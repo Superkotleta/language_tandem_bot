@@ -1,0 +1,12 @@
+DROP TABLE IF EXISTS profile.user_traits CASCADE;
+DROP INDEX IF EXISTS idx_user_traits_user_id;
+DROP TABLE IF EXISTS profile.user_interests CASCADE;
+DROP INDEX IF EXISTS idx_user_interests_user_id;
+DROP TABLE IF EXISTS profile.interests CASCADE;
+DROP TABLE IF EXISTS profile.user_time_availability CASCADE;
+DROP TABLE IF EXISTS profile.friendship_preferences CASCADE;
+DROP TABLE IF EXISTS profile.user_language_pairs CASCADE;
+DROP INDEX IF EXISTS idx_user_language_pairs_user_id;
+DROP TABLE IF EXISTS profile.languages CASCADE;
+DROP TABLE IF EXISTS profile.users CASCADE;
+DROP INDEX IF EXISTS idx_users_telegram_id;
