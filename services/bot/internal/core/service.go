@@ -1,9 +1,11 @@
 package core
 
 import (
+	"fmt"
 	"language-exchange-bot/internal/database"
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
+	"strings"
 )
 
 type BotService struct {
@@ -67,4 +69,46 @@ func (s *BotService) GetLocalizedLanguageName(langCode, interfaceLangCode string
 
 func (s *BotService) GetLocalizedInterests(langCode string) (map[int]string, error) {
 	return s.Localizer.GetInterests(langCode)
+}
+
+// IsProfileCompleted проверяет наличие языков и хотя бы одного интереса.
+func (s *BotService) IsProfileCompleted(user *models.User) (bool, error) {
+	if user.NativeLanguageCode == "" || user.TargetLanguageCode == "" {
+		return false, nil
+	}
+	ids, err := s.DB.GetUserSelectedInterests(user.ID)
+	if err != nil {
+		return false, err
+	}
+	return len(ids) > 0, nil
+}
+
+// BuildProfileSummary возвращает локализованное резюме профиля.
+func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
+	lang := user.InterfaceLanguageCode
+	nativeName := s.Localizer.GetLanguageName(user.NativeLanguageCode, lang)
+	targetName := s.Localizer.GetLanguageName(user.TargetLanguageCode, lang)
+
+	ids, err := s.DB.GetUserSelectedInterests(user.ID)
+	if err != nil {
+		ids = []int{}
+	}
+	allInterests, _ := s.Localizer.GetInterests(lang)
+
+	var picked []string
+	for _, id := range ids {
+		if name, ok := allInterests[id]; ok {
+			picked = append(picked, name)
+		}
+	}
+	interestsLine := fmt.Sprintf("%s: %d", s.Localizer.Get(lang, "profile_field_interests"), len(picked))
+	if len(picked) > 0 {
+		interestsLine = fmt.Sprintf("%s: %d\n• %s", s.Localizer.Get(lang, "profile_field_interests"), len(picked), strings.Join(picked, ", "))
+	}
+
+	title := s.Localizer.Get(lang, "profile_summary_title")
+	native := fmt.Sprintf("%s: %s", s.Localizer.Get(lang, "profile_field_native"), nativeName)
+	target := fmt.Sprintf("%s: %s", s.Localizer.Get(lang, "profile_field_target"), targetName)
+
+	return fmt.Sprintf("%s\n\n%s\n%s\n%s", title, native, target, interestsLine), nil
 }

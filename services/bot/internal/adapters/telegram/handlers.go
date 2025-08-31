@@ -62,12 +62,28 @@ func (h *TelegramHandler) handleCommand(message *tgbotapi.Message, user *models.
 		return h.handleResetCommand(message, user)
 	case "language":
 		return h.handleLanguageCommand(message, user)
+	case "profile":
+		return h.handleProfileCommand(message, user)
 	default:
 		return h.sendMessage(message.Chat.ID, h.service.Localizer.Get(user.InterfaceLanguageCode, "unknown_command"))
 	}
 }
 
 func (h *TelegramHandler) handleStartCommand(message *tgbotapi.Message, user *models.User) error {
+
+	completed, err := h.service.IsProfileCompleted(user)
+	if err == nil && completed {
+		summary, serr := h.service.BuildProfileSummary(user)
+		if serr != nil {
+			log.Printf("profile summary error: %v", serr)
+		}
+		text := summary + "\n\n" + h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_actions")
+		msg := tgbotapi.NewMessage(message.Chat.ID, text)
+		msg.ReplyMarkup = h.createProfileMenuKeyboard(user.InterfaceLanguageCode)
+		_, sendErr := h.bot.Send(msg)
+		return sendErr
+	}
+
 	welcomeText := h.service.GetWelcomeMessage(user)
 	languagePrompt := h.service.GetLanguagePrompt(user, "native")
 	fullText := welcomeText + "\n\n" + languagePrompt
@@ -130,6 +146,7 @@ func (h *TelegramHandler) handleState(message *tgbotapi.Message, user *models.Us
 	}
 }
 
+// Поддержка новых колбэков в роутере
 func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 	user, err := h.service.HandleUserRegistration(
 		callback.From.ID,
@@ -137,31 +154,36 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		callback.From.FirstName,
 		callback.From.LanguageCode,
 	)
-
 	if err != nil {
 		log.Printf("Error handling user registration: %v", err)
 		return err
 	}
 
 	data := callback.Data
-	callbackResponse := tgbotapi.NewCallback(callback.ID, "")
-	h.bot.Request(callbackResponse)
+	_, _ = h.bot.Request(tgbotapi.NewCallback(callback.ID, ""))
 
-	if strings.HasPrefix(data, "lang_native_") {
+	switch {
+	case strings.HasPrefix(data, "lang_native_"):
 		return h.handleNativeLanguageCallback(callback, user)
-	} else if strings.HasPrefix(data, "lang_target_") {
+	case strings.HasPrefix(data, "lang_target_"):
 		return h.handleTargetLanguageCallback(callback, user)
-	} else if strings.HasPrefix(data, "lang_interface_") {
+	case strings.HasPrefix(data, "lang_interface_"):
 		langCode := strings.TrimPrefix(data, "lang_interface_")
 		return h.handleInterfaceLanguageSelection(callback, user, langCode)
-	} else if strings.HasPrefix(data, "interest_") {
+	case strings.HasPrefix(data, "interest_"):
 		interestID := strings.TrimPrefix(data, "interest_")
 		return h.handleInterestSelection(callback, user, interestID)
-	} else if data == "interests_continue" {
-		return h.handleInterestsContinue(callback, user)
+	case data == "profile_show":
+		return h.handleProfileShow(callback, user)
+	case data == "profile_reset_ask":
+		return h.handleProfileResetAsk(callback, user)
+	case data == "profile_reset_yes":
+		return h.handleProfileResetYes(callback, user)
+	case data == "profile_reset_no":
+		return h.handleProfileResetNo(callback, user)
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 func (h *TelegramHandler) handleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
@@ -346,4 +368,110 @@ func (h *TelegramHandler) sendMessage(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)
 	_, err := h.bot.Send(msg)
 	return err
+}
+
+func (h *TelegramHandler) createProfileMenuKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+	// Лейблы можно локализовать через Localizer при желании
+	show := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "profile_show"),
+		"profile_show",
+	)
+	reconfig := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "profile_reconfigure"),
+		"profile_reset_ask",
+	)
+	buttons := [][]tgbotapi.InlineKeyboardButton{
+		{show},
+		{reconfig},
+	}
+	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
+}
+
+func (h *TelegramHandler) createResetConfirmKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+	yes := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "profile_reset_yes"),
+		"profile_reset_yes",
+	)
+	no := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "profile_reset_no"),
+		"profile_reset_no",
+	)
+	return tgbotapi.NewInlineKeyboardMarkup([][]tgbotapi.InlineKeyboardButton{{yes}, {no}}...)
+}
+
+// Команда /profile — показать профиль в любой момент.
+func (h *TelegramHandler) handleProfileCommand(message *tgbotapi.Message, user *models.User) error {
+	summary, err := h.service.BuildProfileSummary(user)
+	if err != nil {
+		return h.sendMessage(message.Chat.ID, h.service.Localizer.Get(user.InterfaceLanguageCode, "unknown_command"))
+	}
+	text := summary + "\n\n" + h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_actions")
+	msg := tgbotapi.NewMessage(message.Chat.ID, text)
+	msg.ReplyMarkup = h.createProfileMenuKeyboard(user.InterfaceLanguageCode)
+	_, err = h.bot.Send(msg)
+	return err
+}
+
+// Колбэки профиля: показать профиль
+func (h *TelegramHandler) handleProfileShow(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	summary, err := h.service.BuildProfileSummary(user)
+	if err != nil {
+		return err
+	}
+	text := summary + "\n\n" + h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_actions")
+	edit := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		h.createProfileMenuKeyboard(user.InterfaceLanguageCode),
+	)
+	_, err = h.bot.Request(edit)
+	return err
+}
+
+// Спросить подтверждение сброса
+func (h *TelegramHandler) handleProfileResetAsk(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	title := h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_reset_title")
+	warn := h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_reset_warning")
+	text := fmt.Sprintf("%s\n\n%s", title, warn)
+	edit := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		h.createResetConfirmKeyboard(user.InterfaceLanguageCode),
+	)
+	_, err := h.bot.Request(edit)
+	return err
+}
+
+// Подтверждение сброса
+func (h *TelegramHandler) handleProfileResetYes(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	if err := h.service.DB.ResetUserProfile(user.ID); err != nil {
+		return err
+	}
+	// Обновляем в памяти базовые поля
+	user.NativeLanguageCode = ""
+	user.TargetLanguageCode = ""
+	user.State = models.StateWaitingLanguage
+	user.Status = models.StatusFilling
+	user.ProfileCompletionLevel = 0
+
+	done := h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_reset_done")
+	// Предложим сразу начать с выбора родного языка
+	next := h.service.GetLanguagePrompt(user, "native")
+	text := done + "\n\n" + next
+
+	edit := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		h.createLanguageKeyboard(user.InterfaceLanguageCode, "native"),
+	)
+	_, err := h.bot.Request(edit)
+	return err
+}
+
+// Отмена сброса — вернёмся в меню профиля
+func (h *TelegramHandler) handleProfileResetNo(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	return h.handleProfileShow(callback, user)
 }

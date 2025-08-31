@@ -150,3 +150,35 @@ func (db *DB) ClearUserInterests(userID int) error {
     `, userID)
 	return err
 }
+
+// ResetUserProfile очищает языки и интересы, переводит пользователя в начало онбординга.
+func (db *DB) ResetUserProfile(userID int) error {
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	// Удаляем интересы
+	if _, err := tx.Exec(`DELETE FROM user_interests WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
+
+	// Сбрасываем языки и состояние (интерфейсный язык не трогаем)
+	if _, err := tx.Exec(`
+		UPDATE users
+		SET native_language_code = NULL,
+		    target_language_code = NULL,
+		    state = $1,
+		    status = $2,
+		    profile_completion_level = 0,
+		    updated_at = NOW()
+		WHERE id = $3
+	`, models.StateWaitingLanguage, models.StatusFilling, userID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
