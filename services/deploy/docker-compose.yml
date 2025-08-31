@@ -2,94 +2,47 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: pg
+    env_file:
+      - ./.env
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -q || exit 1"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
     volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
-    ports:
-      - "5050:80"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # One-shot bootstrap to create schemas, roles, and grants with env passwords
-  db-bootstrap:
-    image: postgres:15-alpine
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      - PGPASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - PROFILE_DB_PASS=${PROFILE_DB_PASS}
-      - MATCHING_DB_PASS=${MATCHING_DB_PASS}
-      - MATCHING_RO_DB_PASS=${MATCHING_RO_DB_PASS}
-    volumes:
-      - ./db-init/bootstrap.sh:/bootstrap.sh:ro
-    entrypoint: ["/bin/sh", "/bootstrap.sh"]
-    restart: "no"
-
-  profile:
-    build:
-      context: ../profile
-      dockerfile: Dockerfile
-    environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pg:5432/${POSTGRES_DB}?sslmode=disable
-      - DB_SCHEMA=profile
-      - MIGRATIONS_DIR=/migrations/profile
-      - HTTP_PORT=8081
-    depends_on:
-      postgres:
-        condition: service_healthy
-      db-bootstrap:
-        condition: service_completed_successfully
-    ports:
-      - "8081:8081"
+      - postgres_data:/var/lib/postgresql/data
+      # Если init-скрипты в deploy/db-init, меняем монтирование на локальный путь
+      - ./db-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8081/healthz"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
 
-  matcher:
+  bot:
     build:
-      context: ../matcher
+      context: ../bot
       dockerfile: Dockerfile
+    env_file:
+      - ./.env
     environment:
-      - DATABASE_URL=postgres://matching_rw:${MATCHING_DB_PASS}@postgres:5432/${POSTGRES_DB}?sslmode=disable
-      - DB_SCHEMA=matching
-      - MIGRATIONS_DIR=/migrations/matching
-      - HTTP_PORT=8082
+      # Без хардкодов в compose — берём из .env или из окружения рантайма
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
+      DATABASE_URL: ${DATABASE_URL}
+      DEBUG: ${DEBUG:-false}
     depends_on:
       postgres:
         condition: service_healthy
-      db-bootstrap:
-        condition: service_completed_successfully
-      profile:
-        condition: service_healthy
-    ports:
-      - "8082:8082"
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8082/healthz"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+    networks:
+      - app-network
+    restart: unless-stopped
 
 volumes:
-  pgdata:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,14 @@
+{
+  "welcome_message": "👋 Hi, {name}! Welcome to Language Exchange Bot!\n\n🌟 Here you'll find conversation partners for language learning!\n\n🚀 Let's set up your profile:",
+  "choose_native_language": "🌍 Choose your native language:",
+  "choose_target_language": "📚 What language are you learning?",
+  "choose_interface_language": "🌐 Choose interface language:",
+  "choose_interests": "🎯 Choose your interests (you can select multiple):",
+  "native_language_confirmed": "Native language",
+  "target_language_confirmed": "Learning language", 
+  "profile_completed": "✅ Great! Your profile is ready!\n\n🔍 Starting to search for suitable conversation partners...",
+  "language_updated": "✅ Interface language updated!",
+  "interest_added": "✅ Interest added to your profile!",
+  "use_menu_above": "👆 Please use the menu above",
+  "unknown_command": "❓ Unknown command. Use /start to begin"
+}
