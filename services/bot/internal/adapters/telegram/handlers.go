@@ -137,6 +137,7 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		callback.From.FirstName,
 		callback.From.LanguageCode,
 	)
+
 	if err != nil {
 		log.Printf("Error handling user registration: %v", err)
 		return err
@@ -144,67 +145,105 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 
 	data := callback.Data
 	callbackResponse := tgbotapi.NewCallback(callback.ID, "")
-	_, _ = h.bot.Request(callbackResponse)
+	h.bot.Request(callbackResponse)
 
-	switch {
-	case strings.HasPrefix(data, "lang_native_"):
+	if strings.HasPrefix(data, "lang_native_") {
 		return h.handleNativeLanguageCallback(callback, user)
-	case strings.HasPrefix(data, "lang_target_"):
+	} else if strings.HasPrefix(data, "lang_target_") {
 		return h.handleTargetLanguageCallback(callback, user)
-	case strings.HasPrefix(data, "lang_interface_"):
+	} else if strings.HasPrefix(data, "lang_interface_") {
 		langCode := strings.TrimPrefix(data, "lang_interface_")
 		return h.handleInterfaceLanguageSelection(callback, user, langCode)
-	case strings.HasPrefix(data, "interest_"):
+	} else if strings.HasPrefix(data, "interest_") {
 		interestID := strings.TrimPrefix(data, "interest_")
 		return h.handleInterestSelection(callback, user, interestID)
-	default:
-		return nil
+	} else if data == "interests_continue" {
+		return h.handleInterestsContinue(callback, user)
 	}
+
+	return nil
+}
+
+func (h *TelegramHandler) handleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Завершаем онбординг
+	completedMsg := h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_completed")
+
+	editMsg := tgbotapi.NewEditMessageText(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		completedMsg,
+	)
+	_, err := h.bot.Request(editMsg)
+	if err != nil {
+		return err
+	}
+
+	// Обновляем статус пользователя
+	h.service.DB.UpdateUserState(user.ID, models.StateActive)
+	h.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
+
+	return nil
 }
 
 // ✨ Выбор родного языка
-func (h *TelegramHandler) handleNativeLanguageCallback(cb *tgbotapi.CallbackQuery, user *models.User) error {
-	langCode := strings.TrimPrefix(cb.Data, "lang_native_")
+func (h *TelegramHandler) handleNativeLanguageCallback(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	langCode := callback.Data[len("lang_native_"):]
 
-	if err := h.service.DB.UpdateUserNativeLanguage(user.ID, langCode); err != nil {
+	err := h.service.DB.UpdateUserNativeLanguage(user.ID, langCode)
+	if err != nil {
 		return err
 	}
-	user.NativeLanguageCode = langCode
 
-	// ВАЖНО: интерфейс НЕ меняем автоматически
+	user.NativeLanguageCode = langCode
 	langName := h.service.Localizer.GetLanguageName(langCode, user.InterfaceLanguageCode)
-	confirm := fmt.Sprintf("✅ %s: %s\n\n%s",
+
+	// ✅ Одно сообщение с новой клавиатурой
+	confirmMsg := fmt.Sprintf("✅ %s: %s\n\n%s",
 		h.service.Localizer.Get(user.InterfaceLanguageCode, "native_language_confirmed"),
 		langName,
-		h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_target_language"),
-	)
-	edit := tgbotapi.NewEditMessageText(cb.Message.Chat.ID, cb.Message.MessageID, confirm)
-	if _, err := h.bot.Request(edit); err != nil {
-		return err
-	}
+		h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_target_language"))
 
-	return h.sendTargetLanguageMenu(cb.Message.Chat.ID, user)
+	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "target")
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(callback.Message.Chat.ID, callback.Message.MessageID, confirmMsg, keyboard)
+	_, err = h.bot.Request(editMsg)
+	return err
 }
 
 func (h *TelegramHandler) handleTargetLanguageCallback(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	langCode := strings.TrimPrefix(callback.Data, "lang_target_")
-	if err := h.service.DB.UpdateUserTargetLanguage(user.ID, langCode); err != nil {
+	langCode := callback.Data[len("lang_target_"):]
+	err := h.service.DB.UpdateUserTargetLanguage(user.ID, langCode)
+	if err != nil {
 		return err
 	}
-	user.TargetLanguageCode = langCode
 
+	// ✅ ОЧИЩАЕМ СТАРЫЕ ИНТЕРЕСЫ при переходе к выбору интересов
+	err = h.service.DB.ClearUserInterests(user.ID)
+	if err != nil {
+		log.Printf("Warning: could not clear user interests: %v", err)
+	}
+
+	user.TargetLanguageCode = langCode
 	langName := h.service.Localizer.GetLanguageName(langCode, user.InterfaceLanguageCode)
+
+	// ✅ Одно сообщение с клавиатурой интересов - НЕТ ДУБЛИРОВАНИЯ
 	confirmMsg := fmt.Sprintf("✅ %s: %s\n\n%s",
 		h.service.Localizer.Get(user.InterfaceLanguageCode, "target_language_confirmed"),
 		langName,
-		h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests"),
-	)
+		h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests"))
 
-	editMsg := tgbotapi.NewEditMessageText(callback.Message.Chat.ID, callback.Message.MessageID, confirmMsg)
-	if _, err := h.bot.Request(editMsg); err != nil {
-		return err
-	}
-	return h.sendInterestsMenu(callback.Message.Chat.ID, user)
+	// Получаем интересы и создаем клавиатуру с пустым списком выбранных
+	interests, _ := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+	keyboard := h.createInterestsKeyboard(interests, []int{}) // ✅ Пустой массив
+
+	// Редактируем сообщение с новой клавиатурой
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		confirmMsg,
+		keyboard,
+	)
+	_, err = h.bot.Request(editMsg)
+	return err
 }
 
 func (h *TelegramHandler) handleInterfaceLanguageSelection(callback *tgbotapi.CallbackQuery, user *models.User, langCode string) error {
@@ -226,12 +265,50 @@ func (h *TelegramHandler) handleInterestSelection(callback *tgbotapi.CallbackQue
 		log.Printf("Error parsing interest ID: %v", err)
 		return err
 	}
-	if err := h.service.DB.SaveUserInterest(user.ID, interestID, false); err != nil {
-		log.Printf("Error saving user interest: %v", err)
+
+	// Получаем текущие выбранные интересы пользователя
+	selectedInterests, err := h.service.DB.GetUserSelectedInterests(user.ID)
+	if err != nil {
+		log.Printf("Error getting user interests, using empty list: %v", err)
+		selectedInterests = []int{} // fallback
+	}
+
+	// Переключаем интерес (toggle)
+	isCurrentlySelected := false
+	for i, id := range selectedInterests {
+		if id == interestID {
+			// Убираем из списка
+			selectedInterests = append(selectedInterests[:i], selectedInterests[i+1:]...)
+			isCurrentlySelected = true
+			break
+		}
+	}
+
+	if !isCurrentlySelected {
+		// Добавляем в список
+		selectedInterests = append(selectedInterests, interestID)
+		err = h.service.DB.SaveUserInterest(user.ID, interestID, false)
+	} else {
+		// Удаляем интерес из БД
+		err = h.service.DB.RemoveUserInterest(user.ID, interestID)
+	}
+
+	if err != nil {
+		log.Printf("Error updating user interest: %v", err)
 		return err
 	}
-	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "interest_added")
-	return h.sendMessage(callback.Message.Chat.ID, text)
+
+	// ✅ Обновляем только клавиатуру - никаких новых сообщений
+	interests, _ := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+	keyboard := h.createInterestsKeyboard(interests, selectedInterests)
+
+	editMsg := tgbotapi.NewEditMessageReplyMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		keyboard,
+	)
+	_, err = h.bot.Request(editMsg)
+	return err
 }
 
 func (h *TelegramHandler) sendTargetLanguageMenu(chatID int64, user *models.User) error {
@@ -248,8 +325,17 @@ func (h *TelegramHandler) sendInterestsMenu(chatID int64, user *models.User) err
 	if err != nil {
 		return err
 	}
-	keyboard := h.createInterestsKeyboard(interests)
+
+	// ✅ Загружаем уже выбранные интересы пользователя
+	selectedInterests, err := h.service.DB.GetUserSelectedInterests(user.ID)
+	if err != nil {
+		log.Printf("Error loading user interests: %v", err)
+		selectedInterests = []int{} // fallback на пустой список
+	}
+
+	keyboard := h.createInterestsKeyboard(interests, selectedInterests)
 	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
+
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ReplyMarkup = keyboard
 	_, err = h.bot.Send(msg)
