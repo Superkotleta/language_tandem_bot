@@ -3,6 +3,7 @@ package telegram
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -181,15 +182,15 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		return h.handleProfileResetYes(callback, user)
 	case data == "profile_reset_no":
 		return h.handleProfileResetNo(callback, user)
+	case data == "interests_continue":
+		return h.handleInterestsContinue(callback, user)
 	default:
 		return nil
 	}
 }
 
 func (h *TelegramHandler) handleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	// Завершаем онбординг
 	completedMsg := h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_completed")
-
 	editMsg := tgbotapi.NewEditMessageText(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
@@ -203,7 +204,6 @@ func (h *TelegramHandler) handleInterestsContinue(callback *tgbotapi.CallbackQue
 	// Обновляем статус пользователя
 	h.service.DB.UpdateUserState(user.ID, models.StateActive)
 	h.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
-
 	return nil
 }
 
@@ -342,26 +342,65 @@ func (h *TelegramHandler) sendTargetLanguageMenu(chatID int64, user *models.User
 	return err
 }
 
+// В createInterestsKeyboard нужно передать язык интерфейса
 func (h *TelegramHandler) sendInterestsMenu(chatID int64, user *models.User) error {
 	interests, err := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
 	if err != nil {
 		return err
 	}
 
-	// ✅ Загружаем уже выбранные интересы пользователя
+	// Загружаем уже выбранные интересы пользователя
 	selectedInterests, err := h.service.DB.GetUserSelectedInterests(user.ID)
 	if err != nil {
 		log.Printf("Error loading user interests: %v", err)
 		selectedInterests = []int{} // fallback на пустой список
 	}
 
-	keyboard := h.createInterestsKeyboard(interests, selectedInterests)
+	keyboard := h.createInterestsKeyboardWithLang(interests, selectedInterests, user.InterfaceLanguageCode)
 	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
-
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ReplyMarkup = keyboard
 	_, err = h.bot.Send(msg)
 	return err
+}
+
+// интересы с передачей языка
+func (h *TelegramHandler) createInterestsKeyboardWithLang(interests map[int]string, selectedInterests []int, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+	var buttons [][]tgbotapi.InlineKeyboardButton
+
+	selectedMap := make(map[int]bool)
+	for _, id := range selectedInterests {
+		selectedMap[id] = true
+	}
+
+	var sortedIDs []int
+	for id := range interests {
+		sortedIDs = append(sortedIDs, id)
+	}
+	sort.Ints(sortedIDs)
+
+	for _, id := range sortedIDs {
+		name := interests[id]
+		var label string
+		if selectedMap[id] {
+			label = "✅ " + name
+		} else {
+			label = name
+		}
+
+		button := tgbotapi.NewInlineKeyboardButtonData(label, fmt.Sprintf("interest_%d", id))
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{button})
+	}
+
+	if len(selectedInterests) > 0 {
+		continueButton := tgbotapi.NewInlineKeyboardButtonData(
+			h.service.Localizer.Get(interfaceLang, "interests_continue"),
+			"interests_continue",
+		)
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{continueButton})
+	}
+
+	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
 func (h *TelegramHandler) sendMessage(chatID int64, text string) error {

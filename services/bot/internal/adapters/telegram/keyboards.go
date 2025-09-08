@@ -26,26 +26,25 @@ func (h *TelegramHandler) createLanguageKeyboard(interfaceLang, keyboardType str
 func (h *TelegramHandler) createInterestsKeyboard(interests map[int]string, selectedInterests []int) tgbotapi.InlineKeyboardMarkup {
 	var buttons [][]tgbotapi.InlineKeyboardButton
 
-	// ✅ Создаём мапу для быстрой проверки выбранных
+	// Создаём мапу для быстрой проверки выбранных
 	selectedMap := make(map[int]bool)
 	for _, id := range selectedInterests {
 		selectedMap[id] = true
 	}
 
-	// ✅ КЛЮЧЕВОЙ ФИК: Получаем отсортированные ID для стабильного порядка
+	// Получаем отсортированные ID для стабильного порядка
 	var sortedIDs []int
 	for id := range interests {
 		sortedIDs = append(sortedIDs, id)
 	}
-	// Сортируем по возрастанию ID
 	sort.Ints(sortedIDs)
 
-	// ✅ Создаём кнопки в стабильном порядке
+	// Создаём кнопки в стабильном порядке
 	for _, id := range sortedIDs {
 		name := interests[id]
 		var label string
 		if selectedMap[id] {
-			label = "✅ " + name // Галочка для выбранных
+			label = "✅ " + name
 		} else {
 			label = name
 		}
@@ -54,13 +53,22 @@ func (h *TelegramHandler) createInterestsKeyboard(interests map[int]string, sele
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{button})
 	}
 
-	// Кнопка "Продолжить" если есть выбранные интересы
+	// Кнопка "Продолжить" если есть выбранные интересы - ЛОКАЛИЗОВАННАЯ
 	if len(selectedInterests) > 0 {
+		// Получаем текущий язык интерфейса (нужно передать в функцию или получить из контекста)
 		continueButton := tgbotapi.NewInlineKeyboardButtonData(
-			"▶️ Продолжить", "interests_continue",
+			h.service.Localizer.Get(h.getCurrentInterfaceLanguage(), "interests_continue"),
+			"interests_continue",
 		)
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{continueButton})
 	}
 
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
+}
+
+// Вспомогательный метод для получения текущего языка интерфейса
+func (h *TelegramHandler) getCurrentInterfaceLanguage() string {
+	// Реализация зависит от контекста - можно передавать как параметр
+	// или хранить в структуре handler'а
+	return "en" // временно
 }
