@@ -1,4 +1,4 @@
-SHELL := /bin/sh
+SHELL := /bin/bash
 
 .PHONY: up down restart logs psql-root psql-profile psql-matcher demo-rbac rebuild clean-db full-restart
 
@@ -57,7 +57,9 @@ clean-logs:
 check-health:
 	cd deploy && docker compose ps
 	@echo "=== Container Status ==="
-	cd deploy && docker compose exec postgres pg_isready -U $$(cat ../.env | grep POSTGRES_USER | cut -d '=' -f2) -d $$(cat ../.env | grep POSTGRES_DB | cut -d '=' -f2) || echo "PostgreSQL not ready"
+	-cd deploy && docker compose exec postgres pg_isready -U postgres -d postgres || echo "PostgreSQL not ready"
+	@echo "=== Waiting for PostgreSQL to be ready ==="
+	@echo "If containers are running but PostgreSQL is not ready, wait 30-60 seconds and try again."
 
 help:
 	@echo "Available commands:"
@@ -82,3 +84,37 @@ help:
 # Legacy aliases for compatibility
 migrate-db: full-restart
 db-recreate: clean-db
+
+# Windows PowerShell compatibility commands
+win-logs-bot:
+	powershell -Command "cd deploy; docker compose logs -f bot --tail=100"
+
+win-logs-db:
+	powershell -Command "cd deploy; docker compose logs -f postgres --tail=50"
+
+win-check-emojis:
+	@echo "=== Проверяем загружены ли эмодзи в базу ==="
+	powershell -Command "cd deploy; docker compose exec postgres psql -U postgres -d languagebot -c \"SELECT t.name FROM interest_translations t JOIN interests i ON t.interest_id=i.id WHERE t.language_code='ru' AND i.key_name='movies_tv';\""
+
+win-clean-and-restart:
+	powershell -Command "cd deploy; docker compose down -v"
+	powershell -Command "docker volume prune -f"
+	powershell -Command "docker network prune -f"
+	powershell -Command "cd deploy; docker compose up -d --build"
+
+win-clean-all:
+	powershell -Command "cd deploy; docker compose down -v"
+	powershell -Command "docker volume prune -f --filter label=com.docker.compose.project=language_exchange_bot"
+	powershell -Command "docker network prune -f"
+	powershell -Command "docker system prune -f"
+	powershell -Command "cd deploy; docker compose up -d --build"
+
+win-diagnose:
+	@echo "=== Проверка сети и IP адресов ==="
+	docker network ls
+	docker network inspect deploy_app-network || echo "Network not found"
+	docker container ls -a --filter name=pg
+	docker container inspect pg --format "{{ range .NetworkSettings.Networks }}{{ .IPAddress }}{{ end }}" || echo "IP info not available"
+	@echo "=== Если IP не показался, попробуйте: ==="
+	@echo "docker logs pg | findstr -c:database"
+	@echo "docker logs deploy-bot-1 | tail -n 10"

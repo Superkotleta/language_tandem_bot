@@ -15,7 +15,7 @@ services:
       # Если init-скрипты в deploy/db-init, меняем монтирование на локальный путь
       - ./db-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} && psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c 'SELECT 1;'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,6 +54,8 @@ services:
     networks:
       - app-network
     restart: unless-stopped
+    stdin_open: true
+    tty: true
 
 volumes:
   postgres_data:
