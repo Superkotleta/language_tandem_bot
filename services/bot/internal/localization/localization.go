@@ -96,9 +96,13 @@ func (l *Localizer) GetLanguageName(lang, interfaceLang string) string {
 func (l *Localizer) GetInterests(lang string) (map[int]string, error) {
 	interests := make(map[int]string)
 
-	// Запрос к БД с локализацией
+	// Запрос к БД с локализацией - приоритет перевода, если NULL - ключ
 	query := `
-		SELECT i.id, COALESCE(it.name, i.key_name) as name
+		SELECT i.id,
+			   CASE
+				   WHEN it.name IS NOT NULL AND TRIM(it.name) != '' THEN it.name
+				   ELSE i.key_name
+			   END as name
 		FROM interests i
 		LEFT JOIN interest_translations it ON i.id = it.interest_id AND it.language_code = $1
 		ORDER BY i.id
@@ -121,7 +125,10 @@ func (l *Localizer) GetInterests(lang string) (map[int]string, error) {
 			continue
 		}
 		interests[id] = name
+		fmt.Printf("Interest %d: %s\n", id, name) // Debug: показать загруженные интересы
 	}
+
+	fmt.Printf("Loaded %d interests for language %s\n", len(interests), lang) // Debug: количество интересов
 
 	return interests, nil
 }

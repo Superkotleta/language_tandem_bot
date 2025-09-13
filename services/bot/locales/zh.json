@@ -4,11 +4,56 @@
   "choose_target_language": "📚 你正在学习什么语言？",
   "choose_interface_language": "🌐 选择界面语言：",
   "choose_interests": "🎯 选择你的兴趣（可以选择多个）：",
-  "native_language_confirmed": "母语",
-  "target_language_confirmed": "学习语言",
   "profile_completed": "✅ 太好了！你的个人资料已准备就绪！\n\n🔍 开始寻找合适的对话伙伴...",
   "language_updated": "✅ 界面语言已更新！",
   "interest_added": "✅ 兴趣已添加到你的个人资料！",
   "use_menu_above": "👆 请使用上面的菜单",
-  "unknown_command": "❓ 未知命令。使用 /start 开始"
+  "unknown_command": "❓ 未知命令。使用 /start 开始",
+  "native_language_confirmed": "母语",
+  "target_language_confirmed": "学习语言",
+  "your_status": "你的状态",
+  "status": "状态",
+  "state": "状态",
+  "profile_completion": "个人资料完成度",
+  "interface_language": "界面语言",
+  "profile_reset": "个人资料重置功能",
+
+  "profile_summary_title": "👤 你的个人资料",
+  "profile_field_native": "母语",
+  "profile_field_target": "学习语言",
+  "profile_field_interests": "兴趣",
+  "profile_actions": "你想做什么？",
+  "profile_show": "👤 显示个人资料",
+  "profile_reconfigure": "🔁 重新配置",
+
+  "profile_reset_title": "♻️ 重置个人资料",
+  "profile_reset_warning": "这将清除你的语言和兴趣。你确定吗？",
+  "profile_reset_yes": "✅ 是的，重置",
+  "profile_reset_no": "❌ 不，保留",
+  "profile_reset_done": "✅ 个人资料已重置。让我们重新开始！",
+
+  "interests_continue": "▶️ 继续",
+
+  "languages_selected_confirmation": "✅ 语言已选择！\n\n{native}: {native_name}\n{target}: {target_name}\n\n准备继续吗？",
+  "languages_selected_native": "母语",
+  "languages_selected_target": "学习语言",
+  "languages_continue_filling": "▶️ 继续填写资料",
+  "languages_reselect": "🔄 重新选择语言",
+
+  "choose_level_title": "📚 你的{language}水平如何？",
+  "choose_level_beginner": "初学者 (A1-A2)",
+  "choose_level_elementary": "基础 (A2-B1)",
+  "choose_level_intermediate": "中级 (B1-B2)",
+  "choose_level_upper_intermediate": "中高级 (B2-C1)",
+  "choose_level_advanced": "高级 (C1-C2)",
+
+  "level_updated": "✅ 语言水平已更新！",
+
+  "back_button": "⬅️ 返回",
+  "next_button": "▶️ 下一步",
+
+  "language_en": "英语",
+  "language_ru": "俄语",
+  "language_es": "西班牙语",
+  "language_zh": "中文"
 }

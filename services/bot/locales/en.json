@@ -6,6 +6,7 @@
   "choose_interests": "🎯 Choose your interests (you can select multiple):",
   "profile_completed": "✅ Great! Your profile is ready!\n\n🔍 Starting to search for suitable conversation partners...",
   "language_updated": "✅ Interface language updated!",
+  "interface_language_updated": "Interface language has been updated!",
   "interest_added": "✅ Interest added to your profile!",
   "use_menu_above": "👆 Please use the menu above",
   "unknown_command": "❓ Unknown command. Use /start to begin",
@@ -33,6 +34,25 @@
   "profile_reset_done": "✅ Profile has been reset. Let's start again!",
 
   "interests_continue": "▶️ Continue",
+
+  "languages_selected_confirmation": "✅ Languages selected!\n\n{native}: {native_name}\n{target}: {target_name}\n\nReady to continue?",
+  "languages_selected_native": "Native language",
+  "languages_selected_target": "Learning language",
+  "languages_continue_filling": "▶️ Continue profile setup",
+  "languages_reselect": "🔄 Reselect languages",
+
+  "choose_level_title": "📚 What is your level of {language}?",
+  "choose_level_beginner": "Beginner (A1-A2)",
+  "choose_level_elementary": "Elementary (A2-B1)",
+  "choose_level_intermediate": "Intermediate (B1-B2)",
+  "choose_level_upper_intermediate": "Upper Intermediate (B2-C1)",
+  "choose_level_advanced": "Advanced (C1-C2)",
+
+  "level_updated": "✅ Language level updated!",
+
+  "back_button": "⬅️ Back",
+  "next_button": "▶️ Next",
+  "choose_at_least_one_interest": "Please choose at least one interest",
 
   "language_en": "English",
   "language_ru": "Russian", 

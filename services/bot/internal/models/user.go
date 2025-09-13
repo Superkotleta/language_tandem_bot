@@ -7,6 +7,7 @@ const (
 	StateNew                   = "new"
 	StateWaitingLanguage       = "waiting_language"
 	StateWaitingTargetLanguage = "waiting_target_language"
+	StateWaitingLanguageLevel  = "waiting_language_level"
 	StateWaitingInterests      = "waiting_interests"
 	StateWaitingTime           = "waiting_time"
 	StateActive                = "active"
@@ -27,6 +28,7 @@ type User struct {
 	FirstName              string    `db:"first_name"`
 	NativeLanguageCode     string    `db:"native_language_code"`
 	TargetLanguageCode     string    `db:"target_language_code"`
+	TargetLanguageLevel    string    `db:"target_language_level"`
 	InterfaceLanguageCode  string    `db:"interface_language_code"`
 	State                  string    `db:"state"`
 	Status                 string    `db:"status"`

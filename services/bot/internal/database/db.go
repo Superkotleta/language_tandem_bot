@@ -47,11 +47,12 @@ func (db *DB) FindOrCreateUser(telegramID int64, username, firstName string) (*m
         RETURNING id, telegram_id, username, first_name,
         COALESCE(native_language_code, '') as native_language_code,
         COALESCE(target_language_code, '') as target_language_code,
+        COALESCE(target_language_level, '') as target_language_level,
         interface_language_code, created_at, updated_at, state,
         profile_completion_level, status
     `, telegramID, username, firstName).Scan(
 		&user.ID, &user.TelegramID, &user.Username, &user.FirstName,
-		&user.NativeLanguageCode, &user.TargetLanguageCode,
+		&user.NativeLanguageCode, &user.TargetLanguageCode, &user.TargetLanguageLevel,
 		&user.InterfaceLanguageCode, &user.CreatedAt, &user.UpdatedAt,
 		&user.State, &user.ProfileCompletionLevel, &user.Status,
 	)
@@ -93,6 +94,14 @@ func (db *DB) UpdateUserTargetLanguage(userID int, langCode string) error {
 	_, err := db.conn.Exec(
 		"UPDATE users SET target_language_code = $1, updated_at = NOW() WHERE id = $2",
 		langCode, userID,
+	)
+	return err
+}
+
+func (db *DB) UpdateUserTargetLanguageLevel(userID int, level string) error {
+	_, err := db.conn.Exec(
+		"UPDATE users SET target_language_level = $1, updated_at = NOW() WHERE id = $2",
+		level, userID,
 	)
 	return err
 }
@@ -171,6 +180,7 @@ func (db *DB) ResetUserProfile(userID int) error {
 		UPDATE users
 		SET native_language_code = NULL,
 		    target_language_code = NULL,
+		    target_language_level = '',
 		    state = $1,
 		    status = $2,
 		    profile_completion_level = 0,

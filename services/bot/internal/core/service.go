@@ -40,11 +40,16 @@ func (s *BotService) HandleUserRegistration(telegramID int64, username, firstNam
 	}
 
 	detected := s.DetectLanguage(telegramLangCode)
-	// Переопределяем язык на первом визите или если он пуст/дефолтен
-	if user.Status == models.StatusNew || user.InterfaceLanguageCode == "" ||
-		(user.InterfaceLanguageCode == "en" && detected != "" && detected != "en") {
-		user.InterfaceLanguageCode = detected
-		_ = s.DB.UpdateUserInterfaceLanguage(user.ID, detected)
+	// Определяем начальный язык интерфейса только для новых пользователей
+	if user.Status == models.StatusNew || user.InterfaceLanguageCode == "" {
+		// Для новых пользователей устанавливаем язык интерфейса по настройкам Telegram
+		// Если язык не определен, используем русский как дефолт для проекта
+		if detected == "" {
+			user.InterfaceLanguageCode = "ru"
+		} else {
+			user.InterfaceLanguageCode = detected
+		}
+		_ = s.DB.UpdateUserInterfaceLanguage(user.ID, user.InterfaceLanguageCode)
 	}
 	return user, nil
 }

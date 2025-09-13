@@ -3,7 +3,6 @@ package telegram
 import (
 	"fmt"
 	"log"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -89,7 +88,7 @@ func (h *TelegramHandler) handleStartCommand(message *tgbotapi.Message, user *mo
 	languagePrompt := h.service.GetLanguagePrompt(user, "native")
 	fullText := welcomeText + "\n\n" + languagePrompt
 
-	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "native")
+	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "native", "", false)
 	msg := tgbotapi.NewMessage(message.Chat.ID, fullText)
 	msg.ReplyMarkup = keyboard
 	if _, err := h.bot.Send(msg); err != nil {
@@ -129,7 +128,7 @@ func (h *TelegramHandler) handleResetCommand(message *tgbotapi.Message, user *mo
 
 func (h *TelegramHandler) handleLanguageCommand(message *tgbotapi.Message, user *models.User) error {
 	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interface_language")
-	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "interface")
+	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "interface", "", true)
 	msg := tgbotapi.NewMessage(message.Chat.ID, text)
 	msg.ReplyMarkup = keyboard
 	_, err := h.bot.Send(msg)
@@ -184,19 +183,52 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		return h.handleProfileResetNo(callback, user)
 	case data == "interests_continue":
 		return h.handleInterestsContinue(callback, user)
+	case data == "languages_continue_filling":
+		return h.handleLanguagesContinueFilling(callback, user)
+	case data == "languages_reselect":
+		return h.handleLanguagesReselect(callback, user)
+	case strings.HasPrefix(data, "level_"):
+		levelCode := strings.TrimPrefix(data, "level_")
+		return h.handleLanguageLevelSelection(callback, user, levelCode)
+	case data == "back_to_previous_step":
+		return h.handleBackToPreviousStep(callback, user)
 	default:
 		return nil
 	}
 }
 
 func (h *TelegramHandler) handleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Проверяем, выбраны ли интересы
+	selectedInterests, err := h.service.DB.GetUserSelectedInterests(user.ID)
+	if err != nil {
+		log.Printf("Error getting selected interests: %v", err)
+		return err
+	}
+
+	// Если не выбрано ни одного интереса, сообщаем пользователю
+	if len(selectedInterests) == 0 {
+		warningMsg := "❗ " + h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_at_least_one_interest")
+		if warningMsg == "choose_at_least_one_interest" { // fallback if key doesn't exist
+			warningMsg = "❗ Пожалуйста, выберите хотя бы один интерес"
+		}
+
+		editMsg := tgbotapi.NewEditMessageText(
+			callback.Message.Chat.ID,
+			callback.Message.MessageID,
+			warningMsg,
+		)
+		_, err := h.bot.Request(editMsg)
+		return err
+	}
+
+	// Если интересы выбраны, завершаем профиль
 	completedMsg := h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_completed")
 	editMsg := tgbotapi.NewEditMessageText(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		completedMsg,
 	)
-	_, err := h.bot.Request(editMsg)
+	_, err = h.bot.Request(editMsg)
 	if err != nil {
 		return err
 	}
@@ -205,6 +237,199 @@ func (h *TelegramHandler) handleInterestsContinue(callback *tgbotapi.CallbackQue
 	h.service.DB.UpdateUserState(user.ID, models.StateActive)
 	h.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
 	return nil
+}
+
+// Обработчик продолжения заполнения профиля после подтверждения выбора языков
+func (h *TelegramHandler) handleLanguagesContinueFilling(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Очищаем старые интересы при переходе к выбору интересов
+	err := h.service.DB.ClearUserInterests(user.ID)
+	if err != nil {
+		log.Printf("Warning: could not clear user interests: %v", err)
+	}
+
+	// Предлагаем выбрать уровень владения языком
+	langName := h.service.Localizer.GetLanguageName(user.TargetLanguageCode, user.InterfaceLanguageCode)
+	title := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
+		"language": langName,
+	})
+
+	keyboard := h.createLanguageLevelKeyboard(user.InterfaceLanguageCode, user.TargetLanguageCode)
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		title,
+		keyboard,
+	)
+	_, err = h.bot.Request(editMsg)
+	return err
+}
+
+// Обработчик повторного выбора языков
+func (h *TelegramHandler) handleLanguagesReselect(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Сбрасываем выбор языков
+	user.NativeLanguageCode = ""
+	user.TargetLanguageCode = ""
+	user.TargetLanguageLevel = ""
+
+	// Обновляем статус пользователя
+	_ = h.service.DB.UpdateUserNativeLanguage(user.ID, "")
+	_ = h.service.DB.UpdateUserTargetLanguage(user.ID, "")
+	_ = h.service.DB.UpdateUserTargetLanguageLevel(user.ID, "")
+
+	// Предлагаем выбрать родной язык снова
+	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
+	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "native", "", true)
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err := h.bot.Request(editMsg)
+	return err
+}
+
+// Обработчик выбора уровня владения языком
+func (h *TelegramHandler) handleLanguageLevelSelection(callback *tgbotapi.CallbackQuery, user *models.User, levelCode string) error {
+	// Сохраняем уровень владения языком
+	err := h.service.DB.UpdateUserTargetLanguageLevel(user.ID, levelCode)
+	if err != nil {
+		return err
+	}
+
+	user.TargetLanguageLevel = levelCode
+
+	// Получаем локализованное название уровня
+	levelName := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_level_"+levelCode)
+
+	// Подтверждаем выбор уровня
+	confirmMsg := fmt.Sprintf("%s: %s\n\n%s",
+		h.service.Localizer.Get(user.InterfaceLanguageCode, "level_updated"),
+		levelName,
+		h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests"))
+
+	// Получаем интересы и создаем клавиатуру с пустым списком выбранных
+	interests, _ := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+	keyboard := h.createInterestsKeyboard(interests, []int{}, user.InterfaceLanguageCode)
+
+	// Редактируем сообщение с новой клавиатурой
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		confirmMsg,
+		keyboard,
+	)
+	_, err = h.bot.Request(editMsg)
+	return err
+}
+
+// Обработчик кнопки "Назад"
+func (h *TelegramHandler) handleBackToPreviousStep(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// В зависимости от текущего состояния пользователя, возвращаемся к предыдущему шагу
+	switch user.State {
+	case models.StateWaitingTargetLanguage:
+		// Возвращаемся к выбору родного языка
+		user.NativeLanguageCode = ""
+		_ = h.service.DB.UpdateUserNativeLanguage(user.ID, "")
+
+		text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
+		keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "native", "", true)
+		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+			callback.Message.Chat.ID,
+			callback.Message.MessageID,
+			text,
+			keyboard,
+		)
+		_, err := h.bot.Request(editMsg)
+		return err
+
+	case models.StateWaitingLanguageLevel:
+		// Возвращаемся к выбору изучаемого языка
+		if user.NativeLanguageCode == "ru" {
+			// Если родной язык русский, возвращаем к выбору изучаемого языка
+			user.TargetLanguageCode = ""
+			_ = h.service.DB.UpdateUserTargetLanguage(user.ID, "")
+
+			text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_target_language")
+			// Исключаем русский из списка изучаемых языков
+			keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "target", "ru", true)
+			editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+				callback.Message.Chat.ID,
+				callback.Message.MessageID,
+				text,
+				keyboard,
+			)
+			_, err := h.bot.Request(editMsg)
+			return err
+		} else {
+			// Если родной язык не русский, возвращаем к подтверждению выбора языков
+			user.TargetLanguageCode = ""
+			_ = h.service.DB.UpdateUserTargetLanguage(user.ID, "")
+
+			// Получаем локализованные названия языков
+			nativeLangName := h.service.Localizer.GetLanguageName(user.NativeLanguageCode, user.InterfaceLanguageCode)
+			targetLangName := h.service.Localizer.GetLanguageName("ru", user.InterfaceLanguageCode)
+
+			confirmMsg := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "languages_selected_confirmation", map[string]string{
+				"native":      h.service.Localizer.Get(user.InterfaceLanguageCode, "languages_selected_native"),
+				"native_name": nativeLangName,
+				"target":      h.service.Localizer.Get(user.InterfaceLanguageCode, "languages_selected_target"),
+				"target_name": targetLangName,
+			})
+
+			keyboard := h.createLanguageConfirmationKeyboard(user.InterfaceLanguageCode)
+			editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+				callback.Message.Chat.ID,
+				callback.Message.MessageID,
+				confirmMsg,
+				keyboard,
+			)
+			_, err := h.bot.Request(editMsg)
+			return err
+		}
+
+	case models.StateWaitingInterests:
+		// Возвращаемся к выбору уровня владения языком
+		user.TargetLanguageLevel = ""
+		_ = h.service.DB.UpdateUserTargetLanguageLevel(user.ID, "")
+
+		// Предлагаем выбрать уровень владения языком
+		langName := h.service.Localizer.GetLanguageName(user.TargetLanguageCode, user.InterfaceLanguageCode)
+		title := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
+			"language": langName,
+		})
+
+		keyboard := h.createLanguageLevelKeyboard(user.InterfaceLanguageCode, user.TargetLanguageCode)
+		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+			callback.Message.Chat.ID,
+			callback.Message.MessageID,
+			title,
+			keyboard,
+		)
+		_, err := h.bot.Request(editMsg)
+		return err
+
+	default:
+		// По умолчанию возвращаем к выбору родного языка
+		user.NativeLanguageCode = ""
+		user.TargetLanguageCode = ""
+		user.TargetLanguageLevel = ""
+
+		_ = h.service.DB.UpdateUserNativeLanguage(user.ID, "")
+		_ = h.service.DB.UpdateUserTargetLanguage(user.ID, "")
+		_ = h.service.DB.UpdateUserTargetLanguageLevel(user.ID, "")
+
+		text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
+		keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "native", "", true)
+		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+			callback.Message.Chat.ID,
+			callback.Message.MessageID,
+			text,
+			keyboard,
+		)
+		_, err := h.bot.Request(editMsg)
+		return err
+	}
 }
 
 // ✨ Выбор родного языка
@@ -216,19 +441,69 @@ func (h *TelegramHandler) handleNativeLanguageCallback(callback *tgbotapi.Callba
 		return err
 	}
 
+	// Устанавливаем язык интерфейса равным родному языку
+	err = h.service.DB.UpdateUserInterfaceLanguage(user.ID, langCode)
+	if err != nil {
+		log.Printf("Warning: could not update interface language: %v", err)
+		// Продолжаем выполнение даже при ошибке
+	}
 	user.NativeLanguageCode = langCode
-	langName := h.service.Localizer.GetLanguageName(langCode, user.InterfaceLanguageCode)
+	user.InterfaceLanguageCode = langCode
 
-	// ✅ Одно сообщение с новой клавиатурой
-	confirmMsg := fmt.Sprintf("✅ %s: %s\n\n%s",
-		h.service.Localizer.Get(user.InterfaceLanguageCode, "native_language_confirmed"),
-		langName,
-		h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_target_language"))
+	// Обновляем статус пользователя
+	h.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguage)
 
-	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "target")
-	editMsg := tgbotapi.NewEditMessageTextAndMarkup(callback.Message.Chat.ID, callback.Message.MessageID, confirmMsg, keyboard)
-	_, err = h.bot.Request(editMsg)
-	return err
+	// Переход к следующему шагу онбординга
+	return h.proceedToNextOnboardingStep(callback, user, langCode)
+}
+
+// proceedToNextOnboardingStep определяет следующий шаг после выбора родного языка
+func (h *TelegramHandler) proceedToNextOnboardingStep(callback *tgbotapi.CallbackQuery, user *models.User, nativeLangCode string) error {
+	if nativeLangCode == "ru" {
+		// Если выбран русский как родной, предлагаем выбрать изучаемый язык
+		text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_target_language")
+
+		// Исключаем русский из списка изучаемых языков
+		keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "target", "ru", true)
+		editMsg := tgbotapi.NewEditMessageTextAndMarkup(callback.Message.Chat.ID, callback.Message.MessageID, text, keyboard)
+		_, err := h.bot.Request(editMsg)
+		if err != nil {
+			return err
+		}
+
+		// Обновляем статус для ожидания выбора изучаемого языка
+		h.service.DB.UpdateUserState(user.ID, models.StateWaitingTargetLanguage)
+		return nil
+	} else {
+		// Для всех других языков как родных автоматически устанавливаем русский как изучаемый
+		err := h.service.DB.UpdateUserTargetLanguage(user.ID, "ru")
+		if err != nil {
+			return err
+		}
+		user.TargetLanguageCode = "ru"
+
+		// Предлагаем выбрать уровень владения русским языком
+		langName := h.service.Localizer.GetLanguageName(user.TargetLanguageCode, user.InterfaceLanguageCode)
+		title := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
+			"language": langName,
+		})
+
+		keyboard := h.createLanguageLevelKeyboard(user.InterfaceLanguageCode, user.TargetLanguageCode)
+		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+			callback.Message.Chat.ID,
+			callback.Message.MessageID,
+			title,
+			keyboard,
+		)
+		_, err = h.bot.Request(editMsg)
+		if err != nil {
+			return err
+		}
+
+		// Обновляем статус для ожидания выбора уровня
+		h.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguageLevel)
+		return nil
+	}
 }
 
 func (h *TelegramHandler) handleTargetLanguageCallback(callback *tgbotapi.CallbackQuery, user *models.User) error {
@@ -247,21 +522,16 @@ func (h *TelegramHandler) handleTargetLanguageCallback(callback *tgbotapi.Callba
 	user.TargetLanguageCode = langCode
 	langName := h.service.Localizer.GetLanguageName(langCode, user.InterfaceLanguageCode)
 
-	// ✅ Одно сообщение с клавиатурой интересов - НЕТ ДУБЛИРОВАНИЯ
-	confirmMsg := fmt.Sprintf("✅ %s: %s\n\n%s",
-		h.service.Localizer.Get(user.InterfaceLanguageCode, "target_language_confirmed"),
-		langName,
-		h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests"))
+	// Предлагаем выбрать уровень владения языком
+	title := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
+		"language": langName,
+	})
 
-	// Получаем интересы и создаем клавиатуру с пустым списком выбранных
-	interests, _ := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
-	keyboard := h.createInterestsKeyboard(interests, []int{}) // ✅ Пустой массив
-
-	// Редактируем сообщение с новой клавиатурой
+	keyboard := h.createLanguageLevelKeyboard(user.InterfaceLanguageCode, langCode)
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
-		confirmMsg,
+		title,
 		keyboard,
 	)
 	_, err = h.bot.Request(editMsg)
@@ -322,7 +592,7 @@ func (h *TelegramHandler) handleInterestSelection(callback *tgbotapi.CallbackQue
 
 	// ✅ Обновляем только клавиатуру - никаких новых сообщений
 	interests, _ := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
-	keyboard := h.createInterestsKeyboard(interests, selectedInterests)
+	keyboard := h.createInterestsKeyboard(interests, selectedInterests, user.InterfaceLanguageCode)
 
 	editMsg := tgbotapi.NewEditMessageReplyMarkup(
 		callback.Message.Chat.ID,
@@ -334,7 +604,13 @@ func (h *TelegramHandler) handleInterestSelection(callback *tgbotapi.CallbackQue
 }
 
 func (h *TelegramHandler) sendTargetLanguageMenu(chatID int64, user *models.User) error {
-	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "target")
+	// Исключаем родной язык из списка изучаемых
+	excludeLang := user.NativeLanguageCode
+	if excludeLang == "" {
+		excludeLang = "ru" // По умолчанию исключаем русский
+	}
+
+	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "target", excludeLang, true)
 	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_target_language")
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ReplyMarkup = keyboard
@@ -356,51 +632,12 @@ func (h *TelegramHandler) sendInterestsMenu(chatID int64, user *models.User) err
 		selectedInterests = []int{} // fallback на пустой список
 	}
 
-	keyboard := h.createInterestsKeyboardWithLang(interests, selectedInterests, user.InterfaceLanguageCode)
+	keyboard := h.createInterestsKeyboard(interests, selectedInterests, user.InterfaceLanguageCode)
 	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ReplyMarkup = keyboard
 	_, err = h.bot.Send(msg)
 	return err
-}
-
-// интересы с передачей языка
-func (h *TelegramHandler) createInterestsKeyboardWithLang(interests map[int]string, selectedInterests []int, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
-	var buttons [][]tgbotapi.InlineKeyboardButton
-
-	selectedMap := make(map[int]bool)
-	for _, id := range selectedInterests {
-		selectedMap[id] = true
-	}
-
-	var sortedIDs []int
-	for id := range interests {
-		sortedIDs = append(sortedIDs, id)
-	}
-	sort.Ints(sortedIDs)
-
-	for _, id := range sortedIDs {
-		name := interests[id]
-		var label string
-		if selectedMap[id] {
-			label = "✅ " + name
-		} else {
-			label = name
-		}
-
-		button := tgbotapi.NewInlineKeyboardButtonData(label, fmt.Sprintf("interest_%d", id))
-		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{button})
-	}
-
-	if len(selectedInterests) > 0 {
-		continueButton := tgbotapi.NewInlineKeyboardButtonData(
-			h.service.Localizer.Get(interfaceLang, "interests_continue"),
-			"interests_continue",
-		)
-		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{continueButton})
-	}
-
-	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
 func (h *TelegramHandler) sendMessage(chatID int64, text string) error {
@@ -504,7 +741,7 @@ func (h *TelegramHandler) handleProfileResetYes(callback *tgbotapi.CallbackQuery
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		text,
-		h.createLanguageKeyboard(user.InterfaceLanguageCode, "native"),
+		h.createLanguageKeyboard(user.InterfaceLanguageCode, "native", "", true),
 	)
 	_, err := h.bot.Request(edit)
 	return err
