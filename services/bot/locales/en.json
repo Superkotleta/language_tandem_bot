@@ -26,6 +26,8 @@
   "profile_actions": "What would you like to do?",
   "profile_show": "👤 Show profile",
   "profile_reconfigure": "🔁 Reconfigure",
+  "profile_edit_interests": "🎯 Edit interests",
+  "profile_edit_languages": "🌍 Edit languages",
 
   "profile_reset_title": "♻️ Reset profile",
   "profile_reset_warning": "This will clear your languages and interests. Are you sure?",
@@ -55,7 +57,20 @@
   "choose_at_least_one_interest": "Please choose at least one interest",
 
   "language_en": "English",
-  "language_ru": "Russian", 
+  "language_ru": "Russian",
   "language_es": "Spanish",
-  "language_zh": "Chinese"
+  "language_zh": "Chinese",
+
+  "main_menu_title": "🏠 Main Menu",
+  "main_menu_change_lang": "🌐 Interface Language",
+  "main_menu_view_profile": "👤 My Profile",
+  "main_menu_edit_profile": "🔄 Edit Profile",
+  "main_menu_feedback": "💬 Feedback",
+  "feedback_text": "💌 Thanks for your feedback!\n\nPlease write what worries you or what ideas you have to improve the bot.",
+  "profile_not_completed": "🤔 You don't have a profile yet!\n\nPlease fill in information about yourself - this will help find suitable conversation partners.",
+  "setup_profile_button": "🚀 Setup Profile",
+  "empty_profile_message": "🤔 You don't have a profile yet!\n\nPlease fill in information about yourself - this will help find suitable conversation partners.",
+  "save_button": "Save ✅",
+  "cancel_button": "Cancel ❌",
+  "back_to_main": "🏠 Back to main menu"
 }

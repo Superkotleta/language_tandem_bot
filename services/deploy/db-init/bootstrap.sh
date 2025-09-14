@@ -7,6 +7,8 @@ until pg_isready -h postgres -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -q; do
   sleep 2
 done
 
+echo "Bootstrap starting..."
+
 export PGPASSWORD="${PGPASSWORD}"
 
 # Create schemas, roles, grants (idempotent), set passwords from env

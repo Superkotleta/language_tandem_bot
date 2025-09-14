@@ -10,6 +10,7 @@ const (
 	StateWaitingLanguageLevel  = "waiting_language_level"
 	StateWaitingInterests      = "waiting_interests"
 	StateWaitingTime           = "waiting_time"
+	StateWaitingFeedback       = "waiting_feedback"
 	StateActive                = "active"
 )
 

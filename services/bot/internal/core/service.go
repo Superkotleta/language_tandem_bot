@@ -94,6 +94,34 @@ func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 	nativeName := s.Localizer.GetLanguageName(user.NativeLanguageCode, lang)
 	targetName := s.Localizer.GetLanguageName(user.TargetLanguageCode, lang)
 
+	// Определяем флаги языков
+	var nativeFlag, targetFlag string
+	switch user.NativeLanguageCode {
+	case "ru":
+		nativeFlag = "🇷🇺"
+	case "en":
+		nativeFlag = "🇺🇸"
+	case "es":
+		nativeFlag = "🇪🇸"
+	case "zh":
+		nativeFlag = "🇨🇳"
+	default:
+		nativeFlag = "🌍"
+	}
+
+	switch user.TargetLanguageCode {
+	case "ru":
+		targetFlag = "🇷🇺"
+	case "en":
+		targetFlag = "🇺🇸"
+	case "es":
+		targetFlag = "🇪🇸"
+	case "zh":
+		targetFlag = "🇨🇳"
+	default:
+		targetFlag = "🌍"
+	}
+
 	ids, err := s.DB.GetUserSelectedInterests(user.ID)
 	if err != nil {
 		ids = []int{}
@@ -106,14 +134,14 @@ func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 			picked = append(picked, name)
 		}
 	}
-	interestsLine := fmt.Sprintf("%s: %d", s.Localizer.Get(lang, "profile_field_interests"), len(picked))
+	interestsLine := fmt.Sprintf("🎯 %s: %d", s.Localizer.Get(lang, "profile_field_interests"), len(picked))
 	if len(picked) > 0 {
-		interestsLine = fmt.Sprintf("%s: %d\n• %s", s.Localizer.Get(lang, "profile_field_interests"), len(picked), strings.Join(picked, ", "))
+		interestsLine = fmt.Sprintf("🎯 %s: %d\n• %s", s.Localizer.Get(lang, "profile_field_interests"), len(picked), strings.Join(picked, ", "))
 	}
 
 	title := s.Localizer.Get(lang, "profile_summary_title")
-	native := fmt.Sprintf("%s: %s", s.Localizer.Get(lang, "profile_field_native"), nativeName)
-	target := fmt.Sprintf("%s: %s", s.Localizer.Get(lang, "profile_field_target"), targetName)
+	native := fmt.Sprintf("%s %s: %s", nativeFlag, s.Localizer.Get(lang, "profile_field_native"), nativeName)
+	target := fmt.Sprintf("%s %s: %s", targetFlag, s.Localizer.Get(lang, "profile_field_target"), targetName)
 
 	return fmt.Sprintf("%s\n\n%s\n%s\n%s", title, native, target, interestsLine), nil
 }

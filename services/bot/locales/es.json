@@ -24,6 +24,8 @@
   "profile_actions": "¿Qué te gustaría hacer?",
   "profile_show": "👤 Mostrar perfil",
   "profile_reconfigure": "🔁 Reconfigurar",
+  "profile_edit_interests": "🎯 Editar intereses",
+  "profile_edit_languages": "🌍 Editar idiomas",
   "profile_reset_title": "♻️ Reiniciar perfil",
   "profile_reset_warning": "Esto borrará tus idiomas e intereses. ¿Estás seguro?",
   "profile_reset_yes": "✅ Sí, reiniciar",
@@ -47,5 +49,18 @@
   "language_en": "Inglés",
   "language_ru": "Ruso",
   "language_es": "Español",
-  "language_zh": "Chino"
+  "language_zh": "Chino",
+
+  "main_menu_title": "🏠 Menú Principal",
+  "main_menu_change_lang": "🌐 Idioma de Interfaz",
+  "main_menu_view_profile": "👤 Mi Perfil",
+  "main_menu_edit_profile": "🔄 Editar Perfil",
+  "main_menu_feedback": "💬 Comentarios",
+  "feedback_text": "💌 ¡Gracias por tus comentarios!\n\nPor favor escribe qué te preocupa o qué ideas tienes para mejorar el bot.",
+  "profile_not_completed": "🤔 ¡Aún no tienes un perfil!\n\nPor favor completa información sobre ti - esto ayudará a encontrar compañeros de conversación adecuados.",
+  "setup_profile_button": "🚀 Configurar Perfil",
+  "empty_profile_message": "🤔 ¡Aún no tienes un perfil!\n\nPor favor completa información sobre ti - esto ayudará a encontrar compañeros de conversación adecuados.",
+  "save_button": "Guardar ✅",
+  "cancel_button": "Cancelar ❌",
+  "back_to_main": "🏠 Volver al menú principal"
 }

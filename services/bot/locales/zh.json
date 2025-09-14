@@ -25,6 +25,8 @@
   "profile_actions": "你想做什么？",
   "profile_show": "👤 显示个人资料",
   "profile_reconfigure": "🔁 重新配置",
+  "profile_edit_interests": "🎯 编辑兴趣",
+  "profile_edit_languages": "🌍 编辑语言",
 
   "profile_reset_title": "♻️ 重置个人资料",
   "profile_reset_warning": "这将清除你的语言和兴趣。你确定吗？",
@@ -55,5 +57,18 @@
   "language_en": "英语",
   "language_ru": "俄语",
   "language_es": "西班牙语",
-  "language_zh": "中文"
+  "language_zh": "中文",
+
+  "main_menu_title": "🏠 主菜单",
+  "main_menu_change_lang": "🌐 界面语言",
+  "main_menu_view_profile": "👤 我的资料",
+  "main_menu_edit_profile": "🔄 编辑资料",
+  "main_menu_feedback": "💬 反馈",
+  "feedback_text": "💌 感谢您的反馈！\n\n请写下您担心的问题或您对改进机器人的想法。",
+  "profile_not_completed": "🤔 您还没有个人资料！\n\n请填写关于您自己的信息 - 这将有助于找到合适的对话伙伴。",
+  "setup_profile_button": "🚀 设置资料",
+  "empty_profile_message": "🤔 您还没有个人资料！\n\n请填写关于您自己的信息 - 这将有助于找到合适的对话伙伴。",
+  "save_button": "保存 ✅",
+  "cancel_button": "取消 ❌",
+  "back_to_main": "🏠 返回主菜单"
 }

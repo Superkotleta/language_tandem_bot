@@ -15,10 +15,10 @@ services:
       # Если init-скрипты в deploy/db-init, меняем монтирование на локальный путь
       - ./db-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} && psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c 'SELECT 1;'"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} && psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c 'SELECT COUNT(*) FROM interest_translations;'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
     networks:
       - app-network
 

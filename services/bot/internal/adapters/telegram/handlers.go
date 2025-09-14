@@ -13,14 +13,16 @@ import (
 )
 
 type TelegramHandler struct {
-	bot     *tgbotapi.BotAPI
-	service *core.BotService
+	bot               *tgbotapi.BotAPI
+	service           *core.BotService
+	editInterestsTemp map[int64][]int // Временное хранение выбранных интересов для каждого пользователя
 }
 
 func NewTelegramHandler(bot *tgbotapi.BotAPI, service *core.BotService) *TelegramHandler {
 	return &TelegramHandler{
-		bot:     bot,
-		service: service,
+		bot:               bot,
+		service:           service,
+		editInterestsTemp: make(map[int64][]int),
 	}
 }
 
@@ -64,39 +66,24 @@ func (h *TelegramHandler) handleCommand(message *tgbotapi.Message, user *models.
 		return h.handleLanguageCommand(message, user)
 	case "profile":
 		return h.handleProfileCommand(message, user)
+	case "feedback":
+		return h.handleFeedbackCommand(message, user)
 	default:
 		return h.sendMessage(message.Chat.ID, h.service.Localizer.Get(user.InterfaceLanguageCode, "unknown_command"))
 	}
 }
 
 func (h *TelegramHandler) handleStartCommand(message *tgbotapi.Message, user *models.User) error {
-
-	completed, err := h.service.IsProfileCompleted(user)
-	if err == nil && completed {
-		summary, serr := h.service.BuildProfileSummary(user)
-		if serr != nil {
-			log.Printf("profile summary error: %v", serr)
-		}
-		text := summary + "\n\n" + h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_actions")
-		msg := tgbotapi.NewMessage(message.Chat.ID, text)
-		msg.ReplyMarkup = h.createProfileMenuKeyboard(user.InterfaceLanguageCode)
-		_, sendErr := h.bot.Send(msg)
-		return sendErr
-	}
-
+	// Всегда показываем главное меню, независимо от состояния профиля
 	welcomeText := h.service.GetWelcomeMessage(user)
-	languagePrompt := h.service.GetLanguagePrompt(user, "native")
-	fullText := welcomeText + "\n\n" + languagePrompt
+	menuText := welcomeText + "\n\n" + h.service.Localizer.Get(user.InterfaceLanguageCode, "main_menu_title")
 
-	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "native", "", false)
-	msg := tgbotapi.NewMessage(message.Chat.ID, fullText)
-	msg.ReplyMarkup = keyboard
+	msg := tgbotapi.NewMessage(message.Chat.ID, menuText)
+	msg.ReplyMarkup = h.createMainMenuKeyboard(user.InterfaceLanguageCode)
 	if _, err := h.bot.Send(msg); err != nil {
 		return err
 	}
 
-	_ = h.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguage)
-	_ = h.service.DB.UpdateUserStatus(user.ID, models.StatusFilling)
 	return nil
 }
 
@@ -167,12 +154,19 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		return h.handleNativeLanguageCallback(callback, user)
 	case strings.HasPrefix(data, "lang_target_"):
 		return h.handleTargetLanguageCallback(callback, user)
+	case strings.HasPrefix(data, "lang_edit_native_"):
+		return h.handleEditNativeLanguage(callback, user)
+	case strings.HasPrefix(data, "lang_edit_target_"):
+		return h.handleEditTargetLanguage(callback, user)
 	case strings.HasPrefix(data, "lang_interface_"):
 		langCode := strings.TrimPrefix(data, "lang_interface_")
 		return h.handleInterfaceLanguageSelection(callback, user, langCode)
 	case strings.HasPrefix(data, "interest_"):
 		interestID := strings.TrimPrefix(data, "interest_")
 		return h.handleInterestSelection(callback, user, interestID)
+	case strings.HasPrefix(data, "edit_interest_"):
+		interestID := strings.TrimPrefix(data, "edit_interest_")
+		return h.handleEditInterestSelection(callback, user, interestID)
 	case data == "profile_show":
 		return h.handleProfileShow(callback, user)
 	case data == "profile_reset_ask":
@@ -190,8 +184,37 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 	case strings.HasPrefix(data, "level_"):
 		levelCode := strings.TrimPrefix(data, "level_")
 		return h.handleLanguageLevelSelection(callback, user, levelCode)
+	case strings.HasPrefix(data, "edit_level_"):
+		levelCode := strings.TrimPrefix(data, "edit_level_")
+		return h.handleEditLevelSelection(callback, user, levelCode)
 	case data == "back_to_previous_step":
 		return h.handleBackToPreviousStep(callback, user)
+	case data == "main_change_language":
+		return h.handleMainChangeLanguage(callback, user)
+	case data == "main_view_profile":
+		return h.handleMainViewProfile(callback, user)
+	case data == "main_edit_profile":
+		return h.handleMainEditProfile(callback, user)
+	case data == "main_feedback":
+		return h.handleMainFeedback(callback, user)
+	case data == "start_profile_setup":
+		return h.startProfileSetup(callback, user)
+	case data == "back_to_main_menu":
+		return h.handleBackToMainMenu(callback, user)
+	case data == "edit_interests":
+		return h.handleEditInterests(callback, user)
+	case data == "edit_languages":
+		return h.handleEditLanguages(callback, user)
+	case data == "save_edits":
+		return h.handleSaveEdits(callback, user)
+	case data == "cancel_edits":
+		return h.handleCancelEdits(callback, user)
+	case data == "edit_native_lang":
+		return h.handleEditNativeLang(callback, user)
+	case data == "edit_target_lang":
+		return h.handleEditTargetLang(callback, user)
+	case data == "edit_level":
+		return h.handleEditLevelLang(callback, user)
 	default:
 		return nil
 	}
@@ -205,17 +228,25 @@ func (h *TelegramHandler) handleInterestsContinue(callback *tgbotapi.CallbackQue
 		return err
 	}
 
-	// Если не выбрано ни одного интереса, сообщаем пользователю
+	// Если не выбрано ни одного интереса, сообщаем пользователю и оставляем клавиатуру
 	if len(selectedInterests) == 0 {
 		warningMsg := "❗ " + h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_at_least_one_interest")
 		if warningMsg == "choose_at_least_one_interest" { // fallback if key doesn't exist
 			warningMsg = "❗ Пожалуйста, выберите хотя бы один интерес"
 		}
 
-		editMsg := tgbotapi.NewEditMessageText(
+		// Добавляем оригинальный текст с предупреждением
+		chooseInterestsText := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
+		fullText := warningMsg + "\n\n" + chooseInterestsText
+
+		// Получаем интересы и оставляем клавиатуру с интересами видимой, обновляя только текст
+		interests, _ := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+		keyboard := h.createInterestsKeyboard(interests, []int{}, user.InterfaceLanguageCode)
+		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
-			warningMsg,
+			fullText,
+			keyboard,
 		)
 		_, err := h.bot.Request(editMsg)
 		return err
@@ -223,10 +254,12 @@ func (h *TelegramHandler) handleInterestsContinue(callback *tgbotapi.CallbackQue
 
 	// Если интересы выбраны, завершаем профиль
 	completedMsg := h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_completed")
-	editMsg := tgbotapi.NewEditMessageText(
+	keyboard := h.createProfileCompletedKeyboard(user.InterfaceLanguageCode)
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		completedMsg,
+		keyboard,
 	)
 	_, err = h.bot.Request(editMsg)
 	if err != nil {
@@ -234,9 +267,63 @@ func (h *TelegramHandler) handleInterestsContinue(callback *tgbotapi.CallbackQue
 	}
 
 	// Обновляем статус пользователя
-	h.service.DB.UpdateUserState(user.ID, models.StateActive)
-	h.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
+	err = h.service.DB.UpdateUserState(user.ID, models.StateActive)
+	if err != nil {
+		log.Printf("Error updating user state: %v", err)
+		return err
+	}
+	err = h.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
+	if err != nil {
+		log.Printf("Error updating user status: %v", err)
+		return err
+	}
+
+	// Увеличиваем уровень завершения профиля до 100%
+	err = h.updateProfileCompletionLevel(user.ID, 100)
+	if err != nil {
+		log.Printf("Error updating profile completion level: %v", err)
+		return err
+	}
+
 	return nil
+}
+
+// updateProfileCompletionLevel обновляет уровень завершения профиля от 0 до 100
+func (h *TelegramHandler) updateProfileCompletionLevel(userID int, completionLevel int) error {
+	_, err := h.service.DB.GetConnection().Exec(`
+		UPDATE users
+		SET profile_completion_level = $1, updated_at = NOW()
+		WHERE id = $2
+	`, completionLevel, userID)
+	return err
+}
+
+// startProfileSetup начинает настройку профиля сразу с выбора родного языка
+func (h *TelegramHandler) startProfileSetup(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
+	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "native", "", true)
+
+	// Отправляем новое сообщение для начала настройки профиля
+	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, text)
+	msg.ReplyMarkup = keyboard
+	_, err := h.bot.Send(msg)
+	return err
+}
+
+// handleBackToMainMenu возвращает пользователя в главное меню
+func (h *TelegramHandler) handleBackToMainMenu(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	welcomeText := h.service.GetWelcomeMessage(user)
+	menuText := welcomeText + "\n\n" + h.service.Localizer.Get(user.InterfaceLanguageCode, "main_menu_title")
+
+	keyboard := h.createMainMenuKeyboard(user.InterfaceLanguageCode)
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		menuText,
+		keyboard,
+	)
+	_, err := h.bot.Request(editMsg)
+	return err
 }
 
 // Обработчик продолжения заполнения профиля после подтверждения выбора языков
@@ -303,8 +390,7 @@ func (h *TelegramHandler) handleLanguageLevelSelection(callback *tgbotapi.Callba
 	levelName := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_level_"+levelCode)
 
 	// Подтверждаем выбор уровня
-	confirmMsg := fmt.Sprintf("%s: %s\n\n%s",
-		h.service.Localizer.Get(user.InterfaceLanguageCode, "level_updated"),
+	confirmMsg := fmt.Sprintf("🎯 %s\n\n%s",
 		levelName,
 		h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests"))
 
@@ -362,26 +448,22 @@ func (h *TelegramHandler) handleBackToPreviousStep(callback *tgbotapi.CallbackQu
 			_, err := h.bot.Request(editMsg)
 			return err
 		} else {
-			// Если родной язык не русский, возвращаем к подтверждению выбора языков
+			// Если родной язык не русский, возвращаем к выбору родного языка
+			// потому что для не русского родного сразу устанавливается русский как изучаемый
+			user.NativeLanguageCode = ""
 			user.TargetLanguageCode = ""
+			user.TargetLanguageLevel = ""
+
+			_ = h.service.DB.UpdateUserNativeLanguage(user.ID, "")
 			_ = h.service.DB.UpdateUserTargetLanguage(user.ID, "")
+			_ = h.service.DB.UpdateUserTargetLanguageLevel(user.ID, "")
 
-			// Получаем локализованные названия языков
-			nativeLangName := h.service.Localizer.GetLanguageName(user.NativeLanguageCode, user.InterfaceLanguageCode)
-			targetLangName := h.service.Localizer.GetLanguageName("ru", user.InterfaceLanguageCode)
-
-			confirmMsg := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "languages_selected_confirmation", map[string]string{
-				"native":      h.service.Localizer.Get(user.InterfaceLanguageCode, "languages_selected_native"),
-				"native_name": nativeLangName,
-				"target":      h.service.Localizer.Get(user.InterfaceLanguageCode, "languages_selected_target"),
-				"target_name": targetLangName,
-			})
-
-			keyboard := h.createLanguageConfirmationKeyboard(user.InterfaceLanguageCode)
+			text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
+			keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "native", "", true)
 			editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 				callback.Message.Chat.ID,
 				callback.Message.MessageID,
-				confirmMsg,
+				text,
 				keyboard,
 			)
 			_, err := h.bot.Request(editMsg)
@@ -441,14 +523,7 @@ func (h *TelegramHandler) handleNativeLanguageCallback(callback *tgbotapi.Callba
 		return err
 	}
 
-	// Устанавливаем язык интерфейса равным родному языку
-	err = h.service.DB.UpdateUserInterfaceLanguage(user.ID, langCode)
-	if err != nil {
-		log.Printf("Warning: could not update interface language: %v", err)
-		// Продолжаем выполнение даже при ошибке
-	}
 	user.NativeLanguageCode = langCode
-	user.InterfaceLanguageCode = langCode
 
 	// Обновляем статус пользователя
 	h.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguage)
@@ -482,9 +557,17 @@ func (h *TelegramHandler) proceedToNextOnboardingStep(callback *tgbotapi.Callbac
 		}
 		user.TargetLanguageCode = "ru"
 
+		// Получаем название выбранного языка для сообщения
+		nativeLangName := h.service.Localizer.GetLanguageName(nativeLangCode, user.InterfaceLanguageCode)
+
+		// Показываем сообщение о том, что русский язык установлен автоматически
+		targetExplanation := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "target_language_explanation", map[string]string{
+			"native_lang": nativeLangName,
+		})
+
 		// Предлагаем выбрать уровень владения русским языком
 		langName := h.service.Localizer.GetLanguageName(user.TargetLanguageCode, user.InterfaceLanguageCode)
-		title := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
+		levelTitle := targetExplanation + "\n\n" + h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
 			"language": langName,
 		})
 
@@ -492,7 +575,7 @@ func (h *TelegramHandler) proceedToNextOnboardingStep(callback *tgbotapi.Callbac
 		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
-			title,
+			levelTitle,
 			keyboard,
 		)
 		_, err = h.bot.Request(editMsg)
@@ -543,12 +626,28 @@ func (h *TelegramHandler) handleInterfaceLanguageSelection(callback *tgbotapi.Ca
 		log.Printf("Error updating interface language: %v", err)
 		return err
 	}
+
+	// Обновляем язык интерфейса пользователя и получаем новое сообщение
+	user.InterfaceLanguageCode = langCode
 	langName := h.service.Localizer.GetLanguageName(langCode, langCode)
-	text := fmt.Sprintf("✅ %s: %s",
+	text := fmt.Sprintf("%s\n\n%s: %s",
+		h.service.Localizer.Get(langCode, "choose_interface_language"),
 		h.service.Localizer.Get(langCode, "language_updated"),
 		langName,
 	)
-	return h.sendMessage(callback.Message.Chat.ID, text)
+
+	// Создаем клавиатуру с языками интерфейса (остальные кнопки остаются)
+	keyboard := h.createLanguageKeyboard(langCode, "interface", "", true)
+
+	// Редактируем сообщение, сохраняя клавиатуру
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err := h.bot.Request(editMsg)
+	return err
 }
 
 func (h *TelegramHandler) handleInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
@@ -647,18 +746,61 @@ func (h *TelegramHandler) sendMessage(chatID int64, text string) error {
 }
 
 func (h *TelegramHandler) createProfileMenuKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
-	// Лейблы можно локализовать через Localizer при желании
-	show := tgbotapi.NewInlineKeyboardButtonData(
-		h.service.Localizer.Get(interfaceLang, "profile_show"),
-		"profile_show",
+	// Кнопки для управления профилем
+	editInterests := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "profile_edit_interests"),
+		"edit_interests",
+	)
+	editLanguages := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "profile_edit_languages"),
+		"edit_languages",
+	)
+	changeInterfaceLang := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "main_menu_change_lang"),
+		"main_change_language",
 	)
 	reconfig := tgbotapi.NewInlineKeyboardButtonData(
 		h.service.Localizer.Get(interfaceLang, "profile_reconfigure"),
 		"profile_reset_ask",
 	)
+	backToMain := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "back_to_main"),
+		"back_to_main_menu",
+	)
+
+	// Пять рядов: интересы, языки, язык интерфейса, сброс, главное меню
 	buttons := [][]tgbotapi.InlineKeyboardButton{
-		{show},
+		{editInterests},
+		{editLanguages},
+		{changeInterfaceLang},
 		{reconfig},
+		{backToMain},
+	}
+	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
+}
+
+func (h *TelegramHandler) createMainMenuKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+	viewProfile := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "main_menu_view_profile"),
+		"main_view_profile",
+	)
+	editProfile := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "main_menu_edit_profile"),
+		"main_edit_profile",
+	)
+	changeLang := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "main_menu_change_lang"),
+		"main_change_language",
+	)
+	feedback := tgbotapi.NewInlineKeyboardButtonData(
+		h.service.Localizer.Get(interfaceLang, "main_menu_feedback"),
+		"main_feedback",
+	)
+
+	// Компонуем меню по 2 кнопки в ряд для лучшей организации
+	buttons := [][]tgbotapi.InlineKeyboardButton{
+		{viewProfile, editProfile},
+		{changeLang, feedback},
 	}
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
@@ -673,6 +815,64 @@ func (h *TelegramHandler) createResetConfirmKeyboard(interfaceLang string) tgbot
 		"profile_reset_no",
 	)
 	return tgbotapi.NewInlineKeyboardMarkup([][]tgbotapi.InlineKeyboardButton{{yes}, {no}}...)
+}
+
+// Обработчики главного меню
+func (h *TelegramHandler) handleMainChangeLanguage(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interface_language")
+	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "interface", "", true)
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err := h.bot.Request(editMsg)
+	return err
+}
+
+func (h *TelegramHandler) handleMainViewProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Проверяем, заполнен ли профиль по уровню завершения профиля
+	if user.ProfileCompletionLevel == 0 {
+		// Профиль не заполнен - показываем информационное сообщение и кнопку настройки
+		text := h.service.Localizer.Get(user.InterfaceLanguageCode, "empty_profile_message")
+
+		// Создаем клавиатуру с кнопкой настройки профиля
+		setupButton := tgbotapi.NewInlineKeyboardButtonData(
+			h.service.Localizer.Get(user.InterfaceLanguageCode, "setup_profile_button"),
+			"start_profile_setup",
+		)
+
+		keyboard := tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{setupButton})
+
+		// Отправляем новое сообщение вместо редактирования существующего
+		newMsg := tgbotapi.NewMessage(callback.Message.Chat.ID, text)
+		newMsg.ReplyMarkup = keyboard
+		_, err := h.bot.Send(newMsg)
+		return err
+	}
+
+	// Профиль заполнен - показываем его
+	return h.handleProfileShow(callback, user)
+}
+
+func (h *TelegramHandler) handleMainEditProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	return h.handleProfileResetAsk(callback, user)
+}
+
+func (h *TelegramHandler) handleMainFeedback(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Создаем message объект для handleFeedbackCommand
+	message := &tgbotapi.Message{
+		Chat: callback.Message.Chat,
+	}
+	return h.handleFeedbackCommand(message, user)
+}
+
+// Команда /feedback
+func (h *TelegramHandler) handleFeedbackCommand(message *tgbotapi.Message, user *models.User) error {
+	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_text")
+	_ = h.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedback)
+	return h.sendMessage(message.Chat.ID, text)
 }
 
 // Команда /profile — показать профиль в любой момент.
@@ -747,7 +947,360 @@ func (h *TelegramHandler) handleProfileResetYes(callback *tgbotapi.CallbackQuery
 	return err
 }
 
-// Отмена сброса — вернёмся в меню профиля
+// Отмена сброса — вернёмся в главное меню
 func (h *TelegramHandler) handleProfileResetNo(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	return h.handleBackToMainMenu(callback, user)
+}
+
+// handleEditInterests позволяет редактировать интересы пользователя
+func (h *TelegramHandler) handleEditInterests(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Получаем все доступные интересы
+	interests, err := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+	if err != nil {
+		return err
+	}
+
+	// Получаем текущие выбранные интересы пользователя и сохраняем в кэше
+	selectedInterests, err := h.service.DB.GetUserSelectedInterests(user.ID)
+	if err != nil {
+		log.Printf("Error loading user interests: %v", err)
+		selectedInterests = []int{} // fallback
+	}
+
+	// Инициализируем временное хранилище для сессии редактирования
+	userID := int64(user.ID)
+	h.editInterestsTemp[userID] = make([]int, len(selectedInterests))
+	copy(h.editInterestsTemp[userID], selectedInterests)
+
+	keyboard := h.createEditInterestsKeyboard(interests, selectedInterests, user.InterfaceLanguageCode)
+	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests") +
+		"\n\n" + h.service.Localizer.Get(user.InterfaceLanguageCode, "save_button") +
+		" или " + h.service.Localizer.Get(user.InterfaceLanguageCode, "cancel_button")
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err = h.bot.Request(editMsg)
+	return err
+}
+
+// handleEditLanguages позволяет редактировать языки пользователя
+func (h *TelegramHandler) handleEditLanguages(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Показываем текущие настройки языков с кнопками редактирования
+	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_edit_languages") +
+		"\n\n" + h.service.Localizer.Get(user.InterfaceLanguageCode, "save_button") +
+		" или " + h.service.Localizer.Get(user.InterfaceLanguageCode, "cancel_button")
+
+	keyboard := h.createEditLanguagesKeyboard(
+		user.InterfaceLanguageCode,
+		user.NativeLanguageCode,
+		user.TargetLanguageCode,
+		user.TargetLanguageLevel,
+	)
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err := h.bot.Request(editMsg)
+	return err
+}
+
+// handleSaveEdits сохраняет изменения и возвращается к просмотру профиля
+func (h *TelegramHandler) handleSaveEdits(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	userID := int64(user.ID)
+
+	// Если есть временное хранилище интересов, применяем изменения в БД
+	if tempInterests, exists := h.editInterestsTemp[userID]; exists {
+		// Очищаем текущие интересы в БД
+		err := h.service.DB.ClearUserInterests(user.ID)
+		if err != nil {
+			log.Printf("Error clearing user interests: %v", err)
+			return err
+		}
+
+		// Сохраняем новые интересы
+		for _, interestID := range tempInterests {
+			err := h.service.DB.SaveUserInterest(user.ID, interestID, false)
+			if err != nil {
+				log.Printf("Error saving user interest %d: %v", interestID, err)
+				return err
+			}
+		}
+
+		// Удаляем временное хранилище
+		delete(h.editInterestsTemp, userID)
+	}
+
+	// Показываем профиль с обновленными данными
 	return h.handleProfileShow(callback, user)
+}
+
+// handleCancelEdits отменяет изменения и возвращается к просмотру профиля
+func (h *TelegramHandler) handleCancelEdits(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	userID := int64(user.ID)
+
+	// Очищаем временное хранилище без применения изменений
+	if _, exists := h.editInterestsTemp[userID]; exists {
+		delete(h.editInterestsTemp, userID)
+	}
+
+	// Просто показываем профиль без изменений
+	return h.handleProfileShow(callback, user)
+}
+
+// handleEditNativeLang редактирует родной язык пользователя
+func (h *TelegramHandler) handleEditNativeLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
+	// Показываем клавиатуру с сохранением/отменой вместо обычного выбора
+	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "edit_native", "", false)
+
+	// Добавляем кнопки сохранить/отменить
+	saveRow := h.createSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err := h.bot.Request(editMsg)
+	return err
+}
+
+// handleEditTargetLang редактирует изучаемый язык пользователя (только если родной - русский)
+func (h *TelegramHandler) handleEditTargetLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Проверяем, что родной язык русский - только в этом случае можно редактировать изучаемый язык
+	if user.NativeLanguageCode != "ru" {
+		// Не должно происходить по логике, но на всякий случай
+		return h.sendMessage(callback.Message.Chat.ID, "Редактирование изучаемого языка недоступно при вашем родном языке.")
+	}
+
+	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_target_language")
+	// Исключаем родной язык из списка изучаемых
+	keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "edit_target", user.NativeLanguageCode, false)
+
+	// Добавляем кнопки сохранить/отменить
+	saveRow := h.createSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err := h.bot.Request(editMsg)
+	return err
+}
+
+// handleEditNativeLanguage сохраняет выбор родного языка с учетом первоначальной логики
+func (h *TelegramHandler) handleEditNativeLanguage(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	langCode := callback.Data[len("lang_edit_native_"):]
+
+	// Сохраняем новый родной язык
+	err := h.service.DB.UpdateUserNativeLanguage(user.ID, langCode)
+	if err != nil {
+		return err
+	}
+
+	user.NativeLanguageCode = langCode
+
+	// Применяем изначальную логику выбора языков
+	if langCode == "ru" {
+		// Если выбран русский как родной, предлагаем выбрать изучаемый из оставшихся 3
+		// Но не меняем существующий изучаемый язык, если он есть
+		text := "Выберите изучаемый язык:"
+		keyboard := h.createLanguageKeyboard(user.InterfaceLanguageCode, "edit_target", "ru", false)
+
+		// Добавляем кнопки сохранить/отменить
+		saveRow := h.createSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
+		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
+
+		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+			callback.Message.Chat.ID,
+			callback.Message.MessageID,
+			text,
+			keyboard,
+		)
+		_, err := h.bot.Request(editMsg)
+		return err
+	} else {
+		// Если выбран не русский, автоматически устанавливаем русский как изучаемый
+		err := h.service.DB.UpdateUserTargetLanguage(user.ID, "ru")
+		if err != nil {
+			return err
+		}
+		user.TargetLanguageCode = "ru"
+
+		// Показываем сообщение о том, что русский язык установлен автоматически
+		nativeLangName := h.service.Localizer.GetLanguageName(langCode, user.InterfaceLanguageCode)
+		explanation := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "target_language_explanation", map[string]string{
+			"native_lang": nativeLangName,
+		})
+
+		// Предлагаем выбрать уровень владения русским языком
+		langName := h.service.Localizer.GetLanguageName(user.TargetLanguageCode, user.InterfaceLanguageCode)
+		levelTitle := explanation + "\n\n" + h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
+			"language": langName,
+		})
+
+		keyboard := h.createLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, user.TargetLanguageCode, "edit_level_", false)
+		// Добавляем сохранить/отменить
+		saveRow := h.createSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
+		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
+
+		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+			callback.Message.Chat.ID,
+			callback.Message.MessageID,
+			levelTitle,
+			keyboard,
+		)
+		_, err = h.bot.Request(editMsg)
+		return err
+	}
+}
+
+// handleEditTargetLanguage сохраняет выбор изучаемого языка и предлагает выбрать уровень
+func (h *TelegramHandler) handleEditTargetLanguage(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	langCode := callback.Data[len("lang_edit_target_"):]
+
+	err := h.service.DB.UpdateUserTargetLanguage(user.ID, langCode)
+	if err != nil {
+		return err
+	}
+
+	user.TargetLanguageCode = langCode
+	langName := h.service.Localizer.GetLanguageName(langCode, user.InterfaceLanguageCode)
+
+	// Предлагаем выбрать уровень владения языком
+	title := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
+		"language": langName,
+	})
+
+	keyboard := h.createLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, langCode, "edit_level_", false)
+	// Добавляем save/cancel
+	saveRow := h.createSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		title,
+		keyboard,
+	)
+	_, err = h.bot.Request(editMsg)
+	return err
+}
+
+func (h *TelegramHandler) handleEditInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
+	interestID, err := strconv.Atoi(interestIDStr)
+	if err != nil {
+		log.Printf("Error parsing interest ID: %v", err)
+		return err
+	}
+
+	userID := int64(user.ID)
+
+	// Если временного хранилища нет, инициализируем его
+	if _, exists := h.editInterestsTemp[userID]; !exists {
+		selectedInterests, err := h.service.DB.GetUserSelectedInterests(user.ID)
+		if err != nil {
+			log.Printf("Error getting user interests, using empty list: %v", err)
+			selectedInterests = []int{}
+		}
+		h.editInterestsTemp[userID] = make([]int, len(selectedInterests))
+		copy(h.editInterestsTemp[userID], selectedInterests)
+	}
+
+	// Переключаем интерес в временном хранилище (toggle)
+	isCurrentlySelected := false
+	for i, id := range h.editInterestsTemp[userID] {
+		if id == interestID {
+			// Убираем из списка
+			h.editInterestsTemp[userID] = append(h.editInterestsTemp[userID][:i], h.editInterestsTemp[userID][i+1:]...)
+			isCurrentlySelected = true
+			break
+		}
+	}
+
+	if !isCurrentlySelected {
+		// Добавляем в список
+		h.editInterestsTemp[userID] = append(h.editInterestsTemp[userID], interestID)
+	}
+
+	// ✅ Возвращаем edit клавиатуру с временными изменениями
+	interests, _ := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+	keyboard := h.createEditInterestsKeyboard(interests, h.editInterestsTemp[userID], user.InterfaceLanguageCode)
+	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests") +
+		"\n\n" + h.service.Localizer.Get(user.InterfaceLanguageCode, "save_button") +
+		" или " + h.service.Localizer.Get(user.InterfaceLanguageCode, "cancel_button")
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err = h.bot.Request(editMsg)
+	return err
+}
+
+func (h *TelegramHandler) handleEditLevelSelection(callback *tgbotapi.CallbackQuery, user *models.User, levelCode string) error {
+	// Сохраняем уровень владения языком
+	err := h.service.DB.UpdateUserTargetLanguageLevel(user.ID, levelCode)
+	if err != nil {
+		return err
+	}
+
+	user.TargetLanguageLevel = levelCode
+
+	// Переходим к меню редактирования языков с обновленными данными
+	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_edit_languages") +
+		"\n\n" + h.service.Localizer.Get(user.InterfaceLanguageCode, "save_button") +
+		" или " + h.service.Localizer.Get(user.InterfaceLanguageCode, "cancel_button")
+
+	keyboard := h.createEditLanguagesKeyboard(
+		user.InterfaceLanguageCode,
+		user.NativeLanguageCode,
+		user.TargetLanguageCode,
+		user.TargetLanguageLevel,
+	)
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err = h.bot.Request(editMsg)
+	return err
+}
+
+// handleEditLevelLang редактирует уровень владения языком
+func (h *TelegramHandler) handleEditLevelLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	langName := h.service.Localizer.GetLanguageName(user.TargetLanguageCode, user.InterfaceLanguageCode)
+	title := h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
+		"language": langName,
+	})
+
+	keyboard := h.createLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, user.TargetLanguageCode, "edit_level_", false)
+	// Добавляем save/cancel
+	saveRow := h.createSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		title,
+		keyboard,
+	)
+	_, err := h.bot.Request(editMsg)
+	return err
 }
