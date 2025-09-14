@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/models"
@@ -16,13 +17,27 @@ type TelegramHandler struct {
 	bot               *tgbotapi.BotAPI
 	service           *core.BotService
 	editInterestsTemp map[int64][]int // Временное хранение выбранных интересов для каждого пользователя
+	adminChatIDs      []int64         // Chat ID администраторов
+	adminUsernames    []string        // Usernames администраторов для проверки доступа
 }
 
-func NewTelegramHandler(bot *tgbotapi.BotAPI, service *core.BotService) *TelegramHandler {
+func NewTelegramHandler(bot *tgbotapi.BotAPI, service *core.BotService, adminChatIDs []int64) *TelegramHandler {
 	return &TelegramHandler{
 		bot:               bot,
 		service:           service,
 		editInterestsTemp: make(map[int64][]int),
+		adminChatIDs:      adminChatIDs,
+		adminUsernames:    make([]string, 0), // пустой список нет хардкода
+	}
+}
+
+func NewTelegramHandlerWithAdmins(bot *tgbotapi.BotAPI, service *core.BotService, adminChatIDs []int64, adminUsernames []string) *TelegramHandler {
+	return &TelegramHandler{
+		bot:               bot,
+		service:           service,
+		editInterestsTemp: make(map[int64][]int),
+		adminChatIDs:      adminChatIDs,
+		adminUsernames:    adminUsernames,
 	}
 }
 
@@ -68,7 +83,10 @@ func (h *TelegramHandler) handleCommand(message *tgbotapi.Message, user *models.
 		return h.handleProfileCommand(message, user)
 	case "feedback":
 		return h.handleFeedbackCommand(message, user)
+	case "feedbacks":
+		return h.handleFeedbacksCommand(message, user)
 	default:
+		log.Printf("Unknown command: %s", message.Command())
 		return h.sendMessage(message.Chat.ID, h.service.Localizer.Get(user.InterfaceLanguageCode, "unknown_command"))
 	}
 }
@@ -128,6 +146,10 @@ func (h *TelegramHandler) handleState(message *tgbotapi.Message, user *models.Us
 		models.StateWaitingInterests,
 		models.StateWaitingTime:
 		return h.sendMessage(message.Chat.ID, h.service.Localizer.Get(user.InterfaceLanguageCode, "use_menu_above"))
+	case models.StateWaitingFeedback:
+		return h.handleFeedbackMessage(message, user)
+	case models.StateWaitingFeedbackContact:
+		return h.handleFeedbackContactMessage(message, user)
 	default:
 		return h.sendMessage(message.Chat.ID, h.service.Localizer.Get(user.InterfaceLanguageCode, "unknown_command"))
 	}
@@ -215,6 +237,47 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		return h.handleEditTargetLang(callback, user)
 	case data == "edit_level":
 		return h.handleEditLevelLang(callback, user)
+	case strings.HasPrefix(data, "fb_process_"):
+		feedbackIDStr := strings.TrimPrefix(data, "fb_process_")
+		return h.handleFeedbackProcess(callback, user, feedbackIDStr)
+	case strings.HasPrefix(data, "fb_unprocess_"):
+		feedbackIDStr := strings.TrimPrefix(data, "fb_unprocess_")
+		return h.handleFeedbackUnprocess(callback, user, feedbackIDStr)
+	case strings.HasPrefix(data, "fb_delete_"):
+		feedbackIDStr := strings.TrimPrefix(data, "fb_delete_")
+		return h.handleFeedbackDelete(callback, user, feedbackIDStr)
+	case strings.HasPrefix(data, "browse_active_feedbacks_"):
+		indexStr := strings.TrimPrefix(data, "browse_active_feedbacks_")
+		return h.handleBrowseActiveFeedbacks(callback, user, indexStr)
+	case strings.HasPrefix(data, "browse_archive_feedbacks_"):
+		indexStr := strings.TrimPrefix(data, "browse_archive_feedbacks_")
+		return h.handleBrowseArchiveFeedbacks(callback, user, indexStr)
+	case strings.HasPrefix(data, "browse_all_feedbacks_"):
+		indexStr := strings.TrimPrefix(data, "browse_all_feedbacks_")
+		return h.handleBrowseAllFeedbacks(callback, user, indexStr)
+	case strings.HasPrefix(data, "feedback_prev_"):
+		parts := strings.TrimPrefix(data, "feedback_prev_")
+		indexAndType := strings.Split(parts, "_")
+		if len(indexAndType) == 2 {
+			return h.handleFeedbackPrev(callback, user, indexAndType[0], indexAndType[1])
+		}
+		return nil
+	case strings.HasPrefix(data, "feedback_next_"):
+		parts := strings.TrimPrefix(data, "feedback_next_")
+		indexAndType := strings.Split(parts, "_")
+		if len(indexAndType) == 2 {
+			return h.handleFeedbackNext(callback, user, indexAndType[0], indexAndType[1])
+		}
+		return nil
+	case strings.HasPrefix(data, "feedback_back_"):
+		feedbackType := strings.TrimPrefix(data, "feedback_back_")
+		return h.handleFeedbackBack(callback, user, feedbackType)
+	case data == "show_active_feedbacks":
+		return h.handleShowActiveFeedbacks(callback, user)
+	case data == "show_archive_feedbacks":
+		return h.handleShowArchiveFeedbacks(callback, user)
+	case data == "show_all_feedbacks":
+		return h.handleShowAllFeedbacks(callback, user)
 	default:
 		return nil
 	}
@@ -875,6 +938,459 @@ func (h *TelegramHandler) handleFeedbackCommand(message *tgbotapi.Message, user 
 	return h.sendMessage(message.Chat.ID, text)
 }
 
+// Команда /feedbacks — просмотр отзывов (доступна только администраторам)
+func (h *TelegramHandler) handleFeedbacksCommand(message *tgbotapi.Message, user *models.User) error {
+	// Проверяем права администратора по Chat ID и username
+	isAdminByID := false
+	isAdminByUsername := false
+
+	// Проверяем по Chat ID
+	for _, adminID := range h.adminChatIDs {
+		if message.Chat.ID == adminID {
+			isAdminByID = true
+			break
+		}
+	}
+
+	// Проверяем по username
+	if user.Username != "" {
+		for _, adminUsername := range h.adminUsernames {
+			cleanUsername := strings.TrimPrefix(adminUsername, "@")
+			if user.Username == cleanUsername {
+				isAdminByUsername = true
+				break
+			}
+		}
+	}
+
+	if !isAdminByID && !isAdminByUsername {
+		log.Printf("❌ Отказано в доступе: пользователь %s (ID: %d, ChatID: %d) пытается использовать /feedbacks",
+			user.Username, user.ID, message.Chat.ID)
+		return h.sendMessage(message.Chat.ID, "❌ Данная команда доступна только администраторам бота.")
+	}
+
+	// Получаем все отзывы
+	feedbacks, err := h.service.GetAllFeedback()
+	if err != nil {
+		log.Printf("Ошибка получения отзывов: %v", err)
+		return h.sendMessage(message.Chat.ID, "❌ Ошибка получения отзывов")
+	}
+
+	if len(feedbacks) == 0 {
+		return h.sendMessage(message.Chat.ID, "📝 Отзывов пока нет")
+	}
+
+	// Группируем отзывы по содержимому и пользователю, чтобы убрать дубли
+	type feedbackKey struct {
+		userID       int64
+		feedbackText string
+	}
+	seen := make(map[feedbackKey][]map[string]interface{})
+	for _, fb := range feedbacks {
+		key := feedbackKey{
+			userID:       fb["telegram_id"].(int64),
+			feedbackText: fb["feedback_text"].(string),
+		}
+		seen[key] = append(seen[key], fb)
+	}
+
+	// Разделяем отзывы на обработанные и необработанные
+	var processedFeedbacks []map[string]interface{}
+	var unprocessedFeedbacks []map[string]interface{}
+
+	totalFeedbacks := len(seen)
+	processedCount := 0
+	unprocessedCount := 0
+	shortCount := 0
+	longCount := 0
+	contactCount := 0
+
+	for _, group := range seen {
+		// Берем наиболее свежий отзыв из группы
+		latest := group[0]
+		for _, fb := range group {
+			if fb["created_at"].(time.Time).After(latest["created_at"].(time.Time)) {
+				latest = fb
+			}
+		}
+
+		charCount := len([]rune(strings.ReplaceAll(latest["feedback_text"].(string), "\n", " ")))
+
+		// Определяем характеристики отзыва для статистики
+		if charCount < 50 {
+			shortCount++
+		} else if charCount > 200 {
+			longCount++
+		}
+
+		if latest["is_processed"].(bool) {
+			processedCount++
+			processedFeedbacks = append(processedFeedbacks, latest)
+		} else {
+			unprocessedCount++
+			unprocessedFeedbacks = append(unprocessedFeedbacks, latest)
+		}
+
+		// Подсчет контактов
+		if latest["contact_info"] != nil && latest["contact_info"].(string) != "" {
+			contactCount++
+		}
+	}
+
+	// Отправляем компактную статистику с кнопками управления
+	mediumCount := totalFeedbacks - shortCount - longCount
+
+	statsMessage := fmt.Sprintf(
+		"📊 Отзывы - Статистика:\n\n"+
+			"⏳ Обработка:\n"+
+			"- Всего отзывов: %d\n"+
+			"- 🆕 Активных (необработанных): %d\n"+
+			"- ✅ В архиве (обработанных): %d\n\n"+
+			"📏 По длине:\n"+
+			"- 📝 Короткие (< 50 симв.): %d\n"+
+			"- 📊 Средние (50-200 симв.): %d\n"+
+			"- 📖 Длинные (> 200 симв.): %d\n\n"+
+			"📞 С контактными данными: %d",
+		totalFeedbacks, unprocessedCount, processedCount,
+		shortCount, mediumCount, longCount, contactCount,
+	)
+
+	// Кнопки для интерактивного управления отзывами
+	var buttons [][]tgbotapi.InlineKeyboardButton
+	if unprocessedCount > 0 {
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData("🆕 Просмотреть активные "+fmt.Sprintf("(%d)", unprocessedCount), "browse_active_feedbacks_0"),
+		})
+	}
+	if processedCount > 0 {
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData("📚 Просмотреть архив "+fmt.Sprintf("(%d)", processedCount), "browse_archive_feedbacks_0"),
+		})
+	}
+	if len(seen) > 0 {
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData("📋 Просмотреть все "+fmt.Sprintf("(%d)", totalFeedbacks), "browse_all_feedbacks_0"),
+		})
+	}
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(buttons...)
+
+	msg := tgbotapi.NewMessage(message.Chat.ID, statsMessage)
+	msg.ReplyMarkup = keyboard
+	if _, err := h.bot.Send(msg); err != nil {
+		log.Printf("Ошибка отправки статистики: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// Вспомогательная функция для отправки списка отзывов
+func (h *TelegramHandler) sendFeedbackList(chatID int64, feedbackList []map[string]interface{}) error {
+	for _, feedback := range feedbackList {
+		if err := h.sendFeedbackItem(chatID, feedback); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Вспомогательная функция для отправки одного отзыва
+func (h *TelegramHandler) sendFeedbackItem(chatID int64, fb map[string]interface{}) error {
+	feedbackID := fb["id"].(int)
+	firstName := fb["first_name"].(string)
+	feedbackTextContent := strings.ReplaceAll(fb["feedback_text"].(string), "\n", " ")
+	charCount := len([]rune(feedbackTextContent))
+
+	// Информация об авторе
+	username := "–"
+	if fb["username"] != nil {
+		username = "@" + fb["username"].(string)
+	}
+
+	// Форматируем дату
+	createdAt := fb["created_at"].(time.Time)
+	dateStr := createdAt.Format("02.01.2006 15:04")
+
+	// Иконка статуса отзыва
+	statusIcon := "🏷️"
+	statusText := "Ожидает обработки"
+	if fb["is_processed"].(bool) {
+		statusIcon = "✅"
+		statusText = "Обработан"
+	}
+
+	// Иконка длины отзыва
+	charIcon := "📝"
+	if charCount < 50 {
+		charIcon = "💬"
+	} else if charCount < 200 {
+		charIcon = "📝"
+	} else {
+		charIcon = "📖"
+	}
+
+	// Контактная информация
+	contactStr := ""
+	if fb["contact_info"] != nil && fb["contact_info"].(string) != "" {
+		contactStr = fmt.Sprintf("\n🔗 <i>Контакты: %s</i>", fb["contact_info"].(string))
+	}
+
+	// Формируем полное объединенное сообщение
+	fullMessage := fmt.Sprintf(
+		"%s <b>%s</b> %s\n"+
+			"👤 <b>Автор:</b> %s\n"+
+			"📊 <b>Статус:</b> %s (%d символов)\n"+
+			"⏰ <b>Дата:</b> %s%s\n\n"+
+			"<b>📨 Содержание отзыва:</b>\n"+
+			"<i>%s</i>",
+		statusIcon, firstName, username,
+		statusText,
+		charIcon,
+		charCount,
+		dateStr,
+		contactStr,
+		feedbackTextContent,
+	)
+
+	// Создаем клавиатуру с кнопками управления
+	var buttons [][]tgbotapi.InlineKeyboardButton
+	if fb["is_processed"].(bool) {
+		buttons = [][]tgbotapi.InlineKeyboardButton{
+			{
+				tgbotapi.NewInlineKeyboardButtonData("🔄 Вернуть в обработку", fmt.Sprintf("fb_unprocess_%d", feedbackID)),
+				tgbotapi.NewInlineKeyboardButtonData("🗑️ Удалить", fmt.Sprintf("fb_delete_%d", feedbackID)),
+			},
+		}
+	} else {
+		buttons = [][]tgbotapi.InlineKeyboardButton{
+			{
+				tgbotapi.NewInlineKeyboardButtonData("✅ Обработан", fmt.Sprintf("fb_process_%d", feedbackID)),
+				tgbotapi.NewInlineKeyboardButtonData("🗑️ Удалить", fmt.Sprintf("fb_delete_%d", feedbackID)),
+			},
+		}
+	}
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(buttons...)
+
+	msg := tgbotapi.NewMessage(chatID, fullMessage)
+	msg.ParseMode = tgbotapi.ModeHTML
+	msg.ReplyMarkup = keyboard
+
+	if _, err := h.bot.Send(msg); err != nil {
+		log.Printf("Ошибка отправки отзыва ID %d: %v", feedbackID, err)
+		// Fallback без HTML
+		plainMessage := fmt.Sprintf(
+			"%s %s %s\n"+
+				"Автор: %s\n"+
+				"Статус: %s (%d символов)\n"+
+				"Дата: %s%s\n\n"+
+				"Содержание отзыва:\n%s",
+			statusIcon, firstName, username,
+			statusText,
+			charIcon,
+			charCount,
+			dateStr,
+			contactStr,
+			feedbackTextContent,
+		)
+		plainMsg := tgbotapi.NewMessage(chatID, plainMessage)
+		plainMsg.ReplyMarkup = keyboard
+		if _, plainErr := h.bot.Send(plainMsg); plainErr != nil {
+			log.Printf("Критичная ошибка отправки отзыва ID %d без HTML: %v", feedbackID, plainErr)
+			return plainErr
+		}
+	}
+	return nil
+}
+
+// === ОБРАБОТЧИКИ ВИДОВ ОТЗЫВОВ ===
+
+// handleShowActiveFeedbacks показывает только необработанные отзывы
+func (h *TelegramHandler) handleShowActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Получаем все отзывы
+	feedbacks, err := h.service.GetAllFeedback()
+	if err != nil {
+		log.Printf("Ошибка получения отзывов: %v", err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
+	}
+
+	if len(feedbacks) == 0 {
+		return h.sendMessage(callback.Message.Chat.ID, "📝 Отзывов пока нет")
+	}
+
+	// Группируем и фильтруем только необработанные отзывы
+	type feedbackKey struct {
+		userID       int64
+		feedbackText string
+	}
+	seen := make(map[feedbackKey][]map[string]interface{})
+	for _, fb := range feedbacks {
+		if !fb["is_processed"].(bool) { // Только необработанные
+			key := feedbackKey{
+				userID:       fb["telegram_id"].(int64),
+				feedbackText: fb["feedback_text"].(string),
+			}
+			seen[key] = append(seen[key], fb)
+		}
+	}
+
+	if len(seen) == 0 {
+		return h.sendMessage(callback.Message.Chat.ID, "🎉 Все отзывы обработаны!")
+	}
+
+	// Отправляем заголовок
+	headerMsg := tgbotapi.NewMessage(callback.Message.Chat.ID,
+		fmt.Sprintf("🏷️ <b>Необработанные отзывы (%d):</b>", len(seen)))
+	headerMsg.ParseMode = tgbotapi.ModeHTML
+	if _, err := h.bot.Send(headerMsg); err != nil {
+		log.Printf("Ошибка отправки заголовка активных отзывов: %v", err)
+	}
+
+	var activeFeedbacks []map[string]interface{}
+	for _, group := range seen {
+		latest := group[0]
+		for _, fb := range group {
+			if fb["created_at"].(time.Time).After(latest["created_at"].(time.Time)) {
+				latest = fb
+			}
+		}
+		activeFeedbacks = append(activeFeedbacks, latest)
+	}
+
+	return h.sendFeedbackList(callback.Message.Chat.ID, activeFeedbacks)
+}
+
+// handleShowArchiveFeedbacks показывает только обработанные отзывы
+func (h *TelegramHandler) handleShowArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Получаем все отзывы
+	feedbacks, err := h.service.GetAllFeedback()
+	if err != nil {
+		log.Printf("Ошибка получения отзывов: %v", err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
+	}
+
+	if len(feedbacks) == 0 {
+		return h.sendMessage(callback.Message.Chat.ID, "📝 Отзывов пока нет")
+	}
+
+	// Группируем и фильтруем только обработанные отзывы
+	type feedbackKey struct {
+		userID       int64
+		feedbackText string
+	}
+	seen := make(map[feedbackKey][]map[string]interface{})
+	for _, fb := range feedbacks {
+		if fb["is_processed"].(bool) { // Только обработанные
+			key := feedbackKey{
+				userID:       fb["telegram_id"].(int64),
+				feedbackText: fb["feedback_text"].(string),
+			}
+			seen[key] = append(seen[key], fb)
+		}
+	}
+
+	if len(seen) == 0 {
+		return h.sendMessage(callback.Message.Chat.ID, "📚 Архив пуст - нет обработанных отзывов")
+	}
+
+	// Отправляем заголовок
+	headerMsg := tgbotapi.NewMessage(callback.Message.Chat.ID,
+		fmt.Sprintf("📚 <b>Архив обработанных отзывов (%d):</b>", len(seen)))
+	headerMsg.ParseMode = tgbotapi.ModeHTML
+	if _, err := h.bot.Send(headerMsg); err != nil {
+		log.Printf("Ошибка отправки заголовка архива отзывов: %v", err)
+	}
+
+	var archivedFeedbacks []map[string]interface{}
+	for _, group := range seen {
+		latest := group[0]
+		for _, fb := range group {
+			if fb["created_at"].(time.Time).After(latest["created_at"].(time.Time)) {
+				latest = fb
+			}
+		}
+		archivedFeedbacks = append(archivedFeedbacks, latest)
+	}
+
+	return h.sendFeedbackList(callback.Message.Chat.ID, archivedFeedbacks)
+}
+
+// handleShowAllFeedbacks показывает все отзывы
+func (h *TelegramHandler) handleShowAllFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Получаем все отзывы
+	feedbacks, err := h.service.GetAllFeedback()
+	if err != nil {
+		log.Printf("Ошибка получения отзывов: %v", err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
+	}
+
+	if len(feedbacks) == 0 {
+		return h.sendMessage(callback.Message.Chat.ID, "📝 Отзывов пока нет")
+	}
+
+	// Группируем все отзывы
+	type feedbackKey struct {
+		userID       int64
+		feedbackText string
+	}
+	seen := make(map[feedbackKey][]map[string]interface{})
+	for _, fb := range feedbacks {
+		key := feedbackKey{
+			userID:       fb["telegram_id"].(int64),
+			feedbackText: fb["feedback_text"].(string),
+		}
+		seen[key] = append(seen[key], fb)
+	}
+
+	// Отправляем заголовок
+	totalCount := len(seen)
+	headerMsg := tgbotapi.NewMessage(callback.Message.Chat.ID,
+		fmt.Sprintf("📋 <b>Все отзывы (%d):</b>", totalCount))
+	headerMsg.ParseMode = tgbotapi.ModeHTML
+	if _, err := h.bot.Send(headerMsg); err != nil {
+		log.Printf("Ошибка отправки заголовка всех отзывов: %v", err)
+	}
+
+	var allFeedbacks []map[string]interface{}
+	for _, group := range seen {
+		latest := group[0]
+		for _, fb := range group {
+			if fb["created_at"].(time.Time).After(latest["created_at"].(time.Time)) {
+				latest = fb
+			}
+		}
+		allFeedbacks = append(allFeedbacks, latest)
+	}
+
+	return h.sendFeedbackList(callback.Message.Chat.ID, allFeedbacks)
+}
+
+// вспомогательная функция для сохранения состояния навигации отзывов
+func (h *TelegramHandler) getFeedbackNavigationState(userID int64, feedbackType string, currentIndex int) string {
+	return fmt.Sprintf("fb_nav_%d_%s_%d", userID, feedbackType, currentIndex)
+}
+
+// вспомогательная функция для извлечения состояния навигации
+func (h *TelegramHandler) parseFeedbackNavigationState(stateStr string) (userID int64, feedbackType string, currentIndex int) {
+	parts := strings.Split(stateStr, "_")
+	if len(parts) >= 4 && parts[0] == "fb" && parts[1] == "nav" {
+		userID, _ = strconv.ParseInt(parts[2], 10, 64)
+		feedbackType = parts[3]
+		if len(parts) >= 5 {
+			currentIndex, _ = strconv.Atoi(parts[4])
+		}
+	}
+	return
+}
+
+// Вспомогательная функция для расчета процентов
+func (h *TelegramHandler) calculatePercentage(part, total int) int {
+	if total == 0 {
+		return 0
+	}
+	return (part * 100) / total
+}
+
 // Команда /profile — показать профиль в любой момент.
 func (h *TelegramHandler) handleProfileCommand(message *tgbotapi.Message, user *models.User) error {
 	summary, err := h.service.BuildProfileSummary(user)
@@ -1303,4 +1819,747 @@ func (h *TelegramHandler) handleEditLevelLang(callback *tgbotapi.CallbackQuery, 
 	)
 	_, err := h.bot.Request(editMsg)
 	return err
+}
+
+// === ОБРАБОТЧИКИ СИСТЕМЫ ОБРАТНОЙ СВЯЗИ ===
+
+// handleFeedbackMessage обрабатывает отзыв пользователя
+func (h *TelegramHandler) handleFeedbackMessage(message *tgbotapi.Message, user *models.User) error {
+	feedbackText := message.Text
+
+	// Проверяем валидность отзыва
+	if len([]rune(feedbackText)) < 10 {
+		return h.handleFeedbackTooShort(message, user)
+	}
+	if len([]rune(feedbackText)) > 1000 {
+		return h.handleFeedbackTooLong(message, user)
+	}
+
+	// Проверяем наличие username
+	if user.Username == "" {
+		return h.handleFeedbackContactRequest(message, user, feedbackText)
+	}
+
+	// Логируем принятие отзыва
+	log.Printf("Отзыв принят: len=%d, has_username=%v", len([]rune(feedbackText)), user.Username != "")
+
+	// Сохраняем полный отзыв и отправляем уведомление
+	return h.handleFeedbackComplete(message, user, feedbackText, nil)
+}
+
+// handleFeedbackTooShort обрабатывает слишком короткий отзыв
+func (h *TelegramHandler) handleFeedbackTooShort(message *tgbotapi.Message, user *models.User) error {
+	feedbackText := message.Text
+	count := len([]rune(feedbackText))
+
+	errorText := fmt.Sprintf("%s\n\n%s",
+		h.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_too_short"),
+		h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "feedback_char_count", map[string]string{
+			"count": strconv.Itoa(count),
+		}),
+	)
+
+	return h.sendMessage(message.Chat.ID, errorText)
+}
+
+// handleFeedbackTooLong обрабатывает слишком длинный отзыв
+func (h *TelegramHandler) handleFeedbackTooLong(message *tgbotapi.Message, user *models.User) error {
+	feedbackText := message.Text
+	count := len([]rune(feedbackText))
+
+	errorText := fmt.Sprintf("%s\n\n%s",
+		h.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_too_long"),
+		h.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "feedback_char_count", map[string]string{
+			"count": strconv.Itoa(count),
+		}),
+	)
+
+	return h.sendMessage(message.Chat.ID, errorText)
+}
+
+// handleFeedbackContactRequest запрашивает контактные данные при отсутствии username
+func (h *TelegramHandler) handleFeedbackContactRequest(message *tgbotapi.Message, user *models.User, feedbackText string) error {
+	// Сохраняем отзыв во временном хранилище (в будущем можно добавить в redis/кэш)
+	// Пока просто переходим к следующему состоянию
+
+	// Обновляем состояние для ожидания контактных данных
+	err := h.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedbackContact)
+	if err != nil {
+		return err
+	}
+
+	// Запрашиваем контактные данные
+	contactText := h.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_request")
+	return h.sendMessage(message.Chat.ID, contactText)
+}
+
+// handleFeedbackContactMessage обрабатывает контактные данные пользователя
+func (h *TelegramHandler) handleFeedbackContactMessage(message *tgbotapi.Message, user *models.User) error {
+	contactInfo := strings.TrimSpace(message.Text)
+
+	// Валидируем контактные данные
+	if contactInfo == "" {
+		return h.sendMessage(message.Chat.ID,
+			h.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_placeholder"))
+	}
+
+	// Подтверждаем получение контактов
+	confirmedText := h.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_provided")
+	h.sendMessage(message.Chat.ID, confirmedText)
+
+	// Теперь нужно получить сохраненный отзыв пользователя
+	// Пока что используем временное решение - просим написать отзыв заново
+	// В будущем здесь будет получение из кэша
+
+	feedbackText := "Отзыв был сохранен в предыдущем шаге (требуется интеграция с кэшем)" // временное решение
+
+	return h.handleFeedbackComplete(message, user, feedbackText, &contactInfo)
+}
+
+// handleFeedbackComplete завершает процесс обратной связи
+func (h *TelegramHandler) handleFeedbackComplete(message *tgbotapi.Message, user *models.User, feedbackText string, contactInfo *string) error {
+	// Используем ID администраторов из обработчика
+	adminIDs := h.adminChatIDs
+
+	// Сохраняем отзыв через сервис
+	err := h.service.SaveUserFeedback(user.ID, feedbackText, contactInfo, adminIDs)
+	if err != nil {
+		log.Printf("Ошибка сохранения отзыва: %v", err)
+		// Используем локализацию для ошибки
+		errorText := h.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_error_generic")
+		if errorText == "feedback_error_generic" { // fallback в случае отсутствия перевода
+			errorText = "Произошла ошибка при сохранении отзыва. Попробуйте позже."
+		}
+		return h.sendMessage(message.Chat.ID, errorText)
+	}
+
+	// Отправляем подтверждение пользователю
+	successText := h.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_saved")
+	h.sendMessage(message.Chat.ID, successText)
+
+	// Обновляем состояние пользователя на активное
+	return h.service.DB.UpdateUserState(user.ID, models.StateActive)
+}
+
+// === ОБРАБОТЧИКИ КОНТРОЛЯ ОТЗЫВОВ ===
+
+// handleFeedbackProcess помечает отзыв как обработанный
+func (h *TelegramHandler) handleFeedbackProcess(callback *tgbotapi.CallbackQuery, user *models.User, feedbackIDStr string) error {
+	feedbackID, err := strconv.Atoi(feedbackIDStr)
+	if err != nil {
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка идентификатора отзыва")
+	}
+
+	// Обновляем статус отзыва как обработанный
+	err = h.service.UpdateFeedbackStatus(feedbackID, true)
+	if err != nil {
+		log.Printf("Ошибка обновления статуса отзыва %d: %v", feedbackID, err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка обновления статуса")
+	}
+
+	// Отправляем обновление администратору
+	confirmMsg := fmt.Sprintf("✅ Отзыв #%d отмечен как <b>обработанный</b>", feedbackID)
+	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, confirmMsg)
+	msg.ParseMode = tgbotapi.ModeHTML
+	if _, err := h.bot.Send(msg); err != nil {
+		log.Printf("Ошибка отправки подтверждения обработки: %v", err)
+	}
+
+	return nil
+}
+
+// handleFeedbackUnprocess возвращает отзыв в необработанный статус
+func (h *TelegramHandler) handleFeedbackUnprocess(callback *tgbotapi.CallbackQuery, user *models.User, feedbackIDStr string) error {
+	feedbackID, err := strconv.Atoi(feedbackIDStr)
+	if err != nil {
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка идентификатора отзыва")
+	}
+
+	// Возвращаем отзыв в необработанный статус
+	err = h.service.UpdateFeedbackStatus(feedbackID, false)
+	if err != nil {
+		log.Printf("Ошибка возврата отзыва в обработку %d: %v", feedbackID, err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка возврата статуса")
+	}
+
+	// Отправляем обновление администратору
+	confirmMsg := fmt.Sprintf("🔄 Отзыв #%d возвращен в <b>обработку</b>", feedbackID)
+	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, confirmMsg)
+	msg.ParseMode = tgbotapi.ModeHTML
+	if _, err := h.bot.Send(msg); err != nil {
+		log.Printf("Ошибка отправки подтверждения возврата: %v", err)
+	}
+
+	return nil
+}
+
+// handleFeedbackDelete удаляет отзыв из базы данных
+func (h *TelegramHandler) handleFeedbackDelete(callback *tgbotapi.CallbackQuery, user *models.User, feedbackIDStr string) error {
+	feedbackID, err := strconv.Atoi(feedbackIDStr)
+	if err != nil {
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка идентификатора отзыва")
+	}
+
+	// Удаляем отзыв
+	err = h.service.DeleteFeedback(feedbackID)
+	if err != nil {
+		log.Printf("Ошибка удаления отзыва %d: %v", feedbackID, err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка удаления отзыва")
+	}
+
+	// Отправляем подтверждение удаления
+	deleteMsg := fmt.Sprintf("🗑️ Отзыв #%d <b>удален</b>", feedbackID)
+	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, deleteMsg)
+	msg.ParseMode = tgbotapi.ModeHTML
+	if _, err := h.bot.Send(msg); err != nil {
+		log.Printf("Ошибка отправки подтверждения удаления: %v", err)
+	}
+
+	return nil
+}
+
+// showFeedbackStatisticsEdit показывает статистику отзывов с редактированием текущего сообщения
+func (h *TelegramHandler) showFeedbackStatisticsEdit(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Проверяем права администратора
+	isAdminByID := false
+	isAdminByUsername := false
+
+	for _, adminID := range h.adminChatIDs {
+		if callback.Message.Chat.ID == adminID {
+			isAdminByID = true
+			break
+		}
+	}
+
+	if user.Username != "" {
+		for _, adminUsername := range h.adminUsernames {
+			cleanUsername := strings.TrimPrefix(adminUsername, "@")
+			if user.Username == cleanUsername {
+				isAdminByUsername = true
+				break
+			}
+		}
+	}
+
+	if !isAdminByID && !isAdminByUsername {
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Данная команда доступна только администраторам бота.")
+	}
+
+	// Получаем все отзывы
+	feedbacks, err := h.service.GetAllFeedback()
+	if err != nil {
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
+	}
+
+	if len(feedbacks) == 0 {
+		editMsg := tgbotapi.NewEditMessageText(
+			callback.Message.Chat.ID,
+			callback.Message.MessageID,
+			"📝 Отзывов пока нет",
+		)
+		_, err := h.bot.Request(editMsg)
+		return err
+	}
+
+	// Статистика та же, что и в handleFeedbacksCommand
+	type feedbackKey struct {
+		userID       int64
+		feedbackText string
+	}
+	seen := make(map[feedbackKey][]map[string]interface{})
+	for _, fb := range feedbacks {
+		key := feedbackKey{
+			userID:       fb["telegram_id"].(int64),
+			feedbackText: fb["feedback_text"].(string),
+		}
+		seen[key] = append(seen[key], fb)
+	}
+
+	var processedFeedbacks []map[string]interface{}
+	var unprocessedFeedbacks []map[string]interface{}
+
+	totalFeedbacks := len(seen)
+	processedCount := 0
+	unprocessedCount := 0
+	shortCount := 0
+	longCount := 0
+	contactCount := 0
+
+	for _, group := range seen {
+		latest := group[0]
+		for _, fb := range group {
+			if fb["created_at"].(time.Time).After(latest["created_at"].(time.Time)) {
+				latest = fb
+			}
+		}
+
+		charCount := len([]rune(strings.ReplaceAll(latest["feedback_text"].(string), "\n", " ")))
+
+		if charCount < 50 {
+			shortCount++
+		} else if charCount > 200 {
+			longCount++
+		}
+
+		if latest["is_processed"].(bool) {
+			processedCount++
+			processedFeedbacks = append(processedFeedbacks, latest)
+		} else {
+			unprocessedCount++
+			unprocessedFeedbacks = append(unprocessedFeedbacks, latest)
+		}
+
+		if latest["contact_info"] != nil && latest["contact_info"].(string) != "" {
+			contactCount++
+		}
+	}
+
+	mediumCount := totalFeedbacks - shortCount - longCount
+
+	statsMessage := fmt.Sprintf(
+		"📊 Отзывы - Статистика:\n\n"+
+			"⏳ Обработка:\n"+
+			"- Всего отзывов: %d\n"+
+			"- 🆕 Активных (необработанных): %d\n"+
+			"- ✅ В архиве (обработанных): %d\n\n"+
+			"📏 По длине:\n"+
+			"- 📝 Короткие (< 50 симв.): %d\n"+
+			"- 📊 Средние (50-200 симв.): %d\n"+
+			"- 📖 Длинные (> 200 симв.): %d\n\n"+
+			"📞 С контактными данными: %d",
+		totalFeedbacks, unprocessedCount, processedCount,
+		shortCount, mediumCount, longCount, contactCount,
+	)
+
+	// Кнопки управления отзывами
+	var buttons [][]tgbotapi.InlineKeyboardButton
+	if unprocessedCount > 0 {
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData("🆕 Просмотреть активные "+fmt.Sprintf("(%d)", unprocessedCount), "browse_active_feedbacks_0"),
+		})
+	}
+	if processedCount > 0 {
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData("📚 Просмотреть архив "+fmt.Sprintf("(%d)", processedCount), "browse_archive_feedbacks_0"),
+		})
+	}
+	if len(seen) > 0 {
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData("📋 Просмотреть все "+fmt.Sprintf("(%d)", totalFeedbacks), "browse_all_feedbacks_0"),
+		})
+	}
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(buttons...)
+
+	// Редактируем текушее сообщение
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		statsMessage,
+		keyboard,
+	)
+
+	_, err = h.bot.Request(editMsg)
+	return err
+}
+
+// === ОБРАБОТЧИКИ ИНТЕРАКТИВНОГО ПРОСМОТРА ОТЗЫВОВ ===
+
+// handleBrowseActiveFeedbacks показывает активные отзывы в интерактивном режиме с редактированием
+func (h *TelegramHandler) handleBrowseActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
+	index, err := strconv.Atoi(indexStr)
+	if err != nil {
+		log.Printf("Ошибка парсинга индекса: %v", err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка индекса")
+	}
+
+	// Получаем активные отзывы
+	feedbacks, err := h.service.GetAllFeedback()
+	if err != nil {
+		log.Printf("Ошибка получения отзывов: %v", err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
+	}
+
+	// Фильтруем только необработанные отзывы
+	var activeFeedbacks []map[string]interface{}
+	type feedbackKey struct {
+		userID       int64
+		feedbackText string
+	}
+	seen := make(map[feedbackKey][]map[string]interface{})
+	for _, fb := range feedbacks {
+		if !fb["is_processed"].(bool) {
+			key := feedbackKey{
+				userID:       fb["telegram_id"].(int64),
+				feedbackText: fb["feedback_text"].(string),
+			}
+			seen[key] = append(seen[key], fb)
+		}
+	}
+
+	for _, group := range seen {
+		for _, fb := range group {
+			activeFeedbacks = append(activeFeedbacks, fb)
+			break
+		}
+	}
+
+	if len(activeFeedbacks) == 0 {
+		return h.sendMessage(callback.Message.Chat.ID, "🎉 Все отзывы обработаны!")
+	}
+
+	// Проверяем границы
+	if index < 0 || index >= len(activeFeedbacks) {
+		index = 0
+	}
+
+	// Показываем текущий отзыв с редактированием текущего сообщения
+	return h.showFeedbackItemWithNavigationEdit(callback, activeFeedbacks[index], index, len(activeFeedbacks), "active")
+}
+
+// handleBrowseArchiveFeedbacks показывает обработанные отзывы в интерактивном режиме
+func (h *TelegramHandler) handleBrowseArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
+	index, err := strconv.Atoi(indexStr)
+	if err != nil {
+		log.Printf("Ошибка парсинга индекса: %v", err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка индекса")
+	}
+
+	// Получаем обработанные отзывы
+	feedbacks, err := h.service.GetAllFeedback()
+	if err != nil {
+		log.Printf("Ошибка получения отзывов: %v", err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
+	}
+
+	// Фильтруем только обработанные отзывы
+	var archivedFeedbacks []map[string]interface{}
+	type feedbackKey struct {
+		userID       int64
+		feedbackText string
+	}
+	seen := make(map[feedbackKey][]map[string]interface{})
+	for _, fb := range feedbacks {
+		if fb["is_processed"].(bool) {
+			key := feedbackKey{
+				userID:       fb["telegram_id"].(int64),
+				feedbackText: fb["feedback_text"].(string),
+			}
+			seen[key] = append(seen[key], fb)
+		}
+	}
+
+	for _, group := range seen {
+		for _, fb := range group {
+			archivedFeedbacks = append(archivedFeedbacks, fb)
+			break
+		}
+	}
+
+	if len(archivedFeedbacks) == 0 {
+		return h.sendMessage(callback.Message.Chat.ID, "📚 Архив пуст - нет обработанных отзывов")
+	}
+
+	// Проверяем границы
+	if index < 0 || index >= len(archivedFeedbacks) {
+		index = 0
+	}
+
+	// Показываем текущий отзыв с редактированием текущего сообщения
+	return h.showFeedbackItemWithNavigationEdit(callback, archivedFeedbacks[index], index, len(archivedFeedbacks), "archive")
+}
+
+// handleBrowseAllFeedbacks показывает все отзывы в интерактивном режиме
+func (h *TelegramHandler) handleBrowseAllFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
+	index, err := strconv.Atoi(indexStr)
+	if err != nil {
+		log.Printf("Ошибка парсинга индекса: %v", err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка индекса")
+	}
+
+	// Получаем все отзывы
+	feedbacks, err := h.service.GetAllFeedback()
+	if err != nil {
+		log.Printf("Ошибка получения отзывов: %v", err)
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
+	}
+
+	if len(feedbacks) == 0 {
+		return h.sendMessage(callback.Message.Chat.ID, "📝 Отзывов пока нет")
+	}
+
+	// Проверяем границы
+	if index < 0 || index >= len(feedbacks) {
+		index = 0
+	}
+
+	// Показываем текущий отзыв с редактированием текущего сообщения
+	return h.showFeedbackItemWithNavigationEdit(callback, feedbacks[index], index, len(feedbacks), "all")
+}
+
+// showFeedbackItemWithNavigation показывает отзыв с кнопками навигации
+func (h *TelegramHandler) showFeedbackItemWithNavigation(chatID int64, fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) error {
+	feedbackID := fb["id"].(int)
+	firstName := fb["first_name"].(string)
+	feedbackTextContent := strings.ReplaceAll(fb["feedback_text"].(string), "\n", " ")
+	charCount := len([]rune(feedbackTextContent))
+
+	// Информация об авторе
+	username := "–"
+	if fb["username"] != nil {
+		username = "@" + fb["username"].(string)
+	}
+
+	// Форматируем дату
+	createdAt := fb["created_at"].(time.Time)
+	dateStr := createdAt.Format("02.01.2006 15:04")
+
+	// Иконка статуса отзыва
+	statusIcon := "🏷️"
+	statusText := "Ожидает обработки"
+	if fb["is_processed"].(bool) {
+		statusIcon = "✅"
+		statusText = "Обработан"
+	}
+
+	// Иконка длины отзыва
+	charIcon := "📝"
+	if charCount < 50 {
+		charIcon = "💬"
+	} else if charCount < 200 {
+		charIcon = "📝"
+	} else {
+		charIcon = "📖"
+	}
+
+	// Контактная информация
+	contactStr := ""
+	if fb["contact_info"] != nil && fb["contact_info"].(string) != "" {
+		contactStr = fmt.Sprintf("\n🔗 <i>Контакты: %s</i>", fb["contact_info"].(string))
+	}
+
+	// Определим тип списка для заголовка
+	headerText := ""
+	switch feedbackType {
+	case "active":
+		headerText = fmt.Sprintf("🆕 <b>Активные отзывы (%d/%d)</b>", currentIndex+1, totalCount)
+	case "archive":
+		headerText = fmt.Sprintf("📚 <b>Архив (%d/%d)</b>", currentIndex+1, totalCount)
+	case "all":
+		headerText = fmt.Sprintf("📋 <b>Все отзывы (%d/%d)</b>", currentIndex+1, totalCount)
+	}
+
+	// Формируем полное объединенное сообщение
+	fullMessage := fmt.Sprintf("%s\n\n%s <b>%s</b> %s\n"+
+		"👤 <b>Автор:</b> %s\n"+
+		"📊 <b>Статус:</b> %s (%d символов)\n"+
+		"⏰ <b>Дата:</b> %s%s\n\n"+
+		"<b>📨 Содержание отзыва:</b>\n"+
+		"<i>%s</i>",
+		headerText, statusIcon, firstName, username,
+		statusText,
+		charIcon,
+		charCount,
+		dateStr,
+		contactStr,
+		feedbackTextContent,
+	)
+
+	// Создаем клавиатуру навигации
+	var buttons [][]tgbotapi.InlineKeyboardButton
+
+	// Кнопки управления отзывом
+	actionRow := []tgbotapi.InlineKeyboardButton{}
+	if fb["is_processed"].(bool) {
+		actionRow = append(actionRow,
+			tgbotapi.NewInlineKeyboardButtonData("🔄 Вернуть в обработку", fmt.Sprintf("fb_unprocess_%d", feedbackID)),
+			tgbotapi.NewInlineKeyboardButtonData("🗑️ Удалить", fmt.Sprintf("fb_delete_%d", feedbackID)),
+		)
+	} else {
+		actionRow = append(actionRow,
+			tgbotapi.NewInlineKeyboardButtonData("✅ Обработан", fmt.Sprintf("fb_process_%d", feedbackID)),
+			tgbotapi.NewInlineKeyboardButtonData("🗑️ Удалить", fmt.Sprintf("fb_delete_%d", feedbackID)),
+		)
+	}
+	buttons = append(buttons, actionRow)
+
+	// Кнопки навигации
+	navRow := []tgbotapi.InlineKeyboardButton{}
+	if currentIndex > 0 {
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("⬅️ Предыдущий", fmt.Sprintf("feedback_prev_%d_%s", currentIndex, feedbackType)))
+	}
+	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("🏠 К стат-тике", fmt.Sprintf("feedback_back_%s", feedbackType)))
+	if currentIndex < totalCount-1 {
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("Следующий ➡️", fmt.Sprintf("feedback_next_%d_%s", currentIndex, feedbackType)))
+	}
+	buttons = append(buttons, navRow)
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(buttons...)
+
+	msg := tgbotapi.NewMessage(chatID, fullMessage)
+	msg.ParseMode = tgbotapi.ModeHTML
+	msg.ReplyMarkup = keyboard
+
+	_, err := h.bot.Send(msg)
+	return err
+}
+
+// showFeedbackItemWithNavigationEdit показывает отзыв с кнопками навигации с редактированием текущего сообщения
+func (h *TelegramHandler) showFeedbackItemWithNavigationEdit(callback *tgbotapi.CallbackQuery, fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) error {
+	feedbackID := fb["id"].(int)
+	firstName := fb["first_name"].(string)
+	feedbackTextContent := strings.ReplaceAll(fb["feedback_text"].(string), "\n", " ")
+	charCount := len([]rune(feedbackTextContent))
+
+	// Информация об авторе
+	username := "–"
+	if fb["username"] != nil {
+		username = "@" + fb["username"].(string)
+	}
+
+	// Форматируем дату
+	createdAt := fb["created_at"].(time.Time)
+	dateStr := createdAt.Format("02.01.2006 15:04")
+
+	// Иконка статуса отзыва
+	statusIcon := "🏷️"
+	statusText := "Ожидает обработки"
+	if fb["is_processed"].(bool) {
+		statusIcon = "✅"
+		statusText = "Обработан"
+	}
+
+	// Иконка длины отзыва
+	charIcon := "📝"
+	if charCount < 50 {
+		charIcon = "💬"
+	} else if charCount < 200 {
+		charIcon = "📝"
+	} else {
+		charIcon = "📖"
+	}
+
+	// Контактная информация
+	contactStr := ""
+	if fb["contact_info"] != nil && fb["contact_info"].(string) != "" {
+		contactStr = fmt.Sprintf("\n🔗 <i>Контакты: %s</i>", fb["contact_info"].(string))
+	}
+
+	// Определим тип списка для заголовка
+	headerText := ""
+	switch feedbackType {
+	case "active":
+		headerText = fmt.Sprintf("🆕 <b>Активные отзывы (%d/%d)</b>", currentIndex+1, totalCount)
+	case "archive":
+		headerText = fmt.Sprintf("📚 <b>Архив (%d/%d)</b>", currentIndex+1, totalCount)
+	case "all":
+		headerText = fmt.Sprintf("📋 <b>Все отзывы (%d/%d)</b>", currentIndex+1, totalCount)
+	}
+
+	// Формируем полное объединенное сообщение
+	fullMessage := fmt.Sprintf("%s\n\n%s <b>%s</b> %s\n"+
+		"👤 <b>Автор:</b> %s\n"+
+		"📊 <b>Статус:</b> %s (%d символов)\n"+
+		"⏰ <b>Дата:</b> %s%s\n\n"+
+		"<b>📨 Содержание отзыва:</b>\n"+
+		"<i>%s</i>",
+		headerText, statusIcon, firstName, username,
+		statusText,
+		charIcon,
+		charCount,
+		dateStr,
+		contactStr,
+		feedbackTextContent,
+	)
+
+	// Создаем клавиатуру навигации
+	var buttons [][]tgbotapi.InlineKeyboardButton
+
+	// Кнопки управления отзывом
+	actionRow := []tgbotapi.InlineKeyboardButton{}
+	if fb["is_processed"].(bool) {
+		actionRow = append(actionRow,
+			tgbotapi.NewInlineKeyboardButtonData("🔄 Вернуть в обработку", fmt.Sprintf("fb_unprocess_%d", feedbackID)),
+			tgbotapi.NewInlineKeyboardButtonData("🗑️ Удалить", fmt.Sprintf("fb_delete_%d", feedbackID)),
+		)
+	} else {
+		actionRow = append(actionRow,
+			tgbotapi.NewInlineKeyboardButtonData("✅ Обработан", fmt.Sprintf("fb_process_%d", feedbackID)),
+			tgbotapi.NewInlineKeyboardButtonData("🗑️ Удалить", fmt.Sprintf("fb_delete_%d", feedbackID)),
+		)
+	}
+	buttons = append(buttons, actionRow)
+
+	// Кнопки навигации
+	navRow := []tgbotapi.InlineKeyboardButton{}
+	if currentIndex > 0 {
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("⬅️ Предыдущий", fmt.Sprintf("feedback_prev_%d_%s", currentIndex, feedbackType)))
+	}
+	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("🏠 К стат-тике", fmt.Sprintf("feedback_back_%s", feedbackType)))
+	if currentIndex < totalCount-1 {
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("Следующий ➡️", fmt.Sprintf("feedback_next_%d_%s", currentIndex, feedbackType)))
+	}
+	buttons = append(buttons, navRow)
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(buttons...)
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		fullMessage,
+		keyboard,
+	)
+	editMsg.ParseMode = tgbotapi.ModeHTML
+
+	_, err := h.bot.Request(editMsg)
+	return err
+}
+
+// handleFeedbackPrev переходит к предыдущему отзыву
+func (h *TelegramHandler) handleFeedbackPrev(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string, feedbackType string) error {
+	currentIndex, err := strconv.Atoi(indexStr)
+	if err != nil {
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка индекса")
+	}
+
+	newIndex := currentIndex - 1
+	if newIndex < 0 {
+		newIndex = 0
+	}
+
+	switch feedbackType {
+	case "active":
+		return h.handleBrowseActiveFeedbacks(callback, user, strconv.Itoa(newIndex))
+	case "archive":
+		return h.handleBrowseArchiveFeedbacks(callback, user, strconv.Itoa(newIndex))
+	case "all":
+		return h.handleBrowseAllFeedbacks(callback, user, strconv.Itoa(newIndex))
+	default:
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Неизвестный тип отзывов")
+	}
+}
+
+// handleFeedbackNext переходит к следующему отзыву
+func (h *TelegramHandler) handleFeedbackNext(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string, feedbackType string) error {
+	currentIndex, err := strconv.Atoi(indexStr)
+	if err != nil {
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Ошибка индекса")
+	}
+
+	newIndex := currentIndex + 1
+
+	switch feedbackType {
+	case "active":
+		return h.handleBrowseActiveFeedbacks(callback, user, strconv.Itoa(newIndex))
+	case "archive":
+		return h.handleBrowseArchiveFeedbacks(callback, user, strconv.Itoa(newIndex))
+	case "all":
+		return h.handleBrowseAllFeedbacks(callback, user, strconv.Itoa(newIndex))
+	default:
+		return h.sendMessage(callback.Message.Chat.ID, "❌ Неизвестный тип отзывов")
+	}
+}
+
+// handleFeedbackBack возвращает к статистике отзывов с редактированием текущего сообщения
+func (h *TelegramHandler) handleFeedbackBack(callback *tgbotapi.CallbackQuery, user *models.User, feedbackType string) error {
+	return h.showFeedbackStatisticsEdit(callback, user)
 }

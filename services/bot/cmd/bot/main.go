@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 
@@ -41,9 +42,27 @@ func main() {
 
 	// Telegram Bot
 	if cfg.EnableTelegram && cfg.TelegramToken != "" {
-		telegramBot, err := telegram.NewTelegramBot(cfg.TelegramToken, db, cfg.Debug)
+		// Используем usernames, прочитанные из конфигурации (только из .env файла)
+		// Добавляем @ перед username'ами для полной совместимости
+		var adminInputs []string
+		for _, username := range cfg.AdminUsernames {
+			adminInputs = append(adminInputs, "@"+username)
+		}
+		// Добавляем также числовые ID из конфигурации
+		for _, chatID := range cfg.AdminChatIDs {
+			adminInputs = append(adminInputs, strconv.FormatInt(chatID, 10))
+		}
+
+		telegramBot, err := telegram.NewTelegramBotWithUsernames(cfg.TelegramToken, db, cfg.Debug, adminInputs)
 		if err != nil {
 			log.Fatalf("Failed to create Telegram bot: %v", err)
+		}
+
+		// Связываем бота с сервисом для отправки уведомлений о новых отзывах
+		service := telegramBot.GetService()
+		if service != nil {
+			service.SetFeedbackNotificationFunc(telegramBot.SendFeedbackNotification)
+			log.Printf("Связал функцию уведомлений с сервисом отзывов")
 		}
 
 		bots = append(bots, telegramBot)
@@ -56,7 +75,7 @@ func main() {
 			}
 		}()
 
-		log.Println("Telegram bot started")
+		log.Printf("Telegram bot started with %d admin users", telegramBot.GetAdminCount())
 	}
 
 	// Будущие боты (Discord, etc)

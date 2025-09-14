@@ -192,3 +192,144 @@ func (db *DB) ResetUserProfile(userID int) error {
 
 	return tx.Commit()
 }
+
+// Методы работы с отзывами пользователей
+
+// SaveUserFeedback сохраняет отзыв пользователя в базу данных
+func (db *DB) SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error {
+	query := `
+        INSERT INTO user_feedback (user_id, feedback_text, contact_info, created_at, is_processed)
+        VALUES ($1, $2, $3, NOW(), false)
+    `
+
+	_, err := db.conn.Exec(query, userID, feedbackText, contactInfo)
+	return err
+}
+
+// GetUserFeedbackByUserID получает отзывы пользователя
+func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, error) {
+	query := `
+        SELECT id, feedback_text, contact_info, created_at, is_processed, admin_response
+        FROM user_feedback
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+    `
+
+	rows, err := db.conn.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var feedbacks []map[string]interface{}
+	for rows.Next() {
+		var (
+			id            int
+			feedbackText  string
+			contactInfo   sql.NullString
+			createdAt     sql.NullTime
+			isProcessed   bool
+			adminResponse sql.NullString
+		)
+
+		err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &isProcessed, &adminResponse)
+		if err != nil {
+			continue // Пропускаем ошибочные записи
+		}
+
+		feedback := map[string]interface{}{
+			"id":            id,
+			"feedback_text": feedbackText,
+			"created_at":    createdAt.Time,
+			"is_processed":  isProcessed,
+		}
+
+		if contactInfo.Valid {
+			feedback["contact_info"] = contactInfo.String
+		} else {
+			feedback["contact_info"] = nil
+		}
+
+		if adminResponse.Valid {
+			feedback["admin_response"] = adminResponse.String
+		} else {
+			feedback["admin_response"] = nil
+		}
+
+		feedbacks = append(feedbacks, feedback)
+	}
+
+	return feedbacks, nil
+}
+
+// GetUnprocessedFeedback получает все необработанные отзывы для администрирования
+func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
+	query := `
+        SELECT uf.id, uf.feedback_text, uf.contact_info, uf.created_at,
+               u.username, u.telegram_id, u.first_name
+        FROM user_feedback uf
+        JOIN users u ON uf.user_id = u.id
+        WHERE uf.is_processed = false
+        ORDER BY uf.created_at ASC
+    `
+
+	rows, err := db.conn.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var feedbacks []map[string]interface{}
+	for rows.Next() {
+		var (
+			id           int
+			feedbackText string
+			contactInfo  sql.NullString
+			createdAt    sql.NullTime
+			username     sql.NullString
+			telegramID   int64
+			firstName    string
+		)
+
+		err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &username, &telegramID, &firstName)
+		if err != nil {
+			continue // Пропускаем ошибочные записи
+		}
+
+		feedback := map[string]interface{}{
+			"id":            id,
+			"feedback_text": feedbackText,
+			"created_at":    createdAt.Time,
+			"telegram_id":   telegramID,
+			"first_name":    firstName,
+		}
+
+		if username.Valid {
+			feedback["username"] = username.String
+		} else {
+			feedback["username"] = nil
+		}
+
+		if contactInfo.Valid {
+			feedback["contact_info"] = contactInfo.String
+		} else {
+			feedback["contact_info"] = nil
+		}
+
+		feedbacks = append(feedbacks, feedback)
+	}
+
+	return feedbacks, nil
+}
+
+// MarkFeedbackProcessed помечает отзыв как обработанный и добавляет ответ администратора
+func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
+	query := `
+        UPDATE user_feedback
+        SET is_processed = true, admin_response = $1
+        WHERE id = $2
+    `
+
+	_, err := db.conn.Exec(query, adminResponse, feedbackID)
+	return err
+}
