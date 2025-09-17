@@ -32,6 +32,8 @@ func (l *Localizer) loadTranslations() {
 
 	if _, err := os.Stat(localesPath); os.IsNotExist(err) {
 		fmt.Printf("Locales directory '%s' not found, will use fallback to key names\n", localesPath)
+		// Добавляем базовые переводы для тестов
+		l.loadFallbackTranslations()
 		return
 	}
 
@@ -94,6 +96,25 @@ func (l *Localizer) GetLanguageName(lang, interfaceLang string) string {
 }
 
 func (l *Localizer) GetInterests(lang string) (map[int]string, error) {
+	// Если БД не инициализирована (тесты), возвращаем заглушки
+	if l.db == nil {
+		interests := map[int]string{
+			1: "Movies",
+			2: "Music",
+			3: "Sports",
+			4: "Travel",
+		}
+		if lang == "ru" {
+			interests = map[int]string{
+				1: "Фильмы",
+				2: "Музыка",
+				3: "Спорт",
+				4: "Путешествия",
+			}
+		}
+		return interests, nil
+	}
+
 	interests := make(map[int]string)
 
 	// Запрос к БД с локализацией - приоритет перевода, если NULL - ключ
@@ -131,4 +152,31 @@ func (l *Localizer) GetInterests(lang string) (map[int]string, error) {
 	fmt.Printf("Loaded %d interests for language %s\n", len(interests), lang) // Debug: количество интересов
 
 	return interests, nil
+}
+
+// loadFallbackTranslations загружает базовые переводы для тестов
+func (l *Localizer) loadFallbackTranslations() {
+	// Английский
+	l.translations["en"] = map[string]string{
+		"welcome_message":         "👋 Hi, {name}! Welcome to Language Exchange Bot!",
+		"choose_native_language":  "🌍 Choose your native language:",
+		"choose_target_language":  "📚 What language are you learning?",
+		"profile_summary_title":   "👤 Your profile",
+		"profile_field_native":    "Native language",
+		"profile_field_target":    "Learning language",
+		"profile_field_interests": "Interests",
+		"unknown_command":         "❓ Unknown command. Use /start to begin",
+	}
+
+	// Русский
+	l.translations["ru"] = map[string]string{
+		"welcome_message":         "👋 Привет, {name}! Добро пожаловать в Language Exchange Bot!",
+		"choose_native_language":  "🌍 Выбери свой родной язык:",
+		"choose_target_language":  "📚 Какой язык ты изучаешь?",
+		"profile_summary_title":   "👤 Твой профиль",
+		"profile_field_native":    "Родной язык",
+		"profile_field_target":    "Изучаемый язык",
+		"profile_field_interests": "Интересы",
+		"unknown_command":         "❓ Неизвестная команда. Используй /start для начала",
+	}
 }

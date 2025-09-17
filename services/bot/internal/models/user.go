@@ -37,4 +37,5 @@ type User struct {
 	ProfileCompletionLevel int       `db:"profile_completion_level"`
 	CreatedAt              time.Time `db:"created_at"`
 	UpdatedAt              time.Time `db:"updated_at"`
+	Interests              []int     `db:"-"` // Не храним в БД, загружаем отдельно
 }

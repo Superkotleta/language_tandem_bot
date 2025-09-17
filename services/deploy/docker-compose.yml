@@ -48,6 +48,9 @@ services:
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
       DATABASE_URL: ${DATABASE_URL}
       DEBUG: ${DEBUG:-false}
+      ADMIN_CHAT_IDS: ${ADMIN_CHAT_IDS}
+      ADMIN_USERNAMES: ${ADMIN_USERNAMES}
+      LOCALES_DIR: ${LOCALES_DIR:-./locales}
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,6 +59,44 @@ services:
     restart: unless-stopped
     stdin_open: true
     tty: true
+
+  profile:
+    build:
+      context: ../profile
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DB_SCHEMA: ${DB_SCHEMA:-profile}
+      MIGRATIONS_DIR: ${MIGRATIONS_DIR:-/migrations/profile}
+      HTTP_PORT: ${HTTP_PORT:-8081}
+      DEBUG: ${DEBUG:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  matcher:
+    build:
+      context: ../matcher
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DB_SCHEMA: ${DB_SCHEMA:-matching}
+      MIGRATIONS_DIR: ${MIGRATIONS_DIR:-/migrations/matching}
+      HTTP_PORT: ${MATCHER_HTTP_PORT:-8082}
+      DEBUG: ${DEBUG:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:

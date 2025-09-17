@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 
 	"language-exchange-bot/internal/core"
@@ -47,7 +46,7 @@ func NewTelegramBot(token string, db *database.DB, debug bool, adminChatIDs []in
 }
 
 // NewTelegramBotWithUsernames создает бота с поддержкой usernames администраторов
-func NewTelegramBotWithUsernames(token string, db *database.DB, debug bool, adminInputs []string) (*TelegramBot, error) {
+func NewTelegramBotWithUsernames(token string, db *database.DB, debug bool, adminUsernames []string) (*TelegramBot, error) {
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create telegram bot: %w", err)
@@ -58,45 +57,39 @@ func NewTelegramBotWithUsernames(token string, db *database.DB, debug bool, admi
 		api:            bot,
 		service:        core.NewBotService(db),
 		debug:          debug,
-		adminChatIDs:   make([]int64, 0),
+		adminChatIDs:   make([]int64, 0), // Будет установлен позже через SetAdminChatIDs
 		adminUsernames: make([]string, 0),
 	}
 
-	// Обрабатываем usernames (работаем с ними напрямую без разрешения)
-	for _, adminInput := range adminInputs {
-		adminInput = strings.TrimSpace(adminInput)
-		if adminInput == "" {
+	// Обрабатываем usernames для проверки прав
+	for _, username := range adminUsernames {
+		username = strings.TrimSpace(username)
+		if username == "" {
 			continue
 		}
 
-		if strings.HasPrefix(adminInput, "@") {
-			// Это username - сохраняем для отправки по @username
-			tgBot.adminUsernames = append(tgBot.adminUsernames, adminInput)
-			log.Printf("Добавлен администратор: %s", adminInput)
-		} else {
-			// Это числовой ID - добавляем как обычно
-			chatID, err := strconv.ParseInt(adminInput, 10, 64)
-			if err == nil {
-				tgBot.adminChatIDs = append(tgBot.adminChatIDs, chatID)
-				log.Printf("Использован готовый Chat ID: %d", chatID)
-			} else {
-				log.Printf("Неверный формат администратора: %s", adminInput)
-			}
+		// Убираем @ если есть
+		if strings.HasPrefix(username, "@") {
+			username = strings.TrimPrefix(username, "@")
 		}
+
+		tgBot.adminUsernames = append(tgBot.adminUsernames, username)
+		log.Printf("Добавлен администратор для проверки прав: @%s", username)
 	}
 
-	totalAdmins := len(tgBot.adminChatIDs) + len(tgBot.adminUsernames)
-	if totalAdmins == 0 {
-		log.Println("Предупреждение: не удалось настроить ни одного администратора")
+	if len(tgBot.adminUsernames) == 0 {
+		log.Println("Предупреждение: не настроено ни одного администратора для проверки прав")
 	}
 
-	log.Printf("Бот настроен с %d администраторами (%d по ID, %d по username)",
-		totalAdmins, len(tgBot.adminChatIDs), len(tgBot.adminUsernames))
+	log.Printf("Бот настроен с %d администраторами для проверки прав", len(tgBot.adminUsernames))
 	return tgBot, nil
 }
 
 // SendFeedbackNotification отправляет уведомление администраторам о новом отзыве
 func (tb *TelegramBot) SendFeedbackNotification(feedbackData map[string]interface{}) error {
+	log.Printf("Отправляем уведомление о новом отзыве администраторам...")
+	log.Printf("Администраторы по ID: %v", tb.adminChatIDs)
+	log.Printf("Администраторы по username: %v", tb.adminUsernames)
 	// Формируем сообщение для администраторов
 	adminMsg := fmt.Sprintf(`
 📝 Новый отзыв от пользователя:
@@ -126,36 +119,21 @@ func (tb *TelegramBot) SendFeedbackNotification(feedbackData map[string]interfac
 	}
 
 	// Отправляем сообщение всем администраторам по ID
+	log.Printf("Отправляем уведомления %d администраторам по ID", len(tb.adminChatIDs))
 	for _, adminID := range tb.adminChatIDs {
 		msg := tgbotapi.NewMessage(adminID, adminMsg)
 		if _, err := tb.api.Send(msg); err != nil {
 			log.Printf("Ошибка отправки уведомления администратору %d: %v", adminID, err)
-		}
-	}
-
-	// Отправляем сообщение всем администраторам по username
-	for _, username := range tb.adminUsernames {
-		// Убираем @ из username перед отправкой
-		cleanUsername := strings.TrimPrefix(username, "@")
-
-		// Попытка получить Chat ID по username с помощью GetChat
-		if chatID, err := tb.getChatIDByUsername(cleanUsername); err == nil {
-			// Успешно получили Chat ID, отправляем по ID
-			msg := tgbotapi.NewMessage(chatID, adminMsg)
-			if _, err := tb.api.Send(msg); err != nil {
-				log.Printf("Не удалось отправить уведомление администратору @%s: %v", cleanUsername, err)
-			} else {
-				log.Printf("✅ Уведомление отправлено администратору @%s (по ID: %d)", cleanUsername, chatID)
-			}
 		} else {
-			// Не удалось получить Chat ID, логируем ошибку
-			log.Printf("❌ Не удалось получить Chat ID для @%s: %v", cleanUsername, err)
+			log.Printf("Уведомление отправлено администратору %d", adminID)
 		}
 	}
 
-	totalAdmins := len(tb.adminChatIDs) + len(tb.adminUsernames)
-	log.Printf("Отправлено уведомление %d администраторам (%d по ID, %d по username)",
-		totalAdmins, len(tb.adminChatIDs), len(tb.adminUsernames))
+	// Username администраторы используются только для проверки прав, не для уведомлений
+	log.Printf("Username администраторы (%d) используются только для проверки прав", len(tb.adminUsernames))
+
+	totalAdmins := len(tb.adminChatIDs)
+	log.Printf("Отправлено уведомление %d администраторам по Chat ID", totalAdmins)
 	return nil
 }
 
@@ -199,15 +177,33 @@ func (tb *TelegramBot) GetPlatformName() string {
 }
 
 // getChatIDByUsername - функция для получения Chat ID по username
-// Пока что всегда возвращает ошибку для реализации в будущем
 func (tb *TelegramBot) getChatIDByUsername(username string) (int64, error) {
-	// Функция зарезервирована для будущей реализации получения Chat ID через Telegram API
-	// Сейчас возвращает ошибку чтобы не было хардкода
-	log.Printf("Получение Chat ID по @%s пока не реализовано", username)
-	return 0, fmt.Errorf("получение Chat ID по username пока не поддерживается")
+	log.Printf("Пытаемся получить Chat ID для username: @%s", username)
+
+	// Используем Telegram API для получения информации о чате по username
+	chatConfig := tgbotapi.ChatInfoConfig{
+		ChatConfig: tgbotapi.ChatConfig{
+			SuperGroupUsername: "@" + username,
+		},
+	}
+
+	chat, err := tb.api.GetChat(chatConfig)
+	if err != nil {
+		log.Printf("Ошибка получения Chat ID для @%s: %v", username, err)
+		return 0, fmt.Errorf("не удалось получить информацию о чате @%s: %w", username, err)
+	}
+
+	log.Printf("Получен Chat ID %d для username @%s", chat.ID, username)
+	return chat.ID, nil
+}
+
+// SetAdminChatIDs устанавливает Chat ID администраторов для уведомлений
+func (tb *TelegramBot) SetAdminChatIDs(chatIDs []int64) {
+	tb.adminChatIDs = chatIDs
+	log.Printf("Установлены Chat ID администраторов для уведомлений: %v", chatIDs)
 }
 
 // GetAdminCount возвращает количество настроенных администраторов
 func (tb *TelegramBot) GetAdminCount() int {
-	return len(tb.adminChatIDs)
+	return len(tb.adminChatIDs) + len(tb.adminUsernames)
 }

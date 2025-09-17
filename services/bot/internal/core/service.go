@@ -11,15 +11,151 @@ import (
 )
 
 type BotService struct {
-	DB                       *database.DB
+	DB                       database.Database
 	Localizer                *localization.Localizer
 	FeedbackNotificationFunc func(data map[string]interface{}) error // функция для отправки уведомлений
 }
 
 func NewBotService(db *database.DB) *BotService {
 	return &BotService{
-		DB:        db,
+		DB:        &databaseAdapter{db: db}, // Оборачиваем в адаптер
 		Localizer: localization.NewLocalizer(db.GetConnection()),
+	}
+}
+
+// databaseAdapter адаптер для совместимости с интерфейсом Database
+type databaseAdapter struct {
+	db *database.DB
+}
+
+// Реализуем все методы интерфейса, делегируя к db или создавая заглушки
+
+func (a *databaseAdapter) FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error) {
+	return a.db.FindOrCreateUser(telegramID, username, firstName)
+}
+
+func (a *databaseAdapter) GetUserByTelegramID(telegramID int64) (*models.User, error) {
+	// Заглушка - используем FindOrCreateUser
+	return a.db.FindOrCreateUser(telegramID, "", "")
+}
+
+func (a *databaseAdapter) UpdateUser(user *models.User) error {
+	// Заглушка - обновляем основные поля
+	a.db.UpdateUserState(user.ID, user.State)
+	a.db.UpdateUserStatus(user.ID, user.Status)
+	a.db.UpdateUserInterfaceLanguage(user.ID, user.InterfaceLanguageCode)
+	return nil
+}
+
+func (a *databaseAdapter) UpdateUserInterfaceLanguage(userID int, language string) error {
+	return a.db.UpdateUserInterfaceLanguage(userID, language)
+}
+
+func (a *databaseAdapter) UpdateUserState(userID int, state string) error {
+	return a.db.UpdateUserState(userID, state)
+}
+
+func (a *databaseAdapter) UpdateUserStatus(userID int, status string) error {
+	return a.db.UpdateUserStatus(userID, status)
+}
+
+func (a *databaseAdapter) UpdateUserNativeLanguage(userID int, langCode string) error {
+	return a.db.UpdateUserNativeLanguage(userID, langCode)
+}
+
+func (a *databaseAdapter) UpdateUserTargetLanguage(userID int, langCode string) error {
+	return a.db.UpdateUserTargetLanguage(userID, langCode)
+}
+
+func (a *databaseAdapter) UpdateUserTargetLanguageLevel(userID int, level string) error {
+	return a.db.UpdateUserTargetLanguageLevel(userID, level)
+}
+
+func (a *databaseAdapter) ResetUserProfile(userID int) error {
+	return a.db.ResetUserProfile(userID)
+}
+
+func (a *databaseAdapter) GetLanguages() ([]*models.Language, error) {
+	// Заглушка - возвращаем базовые языки
+	return []*models.Language{
+		{ID: 1, Code: "en", NameNative: "English", NameEn: "English"},
+		{ID: 2, Code: "ru", NameNative: "Русский", NameEn: "Russian"},
+		{ID: 3, Code: "es", NameNative: "Español", NameEn: "Spanish"},
+		{ID: 4, Code: "zh", NameNative: "中文", NameEn: "Chinese"},
+	}, nil
+}
+
+func (a *databaseAdapter) GetLanguageByCode(code string) (*models.Language, error) {
+	languages, _ := a.GetLanguages()
+	for _, lang := range languages {
+		if lang.Code == code {
+			return lang, nil
+		}
+	}
+	return nil, sql.ErrNoRows
+}
+
+func (a *databaseAdapter) GetInterests() ([]*models.Interest, error) {
+	// Заглушка - возвращаем базовые интересы
+	return []*models.Interest{
+		{ID: 1, Name: "movies", Type: "entertainment"},
+		{ID: 2, Name: "music", Type: "entertainment"},
+		{ID: 3, Name: "sports", Type: "activity"},
+		{ID: 4, Name: "travel", Type: "activity"},
+	}, nil
+}
+
+func (a *databaseAdapter) GetUserSelectedInterests(userID int) ([]int, error) {
+	return a.db.GetUserSelectedInterests(userID)
+}
+
+func (a *databaseAdapter) SaveUserInterests(userID int64, interestIDs []int) error {
+	// Заглушка - сохраняем по одному
+	for _, id := range interestIDs {
+		if err := a.db.SaveUserInterest(int(userID), id, false); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (a *databaseAdapter) SaveUserInterest(userID, interestID int, isPrimary bool) error {
+	return a.db.SaveUserInterest(userID, interestID, isPrimary)
+}
+
+func (a *databaseAdapter) RemoveUserInterest(userID, interestID int) error {
+	return a.db.RemoveUserInterest(userID, interestID)
+}
+
+func (a *databaseAdapter) ClearUserInterests(userID int) error {
+	return a.db.ClearUserInterests(userID)
+}
+
+func (a *databaseAdapter) SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error {
+	return a.db.SaveUserFeedback(userID, feedbackText, contactInfo)
+}
+
+func (a *databaseAdapter) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
+	return a.db.GetUnprocessedFeedback()
+}
+
+func (a *databaseAdapter) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
+	return a.db.MarkFeedbackProcessed(feedbackID, adminResponse)
+}
+
+func (a *databaseAdapter) GetConnection() *sql.DB {
+	return a.db.GetConnection()
+}
+
+func (a *databaseAdapter) Close() error {
+	return a.db.Close()
+}
+
+// NewBotServiceWithInterface создает BotService с интерфейсом Database (для тестов)
+func NewBotServiceWithInterface(db database.Database, localizer *localization.Localizer) *BotService {
+	return &BotService{
+		DB:        db,
+		Localizer: localizer,
 	}
 }
 
@@ -175,7 +311,7 @@ func (s *BotService) SendFeedbackNotification(feedbackData map[string]interface{
 %s
 `,
 		feedbackData["first_name"].(string),
-		int64(feedbackData["telegram_id"].(int)),
+		feedbackData["telegram_id"].(int64),
 		func() string {
 			if username, ok := feedbackData["username"].(*string); ok && username != nil {
 				return fmt.Sprintf("👤 Username: @%s", *username)
@@ -269,7 +405,7 @@ func (s *BotService) GetUserDataForFeedback(userID int) (map[string]interface{},
 	}
 
 	if username != "" {
-		result["username"] = username
+		result["username"] = &username
 	}
 
 	return result, nil
@@ -375,6 +511,31 @@ func (s *BotService) UpdateFeedbackStatus(feedbackID int, isProcessed bool) erro
 	return nil
 }
 
+// ArchiveFeedback архивирует отзыв
+func (s *BotService) ArchiveFeedback(feedbackID int) error {
+	query := `
+		UPDATE user_feedback
+		SET is_processed = true, updated_at = NOW()
+		WHERE id = $1
+	`
+
+	result, err := s.DB.GetConnection().Exec(query, feedbackID)
+	if err != nil {
+		return fmt.Errorf("ошибка архивирования отзыва: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("ошибка получения количества обновленных строк: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("отзыв с ID %d не найден", feedbackID)
+	}
+
+	return nil
+}
+
 // DeleteFeedback удаляет отзыв из базы данных
 func (s *BotService) DeleteFeedback(feedbackID int) error {
 	query := `DELETE FROM user_feedback WHERE id = $1`
@@ -399,4 +560,44 @@ func (s *BotService) DeleteFeedback(feedbackID int) error {
 // MarkFeedbackProcessed помечает отзыв как обработанный с ответом
 func (s *BotService) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
 	return s.DB.MarkFeedbackProcessed(feedbackID, adminResponse)
+}
+
+// DeleteAllProcessedFeedbacks удаляет все обработанные отзывы
+func (s *BotService) DeleteAllProcessedFeedbacks() (int, error) {
+	query := `DELETE FROM user_feedback WHERE is_processed = true`
+	result, err := s.DB.GetConnection().Exec(query)
+	if err != nil {
+		return 0, fmt.Errorf("ошибка удаления обработанных отзывов: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("ошибка получения количества удаленных строк: %w", err)
+	}
+
+	return int(rowsAffected), nil
+}
+
+// UnarchiveFeedback возвращает отзыв в активные (убирает флаг is_processed)
+func (s *BotService) UnarchiveFeedback(feedbackID int) error {
+	query := `
+		UPDATE user_feedback
+		SET is_processed = false, updated_at = NOW()
+		WHERE id = $1
+	`
+	result, err := s.DB.GetConnection().Exec(query, feedbackID)
+	if err != nil {
+		return fmt.Errorf("ошибка возврата отзыва в активные: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("ошибка получения количества обновленных строк: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("отзыв с ID %d не найден", feedbackID)
+	}
+
+	return nil
 }

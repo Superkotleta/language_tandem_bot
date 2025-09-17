@@ -50,6 +50,7 @@
   "choose_level_advanced": "高级 (C1-C2)",
 
   "level_updated": "✅ 语言水平已更新！",
+  "level_label": "水平",
 
   "back_button": "⬅️ 返回",
   "next_button": "▶️ 下一步",
@@ -88,5 +89,6 @@
   "save_button": "保存 ✅",
   "cancel_button": "取消 ❌",
   "back_to_main": "🏠 返回主菜单",
-  "target_language_explanation": "🎯 你的俄语水平如何?"
+  "target_language_explanation": "🎯 你的俄语水平如何?",
+  "access_denied": "❌ 您没有执行此命令的权限"
 }

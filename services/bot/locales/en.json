@@ -51,6 +51,7 @@
   "choose_level_advanced": "Advanced (C1-C2)",
 
   "level_updated": "✅ Language level updated!",
+  "level_label": "Level",
 
   "back_button": "⬅️ Back",
   "next_button": "▶️ Next",
@@ -89,5 +90,6 @@
   "save_button": "Save ✅",
   "cancel_button": "Cancel ❌",
   "back_to_main": "🏠 Back to main menu",
-  "target_language_explanation": "🎯 What is your Russian level?"
+  "target_language_explanation": "🎯 What is your Russian level?",
+  "access_denied": "❌ You don't have permission to execute this command"
 }

@@ -44,6 +44,7 @@
   "choose_level_upper_intermediate": "Intermedio alto (B2-C1)",
   "choose_level_advanced": "Avanzado (C1-C2)",
   "level_updated": "✅ ¡Nivel de idioma actualizado!",
+  "level_label": "Nivel",
   "back_button": "⬅️ Atrás",
   "next_button": "▶️ Siguiente",
   "language_en": "Inglés",
@@ -79,5 +80,6 @@
   "save_button": "Guardar ✅",
   "cancel_button": "Cancelar ❌",
   "back_to_main": "🏠 Volver al menú principal",
-  "target_language_explanation": "🎯 ¿Cuál es tu nivel de ruso?"
+  "target_language_explanation": "🎯 ¿Cuál es tu nivel de ruso?",
+  "access_denied": "❌ No tienes permisos para ejecutar este comando"
 }

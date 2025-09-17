@@ -27,7 +27,20 @@ type Config struct {
 }
 
 func Load() *Config {
-	_ = godotenv.Load()
+	// Ищем .env файл в папке deploy (относительно корня проекта)
+	envPaths := []string{
+		"../../deploy/.env", // из services/bot/cmd/bot/
+		"../deploy/.env",    // из services/bot/
+		"deploy/.env",       // из корня проекта
+		".env",              // текущая директория (fallback)
+	}
+
+	for _, path := range envPaths {
+		if err := godotenv.Load(path); err == nil {
+			log.Printf("Загружен .env файл из: %s", path)
+			break
+		}
+	}
 
 	getFromFile := func(path string) string {
 		if path == "" {
@@ -53,10 +66,9 @@ func Load() *Config {
 	enableTelegram, _ := strconv.ParseBool(getEnv("ENABLE_TELEGRAM", "true"))
 	enableDiscord, _ := strconv.ParseBool(getEnv("ENABLE_DISCORD", "false"))
 
-	// Парсим Admin Chat IDs - поддержка как числовых ID, так и username'ов (только для динамического чтения)
+	// Парсим Admin Chat IDs для уведомлений
 	adminChatIDsStr := getEnv("ADMIN_CHAT_IDS", "")
 	var adminChatIDs []int64
-	var adminUsernames []string
 
 	if adminChatIDsStr != "" {
 		for _, idStr := range strings.Split(adminChatIDsStr, ",") {
@@ -65,18 +77,31 @@ func Load() *Config {
 				continue
 			}
 
-			// Если начинается с @, убираем @ для чистоты хранения
-			if strings.HasPrefix(idStr, "@") {
-				username := strings.TrimPrefix(idStr, "@")
-				adminUsernames = append(adminUsernames, username)
+			// Парсим числовой ID
+			if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
+				adminChatIDs = append(adminChatIDs, id)
 			} else {
-				// Парсим числовой ID
-				if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
-					adminChatIDs = append(adminChatIDs, id)
-				} else {
-					log.Printf("Ошибка парсинга admin chat ID '%s': %v", idStr, err)
-				}
+				log.Printf("Ошибка парсинга admin chat ID '%s': %v", idStr, err)
 			}
+		}
+	}
+
+	// Парсим Admin Usernames для проверки прав
+	adminUsernamesStr := getEnv("ADMIN_USERNAMES", "")
+	var adminUsernames []string
+
+	if adminUsernamesStr != "" {
+		for _, username := range strings.Split(adminUsernamesStr, ",") {
+			username = strings.TrimSpace(username)
+			if username == "" {
+				continue
+			}
+
+			// Убираем @ если есть
+			if strings.HasPrefix(username, "@") {
+				username = strings.TrimPrefix(username, "@")
+			}
+			adminUsernames = append(adminUsernames, username)
 		}
 	}
 

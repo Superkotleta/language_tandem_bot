@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"sync"
 	"syscall"
 
@@ -42,21 +41,14 @@ func main() {
 
 	// Telegram Bot
 	if cfg.EnableTelegram && cfg.TelegramToken != "" {
-		// Используем usernames, прочитанные из конфигурации (только из .env файла)
-		// Добавляем @ перед username'ами для полной совместимости
-		var adminInputs []string
-		for _, username := range cfg.AdminUsernames {
-			adminInputs = append(adminInputs, "@"+username)
-		}
-		// Добавляем также числовые ID из конфигурации
-		for _, chatID := range cfg.AdminChatIDs {
-			adminInputs = append(adminInputs, strconv.FormatInt(chatID, 10))
-		}
-
-		telegramBot, err := telegram.NewTelegramBotWithUsernames(cfg.TelegramToken, db, cfg.Debug, adminInputs)
+		// Создаем бота с Chat ID для уведомлений и username для проверки прав
+		telegramBot, err := telegram.NewTelegramBotWithUsernames(cfg.TelegramToken, db, cfg.Debug, cfg.AdminUsernames)
 		if err != nil {
 			log.Fatalf("Failed to create Telegram bot: %v", err)
 		}
+
+		// Устанавливаем Chat ID для уведомлений
+		telegramBot.SetAdminChatIDs(cfg.AdminChatIDs)
 
 		// Связываем бота с сервисом для отправки уведомлений о новых отзывах
 		service := telegramBot.GetService()
