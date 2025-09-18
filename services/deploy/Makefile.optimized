@@ -1,0 +1,236 @@
+# Makefile for optimized version of Language Exchange Bot
+
+.PHONY: help up down restart logs build clean test monitor
+
+# Variables
+COMPOSE_FILE=docker-compose.optimized.yml
+ENV_FILE=env.optimized.example
+
+# Help
+help: ## Show help
+	@echo "Available commands for optimized version:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+# Main commands
+up: ## Start all services
+	@echo "Starting optimized version of Language Exchange Bot..."
+	@if [ ! -f .env ]; then \
+		echo "Creating .env file from example..."; \
+		cp $(ENV_FILE) .env; \
+		echo "Please edit .env file with your settings!"; \
+	fi
+	docker-compose -f $(COMPOSE_FILE) up -d --build
+
+down: ## Stop all services
+	docker-compose -f $(COMPOSE_FILE) down
+
+restart: down up ## Restart all services
+
+rebuild: ## Rebuild images
+	docker-compose -f $(COMPOSE_FILE) build --no-cache
+
+clean: ## Clean everything (including volumes)
+	docker-compose -f $(COMPOSE_FILE) down -v
+	docker system prune -f
+
+# Logs
+logs: ## Show logs of all services
+	docker-compose -f $(COMPOSE_FILE) logs -f
+
+logs-bot: ## Show bot logs
+	docker-compose -f $(COMPOSE_FILE) logs -f bot-optimized
+
+logs-db: ## Show database logs
+	docker-compose -f $(COMPOSE_FILE) logs -f postgres
+
+logs-redis: ## Show Redis logs
+	docker-compose -f $(COMPOSE_FILE) logs -f redis
+
+logs-prometheus: ## Show Prometheus logs
+	docker-compose -f $(COMPOSE_FILE) logs -f prometheus
+
+logs-grafana: ## Show Grafana logs
+	docker-compose -f $(COMPOSE_FILE) logs -f grafana
+
+# Monitoring
+monitor: ## Show service status
+	@echo "=== Container Status ==="
+	docker-compose -f $(COMPOSE_FILE) ps
+	@echo ""
+	@echo "=== Health checks ==="
+	@echo "Bot: http://localhost:8080/health"
+	@echo "Prometheus: http://localhost:9090"
+	@echo "Grafana: http://localhost:3000"
+	@echo "PgAdmin: http://localhost:5050"
+	@echo ""
+	@echo "=== Metrics ==="
+	@echo "Bot metrics: http://localhost:8080/metrics"
+
+health: ## Check service health
+	@echo "Checking service health..."
+	@curl -s http://localhost:8080/health | jq . || echo "Bot health check failed"
+	@curl -s http://localhost:9090/-/healthy || echo "Prometheus health check failed"
+	@curl -s http://localhost:3000/api/health || echo "Grafana health check failed"
+
+# Database
+db-setup: ## Setup database
+	@echo "Setting up database..."
+	docker-compose -f $(COMPOSE_FILE) exec postgres psql -U postgres -d language_exchange -c "SELECT version();"
+
+db-backup: ## Create database backup
+	@echo "Creating database backup..."
+	docker-compose -f $(COMPOSE_FILE) exec postgres pg_dump -U postgres language_exchange > backup_$(shell date +%Y%m%d_%H%M%S).sql
+	@echo "Backup saved to backup_$(shell date +%Y%m%d_%H%M%S).sql"
+
+db-restore: ## Restore database from backup
+	@echo "Restoring database..."
+	@read -p "Enter backup file path: " backup_file; \
+	docker-compose -f $(COMPOSE_FILE) exec -T postgres psql -U postgres language_exchange < $$backup_file
+
+# Testing
+test: ## Run tests
+	@echo "Running tests..."
+	cd ../bot && make test
+
+test-integration: ## Run integration tests
+	@echo "Running integration tests..."
+	cd ../bot && make test-integration
+
+# Development
+dev: ## Start in development mode
+	@echo "Starting in development mode..."
+	DEBUG=true docker-compose -f $(COMPOSE_FILE) up -d --build
+
+dev-logs: ## Show logs in development mode
+	docker-compose -f $(COMPOSE_FILE) logs -f bot-optimized
+
+dev-setup: ## Full development setup with ngrok
+	@echo "Setting up for development..."
+	@if [ -f scripts/dev-setup.sh ]; then \
+		chmod +x scripts/*.sh; \
+		./scripts/dev-setup.sh; \
+	elif [ -f scripts/dev-setup.bat ]; then \
+		scripts\dev-setup.bat; \
+	else \
+		echo "Setup scripts not found"; \
+	fi
+
+ngrok-setup: ## Setup ngrok for development
+	@echo "Setting up ngrok..."
+	@if [ -f scripts/setup-ngrok.sh ]; then \
+		chmod +x scripts/*.sh; \
+		./scripts/setup-ngrok.sh; \
+	elif [ -f scripts/setup-ngrok.bat ]; then \
+		scripts\setup-ngrok.bat; \
+	else \
+		echo "Ngrok setup script not found"; \
+	fi
+
+webhook-setup: ## Setup webhook in Telegram
+	@echo "Setting up webhook..."
+	@if [ -f scripts/setup-webhook.sh ]; then \
+		chmod +x scripts/*.sh; \
+		./scripts/setup-webhook.sh; \
+	elif [ -f scripts/setup-webhook.bat ]; then \
+		scripts\setup-webhook.bat; \
+	else \
+		echo "Webhook setup script not found"; \
+	fi
+
+ngrok-stop: ## Stop ngrok
+	@echo "Stopping ngrok..."
+	@if [ -f scripts/stop-ngrok.sh ]; then \
+		chmod +x scripts/*.sh; \
+		./scripts/stop-ngrok.sh; \
+	elif [ -f scripts/stop-ngrok.bat ]; then \
+		scripts\stop-ngrok.bat; \
+	else \
+		echo "Ngrok stop script not found"; \
+	fi
+
+# Production
+prod: ## Start in production mode
+	@echo "Starting in production mode..."
+	@if [ ! -f .env ]; then \
+		echo ".env file not found! Create it based on env.optimized.example"; \
+		exit 1; \
+	fi
+	DEBUG=false docker-compose -f $(COMPOSE_FILE) up -d --build
+
+prod-logs: ## Show logs in production mode
+	docker-compose -f $(COMPOSE_FILE) logs -f
+
+production-setup: ## Show production deployment instructions
+	@echo "Production Deployment"
+	@echo "====================="
+	@echo "Follow instructions in docs/PRODUCTION_DEPLOYMENT.md"
+	@echo ""
+	@echo "Quick Start:"
+	@echo "1. Copy env.production.example to .env"
+	@echo "2. Configure variables in .env"
+	@echo "3. Run: make prod"
+	@echo "4. Setup webhook in Telegram"
+	@echo ""
+	@echo "Requirements:"
+	@echo "- VPS with Ubuntu 20.04+"
+	@echo "- Domain with SSL certificate"
+	@echo "- Docker and Docker Compose"
+
+# SSL/TLS
+ssl-setup: ## Setup SSL certificates
+	@echo "Setting up SSL certificates..."
+	@if [ ! -d nginx/ssl ]; then \
+		mkdir -p nginx/ssl; \
+		echo "Created nginx/ssl folder"; \
+	fi
+	@echo "Place your SSL certificates in nginx/ssl/ folder"
+
+# Update
+update: ## Update all images
+	docker-compose -f $(COMPOSE_FILE) pull
+	docker-compose -f $(COMPOSE_FILE) up -d --build
+
+# Cleanup
+clean-images: ## Remove unused images
+	docker image prune -f
+
+clean-volumes: ## Remove unused volumes
+	docker volume prune -f
+
+clean-all: clean clean-images clean-volumes ## Full cleanup
+
+# Utilities
+shell-bot: ## Connect to bot container
+	docker-compose -f $(COMPOSE_FILE) exec bot-optimized sh
+
+shell-db: ## Connect to database
+	docker-compose -f $(COMPOSE_FILE) exec postgres psql -U postgres -d language_exchange
+
+shell-redis: ## Connect to Redis
+	docker-compose -f $(COMPOSE_FILE) exec redis redis-cli
+
+# Statistics
+stats: ## Show resource usage statistics
+	docker stats --no-stream
+
+# Security
+security-scan: ## Security scanning
+	@echo "Scanning image security..."
+	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+		aquasec/trivy image language-exchange-bot-optimized
+
+# Backup all data
+backup-all: ## Create full backup
+	@echo "Creating full backup..."
+	@mkdir -p backups
+	docker-compose -f $(COMPOSE_FILE) exec postgres pg_dump -U postgres language_exchange > backups/db_$(shell date +%Y%m%d_%H%M%S).sql
+	docker-compose -f $(COMPOSE_FILE) exec redis redis-cli BGSAVE
+	@echo "Backup created in backups/ folder"
+
+# Restoration
+restore-all: ## Restore from full backup
+	@echo "Restoring from full backup..."
+	@read -p "Enter backup date (YYYYMMDD_HHMMSS): " backup_date; \
+	docker-compose -f $(COMPOSE_FILE) exec -T postgres psql -U postgres language_exchange < backups/db_$$backup_date.sql
+	@echo "Restoration completed"
+

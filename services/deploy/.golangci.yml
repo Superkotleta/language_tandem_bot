@@ -1,7 +1,215 @@
 # .golangci.yml
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+
+issues:
+  exclude-dirs:
+    - vendor
+    - testdata
+    - .git
+  exclude-files:
+    - ".*\\.pb\\.go$"
+    - ".*_mock\\.go$"
+  uniq-by-line: true
+
+output:
+  formats:
+    - format: colored-line-number
+      print-issued-line: true
+      print-linter-name: true
+
 linters:
   enable:
+    # Базовые линтеры
     - unused
-    - deadcode
-    - structcheck
-    - varcheck
+    
+    # Стиль кода и форматирование
+    - gofmt
+    - goimports
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - unconvert
+    - whitespace
+    
+    # Безопасность
+    - gosec
+    
+    # Производительность
+    - gocyclo
+    - goconst
+    - gocritic
+    - mnd
+    
+    # Документация
+    - godot
+    - godox
+    
+    # Ошибки и потенциальные проблемы
+    - errcheck
+    - errorlint
+    - gocognit
+    - nakedret
+    - noctx
+    - nolintlint
+    - revive
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unparam
+    
+    # Специфичные для HTTP/API
+    - bodyclose
+    
+    # Длина строк и сложность
+    - lll
+
+linters-settings:
+  # Настройки для gocyclo (сложность циклов)
+  gocyclo:
+    min-complexity: 15
+  
+  # Настройки для gocognit (когнитивная сложность)
+  gocognit:
+    min-complexity: 20
+  
+  # Настройки для lll (длина строк)
+  lll:
+    line-length: 120
+  
+  # Настройки для mnd (магические числа)
+  mnd:
+    # Игнорируем числа 0, 1, 2, 3, 4, 5, 10, 100, 1000
+    checks: argument,case,condition,operation,return,assign
+    ignored-numbers: "0,1,2,3,4,5,10,100,1000"
+    ignored-functions: "strings.Split,strings.SplitN,strings.SplitAfter,strings.SplitAfterN,bytes.Split,bytes.SplitN,bytes.SplitAfter,bytes.SplitAfterN"
+  
+  # Настройки для goconst (константы)
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  
+  # Настройки для revive (стиль кода)
+  revive:
+    min-confidence: 0.8
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+  
+  # Настройки для gocritic
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport # может конфликтовать с goimports
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+  
+  # Настройки для godot (документация)
+  godot:
+    scope: declarations
+    exclude:
+      - "^//go:generate "
+  
+  # Настройки для godox (TODO комментарии)
+  godox:
+    keywords:
+      - NOTE
+      - OPTIMIZE
+      - HACK
+      - TODO
+      - BUG
+      - FIXME
+  
+  # Настройки для gosec (безопасность)
+  gosec:
+    severity: medium
+    confidence: medium
+    excludes:
+      - G204 # Subprocess launching should be audited
+      - G304 # File path provided as taint input
+  
+  # Настройки для nakedret
+  nakedret:
+    max-func-lines: 30
+  
+  # Настройки для noctx
+  noctx:
+    include:
+      - "net/http"
+  
+  # Настройки для nolintlint
+  nolintlint:
+    allow-leading-space: true
+    allow-unused: false
+    require-explanation: false
+    require-specific: false
+
+  # Максимальное количество проблем
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  
+  # Исключения
+  exclude-rules:
+    # Исключаем некоторые проверки для тестов
+    - path: _test\.go
+      linters:
+        - mnd
+        - gocyclo
+        - gocognit
+        - lll
+    
+    # Исключаем проверки для моков
+    - path: _mock\.go
+      linters:
+        - mnd
+        - gocyclo
+        - gocognit
+    
+    # Исключаем проверки для сгенерированных файлов
+    - path: \.pb\.go$
+      linters:
+        - mnd
+        - gocyclo
+        - gocognit
+        - lll
+        - revive
+    
+    # Исключаем некоторые проверки для main.go
+    - path: main\.go$
+      linters:
+        - gocyclo
+        - gocognit
+    
+    # Исключаем проверки для конфигурационных файлов
+    - path: config/
+      linters:
+        - mnd
+        - gocyclo
+        - gocognit
