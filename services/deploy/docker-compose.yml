@@ -62,18 +62,27 @@ services:
       # Без хардкодов в compose — берём из .env или из окружения рантайма
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
       DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       DEBUG: ${DEBUG:-false}
       ADMIN_CHAT_IDS: ${ADMIN_CHAT_IDS}
       ADMIN_USERNAMES: ${ADMIN_USERNAMES}
       LOCALES_DIR: ${LOCALES_DIR:-./locales}
+      PORT: ${BOT_PORT:-8080}
+      ENABLE_TELEGRAM: ${ENABLE_TELEGRAM:-true}
+      ENABLE_DISCORD: ${ENABLE_DISCORD:-false}
+      WEBHOOK_URL: ${WEBHOOK_URL}
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - app-network
     restart: unless-stopped
     stdin_open: true
     tty: true
+    ports:
+      - "${BOT_PORT:-8080}:${BOT_PORT:-8080}"
 
   profile:
     build:
@@ -115,6 +124,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   app-network:

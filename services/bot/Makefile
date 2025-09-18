@@ -21,7 +21,7 @@ deps: ## Установить зависимости
 test: test-unit test-integration ## Запустить все тесты
 
 test-unit: ## Запустить unit тесты
-	go test -v ./internal/... -race
+	go test -v ./tests/unit/... -race
 
 test-integration: ## Запустить интеграционные тесты
 	@echo "Запуск интеграционных тестов..."
@@ -29,7 +29,12 @@ test-integration: ## Запустить интеграционные тесты
 	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test -v ./tests/integration/... -race
 
 test-coverage: ## Запустить тесты с покрытием
-	go test -v -coverprofile=coverage.out ./...
+	go test -v -coverprofile=coverage.out ./tests/unit/...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Отчет о покрытии сохранен в coverage.html"
+
+test-coverage-all: ## Запустить все тесты с покрытием
+	go test -v -coverprofile=coverage.out ./tests/...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Отчет о покрытии сохранен в coverage.html"
 
@@ -131,6 +136,28 @@ profile: ## Запустить с профилированием
 # Генерация моков
 generate-mocks: ## Генерировать моки
 	go generate ./...
+
+# Мониторинг и логи
+logs: ## Показать логи всех сервисов
+	docker-compose -f ../deploy/docker-compose.yml logs -f
+
+logs-bot: ## Показать логи бота
+	docker-compose -f ../deploy/docker-compose.yml logs -f bot
+
+logs-db: ## Показать логи базы данных
+	docker-compose -f ../deploy/docker-compose.yml logs -f postgres
+
+logs-redis: ## Показать логи Redis
+	docker-compose -f ../deploy/docker-compose.yml logs -f redis
+
+# Мониторинг
+monitor: ## Запустить мониторинг сервисов
+	@echo "Мониторинг сервисов:"
+	@echo "Bot: http://localhost:8080/health"
+	@echo "Profile: http://localhost:8081/health"
+	@echo "Matcher: http://localhost:8082/health"
+	@echo "PgAdmin: http://localhost:8080"
+	@echo "Redis: redis-cli -h localhost -p 6379"
 
 # Установка инструментов
 install-tools: ## Установить инструменты разработки

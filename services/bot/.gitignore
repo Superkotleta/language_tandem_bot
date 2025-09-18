@@ -14,8 +14,6 @@ log/
 *.db
 *.sqlite
 *.sqlite3
-postgres_data/
-redis_data/
 
 # Временные файлы
 *.tmp
@@ -30,34 +28,41 @@ Thumbs.db
 *.swo
 *~
 
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+
 # Docker
 .dockerignore
-docker-compose.override.yml
+
+# Кэш
+.cache/
+cache/
 
 # Backup файлы
 *.bak
 *.backup
 *.old
-backups/
 
 # SSL сертификаты
 *.pem
 *.key
 *.crt
 *.csr
-ssl/
-certs/
 
 # Конфигурационные файлы с секретами
 config.json
 secrets.json
 credentials.json
 
-# Мониторинг
-prometheus_data/
-grafana_data/
-loki_data/
-
-# Тестовые данные
+# Тестовые данные (если содержат реальные данные)
 test_data/
 test_secrets/
+

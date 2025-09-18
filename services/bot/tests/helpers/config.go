@@ -7,6 +7,7 @@ import (
 // GetTestConfig возвращает конфигурацию для тестов
 func GetTestConfig() *config.Config {
 	return &config.Config{
+		// Тестовый токен - НЕ ИСПОЛЬЗУЙТЕ В PRODUCTION!
 		TelegramToken:  "test_token_12345",
 		DatabaseURL:    "postgres://test:test@localhost:5432/test_db",
 		Debug:          true,
