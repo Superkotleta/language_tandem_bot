@@ -1,8 +1,16 @@
 #!/bin/sh
 set -euo pipefail
 
+# Set default values if not provided
+POSTGRES_USER=${POSTGRES_USER:-postgres}
+POSTGRES_DB=${POSTGRES_DB:-languagebot}
+PGPASSWORD=${PGPASSWORD:-dev_password}
+PROFILE_DB_PASS=${PROFILE_DB_PASS:-profile_password}
+MATCHING_DB_PASS=${MATCHING_DB_PASS:-matching_password}
+MATCHING_RO_DB_PASS=${MATCHING_RO_DB_PASS:-matching_ro_password}
+
 # Wait for postgres to be ready
-until pg_isready -h postgres -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -q; do
+until pg_isready -h localhost -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -q; do
   echo "Waiting for postgres..."
   sleep 2
 done
@@ -12,14 +20,14 @@ echo "Bootstrap starting..."
 export PGPASSWORD="${PGPASSWORD}"
 
 # Create schemas, roles, grants (idempotent), set passwords from env
-psql -h postgres -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" <<'SQL'
+psql -h localhost -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" <<'SQL'
 -- Schemas
 CREATE SCHEMA IF NOT EXISTS profile;
 CREATE SCHEMA IF NOT EXISTS matching;
 SQL
 
 # Roles with passwords from env require shell variable expansion; use cat <<EOF
-psql -h postgres -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" <<EOF
+psql -h localhost -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" <<EOF
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'profile_rw') THEN

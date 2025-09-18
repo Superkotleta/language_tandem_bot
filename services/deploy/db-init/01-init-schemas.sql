@@ -2,10 +2,10 @@
 CREATE SCHEMA IF NOT EXISTS profile;
 CREATE SCHEMA IF NOT EXISTS matching;
 
--- Выдача прав пользователю langbot на все схемы
-GRANT ALL PRIVILEGES ON SCHEMA profile TO langbot;
-GRANT ALL PRIVILEGES ON SCHEMA matching TO langbot;
-GRANT ALL PRIVILEGES ON SCHEMA public TO langbot;
+-- Выдача прав пользователю postgres на все схемы
+GRANT ALL PRIVILEGES ON SCHEMA profile TO postgres;
+GRANT ALL PRIVILEGES ON SCHEMA matching TO postgres;
+GRANT ALL PRIVILEGES ON SCHEMA public TO postgres;
 
 -- Создание пользователей для сервисов (если нужно)
 DO $$
