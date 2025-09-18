@@ -9,14 +9,14 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// MenuHandler обрабатывает команды и действия главного меню
+// MenuHandler обрабатывает команды и действия главного меню.
 type MenuHandler struct {
 	bot             *tgbotapi.BotAPI
 	service         *core.BotService
 	keyboardBuilder *KeyboardBuilder
 }
 
-// NewMenuHandler создает новый экземпляр MenuHandler
+// NewMenuHandler создает новый экземпляр MenuHandler.
 func NewMenuHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuilder *KeyboardBuilder) *MenuHandler {
 	return &MenuHandler{
 		bot:             bot,
@@ -25,7 +25,7 @@ func NewMenuHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuil
 	}
 }
 
-// HandleStartCommand обрабатывает команду /start
+// HandleStartCommand обрабатывает команду /start.
 func (mh *MenuHandler) HandleStartCommand(message *tgbotapi.Message, user *models.User) error {
 	// Всегда показываем главное меню, независимо от состояния профиля
 	welcomeText := mh.service.GetWelcomeMessage(user)
@@ -40,7 +40,7 @@ func (mh *MenuHandler) HandleStartCommand(message *tgbotapi.Message, user *model
 	return nil
 }
 
-// HandleStatusCommand обрабатывает команду /status
+// HandleStatusCommand обрабатывает команду /status.
 func (mh *MenuHandler) HandleStatusCommand(message *tgbotapi.Message, user *models.User) error {
 	statusText := fmt.Sprintf(
 		"📊 %s:\n\n"+
@@ -63,12 +63,12 @@ func (mh *MenuHandler) HandleStatusCommand(message *tgbotapi.Message, user *mode
 	return mh.sendMessage(message.Chat.ID, statusText)
 }
 
-// HandleResetCommand обрабатывает команду /reset
+// HandleResetCommand обрабатывает команду /reset.
 func (mh *MenuHandler) HandleResetCommand(message *tgbotapi.Message, user *models.User) error {
 	return mh.sendMessage(message.Chat.ID, mh.service.Localizer.Get(user.InterfaceLanguageCode, "profile_reset"))
 }
 
-// HandleLanguageCommand обрабатывает команду /language
+// HandleLanguageCommand обрабатывает команду /language.
 func (mh *MenuHandler) HandleLanguageCommand(message *tgbotapi.Message, user *models.User) error {
 	text := mh.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interface_language")
 	keyboard := mh.keyboardBuilder.CreateLanguageKeyboard(user.InterfaceLanguageCode, "interface", "", true)
@@ -78,7 +78,7 @@ func (mh *MenuHandler) HandleLanguageCommand(message *tgbotapi.Message, user *mo
 	return err
 }
 
-// HandleBackToMainMenu возвращает пользователя в главное меню
+// HandleBackToMainMenu возвращает пользователя в главное меню.
 func (mh *MenuHandler) HandleBackToMainMenu(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	welcomeText := mh.service.GetWelcomeMessage(user)
 	menuText := welcomeText + "\n\n" + mh.service.Localizer.Get(user.InterfaceLanguageCode, "main_menu_title")
@@ -94,7 +94,7 @@ func (mh *MenuHandler) HandleBackToMainMenu(callback *tgbotapi.CallbackQuery, us
 	return err
 }
 
-// HandleMainChangeLanguage обрабатывает смену языка интерфейса
+// HandleMainChangeLanguage обрабатывает смену языка интерфейса.
 func (mh *MenuHandler) HandleMainChangeLanguage(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	text := mh.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interface_language")
 	keyboard := mh.keyboardBuilder.CreateLanguageKeyboard(user.InterfaceLanguageCode, "interface", "", true)
@@ -108,7 +108,7 @@ func (mh *MenuHandler) HandleMainChangeLanguage(callback *tgbotapi.CallbackQuery
 	return err
 }
 
-// HandleMainViewProfile обрабатывает просмотр профиля
+// HandleMainViewProfile обрабатывает просмотр профиля.
 func (mh *MenuHandler) HandleMainViewProfile(callback *tgbotapi.CallbackQuery, user *models.User, profileHandler *ProfileHandlerImpl) error {
 	// Проверяем, заполнен ли профиль по уровню завершения профиля
 	if user.ProfileCompletionLevel == 0 {
@@ -134,12 +134,12 @@ func (mh *MenuHandler) HandleMainViewProfile(callback *tgbotapi.CallbackQuery, u
 	return profileHandler.HandleProfileShow(callback, user)
 }
 
-// HandleMainEditProfile обрабатывает редактирование профиля
+// HandleMainEditProfile обрабатывает редактирование профиля.
 func (mh *MenuHandler) HandleMainEditProfile(callback *tgbotapi.CallbackQuery, user *models.User, profileHandler *ProfileHandlerImpl) error {
 	return profileHandler.HandleProfileResetAsk(callback, user)
 }
 
-// HandleMainFeedback обрабатывает переход к отзывам
+// HandleMainFeedback обрабатывает переход к отзывам.
 func (mh *MenuHandler) HandleMainFeedback(callback *tgbotapi.CallbackQuery, user *models.User, feedbackHandler FeedbackHandler) error {
 	// Создаем message объект для handleFeedbackCommand
 	message := &tgbotapi.Message{
@@ -148,14 +148,14 @@ func (mh *MenuHandler) HandleMainFeedback(callback *tgbotapi.CallbackQuery, user
 	return feedbackHandler.HandleFeedbackCommand(message, user)
 }
 
-// sendMessage отправляет простое текстовое сообщение
+// sendMessage отправляет простое текстовое сообщение.
 func (mh *MenuHandler) sendMessage(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)
 	_, err := mh.bot.Send(msg)
 	return err
 }
 
-// ProfileHandler интерфейс для работы с профилем
+// ProfileHandler интерфейс для работы с профилем.
 type ProfileHandler interface {
 	HandleProfileShow(callback *tgbotapi.CallbackQuery, user *models.User) error
 	HandleProfileResetAsk(callback *tgbotapi.CallbackQuery, user *models.User) error

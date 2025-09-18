@@ -11,13 +11,13 @@ import (
 	"language-exchange-bot/internal/logging"
 )
 
-// HealthChecker интерфейс для проверки здоровья компонентов
+// HealthChecker интерфейс для проверки здоровья компонентов.
 type HealthChecker interface {
 	Check(ctx context.Context) error
 	Name() string
 }
 
-// HealthStatus статус здоровья
+// HealthStatus статус здоровья.
 type HealthStatus string
 
 const (
@@ -26,7 +26,7 @@ const (
 	StatusDegraded  HealthStatus = "degraded"
 )
 
-// HealthResponse ответ health check
+// HealthResponse ответ health check.
 type HealthResponse struct {
 	Status    HealthStatus           `json:"status"`
 	Timestamp time.Time              `json:"timestamp"`
@@ -36,7 +36,7 @@ type HealthResponse struct {
 	System    SystemInfo             `json:"system"`
 }
 
-// CheckResult результат проверки компонента
+// CheckResult результат проверки компонента.
 type CheckResult struct {
 	Status    HealthStatus  `json:"status"`
 	Message   string        `json:"message,omitempty"`
@@ -44,7 +44,7 @@ type CheckResult struct {
 	Timestamp time.Time     `json:"timestamp"`
 }
 
-// SystemInfo информация о системе
+// SystemInfo информация о системе.
 type SystemInfo struct {
 	MemoryUsage  uint64  `json:"memory_usage_bytes"`
 	MemoryTotal  uint64  `json:"memory_total_bytes"`
@@ -55,7 +55,7 @@ type SystemInfo struct {
 	OS           string  `json:"os"`
 }
 
-// HealthManager управляет проверками здоровья
+// HealthManager управляет проверками здоровья.
 type HealthManager struct {
 	checkers  []HealthChecker
 	logger    logging.Logger
@@ -63,7 +63,7 @@ type HealthManager struct {
 	version   string
 }
 
-// NewHealthManager создает новый менеджер здоровья
+// NewHealthManager создает новый менеджер здоровья.
 func NewHealthManager(logger logging.Logger, version string) *HealthManager {
 	return &HealthManager{
 		checkers:  make([]HealthChecker, 0),
@@ -73,12 +73,12 @@ func NewHealthManager(logger logging.Logger, version string) *HealthManager {
 	}
 }
 
-// AddChecker добавляет проверку здоровья
+// AddChecker добавляет проверку здоровья.
 func (h *HealthManager) AddChecker(checker HealthChecker) {
 	h.checkers = append(h.checkers, checker)
 }
 
-// Check выполняет все проверки здоровья
+// Check выполняет все проверки здоровья.
 func (h *HealthManager) Check(ctx context.Context) *HealthResponse {
 	response := &HealthResponse{
 		Timestamp: time.Now(),
@@ -132,7 +132,7 @@ func (h *HealthManager) Check(ctx context.Context) *HealthResponse {
 	return response
 }
 
-// getSystemInfo получает информацию о системе
+// getSystemInfo получает информацию о системе.
 func (h *HealthManager) getSystemInfo() SystemInfo {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -148,7 +148,7 @@ func (h *HealthManager) getSystemInfo() SystemInfo {
 	}
 }
 
-// HTTPHandler создает HTTP обработчик для health check
+// HTTPHandler создает HTTP обработчик для health check.
 func (h *HealthManager) HTTPHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -179,7 +179,7 @@ func (h *HealthManager) HTTPHandler() http.HandlerFunc {
 	}
 }
 
-// ReadinessHandler создает HTTP обработчик для readiness check
+// ReadinessHandler создает HTTP обработчик для readiness check.
 func (h *HealthManager) ReadinessHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
@@ -214,7 +214,7 @@ func (h *HealthManager) ReadinessHandler() http.HandlerFunc {
 	}
 }
 
-// LivenessHandler создает HTTP обработчик для liveness check
+// LivenessHandler создает HTTP обработчик для liveness check.
 func (h *HealthManager) LivenessHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Liveness check всегда возвращает OK, если процесс запущен
@@ -223,13 +223,13 @@ func (h *HealthManager) LivenessHandler() http.HandlerFunc {
 	}
 }
 
-// DatabaseHealthChecker проверка здоровья базы данных
+// DatabaseHealthChecker проверка здоровья базы данных.
 type DatabaseHealthChecker struct {
 	name      string
 	checkFunc func(ctx context.Context) error
 }
 
-// NewDatabaseHealthChecker создает новый проверщик БД
+// NewDatabaseHealthChecker создает новый проверщик БД.
 func NewDatabaseHealthChecker(name string, checkFunc func(ctx context.Context) error) *DatabaseHealthChecker {
 	return &DatabaseHealthChecker{
 		name:      name,
@@ -237,23 +237,23 @@ func NewDatabaseHealthChecker(name string, checkFunc func(ctx context.Context) e
 	}
 }
 
-// Check выполняет проверку БД
+// Check выполняет проверку БД.
 func (d *DatabaseHealthChecker) Check(ctx context.Context) error {
 	return d.checkFunc(ctx)
 }
 
-// Name возвращает имя проверщика
+// Name возвращает имя проверщика.
 func (d *DatabaseHealthChecker) Name() string {
 	return d.name
 }
 
-// CacheHealthChecker проверка здоровья кэша
+// CacheHealthChecker проверка здоровья кэша.
 type CacheHealthChecker struct {
 	name      string
 	checkFunc func(ctx context.Context) error
 }
 
-// NewCacheHealthChecker создает новый проверщик кэша
+// NewCacheHealthChecker создает новый проверщик кэша.
 func NewCacheHealthChecker(name string, checkFunc func(ctx context.Context) error) *CacheHealthChecker {
 	return &CacheHealthChecker{
 		name:      name,
@@ -261,17 +261,17 @@ func NewCacheHealthChecker(name string, checkFunc func(ctx context.Context) erro
 	}
 }
 
-// Check выполняет проверку кэша
+// Check выполняет проверку кэша.
 func (c *CacheHealthChecker) Check(ctx context.Context) error {
 	return c.checkFunc(ctx)
 }
 
-// Name возвращает имя проверщика
+// Name возвращает имя проверщика.
 func (c *CacheHealthChecker) Name() string {
 	return c.name
 }
 
-// ExternalServiceHealthChecker проверка здоровья внешнего сервиса
+// ExternalServiceHealthChecker проверка здоровья внешнего сервиса.
 type ExternalServiceHealthChecker struct {
 	name    string
 	url     string
@@ -279,7 +279,7 @@ type ExternalServiceHealthChecker struct {
 	client  *http.Client
 }
 
-// NewExternalServiceHealthChecker создает новый проверщик внешнего сервиса
+// NewExternalServiceHealthChecker создает новый проверщик внешнего сервиса.
 func NewExternalServiceHealthChecker(name, url string, timeout time.Duration) *ExternalServiceHealthChecker {
 	return &ExternalServiceHealthChecker{
 		name:    name,
@@ -291,9 +291,9 @@ func NewExternalServiceHealthChecker(name, url string, timeout time.Duration) *E
 	}
 }
 
-// Check выполняет проверку внешнего сервиса
+// Check выполняет проверку внешнего сервиса.
 func (e *ExternalServiceHealthChecker) Check(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, "GET", e.url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", e.url, http.NoBody)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -311,19 +311,19 @@ func (e *ExternalServiceHealthChecker) Check(ctx context.Context) error {
 	return nil
 }
 
-// Name возвращает имя проверщика
+// Name возвращает имя проверщика.
 func (e *ExternalServiceHealthChecker) Name() string {
 	return e.name
 }
 
-// DiskSpaceHealthChecker проверка свободного места на диске
+// DiskSpaceHealthChecker проверка свободного места на диске.
 type DiskSpaceHealthChecker struct {
 	name      string
 	path      string
 	threshold float64 // Минимальный процент свободного места
 }
 
-// NewDiskSpaceHealthChecker создает новый проверщик диска
+// NewDiskSpaceHealthChecker создает новый проверщик диска.
 func NewDiskSpaceHealthChecker(name, path string, threshold float64) *DiskSpaceHealthChecker {
 	return &DiskSpaceHealthChecker{
 		name:      name,
@@ -332,25 +332,25 @@ func NewDiskSpaceHealthChecker(name, path string, threshold float64) *DiskSpaceH
 	}
 }
 
-// Check выполняет проверку диска
+// Check выполняет проверку диска.
 func (d *DiskSpaceHealthChecker) Check(ctx context.Context) error {
 	// Здесь должна быть логика проверки свободного места на диске
 	// Для примера возвращаем успех
 	return nil
 }
 
-// Name возвращает имя проверщика
+// Name возвращает имя проверщика.
 func (d *DiskSpaceHealthChecker) Name() string {
 	return d.name
 }
 
-// MemoryHealthChecker проверка использования памяти
+// MemoryHealthChecker проверка использования памяти.
 type MemoryHealthChecker struct {
 	name      string
 	threshold uint64 // Максимальное использование памяти в байтах
 }
 
-// NewMemoryHealthChecker создает новый проверщик памяти
+// NewMemoryHealthChecker создает новый проверщик памяти.
 func NewMemoryHealthChecker(name string, threshold uint64) *MemoryHealthChecker {
 	return &MemoryHealthChecker{
 		name:      name,
@@ -358,7 +358,7 @@ func NewMemoryHealthChecker(name string, threshold uint64) *MemoryHealthChecker 
 	}
 }
 
-// Check выполняет проверку памяти
+// Check выполняет проверку памяти.
 func (m *MemoryHealthChecker) Check(ctx context.Context) error {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -371,7 +371,7 @@ func (m *MemoryHealthChecker) Check(ctx context.Context) error {
 	return nil
 }
 
-// Name возвращает имя проверщика
+// Name возвращает имя проверщика.
 func (m *MemoryHealthChecker) Name() string {
 	return m.name
 }

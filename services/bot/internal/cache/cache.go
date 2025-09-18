@@ -11,7 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Cache интерфейс для кэширования
+// Cache интерфейс для кэширования.
 type Cache interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
@@ -26,13 +26,13 @@ type Cache interface {
 	Close() error
 }
 
-// RedisCache реализация кэша на Redis
+// RedisCache реализация кэша на Redis.
 type RedisCache struct {
 	client *redis.Client
 	ctx    context.Context
 }
 
-// NewRedisCache создает новый Redis кэш
+// NewRedisCache создает новый Redis кэш.
 func NewRedisCache(addr, password string, db int) (*RedisCache, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
@@ -61,12 +61,12 @@ func NewRedisCache(addr, password string, db int) (*RedisCache, error) {
 	}, nil
 }
 
-// Get получает значение из кэша
+// Get получает значение из кэша.
 func (c *RedisCache) Get(ctx context.Context, key string) (string, error) {
 	return c.client.Get(ctx, key).Result()
 }
 
-// Set сохраняет значение в кэш
+// Set сохраняет значение в кэш.
 func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -75,12 +75,12 @@ func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, exp
 	return c.client.Set(ctx, key, data, expiration).Err()
 }
 
-// Delete удаляет значение из кэша
+// Delete удаляет значение из кэша.
 func (c *RedisCache) Delete(ctx context.Context, key string) error {
 	return c.client.Del(ctx, key).Err()
 }
 
-// GetLanguages получает языки из кэша
+// GetLanguages получает языки из кэша.
 func (c *RedisCache) GetLanguages(ctx context.Context) ([]*models.Language, error) {
 	data, err := c.client.Get(ctx, "languages").Result()
 	if err != nil {
@@ -92,12 +92,12 @@ func (c *RedisCache) GetLanguages(ctx context.Context) ([]*models.Language, erro
 	return languages, err
 }
 
-// SetLanguages сохраняет языки в кэш
+// SetLanguages сохраняет языки в кэш.
 func (c *RedisCache) SetLanguages(ctx context.Context, languages []*models.Language) error {
 	return c.Set(ctx, "languages", languages, 24*time.Hour) // Кэшируем на сутки
 }
 
-// GetInterests получает интересы из кэша
+// GetInterests получает интересы из кэша.
 func (c *RedisCache) GetInterests(ctx context.Context, langCode string) (map[int]string, error) {
 	key := fmt.Sprintf("interests:%s", langCode)
 	data, err := c.client.Get(ctx, key).Result()
@@ -110,13 +110,13 @@ func (c *RedisCache) GetInterests(ctx context.Context, langCode string) (map[int
 	return interests, err
 }
 
-// SetInterests сохраняет интересы в кэш
+// SetInterests сохраняет интересы в кэш.
 func (c *RedisCache) SetInterests(ctx context.Context, langCode string, interests map[int]string) error {
 	key := fmt.Sprintf("interests:%s", langCode)
 	return c.Set(ctx, key, interests, 12*time.Hour) // Кэшируем на 12 часов
 }
 
-// GetUserProfile получает профиль пользователя из кэша
+// GetUserProfile получает профиль пользователя из кэша.
 func (c *RedisCache) GetUserProfile(ctx context.Context, userID int) (*models.User, error) {
 	key := fmt.Sprintf("user:%d", userID)
 	data, err := c.client.Get(ctx, key).Result()
@@ -129,24 +129,24 @@ func (c *RedisCache) GetUserProfile(ctx context.Context, userID int) (*models.Us
 	return &user, err
 }
 
-// SetUserProfile сохраняет профиль пользователя в кэш
+// SetUserProfile сохраняет профиль пользователя в кэш.
 func (c *RedisCache) SetUserProfile(ctx context.Context, user *models.User) error {
 	key := fmt.Sprintf("user:%d", user.ID)
 	return c.Set(ctx, key, user, 30*time.Minute) // Кэшируем на 30 минут
 }
 
-// InvalidateUserProfile удаляет профиль пользователя из кэша
+// InvalidateUserProfile удаляет профиль пользователя из кэша.
 func (c *RedisCache) InvalidateUserProfile(ctx context.Context, userID int) error {
 	key := fmt.Sprintf("user:%d", userID)
 	return c.Delete(ctx, key)
 }
 
-// Close закрывает соединение с Redis
+// Close закрывает соединение с Redis.
 func (c *RedisCache) Close() error {
 	return c.client.Close()
 }
 
-// MemoryCache реализация кэша в памяти
+// MemoryCache реализация кэша в памяти.
 type MemoryCache struct {
 	data   map[string]interface{}
 	mutex  sync.RWMutex
@@ -155,7 +155,7 @@ type MemoryCache struct {
 	cancel context.CancelFunc
 }
 
-// NewMemoryCache создает новый кэш в памяти
+// NewMemoryCache создает новый кэш в памяти.
 func NewMemoryCache() *MemoryCache {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -172,7 +172,7 @@ func NewMemoryCache() *MemoryCache {
 	return cache
 }
 
-// cleanup очищает истекшие ключи
+// cleanup очищает истекшие ключи.
 func (c *MemoryCache) cleanup() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
@@ -195,7 +195,7 @@ func (c *MemoryCache) cleanup() {
 	}
 }
 
-// Get получает значение из кэша
+// Get получает значение из кэша.
 func (c *MemoryCache) Get(ctx context.Context, key string) (string, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
@@ -214,7 +214,7 @@ func (c *MemoryCache) Get(ctx context.Context, key string) (string, error) {
 	return string(data), err
 }
 
-// Set сохраняет значение в кэш
+// Set сохраняет значение в кэш.
 func (c *MemoryCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -226,7 +226,7 @@ func (c *MemoryCache) Set(ctx context.Context, key string, value interface{}, ex
 	return nil
 }
 
-// Delete удаляет значение из кэша
+// Delete удаляет значение из кэша.
 func (c *MemoryCache) Delete(ctx context.Context, key string) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -236,7 +236,7 @@ func (c *MemoryCache) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// GetLanguages получает языки из кэша
+// GetLanguages получает языки из кэша.
 func (c *MemoryCache) GetLanguages(ctx context.Context) ([]*models.Language, error) {
 	data, err := c.Get(ctx, "languages")
 	if err != nil {
@@ -248,12 +248,12 @@ func (c *MemoryCache) GetLanguages(ctx context.Context) ([]*models.Language, err
 	return languages, err
 }
 
-// SetLanguages сохраняет языки в кэш
+// SetLanguages сохраняет языки в кэш.
 func (c *MemoryCache) SetLanguages(ctx context.Context, languages []*models.Language) error {
 	return c.Set(ctx, "languages", languages, 24*time.Hour)
 }
 
-// GetInterests получает интересы из кэша
+// GetInterests получает интересы из кэша.
 func (c *MemoryCache) GetInterests(ctx context.Context, langCode string) (map[int]string, error) {
 	key := fmt.Sprintf("interests:%s", langCode)
 	data, err := c.Get(ctx, key)
@@ -266,13 +266,13 @@ func (c *MemoryCache) GetInterests(ctx context.Context, langCode string) (map[in
 	return interests, err
 }
 
-// SetInterests сохраняет интересы в кэш
+// SetInterests сохраняет интересы в кэш.
 func (c *MemoryCache) SetInterests(ctx context.Context, langCode string, interests map[int]string) error {
 	key := fmt.Sprintf("interests:%s", langCode)
 	return c.Set(ctx, key, interests, 12*time.Hour)
 }
 
-// GetUserProfile получает профиль пользователя из кэша
+// GetUserProfile получает профиль пользователя из кэша.
 func (c *MemoryCache) GetUserProfile(ctx context.Context, userID int) (*models.User, error) {
 	key := fmt.Sprintf("user:%d", userID)
 	data, err := c.Get(ctx, key)
@@ -285,21 +285,20 @@ func (c *MemoryCache) GetUserProfile(ctx context.Context, userID int) (*models.U
 	return &user, err
 }
 
-// SetUserProfile сохраняет профиль пользователя в кэш
+// SetUserProfile сохраняет профиль пользователя в кэш.
 func (c *MemoryCache) SetUserProfile(ctx context.Context, user *models.User) error {
 	key := fmt.Sprintf("user:%d", user.ID)
 	return c.Set(ctx, key, user, 30*time.Minute)
 }
 
-// InvalidateUserProfile удаляет профиль пользователя из кэша
+// InvalidateUserProfile удаляет профиль пользователя из кэша.
 func (c *MemoryCache) InvalidateUserProfile(ctx context.Context, userID int) error {
 	key := fmt.Sprintf("user:%d", userID)
 	return c.Delete(ctx, key)
 }
 
-// Close закрывает кэш
+// Close закрывает кэш.
 func (c *MemoryCache) Close() error {
 	c.cancel()
 	return nil
 }
-

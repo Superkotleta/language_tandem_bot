@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// FeedbackSystemSuite тесты для системы отзывов
+// FeedbackSystemSuite тесты для системы отзывов.
 type FeedbackSystemSuite struct {
 	suite.Suite
 	db      *database.DB
@@ -20,23 +20,23 @@ type FeedbackSystemSuite struct {
 	mockDB  *mocks.DatabaseMock
 }
 
-// SetupSuite выполняется один раз перед всеми тестами
+// SetupSuite выполняется один раз перед всеми тестами.
 func (s *FeedbackSystemSuite) SetupSuite() {
 	s.mockDB = mocks.NewDatabaseMock()
 	_, s.service = helpers.SetupTestBot(s.mockDB)
 }
 
-// TearDownSuite выполняется один раз после всех тестов
+// TearDownSuite выполняется один раз после всех тестов.
 func (s *FeedbackSystemSuite) TearDownSuite() {
 	// Ничего не нужно закрывать для моков
 }
 
-// SetupTest выполняется перед каждым тестом
+// SetupTest выполняется перед каждым тестом.
 func (s *FeedbackSystemSuite) SetupTest() {
 	s.mockDB.Reset()
 }
 
-// TestFeedbackSubmission тестирует отправку отзыва
+// TestFeedbackSubmission тестирует отправку отзыва.
 func (s *FeedbackSystemSuite) TestFeedbackSubmission() {
 	// Arrange
 	telegramID := int64(12351)
@@ -72,7 +72,7 @@ func (s *FeedbackSystemSuite) TestFeedbackSubmission() {
 	assert.Equal(s.T(), false, feedback["is_processed"])
 }
 
-// TestFeedbackValidation тестирует валидацию отзывов
+// TestFeedbackValidation тестирует валидацию отзывов.
 func (s *FeedbackSystemSuite) TestFeedbackValidation() {
 	// Arrange
 	telegramID := int64(12352)
@@ -103,7 +103,7 @@ func (s *FeedbackSystemSuite) TestFeedbackValidation() {
 	assert.NoError(s.T(), err, "Should accept valid feedback")
 }
 
-// TestFeedbackWithoutContactInfo тестирует отправку отзыва без контактной информации
+// TestFeedbackWithoutContactInfo тестирует отправку отзыва без контактной информации.
 func (s *FeedbackSystemSuite) TestFeedbackWithoutContactInfo() {
 	// Arrange
 	telegramID := int64(12353)
@@ -129,7 +129,7 @@ func (s *FeedbackSystemSuite) TestFeedbackWithoutContactInfo() {
 	assert.Nil(s.T(), feedback["contact_info"])
 }
 
-// TestMultipleFeedbacks тестирует отправку нескольких отзывов от одного пользователя
+// TestMultipleFeedbacks тестирует отправку нескольких отзывов от одного пользователя.
 func (s *FeedbackSystemSuite) TestMultipleFeedbacks() {
 	// Arrange
 	telegramID := int64(12354)
@@ -162,7 +162,7 @@ func (s *FeedbackSystemSuite) TestMultipleFeedbacks() {
 	}
 }
 
-// TestAdminFeedbackManagement тестирует управление отзывами администратором
+// TestAdminFeedbackManagement тестирует управление отзывами администратором.
 func (s *FeedbackSystemSuite) TestAdminFeedbackManagement() {
 	// Arrange
 	telegramID := int64(12355)
@@ -204,7 +204,7 @@ func (s *FeedbackSystemSuite) TestAdminFeedbackManagement() {
 	assert.Len(s.T(), unprocessedFeedbacks, 0, "Should have no unprocessed feedbacks")
 }
 
-// TestFeedbackStatusUpdate тестирует обновление статуса отзыва
+// TestFeedbackStatusUpdate тестирует обновление статуса отзыва.
 func (s *FeedbackSystemSuite) TestFeedbackStatusUpdate() {
 	// Arrange
 	telegramID := int64(12356)
@@ -234,7 +234,7 @@ func (s *FeedbackSystemSuite) TestFeedbackStatusUpdate() {
 	assert.Equal(s.T(), true, updatedFeedbacks[0]["is_processed"])
 }
 
-// TestFeedbackArchiving тестирует архивирование отзыва
+// TestFeedbackArchiving тестирует архивирование отзыва.
 func (s *FeedbackSystemSuite) TestFeedbackArchiving() {
 	// Arrange
 	telegramID := int64(12357)
@@ -264,7 +264,7 @@ func (s *FeedbackSystemSuite) TestFeedbackArchiving() {
 	assert.Equal(s.T(), true, archivedFeedbacks[0]["is_processed"])
 }
 
-// TestFeedbackDeletion тестирует удаление отзыва
+// TestFeedbackDeletion тестирует удаление отзыва.
 func (s *FeedbackSystemSuite) TestFeedbackDeletion() {
 	// Arrange
 	telegramID := int64(12358)
@@ -294,7 +294,7 @@ func (s *FeedbackSystemSuite) TestFeedbackDeletion() {
 	assert.Len(s.T(), deletedFeedbacks, 0, "Should have no feedbacks after deletion")
 }
 
-// TestFeedbackSystemSuite запускает весь набор тестов
+// TestFeedbackSystemSuite запускает весь набор тестов.
 func TestFeedbackSystemSuite(t *testing.T) {
 	suite.Run(t, new(FeedbackSystemSuite))
 }

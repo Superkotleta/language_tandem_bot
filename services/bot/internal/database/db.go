@@ -33,7 +33,7 @@ func (db *DB) GetConnection() *sql.DB {
 	return db.conn
 }
 
-// User operations
+// User operations.
 func (db *DB) FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error) {
 	user := &models.User{}
 
@@ -81,7 +81,7 @@ func (db *DB) UpdateUserInterfaceLanguage(userID int, langCode string) error {
 	return err
 }
 
-// ✅ Новые методы для работы с языками пользователя
+// ✅ Новые методы для работы с языками пользователя.
 func (db *DB) UpdateUserNativeLanguage(userID int, langCode string) error {
 	_, err := db.conn.Exec(
 		"UPDATE users SET native_language_code = $1, updated_at = NOW() WHERE id = $2",
@@ -106,7 +106,7 @@ func (db *DB) UpdateUserTargetLanguageLevel(userID int, level string) error {
 	return err
 }
 
-// ✅ Методы-обертки для совместимости
+// ✅ Методы-обертки для совместимости.
 func (db *DB) SaveNativeLanguage(userID int, langCode string) error {
 	return db.UpdateUserNativeLanguage(userID, langCode)
 }
@@ -195,7 +195,7 @@ func (db *DB) ResetUserProfile(userID int) error {
 
 // Методы работы с отзывами пользователей
 
-// SaveUserFeedback сохраняет отзыв пользователя в базу данных
+// SaveUserFeedback сохраняет отзыв пользователя в базу данных.
 func (db *DB) SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error {
 	query := `
         INSERT INTO user_feedback (user_id, feedback_text, contact_info, created_at, is_processed)
@@ -206,7 +206,7 @@ func (db *DB) SaveUserFeedback(userID int, feedbackText string, contactInfo *str
 	return err
 }
 
-// GetUserFeedbackByUserID получает отзывы пользователя
+// GetUserFeedbackByUserID получает отзывы пользователя.
 func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, error) {
 	query := `
         SELECT id, feedback_text, contact_info, created_at, is_processed, admin_response
@@ -262,7 +262,7 @@ func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, err
 	return feedbacks, nil
 }
 
-// GetUnprocessedFeedback получает все необработанные отзывы для администрирования
+// GetUnprocessedFeedback получает все необработанные отзывы для администрирования.
 func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 	query := `
         SELECT uf.id, uf.feedback_text, uf.contact_info, uf.created_at,
@@ -322,7 +322,7 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 	return feedbacks, nil
 }
 
-// MarkFeedbackProcessed помечает отзыв как обработанный и добавляет ответ администратора
+// MarkFeedbackProcessed помечает отзыв как обработанный и добавляет ответ администратора.
 func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
 	query := `
         UPDATE user_feedback

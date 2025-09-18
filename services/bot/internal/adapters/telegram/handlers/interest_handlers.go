@@ -10,21 +10,21 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// InterestHandler интерфейс для обработки интересов
+// InterestHandler интерфейс для обработки интересов.
 type InterestHandler interface {
 	HandleInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error
 	HandleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error
 	SendInterestsMenu(chatID int64, user *models.User) error
 }
 
-// InterestHandlerImpl реализация обработчика интересов
+// InterestHandlerImpl реализация обработчика интересов.
 type InterestHandlerImpl struct {
 	service         *core.BotService
 	bot             *tgbotapi.BotAPI
 	keyboardBuilder *KeyboardBuilder
 }
 
-// NewInterestHandler создает новый обработчик интересов
+// NewInterestHandler создает новый обработчик интересов.
 func NewInterestHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder) InterestHandler {
 	return &InterestHandlerImpl{
 		service:         service,
@@ -33,7 +33,7 @@ func NewInterestHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboard
 	}
 }
 
-// HandleInterestSelection обрабатывает выбор интереса
+// HandleInterestSelection обрабатывает выбор интереса.
 func (h *InterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
@@ -86,7 +86,7 @@ func (h *InterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.Callbac
 	return err
 }
 
-// HandleInterestsContinue обрабатывает продолжение после выбора интересов
+// HandleInterestsContinue обрабатывает продолжение после выбора интересов.
 func (h *InterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	log.Printf("InterestHandler.HandleInterestsContinue called for user ID: %d, Telegram ID: %d", user.ID, user.TelegramID)
 
@@ -159,7 +159,7 @@ func (h *InterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Callbac
 	return nil
 }
 
-// SendInterestsMenu отправляет меню выбора интересов
+// SendInterestsMenu отправляет меню выбора интересов.
 func (h *InterestHandlerImpl) SendInterestsMenu(chatID int64, user *models.User) error {
 	interests, err := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
 	if err != nil {
@@ -181,7 +181,7 @@ func (h *InterestHandlerImpl) SendInterestsMenu(chatID int64, user *models.User)
 	return err
 }
 
-// updateProfileCompletionLevel обновляет уровень завершения профиля от 0 до 100
+// updateProfileCompletionLevel обновляет уровень завершения профиля от 0 до 100.
 func (h *InterestHandlerImpl) updateProfileCompletionLevel(userID int, completionLevel int) error {
 	log.Printf("Executing updateProfileCompletionLevel: userID=%d, level=%d", userID, completionLevel)
 

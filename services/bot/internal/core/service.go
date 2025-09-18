@@ -23,7 +23,7 @@ func NewBotService(db *database.DB) *BotService {
 	}
 }
 
-// NewBotServiceWithInterface создает BotService с уже готовым интерфейсом Database (для тестов)
+// NewBotServiceWithInterface создает BotService с уже готовым интерфейсом Database (для тестов).
 func NewBotServiceWithInterface(db database.Database, localizer *localization.Localizer) *BotService {
 	return &BotService{
 		DB:        db,
@@ -31,7 +31,7 @@ func NewBotServiceWithInterface(db database.Database, localizer *localization.Lo
 	}
 }
 
-// databaseAdapter адаптер для совместимости с интерфейсом Database
+// databaseAdapter адаптер для совместимости с интерфейсом Database.
 type databaseAdapter struct {
 	db *database.DB
 }
@@ -222,7 +222,7 @@ func (a *databaseAdapter) DeleteAllProcessedFeedbacks() (int, error) {
 	return 0, nil
 }
 
-// SetFeedbackNotificationFunc устанавливает функцию для отправки уведомлений о новых отзывах
+// SetFeedbackNotificationFunc устанавливает функцию для отправки уведомлений о новых отзывах.
 func (s *BotService) SetFeedbackNotificationFunc(fn func(map[string]interface{}) error) {
 	s.FeedbackNotificationFunc = fn
 }
@@ -355,7 +355,7 @@ func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 
 // Методы работы с обратной связью
 
-// SendFeedbackNotification отправляет уведомление администраторам о новом отзыве
+// SendFeedbackNotification отправляет уведомление администраторам о новом отзыве.
 func (s *BotService) SendFeedbackNotification(feedbackData map[string]interface{}, admins []int64) error {
 	if s.FeedbackNotificationFunc != nil {
 		return s.FeedbackNotificationFunc(feedbackData)
@@ -395,7 +395,7 @@ func (s *BotService) SendFeedbackNotification(feedbackData map[string]interface{
 	return nil
 }
 
-// ValidateFeedback проверяет корректность отзыва по длине
+// ValidateFeedback проверяет корректность отзыва по длине.
 func (s *BotService) ValidateFeedback(feedbackText string) error {
 	length := len([]rune(feedbackText)) // Учитываем Unicode
 	if length < 10 {
@@ -407,7 +407,7 @@ func (s *BotService) ValidateFeedback(feedbackText string) error {
 	return nil
 }
 
-// SaveUserFeedback сохраняет отзыв пользователя и отправляет уведомления
+// SaveUserFeedback сохраняет отзыв пользователя и отправляет уведомления.
 func (s *BotService) SaveUserFeedback(userID int, feedbackText string, contactInfo *string, admins []int64) error {
 	// Валидируем отзыв
 	if err := s.ValidateFeedback(feedbackText); err != nil {
@@ -449,47 +449,47 @@ func (s *BotService) SaveUserFeedback(userID int, feedbackText string, contactIn
 	return nil
 }
 
-// GetUserDataForFeedback получает данные пользователя для формирования уведомления о новом отзыве
+// GetUserDataForFeedback получает данные пользователя для формирования уведомления о новом отзыве.
 func (s *BotService) GetUserDataForFeedback(userID int) (map[string]interface{}, error) {
 	return s.DB.GetUserDataForFeedback(userID)
 }
 
-// GetAllUnprocessedFeedback получает все необработанные отзывы для администратора
+// GetAllUnprocessedFeedback получает все необработанные отзывы для администратора.
 func (s *BotService) GetAllUnprocessedFeedback() ([]map[string]interface{}, error) {
 	return s.DB.GetUnprocessedFeedback()
 }
 
-// GetAllFeedback получает все отзывы для администратора
+// GetAllFeedback получает все отзывы для администратора.
 func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
 	return s.DB.GetAllFeedback()
 }
 
-// UpdateFeedbackStatus обновляет статус отзыва (обработан/не обработан)
+// UpdateFeedbackStatus обновляет статус отзыва (обработан/не обработан).
 func (s *BotService) UpdateFeedbackStatus(feedbackID int, isProcessed bool) error {
 	return s.DB.UpdateFeedbackStatus(feedbackID, isProcessed)
 }
 
-// ArchiveFeedback архивирует отзыв
+// ArchiveFeedback архивирует отзыв.
 func (s *BotService) ArchiveFeedback(feedbackID int) error {
 	return s.DB.ArchiveFeedback(feedbackID)
 }
 
-// DeleteFeedback удаляет отзыв из базы данных
+// DeleteFeedback удаляет отзыв из базы данных.
 func (s *BotService) DeleteFeedback(feedbackID int) error {
 	return s.DB.DeleteFeedback(feedbackID)
 }
 
-// MarkFeedbackProcessed помечает отзыв как обработанный с ответом
+// MarkFeedbackProcessed помечает отзыв как обработанный с ответом.
 func (s *BotService) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
 	return s.DB.MarkFeedbackProcessed(feedbackID, adminResponse)
 }
 
-// DeleteAllProcessedFeedbacks удаляет все обработанные отзывы
+// DeleteAllProcessedFeedbacks удаляет все обработанные отзывы.
 func (s *BotService) DeleteAllProcessedFeedbacks() (int, error) {
 	return s.DB.DeleteAllProcessedFeedbacks()
 }
 
-// UnarchiveFeedback возвращает отзыв в активные (убирает флаг is_processed)
+// UnarchiveFeedback возвращает отзыв в активные (убирает флаг is_processed).
 func (s *BotService) UnarchiveFeedback(feedbackID int) error {
 	return s.DB.UnarchiveFeedback(feedbackID)
 }

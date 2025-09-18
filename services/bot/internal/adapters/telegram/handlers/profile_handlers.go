@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// ProfileHandlerImpl обрабатывает все операции с профилем пользователя
+// ProfileHandlerImpl обрабатывает все операции с профилем пользователя.
 type ProfileHandlerImpl struct {
 	bot               *tgbotapi.BotAPI
 	service           *core.BotService
@@ -19,7 +19,7 @@ type ProfileHandlerImpl struct {
 	editInterestsTemp map[int64][]int // Временное хранение выбранных интересов для каждого пользователя
 }
 
-// NewProfileHandler создает новый экземпляр ProfileHandler
+// NewProfileHandler создает новый экземпляр ProfileHandler.
 func NewProfileHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuilder *KeyboardBuilder) *ProfileHandlerImpl {
 	return &ProfileHandlerImpl{
 		bot:               bot,
@@ -29,7 +29,7 @@ func NewProfileHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardB
 	}
 }
 
-// HandleProfileCommand обрабатывает команду /profile
+// HandleProfileCommand обрабатывает команду /profile.
 func (ph *ProfileHandlerImpl) HandleProfileCommand(message *tgbotapi.Message, user *models.User) error {
 	summary, err := ph.service.BuildProfileSummary(user)
 	if err != nil {
@@ -44,7 +44,7 @@ func (ph *ProfileHandlerImpl) HandleProfileCommand(message *tgbotapi.Message, us
 	return err
 }
 
-// HandleProfileShow показывает профиль пользователя
+// HandleProfileShow показывает профиль пользователя.
 func (ph *ProfileHandlerImpl) HandleProfileShow(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	summary, err := ph.service.BuildProfileSummary(user)
 	if err != nil {
@@ -61,7 +61,7 @@ func (ph *ProfileHandlerImpl) HandleProfileShow(callback *tgbotapi.CallbackQuery
 	return err
 }
 
-// HandleProfileResetAsk запрашивает подтверждение сброса профиля
+// HandleProfileResetAsk запрашивает подтверждение сброса профиля.
 func (ph *ProfileHandlerImpl) HandleProfileResetAsk(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	title := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_reset_title")
 	warn := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_reset_warning")
@@ -76,7 +76,7 @@ func (ph *ProfileHandlerImpl) HandleProfileResetAsk(callback *tgbotapi.CallbackQ
 	return err
 }
 
-// HandleProfileResetYes выполняет сброс профиля
+// HandleProfileResetYes выполняет сброс профиля.
 func (ph *ProfileHandlerImpl) HandleProfileResetYes(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	if err := ph.service.DB.ResetUserProfile(user.ID); err != nil {
 		return err
@@ -103,7 +103,7 @@ func (ph *ProfileHandlerImpl) HandleProfileResetYes(callback *tgbotapi.CallbackQ
 	return err
 }
 
-// StartProfileSetup начинает настройку профиля с выбора родного языка
+// StartProfileSetup начинает настройку профиля с выбора родного языка.
 func (ph *ProfileHandlerImpl) StartProfileSetup(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	text := ph.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
 	keyboard := ph.keyboardBuilder.CreateLanguageKeyboard(user.InterfaceLanguageCode, "native", "", true)
@@ -115,7 +115,7 @@ func (ph *ProfileHandlerImpl) StartProfileSetup(callback *tgbotapi.CallbackQuery
 	return err
 }
 
-// HandleInterestsContinue обрабатывает продолжение после выбора интересов
+// HandleInterestsContinue обрабатывает продолжение после выбора интересов.
 func (ph *ProfileHandlerImpl) HandleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	log.Printf("HandleInterestsContinue called for user ID: %d, Telegram ID: %d", user.ID, user.TelegramID)
 
@@ -194,7 +194,7 @@ func (ph *ProfileHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Callbac
 	return nil
 }
 
-// updateProfileCompletionLevel обновляет уровень завершения профиля от 0 до 100
+// updateProfileCompletionLevel обновляет уровень завершения профиля от 0 до 100.
 func (ph *ProfileHandlerImpl) updateProfileCompletionLevel(userID int, completionLevel int) error {
 	log.Printf("Executing updateProfileCompletionLevel: userID=%d, level=%d", userID, completionLevel)
 
@@ -249,7 +249,7 @@ func (ph *ProfileHandlerImpl) HandleEditInterests(callback *tgbotapi.CallbackQue
 	return err
 }
 
-// HandleEditLanguages позволяет редактировать языки пользователя
+// HandleEditLanguages позволяет редактировать языки пользователя.
 func (ph *ProfileHandlerImpl) HandleEditLanguages(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Показываем текущие настройки языков с кнопками редактирования
 	text := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_edit_languages") +
@@ -273,7 +273,7 @@ func (ph *ProfileHandlerImpl) HandleEditLanguages(callback *tgbotapi.CallbackQue
 	return err
 }
 
-// HandleSaveEdits сохраняет изменения и возвращается к просмотру профиля
+// HandleSaveEdits сохраняет изменения и возвращается к просмотру профиля.
 func (ph *ProfileHandlerImpl) HandleSaveEdits(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	userID := int64(user.ID)
 
@@ -303,7 +303,7 @@ func (ph *ProfileHandlerImpl) HandleSaveEdits(callback *tgbotapi.CallbackQuery, 
 	return ph.HandleProfileShow(callback, user)
 }
 
-// HandleCancelEdits отменяет изменения и возвращается к просмотру профиля
+// HandleCancelEdits отменяет изменения и возвращается к просмотру профиля.
 func (ph *ProfileHandlerImpl) HandleCancelEdits(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	userID := int64(user.ID)
 	// Удаляем временное хранилище без сохранения
@@ -311,7 +311,7 @@ func (ph *ProfileHandlerImpl) HandleCancelEdits(callback *tgbotapi.CallbackQuery
 	return ph.HandleProfileShow(callback, user)
 }
 
-// HandleEditNativeLang редактирует родной язык пользователя
+// HandleEditNativeLang редактирует родной язык пользователя.
 func (ph *ProfileHandlerImpl) HandleEditNativeLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	text := ph.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
 	// Показываем клавиатуру с сохранением/отменой вместо обычного выбора
@@ -331,7 +331,7 @@ func (ph *ProfileHandlerImpl) HandleEditNativeLang(callback *tgbotapi.CallbackQu
 	return err
 }
 
-// HandleEditTargetLang редактирует изучаемый язык пользователя (только если родной - русский)
+// HandleEditTargetLang редактирует изучаемый язык пользователя (только если родной - русский).
 func (ph *ProfileHandlerImpl) HandleEditTargetLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Проверяем, что родной язык русский - только в этом случае можно редактировать изучаемый язык
 	if user.NativeLanguageCode != "ru" {
@@ -359,7 +359,7 @@ func (ph *ProfileHandlerImpl) HandleEditTargetLang(callback *tgbotapi.CallbackQu
 	return err
 }
 
-// HandleEditNativeLanguage сохраняет выбор родного языка с учетом первоначальной логики
+// HandleEditNativeLanguage сохраняет выбор родного языка с учетом первоначальной логики.
 func (ph *ProfileHandlerImpl) HandleEditNativeLanguage(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	langCode := callback.Data[len("lang_edit_native_"):]
 
@@ -420,7 +420,7 @@ func (ph *ProfileHandlerImpl) HandleEditNativeLanguage(callback *tgbotapi.Callba
 	}
 }
 
-// HandleEditTargetLanguage сохраняет выбор изучаемого языка
+// HandleEditTargetLanguage сохраняет выбор изучаемого языка.
 func (ph *ProfileHandlerImpl) HandleEditTargetLanguage(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	langCode := callback.Data[len("lang_edit_target_"):]
 
@@ -452,7 +452,7 @@ func (ph *ProfileHandlerImpl) HandleEditTargetLanguage(callback *tgbotapi.Callba
 	return err
 }
 
-// HandleEditInterestSelection обрабатывает выбор/отмену интереса при редактировании
+// HandleEditInterestSelection обрабатывает выбор/отмену интереса при редактировании.
 func (ph *ProfileHandlerImpl) HandleEditInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
@@ -510,7 +510,7 @@ func (ph *ProfileHandlerImpl) HandleEditInterestSelection(callback *tgbotapi.Cal
 	return err
 }
 
-// HandleEditLevelSelection обрабатывает выбор уровня владения языком при редактировании
+// HandleEditLevelSelection обрабатывает выбор уровня владения языком при редактировании.
 func (ph *ProfileHandlerImpl) HandleEditLevelSelection(callback *tgbotapi.CallbackQuery, user *models.User, levelCode string) error {
 	// Сохраняем уровень владения языком
 	err := ph.service.DB.UpdateUserTargetLanguageLevel(user.ID, levelCode)
@@ -542,7 +542,7 @@ func (ph *ProfileHandlerImpl) HandleEditLevelSelection(callback *tgbotapi.Callba
 	return err
 }
 
-// HandleEditLevelLang редактирует уровень владения языком
+// HandleEditLevelLang редактирует уровень владения языком.
 func (ph *ProfileHandlerImpl) HandleEditLevelLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	langName := ph.service.Localizer.GetLanguageName(user.TargetLanguageCode, user.InterfaceLanguageCode)
 	title := ph.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{

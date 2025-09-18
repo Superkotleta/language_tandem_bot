@@ -5,7 +5,7 @@ import (
 	"language-exchange-bot/internal/models"
 )
 
-// UserService обрабатывает операции с пользователями
+// UserService обрабатывает операции с пользователями.
 type UserService struct {
 	db *database.DB
 }

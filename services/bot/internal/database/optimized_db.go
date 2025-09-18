@@ -11,14 +11,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// OptimizedDB оптимизированная версия для работы с PostgreSQL
+// OptimizedDB оптимизированная версия для работы с PostgreSQL.
 type OptimizedDB struct {
 	pool   *pgxpool.Pool
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-// NewOptimizedDB создает оптимизированное соединение с БД
+// NewOptimizedDB создает оптимизированное соединение с БД.
 func NewOptimizedDB(databaseURL string) (*OptimizedDB, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -56,26 +56,26 @@ func NewOptimizedDB(databaseURL string) (*OptimizedDB, error) {
 	}, nil
 }
 
-// Close закрывает соединение с БД
+// Close закрывает соединение с БД.
 func (db *OptimizedDB) Close() error {
 	db.cancel()
 	db.pool.Close()
 	return nil
 }
 
-// GetConnection возвращает соединение из пула
+// GetConnection возвращает соединение из пула.
 func (db *OptimizedDB) GetConnection() *sql.DB {
 	// Для совместимости с существующим кодом
 	// В реальном проекте лучше перейти на pgx полностью
 	return nil
 }
 
-// GetPool возвращает пул соединений pgx
+// GetPool возвращает пул соединений pgx.
 func (db *OptimizedDB) GetPool() *pgxpool.Pool {
 	return db.pool
 }
 
-// FindOrCreateUser оптимизированное создание/поиск пользователя
+// FindOrCreateUser оптимизированное создание/поиск пользователя.
 func (db *OptimizedDB) FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(db.ctx, 5*time.Second)
 	defer cancel()
@@ -106,7 +106,7 @@ func (db *OptimizedDB) FindOrCreateUser(telegramID int64, username, firstName st
 	return user, err
 }
 
-// UpdateUserProfileBatch обновляет профиль пользователя в одной транзакции
+// UpdateUserProfileBatch обновляет профиль пользователя в одной транзакции.
 func (db *OptimizedDB) UpdateUserProfileBatch(userID int, updates map[string]interface{}) error {
 	ctx, cancel := context.WithTimeout(db.ctx, 10*time.Second)
 	defer cancel()
@@ -135,7 +135,7 @@ func (db *OptimizedDB) UpdateUserProfileBatch(userID int, updates map[string]int
 		if len(setParts) > 0 {
 			setParts = append(setParts, "updated_at = NOW()")
 			query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d",
-				fmt.Sprintf("%s", setParts[0]), argIndex)
+				setParts[0], argIndex)
 
 			for i := 1; i < len(setParts); i++ {
 				query += fmt.Sprintf(", %s", setParts[i])
@@ -181,7 +181,7 @@ func (db *OptimizedDB) UpdateUserProfileBatch(userID int, updates map[string]int
 	return tx.Commit(ctx)
 }
 
-// GetUserSelectedInterests оптимизированное получение интересов пользователя
+// GetUserSelectedInterests оптимизированное получение интересов пользователя.
 func (db *OptimizedDB) GetUserSelectedInterests(userID int) ([]int, error) {
 	ctx, cancel := context.WithTimeout(db.ctx, 3*time.Second)
 	defer cancel()
@@ -205,7 +205,7 @@ func (db *OptimizedDB) GetUserSelectedInterests(userID int) ([]int, error) {
 	return interests, nil
 }
 
-// SaveUserInterestsBatch сохраняет интересы пользователя batch операцией
+// SaveUserInterestsBatch сохраняет интересы пользователя batch операцией.
 func (db *OptimizedDB) SaveUserInterestsBatch(userID int, interestIDs []int) error {
 	ctx, cancel := context.WithTimeout(db.ctx, 5*time.Second)
 	defer cancel()
@@ -244,7 +244,7 @@ func (db *OptimizedDB) SaveUserInterestsBatch(userID int, interestIDs []int) err
 	return tx.Commit(ctx)
 }
 
-// GetUnprocessedFeedbackBatch получает необработанные отзывы с пагинацией
+// GetUnprocessedFeedbackBatch получает необработанные отзывы с пагинацией.
 func (db *OptimizedDB) GetUnprocessedFeedbackBatch(limit, offset int) ([]map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(db.ctx, 5*time.Second)
 	defer cancel()
@@ -308,7 +308,7 @@ func (db *OptimizedDB) GetUnprocessedFeedbackBatch(limit, offset int) ([]map[str
 	return feedbacks, nil
 }
 
-// MarkFeedbackProcessedBatch помечает несколько отзывов как обработанные
+// MarkFeedbackProcessedBatch помечает несколько отзывов как обработанные.
 func (db *OptimizedDB) MarkFeedbackProcessedBatch(feedbackIDs []int, adminResponse string) error {
 	ctx, cancel := context.WithTimeout(db.ctx, 5*time.Second)
 	defer cancel()
@@ -331,7 +331,7 @@ func (db *OptimizedDB) MarkFeedbackProcessedBatch(feedbackIDs []int, adminRespon
         UPDATE user_feedback
         SET is_processed = true, admin_response = $%d, updated_at = NOW()
         WHERE id IN (%s)
-    `, len(feedbackIDs)+1, fmt.Sprintf("%s", placeholders[0]))
+    `, len(feedbackIDs)+1, placeholders[0])
 
 	for i := 1; i < len(placeholders); i++ {
 		query += fmt.Sprintf(", %s", placeholders[i])
@@ -341,7 +341,7 @@ func (db *OptimizedDB) MarkFeedbackProcessedBatch(feedbackIDs []int, adminRespon
 	return err
 }
 
-// HealthCheck проверяет здоровье соединения с БД
+// HealthCheck проверяет здоровье соединения с БД.
 func (db *OptimizedDB) HealthCheck() error {
 	ctx, cancel := context.WithTimeout(db.ctx, 2*time.Second)
 	defer cancel()
@@ -349,7 +349,7 @@ func (db *OptimizedDB) HealthCheck() error {
 	return db.pool.Ping(ctx)
 }
 
-// GetStats возвращает статистику пула соединений
+// GetStats возвращает статистику пула соединений.
 func (db *OptimizedDB) GetStats() map[string]interface{} {
 	stats := db.pool.Stat()
 	return map[string]interface{}{

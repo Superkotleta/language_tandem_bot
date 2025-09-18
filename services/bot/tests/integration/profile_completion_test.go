@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// ProfileCompletionSuite тесты для заполнения профиля пользователя
+// ProfileCompletionSuite тесты для заполнения профиля пользователя.
 type ProfileCompletionSuite struct {
 	suite.Suite
 	db      *database.DB
@@ -20,23 +20,23 @@ type ProfileCompletionSuite struct {
 	mockDB  *mocks.DatabaseMock // Используем мок для изоляции
 }
 
-// SetupSuite выполняется один раз перед всеми тестами
+// SetupSuite выполняется один раз перед всеми тестами.
 func (s *ProfileCompletionSuite) SetupSuite() {
 	s.mockDB = mocks.NewDatabaseMock()
 	_, s.service = helpers.SetupTestBot(s.mockDB)
 }
 
-// TearDownSuite выполняется один раз после всех тестов
+// TearDownSuite выполняется один раз после всех тестов.
 func (s *ProfileCompletionSuite) TearDownSuite() {
 	// Ничего не нужно закрывать для моков
 }
 
-// SetupTest выполняется перед каждым тестом
+// SetupTest выполняется перед каждым тестом.
 func (s *ProfileCompletionSuite) SetupTest() {
 	s.mockDB.Reset()
 }
 
-// TestCompleteProfileFlow тестирует полный процесс заполнения профиля
+// TestCompleteProfileFlow тестирует полный процесс заполнения профиля.
 func (s *ProfileCompletionSuite) TestCompleteProfileFlow() {
 	// Arrange
 	telegramID := int64(12345)
@@ -86,7 +86,7 @@ func (s *ProfileCompletionSuite) TestCompleteProfileFlow() {
 	assert.Contains(s.T(), summary, "3", "Should contain interests count")
 }
 
-// TestProfileReset тестирует сброс профиля пользователя
+// TestProfileReset тестирует сброс профиля пользователя.
 func (s *ProfileCompletionSuite) TestProfileReset() {
 	// Arrange
 	telegramID := int64(12346)
@@ -117,7 +117,7 @@ func (s *ProfileCompletionSuite) TestProfileReset() {
 	assert.Empty(s.T(), interests, "Interests should be cleared")
 }
 
-// TestLanguageSelection тестирует выбор языков
+// TestLanguageSelection тестирует выбор языков.
 func (s *ProfileCompletionSuite) TestLanguageSelection() {
 	// Arrange
 	telegramID := int64(12347)
@@ -142,7 +142,7 @@ func (s *ProfileCompletionSuite) TestLanguageSelection() {
 	assert.Contains(s.T(), targetPrompt, "aprendiendo", "Should contain learning language prompt")
 }
 
-// TestInterestManagement тестирует управление интересами
+// TestInterestManagement тестирует управление интересами.
 func (s *ProfileCompletionSuite) TestInterestManagement() {
 	// Arrange
 	telegramID := int64(12348)
@@ -183,7 +183,7 @@ func (s *ProfileCompletionSuite) TestInterestManagement() {
 	assert.Empty(s.T(), interests, "Should have no interests after clear")
 }
 
-// TestLocalizedInterests тестирует локализованные интересы
+// TestLocalizedInterests тестирует локализованные интересы.
 func (s *ProfileCompletionSuite) TestLocalizedInterests() {
 	// Arrange
 	telegramID := int64(12349)
@@ -204,7 +204,7 @@ func (s *ProfileCompletionSuite) TestLocalizedInterests() {
 	assert.Greater(s.T(), len(interests), 0, "Should have at least one interest")
 }
 
-// TestProfileCompletionLevel тестирует уровень завершенности профиля
+// TestProfileCompletionLevel тестирует уровень завершенности профиля.
 func (s *ProfileCompletionSuite) TestProfileCompletionLevel() {
 	// Arrange
 	telegramID := int64(12350)
@@ -244,7 +244,7 @@ func (s *ProfileCompletionSuite) TestProfileCompletionLevel() {
 	assert.True(s.T(), completed, "Profile with languages and interests should be completed")
 }
 
-// TestProfileCompletionSuite запускает весь набор тестов
+// TestProfileCompletionSuite запускает весь набор тестов.
 func TestProfileCompletionSuite(t *testing.T) {
 	suite.Run(t, new(ProfileCompletionSuite))
 }

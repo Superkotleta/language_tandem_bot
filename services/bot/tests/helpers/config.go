@@ -4,7 +4,7 @@ import (
 	"language-exchange-bot/internal/config"
 )
 
-// GetTestConfig возвращает конфигурацию для тестов
+// GetTestConfig возвращает конфигурацию для тестов.
 func GetTestConfig() *config.Config {
 	return &config.Config{
 		// Тестовый токен - НЕ ИСПОЛЬЗУЙТЕ В PRODUCTION!
@@ -18,12 +18,12 @@ func GetTestConfig() *config.Config {
 	}
 }
 
-// GetTestAdminUserConfig возвращает данные тестового администратора
+// GetTestAdminUserConfig возвращает данные тестового администратора.
 func GetTestAdminUserConfig() (int64, string) {
 	return 123456789, "testadmin"
 }
 
-// GetTestRegularUserConfig возвращает данные тестового обычного пользователя
+// GetTestRegularUserConfig возвращает данные тестового обычного пользователя.
 func GetTestRegularUserConfig() (int64, string) {
 	return 555666777, "testuser"
 }

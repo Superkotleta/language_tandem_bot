@@ -196,7 +196,7 @@ func TestDatabase_ConnectionOperations(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestDatabase - тестовая реализация интерфейса Database
+// TestDatabase - тестовая реализация интерфейса Database.
 type TestDatabase struct{}
 
 func (t *TestDatabase) FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error) {

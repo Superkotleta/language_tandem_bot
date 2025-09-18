@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// AdminFunctionsSuite тесты для административных функций
+// AdminFunctionsSuite тесты для административных функций.
 type AdminFunctionsSuite struct {
 	suite.Suite
 	db      *database.DB
@@ -20,23 +20,23 @@ type AdminFunctionsSuite struct {
 	mockDB  *mocks.DatabaseMock
 }
 
-// SetupSuite выполняется один раз перед всеми тестами
+// SetupSuite выполняется один раз перед всеми тестами.
 func (s *AdminFunctionsSuite) SetupSuite() {
 	s.mockDB = mocks.NewDatabaseMock()
 	_, s.service = helpers.SetupTestBot(s.mockDB)
 }
 
-// TearDownSuite выполняется один раз после всех тестов
+// TearDownSuite выполняется один раз после всех тестов.
 func (s *AdminFunctionsSuite) TearDownSuite() {
 	// Ничего не нужно закрывать для моков
 }
 
-// SetupTest выполняется перед каждым тестом
+// SetupTest выполняется перед каждым тестом.
 func (s *AdminFunctionsSuite) SetupTest() {
 	s.mockDB.Reset()
 }
 
-// TestAdminFeedbackOverview тестирует обзор отзывов для администратора
+// TestAdminFeedbackOverview тестирует обзор отзывов для администратора.
 func (s *AdminFunctionsSuite) TestAdminFeedbackOverview() {
 	// Arrange - Создаем несколько пользователей с отзывами
 	users := []struct {
@@ -75,7 +75,7 @@ func (s *AdminFunctionsSuite) TestAdminFeedbackOverview() {
 	assert.Contains(s.T(), feedback, "is_processed")
 }
 
-// TestAdminFeedbackProcessing тестирует обработку отзывов администратором
+// TestAdminFeedbackProcessing тестирует обработку отзывов администратором.
 func (s *AdminFunctionsSuite) TestAdminFeedbackProcessing() {
 	// Arrange
 	telegramID := int64(12364)
@@ -117,7 +117,7 @@ func (s *AdminFunctionsSuite) TestAdminFeedbackProcessing() {
 	assert.Len(s.T(), unprocessedFeedbacks, 0, "Should have no unprocessed feedbacks")
 }
 
-// TestAdminBulkOperations тестирует массовые операции администратора
+// TestAdminBulkOperations тестирует массовые операции администратора.
 func (s *AdminFunctionsSuite) TestAdminBulkOperations() {
 	// Arrange - Создаем несколько обработанных отзывов
 	users := []struct {
@@ -162,7 +162,7 @@ func (s *AdminFunctionsSuite) TestAdminBulkOperations() {
 	assert.Len(s.T(), allFeedbacks, 0, "Should have no feedbacks after bulk deletion")
 }
 
-// TestAdminFeedbackUnarchive тестирует возврат отзыва в активные
+// TestAdminFeedbackUnarchive тестирует возврат отзыва в активные.
 func (s *AdminFunctionsSuite) TestAdminFeedbackUnarchive() {
 	// Arrange
 	telegramID := int64(12368)
@@ -201,7 +201,7 @@ func (s *AdminFunctionsSuite) TestAdminFeedbackUnarchive() {
 	assert.Len(s.T(), unprocessedFeedbacks, 1, "Should have one unprocessed feedback after unarchive")
 }
 
-// TestAdminFeedbackNotFound тестирует обработку несуществующих отзывов
+// TestAdminFeedbackNotFound тестирует обработку несуществующих отзывов.
 func (s *AdminFunctionsSuite) TestAdminFeedbackNotFound() {
 	// Act & Assert - Пытаемся обработать несуществующий отзыв
 	nonExistentID := 99999
@@ -221,7 +221,7 @@ func (s *AdminFunctionsSuite) TestAdminFeedbackNotFound() {
 	assert.Error(s.T(), err, "Should return error for non-existent feedback")
 }
 
-// TestAdminFeedbackStatusUpdate тестирует обновление статуса отзыва
+// TestAdminFeedbackStatusUpdate тестирует обновление статуса отзыва.
 func (s *AdminFunctionsSuite) TestAdminFeedbackStatusUpdate() {
 	// Arrange
 	telegramID := int64(12369)
@@ -260,7 +260,7 @@ func (s *AdminFunctionsSuite) TestAdminFeedbackStatusUpdate() {
 	assert.Equal(s.T(), false, updatedFeedbacks[0]["is_processed"])
 }
 
-// TestAdminFunctionsSuite запускает весь набор тестов
+// TestAdminFunctionsSuite запускает весь набор тестов.
 func TestAdminFunctionsSuite(t *testing.T) {
 	suite.Run(t, new(AdminFunctionsSuite))
 }

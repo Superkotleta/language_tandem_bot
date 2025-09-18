@@ -12,7 +12,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// AdminHandler интерфейс для обработки административных функций
+// AdminHandler интерфейс для обработки административных функций.
 type AdminHandler interface {
 	ShowFeedbackStatisticsEdit(callback *tgbotapi.CallbackQuery, user *models.User) error
 	HandleBrowseActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error
@@ -22,7 +22,7 @@ type AdminHandler interface {
 	IsAdmin(chatID int64, username string) bool
 }
 
-// AdminHandlerImpl реализация административного обработчика
+// AdminHandlerImpl реализация административного обработчика.
 type AdminHandlerImpl struct {
 	service         *core.BotService
 	bot             *tgbotapi.BotAPI
@@ -31,7 +31,7 @@ type AdminHandlerImpl struct {
 	adminUsernames  []string
 }
 
-// NewAdminHandler создает новый административный обработчик
+// NewAdminHandler создает новый административный обработчик.
 func NewAdminHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, adminChatIDs []int64, adminUsernames []string) AdminHandler {
 	return &AdminHandlerImpl{
 		service:         service,
@@ -42,7 +42,7 @@ func NewAdminHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBui
 	}
 }
 
-// IsAdmin проверяет права администратора
+// IsAdmin проверяет права администратора.
 func (h *AdminHandlerImpl) IsAdmin(chatID int64, username string) bool {
 	// Проверяем по Chat ID
 	for _, adminID := range h.adminChatIDs {
@@ -64,7 +64,7 @@ func (h *AdminHandlerImpl) IsAdmin(chatID int64, username string) bool {
 	return false
 }
 
-// ShowFeedbackStatisticsEdit показывает статистику отзывов с редактированием текущего сообщения
+// ShowFeedbackStatisticsEdit показывает статистику отзывов с редактированием текущего сообщения.
 func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Проверяем права администратора
 	if !h.IsAdmin(callback.Message.Chat.ID, user.Username) {
@@ -121,7 +121,7 @@ func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.Callbac
 	return err
 }
 
-// HandleBrowseActiveFeedbacks показывает активные отзывы в интерактивном режиме с редактированием
+// HandleBrowseActiveFeedbacks показывает активные отзывы в интерактивном режиме с редактированием.
 func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	index, err := strconv.Atoi(indexStr)
 	if err != nil {
@@ -179,7 +179,7 @@ func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.Callba
 	return h.ShowFeedbackItemWithNavigationEdit(callback, activeFeedbacks[index], index, len(activeFeedbacks), "active")
 }
 
-// HandleBrowseArchiveFeedbacks показывает обработанные отзывы в интерактивном режиме
+// HandleBrowseArchiveFeedbacks показывает обработанные отзывы в интерактивном режиме.
 func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	index, err := strconv.Atoi(indexStr)
 	if err != nil {
@@ -237,7 +237,7 @@ func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.Callb
 	return h.ShowFeedbackItemWithNavigationEdit(callback, archivedFeedbacks[index], index, len(archivedFeedbacks), "archive")
 }
 
-// ShowFeedbackItemWithNavigation показывает отзыв с навигацией (отправляет новое сообщение)
+// ShowFeedbackItemWithNavigation показывает отзыв с навигацией (отправляет новое сообщение).
 func (h *AdminHandlerImpl) ShowFeedbackItemWithNavigation(chatID int64, fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) error {
 	// Формируем текст отзыва
 	feedbackText := h.formatFeedbackText(fb, currentIndex, totalCount, feedbackType)
@@ -251,7 +251,7 @@ func (h *AdminHandlerImpl) ShowFeedbackItemWithNavigation(chatID int64, fb map[s
 	return err
 }
 
-// ShowFeedbackItemWithNavigationEdit показывает отзыв с навигацией (редактирует текущее сообщение)
+// ShowFeedbackItemWithNavigationEdit показывает отзыв с навигацией (редактирует текущее сообщение).
 func (h *AdminHandlerImpl) ShowFeedbackItemWithNavigationEdit(callback *tgbotapi.CallbackQuery, fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) error {
 	// Формируем текст отзыва
 	feedbackText := h.formatFeedbackText(fb, currentIndex, totalCount, feedbackType)
@@ -269,7 +269,7 @@ func (h *AdminHandlerImpl) ShowFeedbackItemWithNavigationEdit(callback *tgbotapi
 	return err
 }
 
-// formatFeedbackText форматирует текст отзыва для отображения
+// formatFeedbackText форматирует текст отзыва для отображения.
 func (h *AdminHandlerImpl) formatFeedbackText(fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) string {
 	userID := fb["telegram_id"].(int64)
 	username := ""
@@ -323,7 +323,7 @@ func (h *AdminHandlerImpl) formatFeedbackText(fb map[string]interface{}, current
 	return text
 }
 
-// createFeedbackNavigationKeyboard создает клавиатуру навигации для отзывов
+// createFeedbackNavigationKeyboard создает клавиатуру навигации для отзывов.
 func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) tgbotapi.InlineKeyboardMarkup {
 	var keyboard [][]tgbotapi.InlineKeyboardButton
 

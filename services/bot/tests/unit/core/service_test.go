@@ -234,7 +234,7 @@ func TestBotService_GetAllFeedback(t *testing.T) {
 	assert.NotNil(t, feedbacks)
 }
 
-// TestDatabase - простая тестовая реализация интерфейса Database
+// TestDatabase - простая тестовая реализация интерфейса Database.
 type TestDatabase struct{}
 
 func (t *TestDatabase) FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error) {

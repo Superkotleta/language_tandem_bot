@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// Language представляет язык в системе
+// Language представляет язык в системе.
 type Language struct {
 	ID                  int       `db:"id"`
 	Code                string    `db:"code"`

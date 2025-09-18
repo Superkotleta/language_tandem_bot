@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// TelegramBotSuite набор тестов для Telegram бота
+// TelegramBotSuite набор тестов для Telegram бота.
 type TelegramBotSuite struct {
 	suite.Suite
 	handler *mocks.TelegramHandlerWrapper
@@ -19,19 +19,19 @@ type TelegramBotSuite struct {
 	mockDB  *mocks.DatabaseMock
 }
 
-// SetupSuite выполняется один раз перед всеми тестами
+// SetupSuite выполняется один раз перед всеми тестами.
 func (s *TelegramBotSuite) SetupSuite() {
 	s.mockDB = mocks.NewDatabaseMock()
 	s.handler, s.service = helpers.SetupTestBot(s.mockDB)
 }
 
-// SetupTest выполняется перед каждым тестом
+// SetupTest выполняется перед каждым тестом.
 func (s *TelegramBotSuite) SetupTest() {
 	s.mockDB.Reset()
 	s.handler.Reset()
 }
 
-// TestStartCommand_NewUser тестирует команду /start для нового пользователя
+// TestStartCommand_NewUser тестирует команду /start для нового пользователя.
 func (s *TelegramBotSuite) TestStartCommand_NewUser() {
 	// Arrange
 	userID, username := helpers.GetTestRegularUserID()
@@ -63,7 +63,7 @@ func (s *TelegramBotSuite) TestStartCommand_NewUser() {
 	assert.NotNil(s.T(), lastMessage.ReplyMarkup, "Should include reply markup")
 }
 
-// TestStartCommand_ExistingUser тестирует команду /start для существующего пользователя
+// TestStartCommand_ExistingUser тестирует команду /start для существующего пользователя.
 func (s *TelegramBotSuite) TestStartCommand_ExistingUser() {
 	// Arrange
 	userID, username := helpers.GetTestRegularUserID()
@@ -93,7 +93,7 @@ func (s *TelegramBotSuite) TestStartCommand_ExistingUser() {
 	assert.Equal(s.T(), 1, s.handler.GetSentMessagesCount(), "Should send exactly one message")
 }
 
-// TestStartCommand_AdminUser тестирует команду /start для администратора
+// TestStartCommand_AdminUser тестирует команду /start для администратора.
 func (s *TelegramBotSuite) TestStartCommand_AdminUser() {
 	// Arrange
 	adminID, adminUsername := helpers.GetTestAdminUserID()
@@ -121,7 +121,7 @@ func (s *TelegramBotSuite) TestStartCommand_AdminUser() {
 	assert.Contains(s.T(), lastMessage.Text, "Admin", "Welcome message should contain admin's name")
 }
 
-// TestProfileCallback тестирует обработку callback для просмотра профиля
+// TestProfileCallback тестирует обработку callback для просмотра профиля.
 func (s *TelegramBotSuite) TestProfileCallback() {
 	// Arrange
 	userID, username := helpers.GetTestRegularUserID()
@@ -154,7 +154,7 @@ func (s *TelegramBotSuite) TestProfileCallback() {
 	assert.NotEmpty(s.T(), editedMessage.Text, "Edited message should have text")
 }
 
-// TestUnknownCommand тестирует обработку неизвестной команды
+// TestUnknownCommand тестирует обработку неизвестной команды.
 func (s *TelegramBotSuite) TestUnknownCommand() {
 	// Arrange
 	userID, username := helpers.GetTestRegularUserID()
@@ -174,7 +174,7 @@ func (s *TelegramBotSuite) TestUnknownCommand() {
 	assert.Contains(s.T(), lastMessage.Text, "Unknown command", "Should send unknown command message")
 }
 
-// TestDatabaseError тестирует обработку ошибки базы данных
+// TestDatabaseError тестирует обработку ошибки базы данных.
 func (s *TelegramBotSuite) TestDatabaseError() {
 	// Arrange
 	s.mockDB.SetError(assert.AnError)
@@ -194,7 +194,7 @@ func (s *TelegramBotSuite) TestDatabaseError() {
 	s.mockDB.ClearError()
 }
 
-// TestTelegramBotSuite запускает весь набор тестов
+// TestTelegramBotSuite запускает весь набор тестов.
 func TestTelegramBotSuite(t *testing.T) {
 	suite.Run(t, new(TelegramBotSuite))
 }

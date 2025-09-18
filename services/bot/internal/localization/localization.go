@@ -154,7 +154,7 @@ func (l *Localizer) GetInterests(lang string) (map[int]string, error) {
 	return interests, nil
 }
 
-// loadFallbackTranslations загружает базовые переводы для тестов
+// loadFallbackTranslations загружает базовые переводы для тестов.
 func (l *Localizer) loadFallbackTranslations() {
 	// Английский
 	l.translations["en"] = map[string]string{
@@ -197,7 +197,7 @@ func (l *Localizer) loadFallbackTranslations() {
 		"profile_field_native":    "Idioma nativo",
 		"profile_field_target":    "Idioma objetivo",
 		"profile_field_interests": "Intereses",
-		"unknown_command":         "❓ Comando desconocido. Usa /start para comenzar",
+		"unknown_command":         "❓ Commando desconocido. Usa /start para comenzar",
 		"language_en":             "Inglés",
 		"language_ru":             "Ruso",
 		"language_es":             "Español",

@@ -16,33 +16,33 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// RequestIDKey ключ для request ID в контексте
+// RequestIDKey ключ для request ID в контексте.
 type RequestIDKey struct{}
 
-// UserIDKey ключ для user ID в контексте
+// UserIDKey ключ для user ID в контексте.
 type UserIDKey struct{}
 
-// TraceIDKey ключ для trace ID в контексте
+// TraceIDKey ключ для trace ID в контексте.
 type TraceIDKey struct{}
 
-// Middleware интерфейс для middleware
+// Middleware интерфейс для middleware.
 type Middleware interface {
 	Handle(next http.Handler) http.Handler
 }
 
-// LoggingMiddleware middleware для логирования
+// LoggingMiddleware middleware для логирования.
 type LoggingMiddleware struct {
 	logger logging.Logger
 }
 
-// NewLoggingMiddleware создает новый middleware для логирования
+// NewLoggingMiddleware создает новый middleware для логирования.
 func NewLoggingMiddleware(logger logging.Logger) *LoggingMiddleware {
 	return &LoggingMiddleware{
 		logger: logger,
 	}
 }
 
-// Handle обрабатывает HTTP запросы с логированием
+// Handle обрабатывает HTTP запросы с логированием.
 func (m *LoggingMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -82,19 +82,19 @@ func (m *LoggingMiddleware) Handle(next http.Handler) http.Handler {
 	})
 }
 
-// MetricsMiddleware middleware для метрик
+// MetricsMiddleware middleware для метрик.
 type MetricsMiddleware struct {
 	metrics *monitoring.Metrics
 }
 
-// NewMetricsMiddleware создает новый middleware для метрик
+// NewMetricsMiddleware создает новый middleware для метрик.
 func NewMetricsMiddleware(metrics *monitoring.Metrics) *MetricsMiddleware {
 	return &MetricsMiddleware{
 		metrics: metrics,
 	}
 }
 
-// Handle обрабатывает HTTP запросы с метриками
+// Handle обрабатывает HTTP запросы с метриками.
 func (m *MetricsMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -116,19 +116,19 @@ func (m *MetricsMiddleware) Handle(next http.Handler) http.Handler {
 	})
 }
 
-// RecoveryMiddleware middleware для восстановления после паники
+// RecoveryMiddleware middleware для восстановления после паники.
 type RecoveryMiddleware struct {
 	logger logging.Logger
 }
 
-// NewRecoveryMiddleware создает новый middleware для восстановления
+// NewRecoveryMiddleware создает новый middleware для восстановления.
 func NewRecoveryMiddleware(logger logging.Logger) *RecoveryMiddleware {
 	return &RecoveryMiddleware{
 		logger: logger,
 	}
 }
 
-// Handle обрабатывает HTTP запросы с восстановлением после паники
+// Handle обрабатывает HTTP запросы с восстановлением после паники.
 func (m *RecoveryMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -155,14 +155,14 @@ func (m *RecoveryMiddleware) Handle(next http.Handler) http.Handler {
 	})
 }
 
-// CORSMiddleware middleware для CORS
+// CORSMiddleware middleware для CORS.
 type CORSMiddleware struct {
 	allowedOrigins []string
 	allowedMethods []string
 	allowedHeaders []string
 }
 
-// NewCORSMiddleware создает новый middleware для CORS
+// NewCORSMiddleware создает новый middleware для CORS.
 func NewCORSMiddleware(allowedOrigins, allowedMethods, allowedHeaders []string) *CORSMiddleware {
 	return &CORSMiddleware{
 		allowedOrigins: allowedOrigins,
@@ -171,7 +171,7 @@ func NewCORSMiddleware(allowedOrigins, allowedMethods, allowedHeaders []string) 
 	}
 }
 
-// Handle обрабатывает HTTP запросы с CORS
+// Handle обрабатывает HTTP запросы с CORS.
 func (m *CORSMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -196,7 +196,7 @@ func (m *CORSMiddleware) Handle(next http.Handler) http.Handler {
 	})
 }
 
-// isOriginAllowed проверяет, разрешен ли origin
+// isOriginAllowed проверяет, разрешен ли origin.
 func (m *CORSMiddleware) isOriginAllowed(origin string) bool {
 	if origin == "" {
 		return false
@@ -211,19 +211,19 @@ func (m *CORSMiddleware) isOriginAllowed(origin string) bool {
 	return false
 }
 
-// RateLimitMiddleware middleware для ограничения скорости запросов
+// RateLimitMiddleware middleware для ограничения скорости запросов.
 type RateLimitMiddleware struct {
 	limiter RateLimiter
 	logger  logging.Logger
 }
 
-// RateLimiter интерфейс для ограничения скорости
+// RateLimiter интерфейс для ограничения скорости.
 type RateLimiter interface {
 	Allow(key string) bool
 	Reset(key string)
 }
 
-// NewRateLimitMiddleware создает новый middleware для ограничения скорости
+// NewRateLimitMiddleware создает новый middleware для ограничения скорости.
 func NewRateLimitMiddleware(limiter RateLimiter, logger logging.Logger) *RateLimitMiddleware {
 	return &RateLimitMiddleware{
 		limiter: limiter,
@@ -231,7 +231,7 @@ func NewRateLimitMiddleware(limiter RateLimiter, logger logging.Logger) *RateLim
 	}
 }
 
-// Handle обрабатывает HTTP запросы с ограничением скорости
+// Handle обрабатывает HTTP запросы с ограничением скорости.
 func (m *RateLimitMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Используем IP адрес как ключ для ограничения
@@ -252,19 +252,19 @@ func (m *RateLimitMiddleware) Handle(next http.Handler) http.Handler {
 	})
 }
 
-// AuthMiddleware middleware для аутентификации
+// AuthMiddleware middleware для аутентификации.
 type AuthMiddleware struct {
 	logger logging.Logger
 }
 
-// NewAuthMiddleware создает новый middleware для аутентификации
+// NewAuthMiddleware создает новый middleware для аутентификации.
 func NewAuthMiddleware(logger logging.Logger) *AuthMiddleware {
 	return &AuthMiddleware{
 		logger: logger,
 	}
 }
 
-// Handle обрабатывает HTTP запросы с аутентификацией
+// Handle обрабатывает HTTP запросы с аутентификацией.
 func (m *AuthMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Извлекаем токен из заголовка
@@ -301,13 +301,13 @@ func (m *AuthMiddleware) Handle(next http.Handler) http.Handler {
 	})
 }
 
-// responseWriter обертка для http.ResponseWriter
+// responseWriter обертка для http.ResponseWriter.
 type responseWriter struct {
 	http.ResponseWriter
 	statusCode int
 }
 
-// WriteHeader записывает статус код
+// WriteHeader записывает статус код.
 func (rw *responseWriter) WriteHeader(code int) {
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
@@ -315,14 +315,14 @@ func (rw *responseWriter) WriteHeader(code int) {
 
 // Helper функции
 
-// generateRequestID генерирует уникальный request ID
+// generateRequestID генерирует уникальный request ID.
 func generateRequestID() string {
 	bytes := make([]byte, 16)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
 }
 
-// getClientIP извлекает IP адрес клиента
+// getClientIP извлекает IP адрес клиента.
 func getClientIP(r *http.Request) string {
 	// Проверяем заголовки прокси
 	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
@@ -340,17 +340,17 @@ func getClientIP(r *http.Request) string {
 	return ip
 }
 
-// ChainMiddleware объединяет несколько middleware
+// ChainMiddleware объединяет несколько middleware.
 func ChainMiddleware(middlewares ...Middleware) Middleware {
 	return &chainMiddleware{middlewares: middlewares}
 }
 
-// chainMiddleware объединяет несколько middleware
+// chainMiddleware объединяет несколько middleware.
 type chainMiddleware struct {
 	middlewares []Middleware
 }
 
-// Handle обрабатывает HTTP запросы через цепочку middleware
+// Handle обрабатывает HTTP запросы через цепочку middleware.
 func (c *chainMiddleware) Handle(next http.Handler) http.Handler {
 	for i := len(c.middlewares) - 1; i >= 0; i-- {
 		next = c.middlewares[i].Handle(next)
@@ -358,14 +358,14 @@ func (c *chainMiddleware) Handle(next http.Handler) http.Handler {
 	return next
 }
 
-// PrometheusMiddleware middleware для Prometheus метрик
+// PrometheusMiddleware middleware для Prometheus метрик.
 type PrometheusMiddleware struct {
 	requestsTotal    *prometheus.CounterVec
 	requestDuration  *prometheus.HistogramVec
 	requestsInFlight prometheus.Gauge
 }
 
-// NewPrometheusMiddleware создает новый middleware для Prometheus
+// NewPrometheusMiddleware создает новый middleware для Prometheus.
 func NewPrometheusMiddleware() *PrometheusMiddleware {
 	return &PrometheusMiddleware{
 		requestsTotal: prometheus.NewCounterVec(
@@ -392,7 +392,7 @@ func NewPrometheusMiddleware() *PrometheusMiddleware {
 	}
 }
 
-// Handle обрабатывает HTTP запросы с Prometheus метриками
+// Handle обрабатывает HTTP запросы с Prometheus метриками.
 func (m *PrometheusMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -419,7 +419,7 @@ func (m *PrometheusMiddleware) Handle(next http.Handler) http.Handler {
 	})
 }
 
-// RegisterPrometheusMetrics регистрирует Prometheus метрики
+// RegisterPrometheusMetrics регистрирует Prometheus метрики.
 func (m *PrometheusMiddleware) RegisterPrometheusMetrics() {
 	prometheus.MustRegister(m.requestsTotal)
 	prometheus.MustRegister(m.requestDuration)

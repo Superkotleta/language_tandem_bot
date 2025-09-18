@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// OptimizedBotService оптимизированный сервис с кэшированием и batch операциями
+// OptimizedBotService оптимизированный сервис с кэшированием и batch операциями.
 type OptimizedBotService struct {
 	db        *database.OptimizedDB
 	cache     cache.Cache
@@ -29,7 +29,7 @@ type OptimizedBotService struct {
 	metrics *ServiceMetrics
 }
 
-// ServiceMetrics метрики производительности
+// ServiceMetrics метрики производительности.
 type ServiceMetrics struct {
 	CacheHits           int64
 	CacheMisses         int64
@@ -39,7 +39,7 @@ type ServiceMetrics struct {
 	mutex               sync.RWMutex
 }
 
-// NewOptimizedBotService создает оптимизированный сервис
+// NewOptimizedBotService создает оптимизированный сервис.
 func NewOptimizedBotService(db *database.OptimizedDB, cache cache.Cache) *OptimizedBotService {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -60,7 +60,7 @@ func NewOptimizedBotService(db *database.OptimizedDB, cache cache.Cache) *Optimi
 	return service
 }
 
-// preloadData предзагружает часто используемые данные
+// preloadData предзагружает часто используемые данные.
 func (s *OptimizedBotService) preloadData() {
 	// Предзагружаем языки
 	if _, err := s.GetLanguages(); err != nil {
@@ -76,7 +76,7 @@ func (s *OptimizedBotService) preloadData() {
 	}
 }
 
-// HandleUserRegistration оптимизированная регистрация пользователя
+// HandleUserRegistration оптимизированная регистрация пользователя.
 func (s *OptimizedBotService) HandleUserRegistration(telegramID int64, username, firstName, telegramLangCode string) (*models.User, error) {
 	start := time.Now()
 	defer func() {
@@ -121,7 +121,7 @@ func (s *OptimizedBotService) HandleUserRegistration(telegramID int64, username,
 	return user, nil
 }
 
-// UpdateUserProfileBatch обновляет профиль пользователя batch операцией
+// UpdateUserProfileBatch обновляет профиль пользователя batch операцией.
 func (s *OptimizedBotService) UpdateUserProfileBatch(userID int, updates map[string]interface{}) error {
 	start := time.Now()
 	defer func() {
@@ -140,7 +140,7 @@ func (s *OptimizedBotService) UpdateUserProfileBatch(userID int, updates map[str
 	return nil
 }
 
-// GetLanguages получает языки с кэшированием
+// GetLanguages получает языки с кэшированием.
 func (s *OptimizedBotService) GetLanguages() ([]*models.Language, error) {
 	start := time.Now()
 	defer func() {
@@ -184,7 +184,7 @@ func (s *OptimizedBotService) GetLanguages() ([]*models.Language, error) {
 	return languages, nil
 }
 
-// GetLocalizedInterests получает локализованные интересы с кэшированием
+// GetLocalizedInterests получает локализованные интересы с кэшированием.
 func (s *OptimizedBotService) GetLocalizedInterests(langCode string) (map[int]string, error) {
 	start := time.Now()
 	defer func() {
@@ -226,7 +226,7 @@ func (s *OptimizedBotService) GetLocalizedInterests(langCode string) (map[int]st
 	return interests, nil
 }
 
-// SaveUserInterestsBatch сохраняет интересы пользователя batch операцией
+// SaveUserInterestsBatch сохраняет интересы пользователя batch операцией.
 func (s *OptimizedBotService) SaveUserInterestsBatch(userID int, interestIDs []int) error {
 	start := time.Now()
 	defer func() {
@@ -245,7 +245,7 @@ func (s *OptimizedBotService) SaveUserInterestsBatch(userID int, interestIDs []i
 	return nil
 }
 
-// GetUnprocessedFeedbackBatch получает необработанные отзывы с пагинацией
+// GetUnprocessedFeedbackBatch получает необработанные отзывы с пагинацией.
 func (s *OptimizedBotService) GetUnprocessedFeedbackBatch(limit, offset int) ([]map[string]interface{}, error) {
 	start := time.Now()
 	defer func() {
@@ -255,7 +255,7 @@ func (s *OptimizedBotService) GetUnprocessedFeedbackBatch(limit, offset int) ([]
 	return s.db.GetUnprocessedFeedbackBatch(limit, offset)
 }
 
-// MarkFeedbackProcessedBatch помечает несколько отзывов как обработанные
+// MarkFeedbackProcessedBatch помечает несколько отзывов как обработанные.
 func (s *OptimizedBotService) MarkFeedbackProcessedBatch(feedbackIDs []int, adminResponse string) error {
 	start := time.Now()
 	defer func() {
@@ -266,21 +266,21 @@ func (s *OptimizedBotService) MarkFeedbackProcessedBatch(feedbackIDs []int, admi
 	return s.db.MarkFeedbackProcessedBatch(feedbackIDs, adminResponse)
 }
 
-// getUserFromCache получает пользователя из кэша
+// getUserFromCache получает пользователя из кэша.
 func (s *OptimizedBotService) getUserFromCache(telegramID int64) (*models.User, error) {
 	// Здесь должен быть запрос к БД по telegram_id для получения user_id
 	// Для упрощения возвращаем nil
 	return nil, fmt.Errorf("user not in cache")
 }
 
-// cacheUser сохраняет пользователя в кэш
+// cacheUser сохраняет пользователя в кэш.
 func (s *OptimizedBotService) cacheUser(user *models.User) {
 	if err := s.cache.SetUserProfile(s.ctx, user); err != nil {
 		log.Printf("Failed to cache user: %v", err)
 	}
 }
 
-// updateMetrics обновляет метрики
+// updateMetrics обновляет метрики.
 func (s *OptimizedBotService) updateMetrics(duration time.Duration) {
 	s.metrics.mutex.Lock()
 	defer s.metrics.mutex.Unlock()
@@ -288,28 +288,28 @@ func (s *OptimizedBotService) updateMetrics(duration time.Duration) {
 	s.metrics.AverageResponseTime = (s.metrics.AverageResponseTime + duration) / 2
 }
 
-// incrementCacheHits увеличивает счетчик попаданий в кэш
+// incrementCacheHits увеличивает счетчик попаданий в кэш.
 func (s *OptimizedBotService) incrementCacheHits() {
 	s.metrics.mutex.Lock()
 	defer s.metrics.mutex.Unlock()
 	s.metrics.CacheHits++
 }
 
-// incrementCacheMisses увеличивает счетчик промахов кэша
+// incrementCacheMisses увеличивает счетчик промахов кэша.
 func (s *OptimizedBotService) incrementCacheMisses() {
 	s.metrics.mutex.Lock()
 	defer s.metrics.mutex.Unlock()
 	s.metrics.CacheMisses++
 }
 
-// incrementBatchOperations увеличивает счетчик batch операций
+// incrementBatchOperations увеличивает счетчик batch операций.
 func (s *OptimizedBotService) incrementBatchOperations() {
 	s.metrics.mutex.Lock()
 	defer s.metrics.mutex.Unlock()
 	s.metrics.BatchOperations++
 }
 
-// GetMetrics возвращает метрики сервиса
+// GetMetrics возвращает метрики сервиса.
 func (s *OptimizedBotService) GetMetrics() *ServiceMetrics {
 	s.metrics.mutex.RLock()
 	defer s.metrics.mutex.RUnlock()
@@ -323,12 +323,12 @@ func (s *OptimizedBotService) GetMetrics() *ServiceMetrics {
 	}
 }
 
-// GetDBStats возвращает статистику БД
+// GetDBStats возвращает статистику БД.
 func (s *OptimizedBotService) GetDBStats() map[string]interface{} {
 	return s.db.GetStats()
 }
 
-// HealthCheck проверяет здоровье сервиса
+// HealthCheck проверяет здоровье сервиса.
 func (s *OptimizedBotService) HealthCheck() error {
 	// Проверяем БД
 	if err := s.db.HealthCheck(); err != nil {
@@ -343,7 +343,7 @@ func (s *OptimizedBotService) HealthCheck() error {
 	return nil
 }
 
-// Close закрывает сервис
+// Close закрывает сервис.
 func (s *OptimizedBotService) Close() error {
 	s.cancel()
 
@@ -358,7 +358,7 @@ func (s *OptimizedBotService) Close() error {
 	return nil
 }
 
-// DetectLanguage определяет язык пользователя (копия из оригинального сервиса)
+// DetectLanguage определяет язык пользователя (копия из оригинального сервиса).
 func (s *OptimizedBotService) DetectLanguage(telegramLangCode string) string {
 	switch telegramLangCode {
 	case "ru", "ru-RU":
@@ -372,14 +372,14 @@ func (s *OptimizedBotService) DetectLanguage(telegramLangCode string) string {
 	}
 }
 
-// GetWelcomeMessage получает приветственное сообщение (копия из оригинального сервиса)
+// GetWelcomeMessage получает приветственное сообщение (копия из оригинального сервиса).
 func (s *OptimizedBotService) GetWelcomeMessage(user *models.User) string {
 	return s.localizer.GetWithParams(user.InterfaceLanguageCode, "welcome_message", map[string]string{
 		"name": user.FirstName,
 	})
 }
 
-// GetLanguagePrompt получает промпт для выбора языка (копия из оригинального сервиса)
+// GetLanguagePrompt получает промпт для выбора языка (копия из оригинального сервиса).
 func (s *OptimizedBotService) GetLanguagePrompt(user *models.User, promptType string) string {
 	key := "choose_native_language"
 	if promptType == "target" {
@@ -388,8 +388,19 @@ func (s *OptimizedBotService) GetLanguagePrompt(user *models.User, promptType st
 	return s.localizer.Get(user.InterfaceLanguageCode, key)
 }
 
-// GetLocalizedLanguageName получает локализованное название языка (копия из оригинального сервиса)
+// GetLocalizedLanguageName получает локализованное название языка (копия из оригинального сервиса).
 func (s *OptimizedBotService) GetLocalizedLanguageName(langCode, interfaceLangCode string) string {
 	return s.localizer.GetLanguageName(langCode, interfaceLangCode)
 }
 
+// GetDB возвращает БД для совместимости с существующими хендлерами.
+func (s *OptimizedBotService) GetDB() *database.DB {
+	// Возвращаем nil, так как мы используем OptimizedDB
+	// В реальном проекте здесь должен быть адаптер
+	return nil
+}
+
+// GetLocalizer возвращает локализатор для совместимости.
+func (s *OptimizedBotService) GetLocalizer() *localization.Localizer {
+	return s.localizer
+}

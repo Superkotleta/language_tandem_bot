@@ -175,7 +175,7 @@ func TestLocalizer_GetWithParams(t *testing.T) {
 	assert.Contains(t, message, "Test User")
 }
 
-// TestDatabase - тестовая реализация интерфейса Database
+// TestDatabase - тестовая реализация интерфейса Database.
 type TestDatabase struct{}
 
 func (t *TestDatabase) FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error) {

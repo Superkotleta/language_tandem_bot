@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// Metrics структура для метрик Prometheus
+// Metrics структура для метрик Prometheus.
 type Metrics struct {
 	// HTTP метрики
 	HTTPRequestsTotal    *prometheus.CounterVec
@@ -42,7 +42,7 @@ type Metrics struct {
 	GoroutinesCount prometheus.Gauge
 }
 
-// NewMetrics создает новый экземпляр метрик
+// NewMetrics создает новый экземпляр метрик.
 func NewMetrics() *Metrics {
 	return &Metrics{
 		// HTTP метрики
@@ -189,95 +189,95 @@ func NewMetrics() *Metrics {
 	}
 }
 
-// RecordHTTPRequest записывает метрику HTTP запроса
+// RecordHTTPRequest записывает метрику HTTP запроса.
 func (m *Metrics) RecordHTTPRequest(method, endpoint, statusCode string, duration time.Duration) {
 	m.HTTPRequestsTotal.WithLabelValues(method, endpoint, statusCode).Inc()
 	m.HTTPRequestDuration.WithLabelValues(method, endpoint).Observe(duration.Seconds())
 }
 
-// RecordDBQuery записывает метрику запроса к БД
+// RecordDBQuery записывает метрику запроса к БД.
 func (m *Metrics) RecordDBQuery(operation, table, status string, duration time.Duration) {
 	m.DBQueriesTotal.WithLabelValues(operation, table, status).Inc()
 	m.DBQueryDuration.WithLabelValues(operation, table).Observe(duration.Seconds())
 }
 
-// RecordDBTransaction записывает метрику транзакции БД
+// RecordDBTransaction записывает метрику транзакции БД.
 func (m *Metrics) RecordDBTransaction(status string) {
 	m.DBTransactionsTotal.WithLabelValues(status).Inc()
 }
 
-// RecordCacheOperation записывает метрику операции с кэшем
+// RecordCacheOperation записывает метрику операции с кэшем.
 func (m *Metrics) RecordCacheOperation(operation, cacheType, keyPattern, status string, duration time.Duration) {
 	m.CacheOperationsTotal.WithLabelValues(operation, cacheType, status).Inc()
 	m.CacheOperationDuration.WithLabelValues(operation, cacheType).Observe(duration.Seconds())
 }
 
-// RecordCacheHit записывает метрику попадания в кэш
+// RecordCacheHit записывает метрику попадания в кэш.
 func (m *Metrics) RecordCacheHit(cacheType, keyPattern string) {
 	m.CacheHitsTotal.WithLabelValues(cacheType, keyPattern).Inc()
 }
 
-// RecordCacheMiss записывает метрику промаха кэша
+// RecordCacheMiss записывает метрику промаха кэша.
 func (m *Metrics) RecordCacheMiss(cacheType, keyPattern string) {
 	m.CacheMissesTotal.WithLabelValues(cacheType, keyPattern).Inc()
 }
 
-// RecordUserRegistration записывает метрику регистрации пользователя
+// RecordUserRegistration записывает метрику регистрации пользователя.
 func (m *Metrics) RecordUserRegistration() {
 	m.UsersRegistered.Inc()
 }
 
-// RecordProfileCompletion записывает метрику завершения профиля
+// RecordProfileCompletion записывает метрику завершения профиля.
 func (m *Metrics) RecordProfileCompletion() {
 	m.ProfilesCompleted.Inc()
 }
 
-// RecordFeedbackSubmission записывает метрику отправки отзыва
+// RecordFeedbackSubmission записывает метрику отправки отзыва.
 func (m *Metrics) RecordFeedbackSubmission() {
 	m.FeedbackSubmitted.Inc()
 }
 
-// RecordFeedbackProcessing записывает метрику обработки отзыва
+// RecordFeedbackProcessing записывает метрику обработки отзыва.
 func (m *Metrics) RecordFeedbackProcessing() {
 	m.FeedbackProcessed.Inc()
 }
 
-// UpdateDBConnections обновляет метрики соединений с БД
+// UpdateDBConnections обновляет метрики соединений с БД.
 func (m *Metrics) UpdateDBConnections(active, idle int) {
 	m.DBConnectionsActive.Set(float64(active))
 	m.DBConnectionsIdle.Set(float64(idle))
 }
 
-// UpdateSystemMetrics обновляет системные метрики
+// UpdateSystemMetrics обновляет системные метрики.
 func (m *Metrics) UpdateSystemMetrics(memoryBytes uint64, cpuPercent float64, goroutines int) {
 	m.MemoryUsage.Set(float64(memoryBytes))
 	m.CPUUsage.Set(cpuPercent)
 	m.GoroutinesCount.Set(float64(goroutines))
 }
 
-// UpdateActiveUsers обновляет метрику активных пользователей
+// UpdateActiveUsers обновляет метрику активных пользователей.
 func (m *Metrics) UpdateActiveUsers(count int) {
 	m.UsersActive.Set(float64(count))
 }
 
-// MetricsCollector интерфейс для сбора метрик
+// MetricsCollector интерфейс для сбора метрик.
 type MetricsCollector interface {
 	Collect(ctx context.Context) error
 }
 
-// SystemMetricsCollector собирает системные метрики
+// SystemMetricsCollector собирает системные метрики.
 type SystemMetricsCollector struct {
 	metrics *Metrics
 }
 
-// NewSystemMetricsCollector создает новый сборщик системных метрик
+// NewSystemMetricsCollector создает новый сборщик системных метрик.
 func NewSystemMetricsCollector(metrics *Metrics) *SystemMetricsCollector {
 	return &SystemMetricsCollector{
 		metrics: metrics,
 	}
 }
 
-// Collect собирает системные метрики
+// Collect собирает системные метрики.
 func (c *SystemMetricsCollector) Collect(ctx context.Context) error {
 	// Здесь должна быть логика сбора системных метрик
 	// Для примера используем заглушки
@@ -297,13 +297,13 @@ func (c *SystemMetricsCollector) Collect(ctx context.Context) error {
 	return nil
 }
 
-// DBMetricsCollector собирает метрики БД
+// DBMetricsCollector собирает метрики БД.
 type DBMetricsCollector struct {
 	metrics *Metrics
 	db      interface{} // Интерфейс для получения статистики БД
 }
 
-// NewDBMetricsCollector создает новый сборщик метрик БД
+// NewDBMetricsCollector создает новый сборщик метрик БД.
 func NewDBMetricsCollector(metrics *Metrics, db interface{}) *DBMetricsCollector {
 	return &DBMetricsCollector{
 		metrics: metrics,
@@ -311,7 +311,7 @@ func NewDBMetricsCollector(metrics *Metrics, db interface{}) *DBMetricsCollector
 	}
 }
 
-// Collect собирает метрики БД
+// Collect собирает метрики БД.
 func (c *DBMetricsCollector) Collect(ctx context.Context) error {
 	// Здесь должна быть логика сбора метрик БД
 	// Для примера используем заглушки
@@ -325,7 +325,7 @@ func (c *DBMetricsCollector) Collect(ctx context.Context) error {
 	return nil
 }
 
-// MetricsManager управляет сбором метрик
+// MetricsManager управляет сбором метрик.
 type MetricsManager struct {
 	collectors []MetricsCollector
 	interval   time.Duration
@@ -333,7 +333,7 @@ type MetricsManager struct {
 	cancel     context.CancelFunc
 }
 
-// NewMetricsManager создает новый менеджер метрик
+// NewMetricsManager создает новый менеджер метрик.
 func NewMetricsManager(interval time.Duration) *MetricsManager {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -345,12 +345,12 @@ func NewMetricsManager(interval time.Duration) *MetricsManager {
 	}
 }
 
-// AddCollector добавляет сборщик метрик
+// AddCollector добавляет сборщик метрик.
 func (m *MetricsManager) AddCollector(collector MetricsCollector) {
 	m.collectors = append(m.collectors, collector)
 }
 
-// Start запускает сбор метрик
+// Start запускает сбор метрик.
 func (m *MetricsManager) Start() {
 	ticker := time.NewTicker(m.interval)
 	defer ticker.Stop()
@@ -370,7 +370,7 @@ func (m *MetricsManager) Start() {
 	}
 }
 
-// Stop останавливает сбор метрик
+// Stop останавливает сбор метрик.
 func (m *MetricsManager) Stop() {
 	m.cancel()
 }

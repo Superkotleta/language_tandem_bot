@@ -13,7 +13,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// SetupTestBot создает тестовый бот с моками
+// SetupTestBot создает тестовый бот с моками.
 func SetupTestBot(mockDB database.Database) (*mocks.TelegramHandlerWrapper, *core.BotService) {
 	// Создаем простой локализатор для тестов - используем реальный с nil DB
 	localizer := localization.NewLocalizer(nil)
@@ -32,7 +32,7 @@ func SetupTestBot(mockDB database.Database) (*mocks.TelegramHandlerWrapper, *cor
 	return wrapper, service
 }
 
-// CreateTestMessage создает тестовое сообщение Telegram
+// CreateTestMessage создает тестовое сообщение Telegram.
 func CreateTestMessage(text string, userID int64, username string) *tgbotapi.Message {
 	return &tgbotapi.Message{
 		MessageID: int(time.Now().Unix()),
@@ -52,7 +52,7 @@ func CreateTestMessage(text string, userID int64, username string) *tgbotapi.Mes
 	}
 }
 
-// CreateTestCommand создает тестовую команду
+// CreateTestCommand создает тестовую команду.
 func CreateTestCommand(command string, userID int64, username string) *tgbotapi.Message {
 	msg := CreateTestMessage("/"+command, userID, username)
 	// Дополнительно устанавливаем поля для команды
@@ -67,7 +67,7 @@ func CreateTestCommand(command string, userID int64, username string) *tgbotapi.
 	return msg
 }
 
-// CreateTestCallback создает тестовый callback query
+// CreateTestCallback создает тестовый callback query.
 func CreateTestCallback(data string, userID int64) *tgbotapi.CallbackQuery {
 	return &tgbotapi.CallbackQuery{
 		ID: "test_callback_" + data,
@@ -89,7 +89,7 @@ func CreateTestCallback(data string, userID int64) *tgbotapi.CallbackQuery {
 	}
 }
 
-// CreateUpdateWithMessage создает Update с сообщением
+// CreateUpdateWithMessage создает Update с сообщением.
 func CreateUpdateWithMessage(message *tgbotapi.Message) tgbotapi.Update {
 	return tgbotapi.Update{
 		UpdateID: int(time.Now().Unix()),
@@ -97,7 +97,7 @@ func CreateUpdateWithMessage(message *tgbotapi.Message) tgbotapi.Update {
 	}
 }
 
-// CreateUpdateWithCallback создает Update с callback query
+// CreateUpdateWithCallback создает Update с callback query.
 func CreateUpdateWithCallback(callback *tgbotapi.CallbackQuery) tgbotapi.Update {
 	return tgbotapi.Update{
 		UpdateID:      int(time.Now().Unix()),
@@ -105,7 +105,7 @@ func CreateUpdateWithCallback(callback *tgbotapi.CallbackQuery) tgbotapi.Update 
 	}
 }
 
-// CreateTestUser создает тестового пользователя
+// CreateTestUser создает тестового пользователя.
 func CreateTestUser() *models.User {
 	return &models.User{
 		ID:                     1,
@@ -123,7 +123,7 @@ func CreateTestUser() *models.User {
 	}
 }
 
-// CreateTestAdminUser создает тестового администратора
+// CreateTestAdminUser создает тестового администратора.
 func CreateTestAdminUser() *models.User {
 	return &models.User{
 		ID:                     2,
@@ -141,13 +141,13 @@ func CreateTestAdminUser() *models.User {
 	}
 }
 
-// CreateTestLocalizer создает простой локализатор для тестов
+// CreateTestLocalizer создает простой локализатор для тестов.
 func CreateTestLocalizer() LocalizerInterface {
 	// Возвращаем мок локализатора вместо реального
 	return mocks.NewLocalizerMock()
 }
 
-// LocalizerInterface интерфейс для локализатора (чтобы можно было использовать мок)
+// LocalizerInterface интерфейс для локализатора (чтобы можно было использовать мок).
 type LocalizerInterface interface {
 	Get(langCode, key string) string
 	GetWithParams(langCode, key string, params map[string]string) string
@@ -155,7 +155,7 @@ type LocalizerInterface interface {
 	GetInterests(langCode string) (map[int]string, error)
 }
 
-// GetTestDatabaseURL возвращает URL тестовой базы данных
+// GetTestDatabaseURL возвращает URL тестовой базы данных.
 func GetTestDatabaseURL() string {
 	// Проверяем переменную окружения для тестовой БД
 	testDBURL := os.Getenv("TEST_DATABASE_URL")
@@ -173,7 +173,7 @@ func GetTestDatabaseURL() string {
 	return "postgres://postgres:password@localhost:5432/language_exchange_test?sslmode=disable"
 }
 
-// CleanupTestData очищает тестовые данные из базы данных
+// CleanupTestData очищает тестовые данные из базы данных.
 func CleanupTestData(db *sql.DB) {
 	// Удаляем тестовые данные в правильном порядке (с учетом foreign keys)
 	tables := []string{
@@ -191,12 +191,12 @@ func CleanupTestData(db *sql.DB) {
 	}
 }
 
-// GetTestRegularUserID возвращает тестового обычного пользователя
+// GetTestRegularUserID возвращает тестового обычного пользователя.
 func GetTestRegularUserID() (int64, string) {
 	return 12345, "testuser"
 }
 
-// GetTestAdminUserID возвращает тестового администратора
+// GetTestAdminUserID возвращает тестового администратора.
 func GetTestAdminUserID() (int64, string) {
 	return 123456, "testadmin"
 }

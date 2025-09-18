@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// Состояния пользователя
+// Состояния пользователя.
 const (
 	StateNew                    = "new"
 	StateWaitingLanguage        = "waiting_language"
@@ -15,7 +15,7 @@ const (
 	StateActive                 = "active"
 )
 
-// Статусы пользователя
+// Статусы пользователя.
 const (
 	StatusNew     = "new"
 	StatusFilling = "filling_profile"

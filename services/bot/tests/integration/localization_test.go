@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// LocalizationSuite тесты для системы локализации
+// LocalizationSuite тесты для системы локализации.
 type LocalizationSuite struct {
 	suite.Suite
 	db        *database.DB
@@ -22,7 +22,7 @@ type LocalizationSuite struct {
 	mockDB    *mocks.DatabaseMock
 }
 
-// SetupSuite выполняется один раз перед всеми тестами
+// SetupSuite выполняется один раз перед всеми тестами.
 func (s *LocalizationSuite) SetupSuite() {
 	s.mockDB = mocks.NewDatabaseMock()
 	_, s.service = helpers.SetupTestBot(s.mockDB)
@@ -30,17 +30,17 @@ func (s *LocalizationSuite) SetupSuite() {
 	s.localizer = &localization.Localizer{}
 }
 
-// TearDownSuite выполняется один раз после всех тестов
+// TearDownSuite выполняется один раз после всех тестов.
 func (s *LocalizationSuite) TearDownSuite() {
 	// Ничего не нужно закрывать для моков
 }
 
-// SetupTest выполняется перед каждым тестом
+// SetupTest выполняется перед каждым тестом.
 func (s *LocalizationSuite) SetupTest() {
 	s.mockDB.Reset()
 }
 
-// TestLanguageDetection тестирует определение языка пользователя
+// TestLanguageDetection тестирует определение языка пользователя.
 func (s *LocalizationSuite) TestLanguageDetection() {
 	// Arrange & Act & Assert - Тестируем различные коды языков
 	testCases := []struct {
@@ -69,7 +69,7 @@ func (s *LocalizationSuite) TestLanguageDetection() {
 	}
 }
 
-// TestLocalizationFallback тестирует fallback механизм локализации
+// TestLocalizationFallback тестирует fallback механизм локализации.
 func (s *LocalizationSuite) TestLocalizationFallback() {
 	// Arrange
 	telegramID := int64(12371)
@@ -87,7 +87,7 @@ func (s *LocalizationSuite) TestLocalizationFallback() {
 	assert.Contains(s.T(), welcomeMessage, firstName, "Should contain user's name")
 }
 
-// TestLocalizedLanguageNames тестирует локализованные названия языков
+// TestLocalizedLanguageNames тестирует локализованные названия языков.
 func (s *LocalizationSuite) TestLocalizedLanguageNames() {
 	// Arrange
 	telegramID := int64(12372)
@@ -121,7 +121,7 @@ func (s *LocalizationSuite) TestLocalizedLanguageNames() {
 	}
 }
 
-// TestLocalizedInterests тестирует локализованные интересы
+// TestLocalizedInterests тестирует локализованные интересы.
 func (s *LocalizationSuite) TestLocalizedInterests() {
 	// Act & Assert - Тестируем получение локализованных интересов
 	testCases := []string{"en", "ru", "es", "zh"}
@@ -139,7 +139,7 @@ func (s *LocalizationSuite) TestLocalizedInterests() {
 	}
 }
 
-// TestLocalizedPrompts тестирует локализованные промпты
+// TestLocalizedPrompts тестирует локализованные промпты.
 func (s *LocalizationSuite) TestLocalizedPrompts() {
 	// Arrange
 	telegramID := int64(12373)
@@ -162,7 +162,7 @@ func (s *LocalizationSuite) TestLocalizedPrompts() {
 	assert.NotEqual(s.T(), nativePrompt, targetPrompt, "Native and target prompts should be different")
 }
 
-// TestLocalizedProfileSummary тестирует локализованное резюме профиля
+// TestLocalizedProfileSummary тестирует локализованное резюме профиля.
 func (s *LocalizationSuite) TestLocalizedProfileSummary() {
 	// Arrange
 	telegramID := int64(12374)
@@ -190,7 +190,7 @@ func (s *LocalizationSuite) TestLocalizedProfileSummary() {
 	assert.Contains(s.T(), summary, "2", "Should contain interests count")
 }
 
-// TestLocalizationWithParams тестирует локализацию с параметрами
+// TestLocalizationWithParams тестирует локализацию с параметрами.
 func (s *LocalizationSuite) TestLocalizationWithParams() {
 	// Arrange
 	telegramID := int64(12375)
@@ -208,7 +208,7 @@ func (s *LocalizationSuite) TestLocalizationWithParams() {
 	assert.Contains(s.T(), welcomeMessage, "Welcome", "Should contain welcome text")
 }
 
-// TestLocalizationFallbackChain тестирует цепочку fallback для локализации
+// TestLocalizationFallbackChain тестирует цепочку fallback для локализации.
 func (s *LocalizationSuite) TestLocalizationFallbackChain() {
 	// Arrange
 	telegramID := int64(12376)
@@ -229,7 +229,7 @@ func (s *LocalizationSuite) TestLocalizationFallbackChain() {
 	assert.NotEqual(s.T(), "choose_target_language", targetPrompt, "Should use English fallback for target prompt")
 }
 
-// TestLocalizationPerformance тестирует производительность локализации
+// TestLocalizationPerformance тестирует производительность локализации.
 func (s *LocalizationSuite) TestLocalizationPerformance() {
 	// Arrange
 	telegramID := int64(12377)
@@ -252,7 +252,7 @@ func (s *LocalizationSuite) TestLocalizationPerformance() {
 	}
 }
 
-// TestLocalizationSuite запускает весь набор тестов
+// TestLocalizationSuite запускает весь набор тестов.
 func TestLocalizationSuite(t *testing.T) {
 	suite.Run(t, new(LocalizationSuite))
 }

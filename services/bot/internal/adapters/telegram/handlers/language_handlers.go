@@ -9,7 +9,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// LanguageHandler интерфейс для обработки language операций
+// LanguageHandler интерфейс для обработки language операций.
 type LanguageHandler interface {
 	HandleLanguagesContinueFilling(callback *tgbotapi.CallbackQuery, user *models.User) error
 	HandleLanguagesReselect(callback *tgbotapi.CallbackQuery, user *models.User) error
@@ -19,14 +19,14 @@ type LanguageHandler interface {
 	HandleInterfaceLanguageSelection(callback *tgbotapi.CallbackQuery, user *models.User, langCode string) error
 }
 
-// LanguageHandlerImpl реализация обработчика language операций
+// LanguageHandlerImpl реализация обработчика language операций.
 type LanguageHandlerImpl struct {
 	service         *core.BotService
 	bot             *tgbotapi.BotAPI
 	keyboardBuilder *KeyboardBuilder
 }
 
-// NewLanguageHandler создает новый обработчик language операций
+// NewLanguageHandler создает новый обработчик language операций.
 func NewLanguageHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder) LanguageHandler {
 	return &LanguageHandlerImpl{
 		service:         service,
@@ -35,14 +35,14 @@ func NewLanguageHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboard
 	}
 }
 
-// sendMessage отправляет сообщение пользователю
+// sendMessage отправляет сообщение пользователю.
 func (lh *LanguageHandlerImpl) sendMessage(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)
 	_, err := lh.bot.Send(msg)
 	return err
 }
 
-// HandleLanguagesContinueFilling продолжает заполнение профиля после выбора языков
+// HandleLanguagesContinueFilling продолжает заполнение профиля после выбора языков.
 func (lh *LanguageHandlerImpl) HandleLanguagesContinueFilling(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Очищаем старые интересы при переходе к выбору интересов
 	err := lh.service.DB.ClearUserInterests(user.ID)
@@ -67,7 +67,7 @@ func (lh *LanguageHandlerImpl) HandleLanguagesContinueFilling(callback *tgbotapi
 	return err
 }
 
-// HandleLanguagesReselect обрабатывает повторный выбор языков
+// HandleLanguagesReselect обрабатывает повторный выбор языков.
 func (lh *LanguageHandlerImpl) HandleLanguagesReselect(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Сбрасываем выбор языков
 	user.NativeLanguageCode = ""
@@ -92,7 +92,7 @@ func (lh *LanguageHandlerImpl) HandleLanguagesReselect(callback *tgbotapi.Callba
 	return err
 }
 
-// HandleLanguageLevelSelection обрабатывает выбор уровня владения языком
+// HandleLanguageLevelSelection обрабатывает выбор уровня владения языком.
 func (lh *LanguageHandlerImpl) HandleLanguageLevelSelection(callback *tgbotapi.CallbackQuery, user *models.User, levelCode string) error {
 	// Сохраняем уровень владения языком
 	err := lh.service.DB.UpdateUserTargetLanguageLevel(user.ID, levelCode)
@@ -121,7 +121,7 @@ func (lh *LanguageHandlerImpl) HandleLanguageLevelSelection(callback *tgbotapi.C
 	return err
 }
 
-// HandleNativeLanguageCallback обрабатывает выбор родного языка
+// HandleNativeLanguageCallback обрабатывает выбор родного языка.
 func (lh *LanguageHandlerImpl) HandleNativeLanguageCallback(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	langCode := callback.Data[len("lang_native_"):]
 
@@ -139,7 +139,7 @@ func (lh *LanguageHandlerImpl) HandleNativeLanguageCallback(callback *tgbotapi.C
 	return lh.proceedToNextOnboardingStep(callback, user, langCode)
 }
 
-// proceedToNextOnboardingStep переходит к следующему шагу онбординга
+// proceedToNextOnboardingStep переходит к следующему шагу онбординга.
 func (lh *LanguageHandlerImpl) proceedToNextOnboardingStep(callback *tgbotapi.CallbackQuery, user *models.User, nativeLangCode string) error {
 	if nativeLangCode == "ru" {
 		// Если выбран русский как родной, предлагаем выбрать изучаемый язык
@@ -196,7 +196,7 @@ func (lh *LanguageHandlerImpl) proceedToNextOnboardingStep(callback *tgbotapi.Ca
 	}
 }
 
-// HandleTargetLanguageCallback обрабатывает выбор изучаемого языка
+// HandleTargetLanguageCallback обрабатывает выбор изучаемого языка.
 func (lh *LanguageHandlerImpl) HandleTargetLanguageCallback(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	langCode := callback.Data[len("lang_target_"):]
 	err := lh.service.DB.UpdateUserTargetLanguage(user.ID, langCode)
@@ -229,7 +229,7 @@ func (lh *LanguageHandlerImpl) HandleTargetLanguageCallback(callback *tgbotapi.C
 	return err
 }
 
-// HandleInterfaceLanguageSelection обрабатывает выбор языка интерфейса
+// HandleInterfaceLanguageSelection обрабатывает выбор языка интерфейса.
 func (lh *LanguageHandlerImpl) HandleInterfaceLanguageSelection(callback *tgbotapi.CallbackQuery, user *models.User, langCode string) error {
 	if err := lh.service.DB.UpdateUserInterfaceLanguage(user.ID, langCode); err != nil {
 		log.Printf("Error updating interface language: %v", err)

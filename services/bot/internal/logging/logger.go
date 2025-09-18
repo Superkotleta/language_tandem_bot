@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Logger интерфейс для логирования
+// Logger интерфейс для логирования.
 type Logger interface {
 	Debug(msg string, fields ...Field)
 	Info(msg string, fields ...Field)
@@ -21,18 +21,18 @@ type Logger interface {
 	WithContext(ctx context.Context) Logger
 }
 
-// Field представляет поле лога
+// Field представляет поле лога.
 type Field struct {
 	Key   string
 	Value interface{}
 }
 
-// ZapLogger реализация логгера на основе zap
+// ZapLogger реализация логгера на основе zap.
 type ZapLogger struct {
 	logger *zap.Logger
 }
 
-// NewLogger создает новый логгер
+// NewLogger создает новый логгер.
 func NewLogger(level string, format string) (Logger, error) {
 	var config zap.Config
 
@@ -74,7 +74,7 @@ func NewLogger(level string, format string) (Logger, error) {
 	return &ZapLogger{logger: logger}, nil
 }
 
-// NewProductionLogger создает production логгер
+// NewProductionLogger создает production логгер.
 func NewProductionLogger() (Logger, error) {
 	config := zap.NewProductionConfig()
 	config.EncoderConfig.TimeKey = "timestamp"
@@ -88,7 +88,7 @@ func NewProductionLogger() (Logger, error) {
 	return &ZapLogger{logger: logger}, nil
 }
 
-// NewDevelopmentLogger создает development логгер
+// NewDevelopmentLogger создает development логгер.
 func NewDevelopmentLogger() (Logger, error) {
 	config := zap.NewDevelopmentConfig()
 	config.EncoderConfig.TimeKey = "timestamp"
@@ -102,39 +102,39 @@ func NewDevelopmentLogger() (Logger, error) {
 	return &ZapLogger{logger: logger}, nil
 }
 
-// Debug логирует debug сообщение
+// Debug логирует debug сообщение.
 func (l *ZapLogger) Debug(msg string, fields ...Field) {
 	l.logger.Debug(msg, l.fieldsToZap(fields)...)
 }
 
-// Info логирует info сообщение
+// Info логирует info сообщение.
 func (l *ZapLogger) Info(msg string, fields ...Field) {
 	l.logger.Info(msg, l.fieldsToZap(fields)...)
 }
 
-// Warn логирует warning сообщение
+// Warn логирует warning сообщение.
 func (l *ZapLogger) Warn(msg string, fields ...Field) {
 	l.logger.Warn(msg, l.fieldsToZap(fields)...)
 }
 
-// Error логирует error сообщение
+// Error логирует error сообщение.
 func (l *ZapLogger) Error(msg string, fields ...Field) {
 	l.logger.Error(msg, l.fieldsToZap(fields)...)
 }
 
-// Fatal логирует fatal сообщение и завершает программу
+// Fatal логирует fatal сообщение и завершает программу.
 func (l *ZapLogger) Fatal(msg string, fields ...Field) {
 	l.logger.Fatal(msg, l.fieldsToZap(fields)...)
 }
 
-// With создает новый логгер с дополнительными полями
+// With создает новый логгер с дополнительными полями.
 func (l *ZapLogger) With(fields ...Field) Logger {
 	return &ZapLogger{
 		logger: l.logger.With(l.fieldsToZap(fields)...),
 	}
 }
 
-// WithContext создает новый логгер с контекстом
+// WithContext создает новый логгер с контекстом.
 func (l *ZapLogger) WithContext(ctx context.Context) Logger {
 	fields := l.extractContextFields(ctx)
 	return &ZapLogger{
@@ -142,7 +142,7 @@ func (l *ZapLogger) WithContext(ctx context.Context) Logger {
 	}
 }
 
-// fieldsToZap конвертирует поля в zap поля
+// fieldsToZap конвертирует поля в zap поля.
 func (l *ZapLogger) fieldsToZap(fields []Field) []zap.Field {
 	zapFields := make([]zap.Field, len(fields))
 	for i, field := range fields {
@@ -151,7 +151,7 @@ func (l *ZapLogger) fieldsToZap(fields []Field) []zap.Field {
 	return zapFields
 }
 
-// extractContextFields извлекает поля из контекста
+// extractContextFields извлекает поля из контекста.
 func (l *ZapLogger) extractContextFields(ctx context.Context) []Field {
 	fields := make([]Field, 0)
 
@@ -173,96 +173,96 @@ func (l *ZapLogger) extractContextFields(ctx context.Context) []Field {
 	return fields
 }
 
-// Sync синхронизирует логгер
+// Sync синхронизирует логгер.
 func (l *ZapLogger) Sync() error {
 	return l.logger.Sync()
 }
 
 // Helper функции для создания полей
 
-// String создает строковое поле
+// String создает строковое поле.
 func String(key, value string) Field {
 	return Field{Key: key, Value: value}
 }
 
-// Int создает целочисленное поле
+// Int создает целочисленное поле.
 func Int(key string, value int) Field {
 	return Field{Key: key, Value: value}
 }
 
-// Int64 создает 64-битное целочисленное поле
+// Int64 создает 64-битное целочисленное поле.
 func Int64(key string, value int64) Field {
 	return Field{Key: key, Value: value}
 }
 
-// Float64 создает поле с плавающей точкой
+// Float64 создает поле с плавающей точкой.
 func Float64(key string, value float64) Field {
 	return Field{Key: key, Value: value}
 }
 
-// Bool создает булево поле
+// Bool создает булево поле.
 func Bool(key string, value bool) Field {
 	return Field{Key: key, Value: value}
 }
 
-// Duration создает поле с продолжительностью
+// Duration создает поле с продолжительностью.
 func Duration(key string, value time.Duration) Field {
 	return Field{Key: key, Value: value}
 }
 
-// Time создает поле с временем
+// Time создает поле с временем.
 func Time(key string, value time.Time) Field {
 	return Field{Key: key, Value: value}
 }
 
-// ErrorField создает поле с ошибкой
+// ErrorField создает поле с ошибкой.
 func ErrorField(err error) Field {
 	return Field{Key: "error", Value: err.Error()}
 }
 
-// Any создает поле с любым значением
+// Any создает поле с любым значением.
 func Any(key string, value interface{}) Field {
 	return Field{Key: key, Value: value}
 }
 
-// RequestID создает поле с ID запроса
+// RequestID создает поле с ID запроса.
 func RequestID(id string) Field {
 	return Field{Key: "request_id", Value: id}
 }
 
-// UserID создает поле с ID пользователя
+// UserID создает поле с ID пользователя.
 func UserID(id int64) Field {
 	return Field{Key: "user_id", Value: id}
 }
 
-// TraceID создает поле с ID трассировки
+// TraceID создает поле с ID трассировки.
 func TraceID(id string) Field {
 	return Field{Key: "trace_id", Value: id}
 }
 
-// Component создает поле с компонентом
+// Component создает поле с компонентом.
 func Component(name string) Field {
 	return Field{Key: "component", Value: name}
 }
 
-// Operation создает поле с операцией
+// Operation создает поле с операцией.
 func Operation(name string) Field {
 	return Field{Key: "operation", Value: name}
 }
 
-// DatabaseLogger специализированный логгер для БД операций
+// DatabaseLogger специализированный логгер для БД операций.
 type DatabaseLogger struct {
 	Logger
 }
 
-// NewDatabaseLogger создает новый логгер для БД
+// NewDatabaseLogger создает новый логгер для БД.
 func NewDatabaseLogger(logger Logger) *DatabaseLogger {
 	return &DatabaseLogger{
 		Logger: logger.With(Component("database")),
 	}
 }
 
-// LogQuery логирует SQL запрос
+// LogQuery логирует SQL запрос.
 func (l *DatabaseLogger) LogQuery(operation, table string, duration time.Duration, err error) {
 	fields := []Field{
 		Operation(operation),
@@ -278,7 +278,7 @@ func (l *DatabaseLogger) LogQuery(operation, table string, duration time.Duratio
 	}
 }
 
-// LogTransaction логирует транзакцию
+// LogTransaction логирует транзакцию.
 func (l *DatabaseLogger) LogTransaction(operation string, duration time.Duration, err error) {
 	fields := []Field{
 		Operation(operation),
@@ -293,19 +293,19 @@ func (l *DatabaseLogger) LogTransaction(operation string, duration time.Duration
 	}
 }
 
-// CacheLogger специализированный логгер для кэша
+// CacheLogger специализированный логгер для кэша.
 type CacheLogger struct {
 	Logger
 }
 
-// NewCacheLogger создает новый логгер для кэша
+// NewCacheLogger создает новый логгер для кэша.
 func NewCacheLogger(logger Logger) *CacheLogger {
 	return &CacheLogger{
 		Logger: logger.With(Component("cache")),
 	}
 }
 
-// LogCacheOperation логирует операцию с кэшем
+// LogCacheOperation логирует операцию с кэшем.
 func (l *CacheLogger) LogCacheOperation(operation, cacheType, key string, hit bool, duration time.Duration, err error) {
 	fields := []Field{
 		Operation(operation),
@@ -323,19 +323,19 @@ func (l *CacheLogger) LogCacheOperation(operation, cacheType, key string, hit bo
 	}
 }
 
-// BusinessLogger специализированный логгер для бизнес-логики
+// BusinessLogger специализированный логгер для бизнес-логики.
 type BusinessLogger struct {
 	Logger
 }
 
-// NewBusinessLogger создает новый логгер для бизнес-логики
+// NewBusinessLogger создает новый логгер для бизнес-логики.
 func NewBusinessLogger(logger Logger) *BusinessLogger {
 	return &BusinessLogger{
 		Logger: logger.With(Component("business")),
 	}
 }
 
-// LogUserAction логирует действие пользователя
+// LogUserAction логирует действие пользователя.
 func (l *BusinessLogger) LogUserAction(userID int64, action string, details map[string]interface{}) {
 	fields := []Field{
 		UserID(userID),
@@ -349,7 +349,7 @@ func (l *BusinessLogger) LogUserAction(userID int64, action string, details map[
 	l.Info("User action", fields...)
 }
 
-// LogProfileUpdate логирует обновление профиля
+// LogProfileUpdate логирует обновление профиля.
 func (l *BusinessLogger) LogProfileUpdate(userID int64, fields []string) {
 	l.Info("Profile updated",
 		UserID(userID),
@@ -357,7 +357,7 @@ func (l *BusinessLogger) LogProfileUpdate(userID int64, fields []string) {
 	)
 }
 
-// LogFeedbackSubmission логирует отправку отзыва
+// LogFeedbackSubmission логирует отправку отзыва.
 func (l *BusinessLogger) LogFeedbackSubmission(userID int64, hasContactInfo bool) {
 	l.Info("Feedback submitted",
 		UserID(userID),
@@ -365,10 +365,10 @@ func (l *BusinessLogger) LogFeedbackSubmission(userID int64, hasContactInfo bool
 	)
 }
 
-// Global logger instance
+// Global logger instance.
 var globalLogger Logger
 
-// InitGlobalLogger инициализирует глобальный логгер
+// InitGlobalLogger инициализирует глобальный логгер.
 func InitGlobalLogger(level, format string) error {
 	logger, err := NewLogger(level, format)
 	if err != nil {
@@ -378,7 +378,7 @@ func InitGlobalLogger(level, format string) error {
 	return nil
 }
 
-// GetGlobalLogger возвращает глобальный логгер
+// GetGlobalLogger возвращает глобальный логгер.
 func GetGlobalLogger() Logger {
 	if globalLogger == nil {
 		// Fallback на простой логгер
@@ -388,34 +388,34 @@ func GetGlobalLogger() Logger {
 	return globalLogger
 }
 
-// SetGlobalLogger устанавливает глобальный логгер
+// SetGlobalLogger устанавливает глобальный логгер.
 func SetGlobalLogger(logger Logger) {
 	globalLogger = logger
 }
 
 // Convenience functions для глобального логгера
 
-// Debug логирует debug сообщение через глобальный логгер
+// Debug логирует debug сообщение через глобальный логгер.
 func Debug(msg string, fields ...Field) {
 	GetGlobalLogger().Debug(msg, fields...)
 }
 
-// Info логирует info сообщение через глобальный логгер
+// Info логирует info сообщение через глобальный логгер.
 func Info(msg string, fields ...Field) {
 	GetGlobalLogger().Info(msg, fields...)
 }
 
-// Warn логирует warning сообщение через глобальный логгер
+// Warn логирует warning сообщение через глобальный логгер.
 func Warn(msg string, fields ...Field) {
 	GetGlobalLogger().Warn(msg, fields...)
 }
 
-// Error логирует error сообщение через глобальный логгер
+// Error логирует error сообщение через глобальный логгер.
 func Error(msg string, fields ...Field) {
 	GetGlobalLogger().Error(msg, fields...)
 }
 
-// Fatal логирует fatal сообщение через глобальный логгер
+// Fatal логирует fatal сообщение через глобальный логгер.
 func Fatal(msg string, fields ...Field) {
 	GetGlobalLogger().Fatal(msg, fields...)
 }
