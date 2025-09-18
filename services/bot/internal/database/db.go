@@ -322,6 +322,74 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 	return feedbacks, nil
 }
 
+// GetAllFeedback получает все отзывы для администрирования.
+func (db *DB) GetAllFeedback() ([]map[string]interface{}, error) {
+	query := `
+        SELECT uf.id, uf.feedback_text, uf.contact_info, uf.created_at, uf.is_processed, uf.admin_response,
+               u.username, u.telegram_id, u.first_name
+        FROM user_feedback uf
+        JOIN users u ON uf.user_id = u.id
+        ORDER BY uf.created_at DESC
+    `
+
+	rows, err := db.conn.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var feedbacks []map[string]interface{}
+	for rows.Next() {
+		var (
+			id            int
+			feedbackText  string
+			contactInfo   sql.NullString
+			createdAt     sql.NullTime
+			isProcessed   bool
+			adminResponse sql.NullString
+			username      sql.NullString
+			telegramID    int64
+			firstName     string
+		)
+
+		err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &isProcessed, &adminResponse, &username, &telegramID, &firstName)
+		if err != nil {
+			continue // Пропускаем ошибочные записи
+		}
+
+		feedback := map[string]interface{}{
+			"id":            id,
+			"feedback_text": feedbackText,
+			"created_at":    createdAt.Time,
+			"is_processed":  isProcessed,
+			"telegram_id":   telegramID,
+			"first_name":    firstName,
+		}
+
+		if username.Valid {
+			feedback["username"] = username.String
+		} else {
+			feedback["username"] = nil
+		}
+
+		if contactInfo.Valid {
+			feedback["contact_info"] = contactInfo.String
+		} else {
+			feedback["contact_info"] = nil
+		}
+
+		if adminResponse.Valid {
+			feedback["admin_response"] = adminResponse.String
+		} else {
+			feedback["admin_response"] = nil
+		}
+
+		feedbacks = append(feedbacks, feedback)
+	}
+
+	return feedbacks, nil
+}
+
 // MarkFeedbackProcessed помечает отзыв как обработанный и добавляет ответ администратора.
 func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
 	query := `
@@ -332,4 +400,77 @@ func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error 
 
 	_, err := db.conn.Exec(query, adminResponse, feedbackID)
 	return err
+}
+
+// GetUserDataForFeedback получает данные пользователя для формирования уведомления о новом отзыве.
+func (db *DB) GetUserDataForFeedback(userID int) (map[string]interface{}, error) {
+	query := `
+        SELECT telegram_id, username, first_name
+        FROM users
+        WHERE id = $1
+    `
+
+	var (
+		telegramID int64
+		username   sql.NullString
+		firstName  sql.NullString
+	)
+
+	err := db.conn.QueryRow(query, userID).Scan(&telegramID, &username, &firstName)
+	if err != nil {
+		return nil, err
+	}
+
+	userData := map[string]interface{}{
+		"telegram_id": telegramID,
+		"first_name":  firstName.String,
+	}
+
+	if username.Valid {
+		userData["username"] = &username.String
+	} else {
+		userData["username"] = nil
+	}
+
+	return userData, nil
+}
+
+// DeleteFeedback удаляет отзыв из базы данных.
+func (db *DB) DeleteFeedback(feedbackID int) error {
+	query := `DELETE FROM user_feedback WHERE id = $1`
+	_, err := db.conn.Exec(query, feedbackID)
+	return err
+}
+
+// ArchiveFeedback архивирует отзыв (помечает как обработанный).
+func (db *DB) ArchiveFeedback(feedbackID int) error {
+	query := `UPDATE user_feedback SET is_processed = true WHERE id = $1`
+	_, err := db.conn.Exec(query, feedbackID)
+	return err
+}
+
+// UnarchiveFeedback разархивирует отзыв (помечает как необработанный).
+func (db *DB) UnarchiveFeedback(feedbackID int) error {
+	query := `UPDATE user_feedback SET is_processed = false WHERE id = $1`
+	_, err := db.conn.Exec(query, feedbackID)
+	return err
+}
+
+// UpdateFeedbackStatus обновляет статус отзыва.
+func (db *DB) UpdateFeedbackStatus(feedbackID int, isProcessed bool) error {
+	query := `UPDATE user_feedback SET is_processed = $1 WHERE id = $2`
+	_, err := db.conn.Exec(query, isProcessed, feedbackID)
+	return err
+}
+
+// DeleteAllProcessedFeedbacks удаляет все обработанные отзывы.
+func (db *DB) DeleteAllProcessedFeedbacks() (int, error) {
+	query := `DELETE FROM user_feedback WHERE is_processed = true`
+	result, err := db.conn.Exec(query)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	return int(rowsAffected), err
 }

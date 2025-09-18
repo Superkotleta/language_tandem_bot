@@ -308,6 +308,77 @@ func (db *OptimizedDB) GetUnprocessedFeedbackBatch(limit, offset int) ([]map[str
 	return feedbacks, nil
 }
 
+// GetAllFeedback получает все отзывы для администрирования.
+func (db *OptimizedDB) GetAllFeedback() ([]map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(db.ctx, 5*time.Second)
+	defer cancel()
+
+	query := `
+        SELECT uf.id, uf.feedback_text, uf.contact_info, uf.created_at, uf.is_processed, uf.admin_response,
+               u.username, u.telegram_id, u.first_name
+        FROM user_feedback uf
+        JOIN users u ON uf.user_id = u.id
+        ORDER BY uf.created_at DESC
+    `
+
+	rows, err := db.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var feedbacks []map[string]interface{}
+	for rows.Next() {
+		var (
+			id            int
+			feedbackText  string
+			contactInfo   sql.NullString
+			createdAt     sql.NullTime
+			isProcessed   bool
+			adminResponse sql.NullString
+			username      sql.NullString
+			telegramID    int64
+			firstName     string
+		)
+
+		err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &isProcessed, &adminResponse, &username, &telegramID, &firstName)
+		if err != nil {
+			continue // Пропускаем ошибочные записи
+		}
+
+		feedback := map[string]interface{}{
+			"id":            id,
+			"feedback_text": feedbackText,
+			"created_at":    createdAt.Time,
+			"is_processed":  isProcessed,
+			"telegram_id":   telegramID,
+			"first_name":    firstName,
+		}
+
+		if username.Valid {
+			feedback["username"] = username.String
+		} else {
+			feedback["username"] = nil
+		}
+
+		if contactInfo.Valid {
+			feedback["contact_info"] = contactInfo.String
+		} else {
+			feedback["contact_info"] = nil
+		}
+
+		if adminResponse.Valid {
+			feedback["admin_response"] = adminResponse.String
+		} else {
+			feedback["admin_response"] = nil
+		}
+
+		feedbacks = append(feedbacks, feedback)
+	}
+
+	return feedbacks, nil
+}
+
 // MarkFeedbackProcessedBatch помечает несколько отзывов как обработанные.
 func (db *OptimizedDB) MarkFeedbackProcessedBatch(feedbackIDs []int, adminResponse string) error {
 	ctx, cancel := context.WithTimeout(db.ctx, 5*time.Second)
@@ -339,6 +410,97 @@ func (db *OptimizedDB) MarkFeedbackProcessedBatch(feedbackIDs []int, adminRespon
 
 	_, err := db.pool.Exec(ctx, query, args...)
 	return err
+}
+
+// GetUserDataForFeedback получает данные пользователя для формирования уведомления о новом отзыве.
+func (db *OptimizedDB) GetUserDataForFeedback(userID int) (map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(db.ctx, 3*time.Second)
+	defer cancel()
+
+	query := `
+        SELECT telegram_id, username, first_name
+        FROM users
+        WHERE id = $1
+    `
+
+	var (
+		telegramID int64
+		username   sql.NullString
+		firstName  sql.NullString
+	)
+
+	err := db.pool.QueryRow(ctx, query, userID).Scan(&telegramID, &username, &firstName)
+	if err != nil {
+		return nil, err
+	}
+
+	userData := map[string]interface{}{
+		"telegram_id": telegramID,
+		"first_name":  firstName.String,
+	}
+
+	if username.Valid {
+		userData["username"] = &username.String
+	} else {
+		userData["username"] = nil
+	}
+
+	return userData, nil
+}
+
+// DeleteFeedback удаляет отзыв из базы данных.
+func (db *OptimizedDB) DeleteFeedback(feedbackID int) error {
+	ctx, cancel := context.WithTimeout(db.ctx, 3*time.Second)
+	defer cancel()
+
+	query := `DELETE FROM user_feedback WHERE id = $1`
+	_, err := db.pool.Exec(ctx, query, feedbackID)
+	return err
+}
+
+// ArchiveFeedback архивирует отзыв (помечает как обработанный).
+func (db *OptimizedDB) ArchiveFeedback(feedbackID int) error {
+	ctx, cancel := context.WithTimeout(db.ctx, 3*time.Second)
+	defer cancel()
+
+	query := `UPDATE user_feedback SET is_processed = true WHERE id = $1`
+	_, err := db.pool.Exec(ctx, query, feedbackID)
+	return err
+}
+
+// UnarchiveFeedback разархивирует отзыв (помечает как необработанный).
+func (db *OptimizedDB) UnarchiveFeedback(feedbackID int) error {
+	ctx, cancel := context.WithTimeout(db.ctx, 3*time.Second)
+	defer cancel()
+
+	query := `UPDATE user_feedback SET is_processed = false WHERE id = $1`
+	_, err := db.pool.Exec(ctx, query, feedbackID)
+	return err
+}
+
+// UpdateFeedbackStatus обновляет статус отзыва.
+func (db *OptimizedDB) UpdateFeedbackStatus(feedbackID int, isProcessed bool) error {
+	ctx, cancel := context.WithTimeout(db.ctx, 3*time.Second)
+	defer cancel()
+
+	query := `UPDATE user_feedback SET is_processed = $1 WHERE id = $2`
+	_, err := db.pool.Exec(ctx, query, isProcessed, feedbackID)
+	return err
+}
+
+// DeleteAllProcessedFeedbacks удаляет все обработанные отзывы.
+func (db *OptimizedDB) DeleteAllProcessedFeedbacks() (int, error) {
+	ctx, cancel := context.WithTimeout(db.ctx, 5*time.Second)
+	defer cancel()
+
+	query := `DELETE FROM user_feedback WHERE is_processed = true`
+	result, err := db.pool.Exec(ctx, query)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected := result.RowsAffected()
+	return int(rowsAffected), nil
 }
 
 // HealthCheck проверяет здоровье соединения с БД.

@@ -63,6 +63,8 @@ type FeedbackHandlerImpl struct {
 	keyboardBuilder *KeyboardBuilder
 	adminChatIDs    []int64
 	adminUsernames  []string
+	// Временное хранилище отзывов для пользователей без username
+	tempFeedbacks map[int]string // userID -> feedbackText
 }
 
 // NewFeedbackHandler создает новый экземпляр FeedbackHandler.
@@ -73,6 +75,7 @@ func NewFeedbackHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboard
 		keyboardBuilder: keyboardBuilder,
 		adminChatIDs:    adminChatIDs,
 		adminUsernames:  adminUsernames,
+		tempFeedbacks:   make(map[int]string),
 	}
 }
 
@@ -524,8 +527,8 @@ func (fh *FeedbackHandlerImpl) handleFeedbackTooLong(message *tgbotapi.Message, 
 
 // handleFeedbackContactRequest запрашивает контактные данные при отсутствии username.
 func (fh *FeedbackHandlerImpl) handleFeedbackContactRequest(message *tgbotapi.Message, user *models.User, feedbackText string) error {
-	// Сохраняем отзыв во временном хранилище (в будущем можно добавить в redis/кэш)
-	// Пока просто переходим к следующему состоянию
+	// Сохраняем отзыв во временном хранилище
+	fh.tempFeedbacks[user.ID] = feedbackText
 
 	// Обновляем состояние для ожидания контактных данных
 	err := fh.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedbackContact)
@@ -561,6 +564,9 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 		successText = "✅ Спасибо за ваш отзыв! Мы обязательно его рассмотрим."
 	}
 
+	// Очищаем временное хранилище отзывов для этого пользователя
+	delete(fh.tempFeedbacks, user.ID)
+
 	// Возвращаем пользователя в активное состояние
 	err = fh.service.DB.UpdateUserState(user.ID, models.StateActive)
 	if err != nil {
@@ -585,15 +591,25 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackContactMessage(message *tgbotapi.Me
 			fh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_placeholder"))
 	}
 
+	// Получаем сохраненный отзыв из временного хранилища
+	feedbackText, exists := fh.tempFeedbacks[user.ID]
+	if !exists {
+		// Если отзыв не найден, просим написать заново
+		errorText := fh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_not_found")
+		if errorText == "feedback_not_found" {
+			errorText = "❌ Отзыв не найден. Пожалуйста, напишите отзыв заново."
+		}
+		// Возвращаем пользователя в состояние ожидания отзыва
+		_ = fh.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedback)
+		return fh.sendMessage(message.Chat.ID, errorText)
+	}
+
+	// Удаляем отзыв из временного хранилища
+	delete(fh.tempFeedbacks, user.ID)
+
 	// Подтверждаем получение контактов
 	confirmedText := fh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_provided")
 	fh.sendMessage(message.Chat.ID, confirmedText)
-
-	// Теперь нужно получить сохраненный отзыв пользователя
-	// Пока что используем временное решение - просим написать отзыв заново
-	// В будущем здесь будет получение из кэша
-
-	feedbackText := "Отзыв был сохранен в предыдущем шаге (требуется интеграция с кэшем)" // временное решение
 
 	return fh.handleFeedbackComplete(message, user, feedbackText, &contactInfo)
 }

@@ -193,33 +193,27 @@ func (a *databaseAdapter) GetUserDataForFeedback(userID int) (map[string]interfa
 }
 
 func (a *databaseAdapter) GetAllFeedback() ([]map[string]interface{}, error) {
-	// Заглушка - возвращаем пустой список
-	return []map[string]interface{}{}, nil
+	return a.db.GetAllFeedback()
 }
 
 func (a *databaseAdapter) DeleteFeedback(feedbackID int) error {
-	// Заглушка - ничего не делаем
-	return nil
+	return a.db.DeleteFeedback(feedbackID)
 }
 
 func (a *databaseAdapter) ArchiveFeedback(feedbackID int) error {
-	// Заглушка - ничего не делаем
-	return nil
+	return a.db.ArchiveFeedback(feedbackID)
 }
 
 func (a *databaseAdapter) UnarchiveFeedback(feedbackID int) error {
-	// Заглушка - ничего не делаем
-	return nil
+	return a.db.UnarchiveFeedback(feedbackID)
 }
 
 func (a *databaseAdapter) UpdateFeedbackStatus(feedbackID int, isProcessed bool) error {
-	// Заглушка - в реальной БД здесь было бы обновление статуса
-	return nil
+	return a.db.UpdateFeedbackStatus(feedbackID, isProcessed)
 }
 
 func (a *databaseAdapter) DeleteAllProcessedFeedbacks() (int, error) {
-	// Заглушка - в реальной БД здесь было бы удаление обработанных отзывов
-	return 0, nil
+	return a.db.DeleteAllProcessedFeedbacks()
 }
 
 // SetFeedbackNotificationFunc устанавливает функцию для отправки уведомлений о новых отзывах.
