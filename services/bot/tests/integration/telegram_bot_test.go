@@ -34,7 +34,7 @@ func (s *TelegramBotSuite) SetupTest() {
 // TestStartCommand_NewUser тестирует команду /start для нового пользователя
 func (s *TelegramBotSuite) TestStartCommand_NewUser() {
 	// Arrange
-	userID, username := helpers.GetTestRegularUser()
+	userID, username := helpers.GetTestRegularUserID()
 	message := helpers.CreateTestCommand("start", userID, username)
 	update := helpers.CreateUpdateWithMessage(message)
 
@@ -66,7 +66,7 @@ func (s *TelegramBotSuite) TestStartCommand_NewUser() {
 // TestStartCommand_ExistingUser тестирует команду /start для существующего пользователя
 func (s *TelegramBotSuite) TestStartCommand_ExistingUser() {
 	// Arrange
-	userID, username := helpers.GetTestRegularUser()
+	userID, username := helpers.GetTestRegularUserID()
 
 	// Создаем пользователя в БД
 	existingUser, err := s.mockDB.CreateUser(userID, username, "TestUser", "en")
@@ -96,7 +96,7 @@ func (s *TelegramBotSuite) TestStartCommand_ExistingUser() {
 // TestStartCommand_AdminUser тестирует команду /start для администратора
 func (s *TelegramBotSuite) TestStartCommand_AdminUser() {
 	// Arrange
-	adminID, adminUsername := helpers.GetTestAdminUser()
+	adminID, adminUsername := helpers.GetTestAdminUserID()
 	message := helpers.CreateTestCommand("start", adminID, adminUsername)
 	// Обновляем FirstName в сообщении для правильной проверки
 	message.From.FirstName = "Admin"
@@ -124,7 +124,7 @@ func (s *TelegramBotSuite) TestStartCommand_AdminUser() {
 // TestProfileCallback тестирует обработку callback для просмотра профиля
 func (s *TelegramBotSuite) TestProfileCallback() {
 	// Arrange
-	userID, username := helpers.GetTestRegularUser()
+	userID, username := helpers.GetTestRegularUserID()
 
 	// Создаем пользователя с заполненным профилем
 	user, err := s.mockDB.CreateUser(userID, username, "TestUser", "en")
@@ -157,7 +157,7 @@ func (s *TelegramBotSuite) TestProfileCallback() {
 // TestUnknownCommand тестирует обработку неизвестной команды
 func (s *TelegramBotSuite) TestUnknownCommand() {
 	// Arrange
-	userID, username := helpers.GetTestRegularUser()
+	userID, username := helpers.GetTestRegularUserID()
 	message := helpers.CreateTestCommand("unknown", userID, username)
 	update := helpers.CreateUpdateWithMessage(message)
 
@@ -179,7 +179,7 @@ func (s *TelegramBotSuite) TestDatabaseError() {
 	// Arrange
 	s.mockDB.SetError(assert.AnError)
 
-	userID, username := helpers.GetTestRegularUser()
+	userID, username := helpers.GetTestRegularUserID()
 	message := helpers.CreateTestCommand("start", userID, username)
 	update := helpers.CreateUpdateWithMessage(message)
 

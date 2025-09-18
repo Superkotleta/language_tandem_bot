@@ -17,12 +17,12 @@ func GetTestConfig() *config.Config {
 	}
 }
 
-// GetTestAdminUser возвращает данные тестового администратора
-func GetTestAdminUser() (int64, string) {
+// GetTestAdminUserConfig возвращает данные тестового администратора
+func GetTestAdminUserConfig() (int64, string) {
 	return 123456789, "testadmin"
 }
 
-// GetTestRegularUser возвращает данные тестового обычного пользователя
-func GetTestRegularUser() (int64, string) {
+// GetTestRegularUserConfig возвращает данные тестового обычного пользователя
+func GetTestRegularUserConfig() (int64, string) {
 	return 555666777, "testuser"
 }

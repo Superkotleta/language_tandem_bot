@@ -14,6 +14,8 @@ type Config struct {
 	TelegramToken string
 	// Database
 	DatabaseURL string
+	// Cache
+	RedisURL string
 	// Server
 	Port       string
 	Debug      bool
@@ -62,6 +64,11 @@ func Load() *Config {
 		databaseURL = getFromFile(os.Getenv("DATABASE_URL_FILE"))
 	}
 
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		redisURL = getFromFile(os.Getenv("REDIS_URL_FILE"))
+	}
+
 	debug, _ := strconv.ParseBool(getEnv("DEBUG", "false"))
 	enableTelegram, _ := strconv.ParseBool(getEnv("ENABLE_TELEGRAM", "true"))
 	enableDiscord, _ := strconv.ParseBool(getEnv("ENABLE_DISCORD", "false"))
@@ -98,9 +105,7 @@ func Load() *Config {
 			}
 
 			// Убираем @ если есть
-			if strings.HasPrefix(username, "@") {
-				username = strings.TrimPrefix(username, "@")
-			}
+			username = strings.TrimPrefix(username, "@")
 			adminUsernames = append(adminUsernames, username)
 		}
 	}
@@ -108,6 +113,7 @@ func Load() *Config {
 	return &Config{
 		TelegramToken:  telegramToken,
 		DatabaseURL:    databaseURL,
+		RedisURL:       redisURL,
 		Port:           getEnv("PORT", "8080"),
 		Debug:          debug,
 		WebhookURL:     getEnv("WEBHOOK_URL", ""),

@@ -166,6 +166,10 @@ func (l *Localizer) loadFallbackTranslations() {
 		"profile_field_target":    "Learning language",
 		"profile_field_interests": "Interests",
 		"unknown_command":         "❓ Unknown command. Use /start to begin",
+		"language_en":             "English",
+		"language_ru":             "Russian",
+		"language_es":             "Spanish",
+		"language_zh":             "Chinese",
 	}
 
 	// Русский
@@ -178,5 +182,25 @@ func (l *Localizer) loadFallbackTranslations() {
 		"profile_field_target":    "Изучаемый язык",
 		"profile_field_interests": "Интересы",
 		"unknown_command":         "❓ Неизвестная команда. Используй /start для начала",
+		"language_en":             "Английский",
+		"language_ru":             "Русский",
+		"language_es":             "Испанский",
+		"language_zh":             "Китайский",
+	}
+
+	// Испанский
+	l.translations["es"] = map[string]string{
+		"welcome_message":         "👋 ¡Hola, {name}! ¡Bienvenido al Language Exchange Bot!",
+		"choose_native_language":  "🌍 Elige tu idioma nativo:",
+		"choose_target_language":  "📚 ¿Qué idioma estás aprendiendo?",
+		"profile_summary_title":   "👤 Tu perfil",
+		"profile_field_native":    "Idioma nativo",
+		"profile_field_target":    "Idioma objetivo",
+		"profile_field_interests": "Intereses",
+		"unknown_command":         "❓ Comando desconocido. Usa /start para comenzar",
+		"language_en":             "Inglés",
+		"language_ru":             "Ruso",
+		"language_es":             "Español",
+		"language_zh":             "Chino",
 	}
 }

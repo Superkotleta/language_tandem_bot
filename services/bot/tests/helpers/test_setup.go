@@ -1,11 +1,13 @@
 package helpers
 
 import (
+	"database/sql"
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/database"
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 	"language-exchange-bot/tests/mocks"
+	"os"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -151,4 +153,50 @@ type LocalizerInterface interface {
 	GetWithParams(langCode, key string, params map[string]string) string
 	GetLanguageName(langCode, interfaceLangCode string) string
 	GetInterests(langCode string) (map[int]string, error)
+}
+
+// GetTestDatabaseURL возвращает URL тестовой базы данных
+func GetTestDatabaseURL() string {
+	// Проверяем переменную окружения для тестовой БД
+	testDBURL := os.Getenv("TEST_DATABASE_URL")
+	if testDBURL != "" {
+		return testDBURL
+	}
+
+	// Fallback на основную БД с тестовой схемой
+	mainDBURL := os.Getenv("DATABASE_URL")
+	if mainDBURL != "" {
+		return mainDBURL
+	}
+
+	// Дефолтная тестовая БД
+	return "postgres://postgres:password@localhost:5432/language_exchange_test?sslmode=disable"
+}
+
+// CleanupTestData очищает тестовые данные из базы данных
+func CleanupTestData(db *sql.DB) {
+	// Удаляем тестовые данные в правильном порядке (с учетом foreign keys)
+	tables := []string{
+		"user_feedback",
+		"user_interests",
+		"users",
+	}
+
+	for _, table := range tables {
+		_, err := db.Exec("DELETE FROM " + table + " WHERE telegram_id >= 12345 AND telegram_id <= 99999")
+		if err != nil {
+			// Игнорируем ошибки очистки в тестах
+			continue
+		}
+	}
+}
+
+// GetTestRegularUserID возвращает тестового обычного пользователя
+func GetTestRegularUserID() (int64, string) {
+	return 12345, "testuser"
+}
+
+// GetTestAdminUserID возвращает тестового администратора
+func GetTestAdminUserID() (int64, string) {
+	return 123456, "testadmin"
 }

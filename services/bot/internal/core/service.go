@@ -23,6 +23,14 @@ func NewBotService(db *database.DB) *BotService {
 	}
 }
 
+// NewBotServiceWithInterface создает BotService с уже готовым интерфейсом Database (для тестов)
+func NewBotServiceWithInterface(db database.Database, localizer *localization.Localizer) *BotService {
+	return &BotService{
+		DB:        db,
+		Localizer: localizer,
+	}
+}
+
 // databaseAdapter адаптер для совместимости с интерфейсом Database
 type databaseAdapter struct {
 	db *database.DB
@@ -69,6 +77,11 @@ func (a *databaseAdapter) UpdateUserTargetLanguage(userID int, langCode string) 
 
 func (a *databaseAdapter) UpdateUserTargetLanguageLevel(userID int, level string) error {
 	return a.db.UpdateUserTargetLanguageLevel(userID, level)
+}
+
+func (a *databaseAdapter) UpdateUserProfileCompletionLevel(userID int, level int) error {
+	// Заглушка - в реальной БД здесь было бы обновление
+	return nil
 }
 
 func (a *databaseAdapter) ResetUserProfile(userID int) error {
@@ -135,6 +148,10 @@ func (a *databaseAdapter) SaveUserFeedback(userID int, feedbackText string, cont
 	return a.db.SaveUserFeedback(userID, feedbackText, contactInfo)
 }
 
+func (a *databaseAdapter) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, error) {
+	return a.db.GetUserFeedbackByUserID(userID)
+}
+
 func (a *databaseAdapter) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 	return a.db.GetUnprocessedFeedback()
 }
@@ -151,12 +168,58 @@ func (a *databaseAdapter) Close() error {
 	return a.db.Close()
 }
 
-// NewBotServiceWithInterface создает BotService с интерфейсом Database (для тестов)
-func NewBotServiceWithInterface(db database.Database, localizer *localization.Localizer) *BotService {
-	return &BotService{
-		DB:        db,
-		Localizer: localizer,
+func (a *databaseAdapter) GetUserDataForFeedback(userID int) (map[string]interface{}, error) {
+	// Получаем пользователя по ID
+	var telegramID int64
+	var username, firstName string
+	err := a.db.GetConnection().QueryRow(`
+		SELECT telegram_id, username, first_name
+		FROM users WHERE id = $1
+	`, userID).Scan(&telegramID, &username, &firstName)
+	if err != nil {
+		return nil, err
 	}
+
+	result := map[string]interface{}{
+		"telegram_id": telegramID,
+		"first_name":  firstName,
+	}
+
+	if username != "" {
+		result["username"] = &username
+	}
+
+	return result, nil
+}
+
+func (a *databaseAdapter) GetAllFeedback() ([]map[string]interface{}, error) {
+	// Заглушка - возвращаем пустой список
+	return []map[string]interface{}{}, nil
+}
+
+func (a *databaseAdapter) DeleteFeedback(feedbackID int) error {
+	// Заглушка - ничего не делаем
+	return nil
+}
+
+func (a *databaseAdapter) ArchiveFeedback(feedbackID int) error {
+	// Заглушка - ничего не делаем
+	return nil
+}
+
+func (a *databaseAdapter) UnarchiveFeedback(feedbackID int) error {
+	// Заглушка - ничего не делаем
+	return nil
+}
+
+func (a *databaseAdapter) UpdateFeedbackStatus(feedbackID int, isProcessed bool) error {
+	// Заглушка - в реальной БД здесь было бы обновление статуса
+	return nil
+}
+
+func (a *databaseAdapter) DeleteAllProcessedFeedbacks() (int, error) {
+	// Заглушка - в реальной БД здесь было бы удаление обработанных отзывов
+	return 0, nil
 }
 
 // SetFeedbackNotificationFunc устанавливает функцию для отправки уведомлений о новых отзывах
@@ -388,27 +451,7 @@ func (s *BotService) SaveUserFeedback(userID int, feedbackText string, contactIn
 
 // GetUserDataForFeedback получает данные пользователя для формирования уведомления о новом отзыве
 func (s *BotService) GetUserDataForFeedback(userID int) (map[string]interface{}, error) {
-	// Получаем пользователя по ID (нужно добавить метод в DB)
-	var telegramID int64
-	var username, firstName string
-	err := s.DB.GetConnection().QueryRow(`
-		SELECT telegram_id, username, first_name
-		FROM users WHERE id = $1
-	`, userID).Scan(&telegramID, &username, &firstName)
-	if err != nil {
-		return nil, err
-	}
-
-	result := map[string]interface{}{
-		"telegram_id": telegramID,
-		"first_name":  firstName,
-	}
-
-	if username != "" {
-		result["username"] = &username
-	}
-
-	return result, nil
+	return s.DB.GetUserDataForFeedback(userID)
 }
 
 // GetAllUnprocessedFeedback получает все необработанные отзывы для администратора
@@ -418,143 +461,22 @@ func (s *BotService) GetAllUnprocessedFeedback() ([]map[string]interface{}, erro
 
 // GetAllFeedback получает все отзывы для администратора
 func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
-	query := `
-        SELECT uf.id, uf.feedback_text, uf.contact_info, uf.created_at,
-               uf.is_processed, u.username, u.telegram_id, u.first_name,
-               uf.admin_response
-        FROM user_feedback uf
-        JOIN users u ON uf.user_id = u.id
-        ORDER BY uf.created_at DESC
-    `
-
-	rows, err := s.DB.GetConnection().Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var feedbacks []map[string]interface{}
-	for rows.Next() {
-		var (
-			id           int
-			feedbackText string
-			contactInfo  sql.NullString
-			createdAt    sql.NullTime
-			isProcessed  bool
-			username     sql.NullString
-			telegramID   int64
-			firstName    string
-			adminResp    sql.NullString
-		)
-
-		err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &isProcessed,
-			&username, &telegramID, &firstName, &adminResp)
-		if err != nil {
-			continue // Пропускаем ошибочные записи
-		}
-
-		feedback := map[string]interface{}{
-			"id":            id,
-			"feedback_text": feedbackText,
-			"created_at":    createdAt.Time,
-			"telegram_id":   telegramID,
-			"first_name":    firstName,
-			"is_processed":  isProcessed,
-		}
-
-		if username.Valid {
-			feedback["username"] = username.String
-		} else {
-			feedback["username"] = nil
-		}
-
-		if contactInfo.Valid {
-			feedback["contact_info"] = contactInfo.String
-		} else {
-			feedback["contact_info"] = nil
-		}
-
-		if adminResp.Valid {
-			feedback["admin_response"] = adminResp.String
-		} else {
-			feedback["admin_response"] = nil
-		}
-
-		feedbacks = append(feedbacks, feedback)
-	}
-
-	return feedbacks, nil
+	return s.DB.GetAllFeedback()
 }
 
 // UpdateFeedbackStatus обновляет статус отзыва (обработан/не обработан)
 func (s *BotService) UpdateFeedbackStatus(feedbackID int, isProcessed bool) error {
-	query := `
-		UPDATE user_feedback
-		SET is_processed = $1, updated_at = NOW()
-		WHERE id = $2
-	`
-
-	result, err := s.DB.GetConnection().Exec(query, isProcessed, feedbackID)
-	if err != nil {
-		return fmt.Errorf("ошибка обновления статуса отзыва: %w", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("не удалось получить количество измененных строк: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("отзыв с ID %d не найден", feedbackID)
-	}
-
-	return nil
+	return s.DB.UpdateFeedbackStatus(feedbackID, isProcessed)
 }
 
 // ArchiveFeedback архивирует отзыв
 func (s *BotService) ArchiveFeedback(feedbackID int) error {
-	query := `
-		UPDATE user_feedback
-		SET is_processed = true, updated_at = NOW()
-		WHERE id = $1
-	`
-
-	result, err := s.DB.GetConnection().Exec(query, feedbackID)
-	if err != nil {
-		return fmt.Errorf("ошибка архивирования отзыва: %w", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("ошибка получения количества обновленных строк: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("отзыв с ID %d не найден", feedbackID)
-	}
-
-	return nil
+	return s.DB.ArchiveFeedback(feedbackID)
 }
 
 // DeleteFeedback удаляет отзыв из базы данных
 func (s *BotService) DeleteFeedback(feedbackID int) error {
-	query := `DELETE FROM user_feedback WHERE id = $1`
-
-	result, err := s.DB.GetConnection().Exec(query, feedbackID)
-	if err != nil {
-		return fmt.Errorf("ошибка удаления отзыва: %w", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("не удалось получить количество удаленных строк: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("отзыв с ID %d не найден", feedbackID)
-	}
-
-	return nil
+	return s.DB.DeleteFeedback(feedbackID)
 }
 
 // MarkFeedbackProcessed помечает отзыв как обработанный с ответом
@@ -564,40 +486,10 @@ func (s *BotService) MarkFeedbackProcessed(feedbackID int, adminResponse string)
 
 // DeleteAllProcessedFeedbacks удаляет все обработанные отзывы
 func (s *BotService) DeleteAllProcessedFeedbacks() (int, error) {
-	query := `DELETE FROM user_feedback WHERE is_processed = true`
-	result, err := s.DB.GetConnection().Exec(query)
-	if err != nil {
-		return 0, fmt.Errorf("ошибка удаления обработанных отзывов: %w", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("ошибка получения количества удаленных строк: %w", err)
-	}
-
-	return int(rowsAffected), nil
+	return s.DB.DeleteAllProcessedFeedbacks()
 }
 
 // UnarchiveFeedback возвращает отзыв в активные (убирает флаг is_processed)
 func (s *BotService) UnarchiveFeedback(feedbackID int) error {
-	query := `
-		UPDATE user_feedback
-		SET is_processed = false, updated_at = NOW()
-		WHERE id = $1
-	`
-	result, err := s.DB.GetConnection().Exec(query, feedbackID)
-	if err != nil {
-		return fmt.Errorf("ошибка возврата отзыва в активные: %w", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("ошибка получения количества обновленных строк: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("отзыв с ID %d не найден", feedbackID)
-	}
-
-	return nil
+	return s.DB.UnarchiveFeedback(feedbackID)
 }

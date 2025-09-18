@@ -17,6 +17,7 @@ type Database interface {
 	UpdateUserNativeLanguage(userID int, langCode string) error
 	UpdateUserTargetLanguage(userID int, langCode string) error
 	UpdateUserTargetLanguageLevel(userID int, level string) error
+	UpdateUserProfileCompletionLevel(userID int, level int) error
 	ResetUserProfile(userID int) error
 
 	// Языки
@@ -33,8 +34,16 @@ type Database interface {
 
 	// Обратная связь
 	SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error
+	GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, error)
 	GetUnprocessedFeedback() ([]map[string]interface{}, error)
 	MarkFeedbackProcessed(feedbackID int, adminResponse string) error
+	GetUserDataForFeedback(userID int) (map[string]interface{}, error)
+	GetAllFeedback() ([]map[string]interface{}, error)
+	DeleteFeedback(feedbackID int) error
+	ArchiveFeedback(feedbackID int) error
+	UnarchiveFeedback(feedbackID int) error
+	UpdateFeedbackStatus(feedbackID int, isProcessed bool) error
+	DeleteAllProcessedFeedbacks() (int, error)
 
 	// Соединение
 	GetConnection() *sql.DB
