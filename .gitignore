@@ -1,1 +1,68 @@
+# Секреты и конфигурация
 .env
+.env.local
+.env.production
+.env.staging
+*.env
+
+# Логи
+*.log
+logs/
+log/
+
+# База данных
+*.db
+*.sqlite
+*.sqlite3
+
+# Временные файлы
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Docker
+.dockerignore
+
+# Кэш
+.cache/
+cache/
+
+# Backup файлы
+*.bak
+*.backup
+*.old
+
+# SSL сертификаты
+*.pem
+*.key
+*.crt
+*.csr
+
+# Конфигурационные файлы с секретами
+config.json
+secrets.json
+credentials.json
+
+# Тестовые данные (если содержат реальные данные)
+test_data/
+test_secrets/
+
