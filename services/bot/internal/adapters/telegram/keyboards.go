@@ -204,7 +204,7 @@ func (h *TelegramHandler) createEditInterestsKeyboard(interests map[int]string, 
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// Создание клавиатуры подтверждения выбора языков
+// Создание клавиатуры подтверждения выбора языков.
 func (h *TelegramHandler) createLanguageConfirmationKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	continueButton := tgbotapi.NewInlineKeyboardButtonData(
 		h.service.Localizer.Get(interfaceLang, "languages_continue_filling"),
@@ -224,12 +224,12 @@ func (h *TelegramHandler) createLanguageConfirmationKeyboard(interfaceLang strin
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-// Создание клавиатуры выбора уровня владения языком
+// Создание клавиатуры выбора уровня владения языком.
 func (h *TelegramHandler) createLanguageLevelKeyboard(interfaceLang, languageCode string) tgbotapi.InlineKeyboardMarkup {
 	return h.createLanguageLevelKeyboardWithPrefix(interfaceLang, languageCode, "level_", true)
 }
 
-// createLanguageLevelKeyboardWithPrefix создает клавиатуру выбора уровня с произвольным префиксом колбэков
+// createLanguageLevelKeyboardWithPrefix создает клавиатуру выбора уровня с произвольным префиксом колбэков.
 func (h *TelegramHandler) createLanguageLevelKeyboardWithPrefix(interfaceLang, languageCode, callbackPrefix string, showBackButton bool) tgbotapi.InlineKeyboardMarkup {
 	levels := []struct {
 		code, key string

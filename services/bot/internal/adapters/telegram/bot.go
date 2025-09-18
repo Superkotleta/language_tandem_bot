@@ -12,8 +12,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// ResolveUsernameToChatID - упрощенная функция валидации
-// Username'ы теперь считываются только из .env файла
+// Username'ы теперь считываются только из .env файла.
 func (tb *TelegramBot) ResolveUsernameToChatID(username string) (int64, error) {
 	// Все username'ы теперь динамически читаются из конфигурации
 	// Эта функция оставлена для совместимости, но не содержит хардкода
@@ -45,7 +44,7 @@ func NewTelegramBot(token string, db *database.DB, debug bool, adminChatIDs []in
 	}, nil
 }
 
-// NewTelegramBotWithUsernames создает бота с поддержкой usernames администраторов
+// NewTelegramBotWithUsernames создает бота с поддержкой usernames администраторов.
 func NewTelegramBotWithUsernames(token string, db *database.DB, debug bool, adminUsernames []string) (*TelegramBot, error) {
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
@@ -85,7 +84,7 @@ func NewTelegramBotWithUsernames(token string, db *database.DB, debug bool, admi
 	return tgBot, nil
 }
 
-// SendFeedbackNotification отправляет уведомление администраторам о новом отзыве
+// SendFeedbackNotification отправляет уведомление администраторам о новом отзыве.
 func (tb *TelegramBot) SendFeedbackNotification(feedbackData map[string]interface{}) error {
 	log.Printf("Отправляем уведомление о новом отзыве администраторам...")
 	log.Printf("Администраторы по ID: %v", tb.adminChatIDs)
@@ -137,7 +136,7 @@ func (tb *TelegramBot) SendFeedbackNotification(feedbackData map[string]interfac
 	return nil
 }
 
-// GetService возвращает сервис бота для внешнего доступа
+// GetService возвращает сервис бота для внешнего доступа.
 func (tb *TelegramBot) GetService() *core.BotService {
 	return tb.service
 }
@@ -176,7 +175,7 @@ func (tb *TelegramBot) GetPlatformName() string {
 	return "telegram"
 }
 
-// getChatIDByUsername - функция для получения Chat ID по username
+// getChatIDByUsername - функция для получения Chat ID по username.
 func (tb *TelegramBot) getChatIDByUsername(username string) (int64, error) {
 	log.Printf("Пытаемся получить Chat ID для username: @%s", username)
 
@@ -197,13 +196,13 @@ func (tb *TelegramBot) getChatIDByUsername(username string) (int64, error) {
 	return chat.ID, nil
 }
 
-// SetAdminChatIDs устанавливает Chat ID администраторов для уведомлений
+// SetAdminChatIDs устанавливает Chat ID администраторов для уведомлений.
 func (tb *TelegramBot) SetAdminChatIDs(chatIDs []int64) {
 	tb.adminChatIDs = chatIDs
 	log.Printf("Установлены Chat ID администраторов для уведомлений: %v", chatIDs)
 }
 
-// GetAdminCount возвращает количество настроенных администраторов
+// GetAdminCount возвращает количество настроенных администраторов.
 func (tb *TelegramBot) GetAdminCount() int {
 	return len(tb.adminChatIDs) + len(tb.adminUsernames)
 }

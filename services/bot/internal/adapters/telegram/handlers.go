@@ -27,7 +27,7 @@ type TelegramHandler struct {
 	utilityHandler    handlers.UtilityHandler
 }
 
-// NewTelegramHandler создает новый экземпляр TelegramHandler с базовой конфигурацией
+// NewTelegramHandler создает новый экземпляр TelegramHandler с базовой конфигурацией.
 func NewTelegramHandler(bot *tgbotapi.BotAPI, service *core.BotService, adminChatIDs []int64) *TelegramHandler {
 	keyboardBuilder := handlers.NewKeyboardBuilder(service)
 	menuHandler := handlers.NewMenuHandler(bot, service, keyboardBuilder)
@@ -55,7 +55,7 @@ func NewTelegramHandler(bot *tgbotapi.BotAPI, service *core.BotService, adminCha
 	}
 }
 
-// NewTelegramHandlerWithAdmins создает новый экземпляр TelegramHandler с полной конфигурацией администраторов
+// NewTelegramHandlerWithAdmins создает новый экземпляр TelegramHandler с полной конфигурацией администраторов.
 func NewTelegramHandlerWithAdmins(bot *tgbotapi.BotAPI, service *core.BotService, adminChatIDs []int64, adminUsernames []string) *TelegramHandler {
 	keyboardBuilder := handlers.NewKeyboardBuilder(service)
 	menuHandler := handlers.NewMenuHandler(bot, service, keyboardBuilder)
@@ -83,7 +83,7 @@ func NewTelegramHandlerWithAdmins(bot *tgbotapi.BotAPI, service *core.BotService
 	}
 }
 
-// HandleUpdate обрабатывает входящие обновления от Telegram API
+// HandleUpdate обрабатывает входящие обновления от Telegram API.
 func (h *TelegramHandler) HandleUpdate(update tgbotapi.Update) error {
 	if update.Message != nil {
 		return h.handleMessage(update.Message)
@@ -94,7 +94,7 @@ func (h *TelegramHandler) HandleUpdate(update tgbotapi.Update) error {
 	return nil
 }
 
-// handleMessage обрабатывает входящие текстовые сообщения
+// handleMessage обрабатывает входящие текстовые сообщения.
 func (h *TelegramHandler) handleMessage(message *tgbotapi.Message) error {
 	user, err := h.service.HandleUserRegistration(
 		message.From.ID,
@@ -113,7 +113,7 @@ func (h *TelegramHandler) handleMessage(message *tgbotapi.Message) error {
 	return h.handleState(message, user)
 }
 
-// handleCommand обрабатывает команды пользователя (начинающиеся с /)
+// handleCommand обрабатывает команды пользователя (начинающиеся с /).
 func (h *TelegramHandler) handleCommand(message *tgbotapi.Message, user *models.User) error {
 	switch message.Command() {
 	case "start":
@@ -136,7 +136,7 @@ func (h *TelegramHandler) handleCommand(message *tgbotapi.Message, user *models.
 	}
 }
 
-// handleState обрабатывает сообщения в зависимости от текущего состояния пользователя
+// handleState обрабатывает сообщения в зависимости от текущего состояния пользователя.
 func (h *TelegramHandler) handleState(message *tgbotapi.Message, user *models.User) error {
 	switch user.State {
 	case models.StateWaitingLanguage,
@@ -152,7 +152,7 @@ func (h *TelegramHandler) handleState(message *tgbotapi.Message, user *models.Us
 	}
 }
 
-// handleCallbackQuery обрабатывает нажатия на inline-кнопки
+// handleCallbackQuery обрабатывает нажатия на inline-кнопки.
 func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 	user, err := h.service.HandleUserRegistration(
 		callback.From.ID,
@@ -322,17 +322,17 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 	}
 }
 
-// handleMainViewProfile делегирует просмотр профиля в menu handler
+// handleMainViewProfile делегирует просмотр профиля в menu handler.
 func (h *TelegramHandler) handleMainViewProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	return h.menuHandler.HandleMainViewProfile(callback, user, h.profileHandler)
 }
 
-// handleMainEditProfile делегирует редактирование профиля в menu handler
+// handleMainEditProfile делегирует редактирование профиля в menu handler.
 func (h *TelegramHandler) handleMainEditProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	return h.menuHandler.HandleMainEditProfile(callback, user, h.profileHandler)
 }
 
-// handleMainFeedback делегирует работу с отзывами в feedback handler
+// handleMainFeedback делегирует работу с отзывами в feedback handler.
 func (h *TelegramHandler) handleMainFeedback(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Создаем message объект для handleFeedbackCommand
 	message := &tgbotapi.Message{

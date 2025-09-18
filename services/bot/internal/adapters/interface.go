@@ -2,14 +2,14 @@ package adapters
 
 import "context"
 
-// BotAdapter определяет интерфейс для различных ботов (Telegram, Discord, etc)
+// BotAdapter определяет интерфейс для различных ботов (Telegram, Discord, etc).
 type BotAdapter interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
 	GetPlatformName() string
 }
 
-// Message представляет универсальное сообщение
+// Message представляет универсальное сообщение.
 type Message struct {
 	ID        string
 	UserID    string
@@ -22,7 +22,7 @@ type Message struct {
 	Language  string
 }
 
-// CallbackQuery представляет универсальный callback
+// CallbackQuery представляет универсальный callback.
 type CallbackQuery struct {
 	ID      string
 	UserID  string
@@ -30,7 +30,7 @@ type CallbackQuery struct {
 	Message *Message
 }
 
-// MessageHandler обрабатывает сообщения для любой платформы
+// MessageHandler обрабатывает сообщения для любой платформы.
 type MessageHandler interface {
 	HandleMessage(msg *Message) error
 	HandleCallbackQuery(callback *CallbackQuery) error
