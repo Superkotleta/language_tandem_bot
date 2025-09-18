@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"language-exchange-bot/internal/adapters/telegram"
 	"language-exchange-bot/internal/cache"
 	"language-exchange-bot/internal/config"
 	"language-exchange-bot/internal/core"
@@ -18,6 +20,7 @@ import (
 	"language-exchange-bot/internal/middleware"
 	"language-exchange-bot/internal/monitoring"
 
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -33,10 +36,10 @@ func main() {
 	defer logger.(*logging.ZapLogger).Sync()
 
 	logging.SetGlobalLogger(logger)
-	logger.Info("Starting Language Exchange Bot (Optimized Version)")
+	logger.Info("Starting Language Exchange Bot (Optimized Version with Telegram)")
 
 	// Создаем контекст с отменой
-	_, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Инициализируем оптимизированную БД
@@ -68,8 +71,27 @@ func main() {
 	// Инициализируем метрики
 	metrics := monitoring.NewMetrics()
 
+	// Парсим администраторов
+	adminChatIDs := cfg.AdminChatIDs
+	adminUsernames := cfg.AdminUsernames
+
+	// Создаем оптимизированный Telegram бот
+	telegramBot, err := telegram.NewOptimizedTelegramBot(
+		cfg.TelegramToken,
+		db,
+		cacheInstance,
+		metrics,
+		logger,
+		cfg.Debug,
+		adminChatIDs,
+		adminUsernames,
+	)
+	if err != nil {
+		logger.Fatal("Failed to create Telegram bot", logging.ErrorField(err))
+	}
+
 	// Создаем health manager
-	healthManager := health.NewHealthManager(logger, "1.0.0")
+	healthManager := health.NewHealthManager(logger, "2.0.0")
 
 	// Добавляем проверки здоровья
 	healthManager.AddChecker(health.NewDatabaseHealthChecker("database", func(ctx context.Context) error {
@@ -81,6 +103,9 @@ func main() {
 	}))
 
 	healthManager.AddChecker(health.NewMemoryHealthChecker("memory", 100*1024*1024)) // 100MB
+
+	// Добавляем проверку Telegram бота
+	healthManager.AddChecker(health.NewExternalServiceHealthChecker("telegram", "https://api.telegram.org", 5*time.Second))
 
 	// Создаем HTTP сервер
 	mux := http.NewServeMux()
@@ -105,7 +130,7 @@ func main() {
 	// Metrics endpoint
 	mux.Handle("/metrics", promhttp.Handler())
 
-	// API endpoints (заглушки для примера)
+	// API endpoints
 	mux.HandleFunc("/api/v1/users", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -116,6 +141,32 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"message": "Feedback endpoint"}`))
+	})
+
+	// Webhook endpoint для Telegram (production режим)
+	mux.HandleFunc("/webhook/telegram", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Читаем обновление от Telegram
+		var update tgbotapi.Update
+		if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
+			logger.Error("Failed to decode webhook update", logging.ErrorField(err))
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		// Обрабатываем обновление асинхронно
+		go func() {
+			if err := telegramBot.GetHandler().HandleUpdate(update); err != nil {
+				logger.Error("Error handling webhook update", logging.ErrorField(err))
+			}
+		}()
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
 	})
 
 	// Применяем middleware
@@ -130,11 +181,19 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Запускаем сервер в горутине
+	// Запускаем HTTP сервер в горутине
 	go func() {
 		logger.Info("Starting HTTP server", logging.String("port", cfg.Port))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start HTTP server", logging.ErrorField(err))
+		}
+	}()
+
+	// Запускаем Telegram бот в горутине
+	go func() {
+		logger.Info("Starting Telegram bot")
+		if err := telegramBot.Start(ctx); err != nil {
+			logger.Error("Telegram bot failed", logging.ErrorField(err))
 		}
 	}()
 
@@ -156,10 +215,15 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
+	// Останавливаем Telegram бот
+	if err := telegramBot.Stop(shutdownCtx); err != nil {
+		logger.Error("Telegram bot shutdown failed", logging.ErrorField(err))
+	}
+
+	// Останавливаем HTTP сервер
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Error("Server shutdown failed", logging.ErrorField(err))
 	}
 
 	logger.Info("Server stopped")
 }
-
