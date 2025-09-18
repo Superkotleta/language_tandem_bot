@@ -16,7 +16,17 @@ docs/
 │   ├── LOGGING_GUIDE.md         # 🔍 Логи и отладка
 │   ├── MANUAL_SETUP.md          # 📋 Ручная настройка
 │   ├── OPTIMIZATION_GUIDE.md    # ⚡ Оптимизация производительности
-│   └── REFACTORING_GUIDE.md     # 🚀 Гид по рефакторингу
+│   ├── REFACTORING_GUIDE.md     # 🚀 Гид по рефакторингу
+│   ├── MAKEFILE_GUIDE.md        # 📋 Руководство по Makefile
+│   ├── QUICK_START.md           # 🚀 Быстрый старт
+│   └── LINTER_GUIDE.md          # 🔍 Руководство по линтеру
+│
+├── deployment/                   # 🚀 Развертывание
+│   ├── PRODUCTION_DEPLOYMENT.md # 🏭 Production развертывание
+│   └── QUICK_START.md           # 🚀 Быстрый старт развертывания
+│
+├── api/                          # 🔌 API документация
+│   └── README.md                # 📚 API документация
 │
 ├── reports/                      # 📊 Отчеты и анализы
 │   ├── PERFORMANCE.md           # 📈 Отчет по производительности
@@ -37,8 +47,9 @@ docs/
 Если вы впервые работаете с проектом:
 
 1. **[📚 Главная документация](README.md)** - Начните здесь
-2. **[🔧 Руководство по настройке](guides/SETUP_GUIDE.md)** - Пошаговая установка
-3. **[✅ Статус проекта](status/PROJECT_STATUS.md)** - Что уже готово
+2. **[🚀 Быстрый старт](guides/QUICK_START.md)** - Быстрый запуск за 5 минут
+3. **[🔧 Руководство по настройке](guides/SETUP_GUIDE.md)** - Пошаговая установка
+4. **[✅ Статус проекта](status/PROJECT_STATUS.md)** - Что уже готово
 
 ### 👨‍💻 **Разработчикам**
 
@@ -47,14 +58,18 @@ docs/
 1. **[🏗️ Архитектура](guides/ARCHITECTURE.md)** - Техническая архитектура
 2. **[🚀 Гид по рефакторингу](guides/REFACTORING_GUIDE.md)** - Что изменилось
 3. **[🔍 Логи и отладка](guides/LOGGING_GUIDE.md)** - Как искать проблемы
+4. **[📋 Makefile Guide](guides/MAKEFILE_GUIDE.md)** - Команды и автоматизация
+5. **[🔍 Linter Guide](guides/LINTER_GUIDE.md)** - Качество кода
 
 ### 🚀 **DevOps инженерам**
 
 Для развертывания и поддержки:
 
-1. **[🔧 Установка](guides/SETUP_GUIDE.md)** - Production установка
-2. **[⚡ Оптимизация](guides/OPTIMIZATION_GUIDE.md)** - Настройка производительности
-3. **[🔒 Безопасность](reports/SECURITY.md)** - Аудит безопасности
+1. **[🚀 Быстрый старт развертывания](deployment/QUICK_START.md)** - Быстрое развертывание
+2. **[🏭 Production развертывание](deployment/PRODUCTION_DEPLOYMENT.md)** - Полная настройка production
+3. **[🔧 Установка](guides/SETUP_GUIDE.md)** - Детальная установка
+4. **[⚡ Оптимизация](guides/OPTIMIZATION_GUIDE.md)** - Настройка производительности
+5. **[🔒 Безопасность](reports/SECURITY.md)** - Аудит безопасности
 
 ### 👨‍💼 **Менеджерам**
 
@@ -129,6 +144,30 @@ docs/
 - Улучшения производительности
 - Новая архитектура
 
+### 📋 **Makefile Guide** (`guides/MAKEFILE_GUIDE.md`)
+
+- Полный список команд Makefile
+- Сценарии использования
+- Команды для разработки и production
+- Windows команды
+- Troubleshooting
+
+### 🚀 **Быстрый старт** (`guides/QUICK_START.md`)
+
+- Быстрый запуск за 5 минут
+- Настройка бота
+- Тестирование
+- Мониторинг
+- Полезные команды
+
+### 🔍 **Linter Guide** (`guides/LINTER_GUIDE.md`)
+
+- Настройка golangci-lint
+- Категории линтеров
+- Исключения и настройки
+- Запуск и CI/CD интеграция
+- Troubleshooting
+
 ### ⚡ **Оптимизация производительности** (`guides/OPTIMIZATION_GUIDE.md`)
 
 - Настройка Redis кэширования
@@ -190,16 +229,47 @@ docs/
 - Текущие работы
 - Блокеры и риски
 
+## 🚀 Развертывание
+
+### 🏭 **Production развертывание** (`deployment/PRODUCTION_DEPLOYMENT.md`)
+
+- Развертывание на VPS с доменом
+- Настройка SSL сертификатов
+- Конфигурация Nginx
+- Настройка мониторинга
+- Безопасность и масштабирование
+
+### 🚀 **Быстрый старт развертывания** (`deployment/QUICK_START.md`)
+
+- Быстрое развертывание для разработки
+- Production развертывание на VPS
+- Полезные команды
+- Troubleshooting
+
+## 🔌 API документация
+
+### 📚 **API документация** (`api/README.md`)
+
+- Оптимизированная версия бота
+- Особенности и производительность
+- Конфигурация и настройки
+- Мониторинг и метрики
+- Production развертывание
+
 ## 🔍 Поиск информации
 
 ### По теме
 
-- **🚀 Установка**: [SETUP_GUIDE.md](guides/SETUP_GUIDE.md)
+- **🚀 Быстрый старт**: [QUICK_START.md](guides/QUICK_START.md)
+- **🚀 Развертывание**: [deployment/QUICK_START.md](deployment/QUICK_START.md)
+- **🔧 Установка**: [SETUP_GUIDE.md](guides/SETUP_GUIDE.md)
 - **🔧 Настройка**: [README.md](README.md) → Конфигурация
 - **🐛 Проблемы**: [LOGGING_GUIDE.md](guides/LOGGING_GUIDE.md) → Устранение неполадок
 - **📊 Мониторинг**: [ARCHITECTURE.md](guides/ARCHITECTURE.md) → Наблюдаемость
 - **🔒 Безопасность**: [SECURITY.md](reports/SECURITY.md)
 - **⚡ Производительность**: [OPTIMIZATION_GUIDE.md](guides/OPTIMIZATION_GUIDE.md)
+- **📋 Команды**: [MAKEFILE_GUIDE.md](guides/MAKEFILE_GUIDE.md)
+- **🔍 Качество кода**: [LINTER_GUIDE.md](guides/LINTER_GUIDE.md)
 
 ### По компонентам
 
@@ -212,10 +282,10 @@ docs/
 
 ### По ролям
 
-- **👨‍💻 Разработчик**: ARCHITECTURE → REFACTORING_GUIDE → LOGGING_GUIDE
-- **🚀 DevOps**: SETUP_GUIDE → OPTIMIZATION_GUIDE → SECURITY
+- **👨‍💻 Разработчик**: QUICK_START → ARCHITECTURE → REFACTORING_GUIDE → MAKEFILE_GUIDE → LINTER_GUIDE
+- **🚀 DevOps**: deployment/QUICK_START → PRODUCTION_DEPLOYMENT → SETUP_GUIDE → OPTIMIZATION_GUIDE → SECURITY
 - **👨‍💼 Менеджер**: PROJECT_STATUS → PERFORMANCE → TESTING
-- **👤 Пользователь**: README → SETUP_GUIDE
+- **👤 Пользователь**: README → QUICK_START → SETUP_GUIDE
 
 ## 📝 Обновление документации
 
@@ -226,6 +296,6 @@ docs/
 - **Проблемы безопасности** → Обновление SECURITY
 - **Улучшения производительности** → Обновление OPTIMIZATION_GUIDE
 
-**Последнее обновление**: 2025-09-18  
-**Версия документации**: 2.0.0  
+**Последнее обновление**: 2025-01-27  
+**Версия документации**: 2.1.0  
 **Статус**: ✅ Актуальная
