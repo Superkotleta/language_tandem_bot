@@ -2,6 +2,14 @@
 CREATE SCHEMA IF NOT EXISTS profile;
 CREATE SCHEMA IF NOT EXISTS matching;
 
+-- Создание роли langbot для основных операций
+DO $$
+BEGIN
+   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'langbot') THEN
+      CREATE ROLE langbot LOGIN PASSWORD 'langbot_pass';
+   END IF;
+END$$;
+
 -- Выдача прав пользователю langbot на все схемы
 GRANT ALL PRIVILEGES ON SCHEMA profile TO langbot;
 GRANT ALL PRIVILEGES ON SCHEMA matching TO langbot;
