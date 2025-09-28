@@ -84,43 +84,43 @@ services:
     ports:
       - "${BOT_PORT:-8080}:${BOT_PORT:-8080}"
 
-  profile:
-    build:
-      context: ../profile
-      dockerfile: Dockerfile
-    env_file:
-      - ./.env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      DB_SCHEMA: ${DB_SCHEMA:-profile}
-      MIGRATIONS_DIR: ${MIGRATIONS_DIR:-/migrations/profile}
-      HTTP_PORT: ${HTTP_PORT:-8081}
-      DEBUG: ${DEBUG:-false}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - app-network
-    restart: unless-stopped
+  # profile:
+  #   build:
+  #     context: ../profile
+  #     dockerfile: Dockerfile
+  #   env_file:
+  #     - ./.env
+  #   environment:
+  #     DATABASE_URL: ${DATABASE_URL}
+  #     DB_SCHEMA: ${DB_SCHEMA:-profile}
+  #     MIGRATIONS_DIR: ${MIGRATIONS_DIR:-/migrations/profile}
+  #     HTTP_PORT: ${HTTP_PORT:-8081}
+  #     DEBUG: ${DEBUG:-false}
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - app-network
+  #   restart: unless-stopped
 
-  matcher:
-    build:
-      context: ../matcher
-      dockerfile: Dockerfile
-    env_file:
-      - ./.env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      DB_SCHEMA: ${DB_SCHEMA:-matching}
-      MIGRATIONS_DIR: ${MIGRATIONS_DIR:-/migrations/matching}
-      HTTP_PORT: ${MATCHER_HTTP_PORT:-8082}
-      DEBUG: ${DEBUG:-false}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - app-network
-    restart: unless-stopped
+  # matcher:
+  #   build:
+  #     context: ../matcher
+  #     dockerfile: Dockerfile
+  #   env_file:
+  #     - ./.env
+  #   environment:
+  #     DATABASE_URL: ${DATABASE_URL}
+  #     DB_SCHEMA: ${DB_SCHEMA:-matching}
+  #     MIGRATIONS_DIR: ${MIGRATIONS_DIR:-/migrations/matching}
+  #     HTTP_PORT: ${MATCHER_HTTP_PORT:-8082}
+  #     DEBUG: ${DEBUG:-false}
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - app-network
+  #   restart: unless-stopped
 
 volumes:
   postgres_data:

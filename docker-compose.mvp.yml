@@ -1,0 +1,92 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: languagebot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./services/deploy/db-init/01-init-schemas.sql:/docker-entrypoint-initdb.d/01-init-schemas.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Profile Service
+  profile-service:
+    build:
+      context: ./services/profile
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/languagebot?sslmode=disable
+      DB_SCHEMA: profile
+      HTTP_PORT: 8081
+      DEBUG: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Bot Service (API)
+  bot-service:
+    build:
+      context: ./services/bot
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/languagebot?sslmode=disable
+      HTTP_PORT: 8082
+      DEBUG: "true"
+      ENABLE_TELEGRAM: "true"
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+      ADMIN_CHAT_IDS: ${ADMIN_CHAT_IDS:-}
+      ADMIN_USERNAMES: ${ADMIN_USERNAMES:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      HTTP_PORT: 8080
+      DEBUG: "true"
+      PROFILE_SERVICE_URL: http://profile-service:8081
+      BOT_SERVICE_URL: http://bot-service:8082
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_RPM: 100
+      RATE_LIMIT_BURST: 20
+    depends_on:
+      profile-service:
+        condition: service_healthy
+      bot-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:

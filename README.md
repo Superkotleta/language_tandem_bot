@@ -228,6 +228,7 @@ make optimized-dev
 ```
 
 **Что происходит:**
+
 - ✅ Установка ngrok
 - ✅ Создание .env файла
 - ✅ Настройка webhook URL

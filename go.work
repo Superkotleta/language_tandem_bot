@@ -1,6 +1,7 @@
 go 1.25.0
 
 use (
+	./services/api-gateway
 	./services/bot
 	./services/matcher
 	./services/profile

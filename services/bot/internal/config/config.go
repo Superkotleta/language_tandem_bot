@@ -18,6 +18,7 @@ type Config struct {
 	RedisURL string
 	// Server
 	Port       string
+	HTTPPort   string
 	Debug      bool
 	WebhookURL string
 	// Bot Platform Settings
@@ -115,6 +116,7 @@ func Load() *Config {
 		DatabaseURL:    databaseURL,
 		RedisURL:       redisURL,
 		Port:           getEnv("PORT", "8080"),
+		HTTPPort:       getEnv("HTTP_PORT", "8082"),
 		Debug:          debug,
 		WebhookURL:     getEnv("WEBHOOK_URL", ""),
 		EnableTelegram: enableTelegram,

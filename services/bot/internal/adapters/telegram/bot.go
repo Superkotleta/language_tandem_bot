@@ -206,3 +206,67 @@ func (tb *TelegramBot) SetAdminChatIDs(chatIDs []int64) {
 func (tb *TelegramBot) GetAdminCount() int {
 	return len(tb.adminChatIDs) + len(tb.adminUsernames)
 }
+
+// Update represents a Telegram update.
+type Update struct {
+	UpdateID      int                     `json:"update_id"`
+	Message       *tgbotapi.Message       `json:"message,omitempty"`
+	CallbackQuery *tgbotapi.CallbackQuery `json:"callback_query,omitempty"`
+}
+
+// ProcessUpdate processes a Telegram update.
+func (tb *TelegramBot) ProcessUpdate(update *Update) error {
+	// Create a handler to process the update
+	handler := NewTelegramHandlerWithAdmins(tb.api, tb.service, tb.adminChatIDs, tb.adminUsernames)
+
+	if update.Message != nil {
+		return handler.handleMessage(update.Message)
+	}
+	if update.CallbackQuery != nil {
+		return handler.handleCallbackQuery(update.CallbackQuery)
+	}
+	return nil
+}
+
+// SetWebhook sets the webhook URL for the bot.
+func (tb *TelegramBot) SetWebhook(url string) error {
+	webhookConfig, _ := tgbotapi.NewWebhook(url)
+	_, err := tb.api.Request(webhookConfig)
+	return err
+}
+
+// GetWebhookInfo gets the current webhook information.
+func (tb *TelegramBot) GetWebhookInfo() (map[string]interface{}, error) {
+	webhookInfo, err := tb.api.GetWebhookInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"url":                    webhookInfo.URL,
+		"has_custom_certificate": webhookInfo.HasCustomCertificate,
+		"pending_update_count":   webhookInfo.PendingUpdateCount,
+		"last_error_date":        webhookInfo.LastErrorDate,
+		"last_error_message":     webhookInfo.LastErrorMessage,
+		"max_connections":        webhookInfo.MaxConnections,
+		"allowed_updates":        webhookInfo.AllowedUpdates,
+	}, nil
+}
+
+// SendMessageRequest represents a request to send a message.
+type SendMessageRequest struct {
+	ChatID    int64  `json:"chat_id"`
+	Text      string `json:"text"`
+	ParseMode string `json:"parse_mode,omitempty"`
+}
+
+// SendMessage sends a message to a chat.
+func (tb *TelegramBot) SendMessage(req *SendMessageRequest) error {
+	msg := tgbotapi.NewMessage(req.ChatID, req.Text)
+	if req.ParseMode != "" {
+		msg.ParseMode = req.ParseMode
+	}
+
+	_, err := tb.api.Send(msg)
+	return err
+}
