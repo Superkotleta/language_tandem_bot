@@ -506,9 +506,9 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackMessage(message *tgbotapi.Message, 
 		message.Chat.ID,
 		"HandleFeedbackMessage",
 		map[string]interface{}{
-			"text_length":    len([]rune(feedbackText)),
-			"has_username":   user.Username != "",
-			"username":       user.Username,
+			"text_length":  len([]rune(feedbackText)),
+			"has_username": user.Username != "",
+			"username":     user.Username,
 		},
 	)
 

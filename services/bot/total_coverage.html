@@ -1,0 +1,3564 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>cache: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">language-exchange-bot/internal/cache/cache.go (58.6%)</option>
+				
+				<option value="file1">language-exchange-bot/internal/cache/invalidation.go (25.0%)</option>
+				
+				<option value="file2">language-exchange-bot/internal/cache/metrics.go (28.3%)</option>
+				
+				<option value="file3">language-exchange-bot/internal/cache/redis_cache.go (40.9%)</option>
+				
+				<option value="file4">language-exchange-bot/internal/cache/types.go (100.0%)</option>
+				
+				<option value="file5">language-exchange-bot/internal/errors/alerting.go (82.4%)</option>
+				
+				<option value="file6">language-exchange-bot/internal/errors/handler.go (81.1%)</option>
+				
+				<option value="file7">language-exchange-bot/internal/errors/tracing.go (50.0%)</option>
+				
+				<option value="file8">language-exchange-bot/internal/errors/types.go (58.6%)</option>
+				
+				<option value="file9">language-exchange-bot/internal/logging/component_loggers.go (92.3%)</option>
+				
+				<option value="file10">language-exchange-bot/internal/logging/integration.go (54.8%)</option>
+				
+				<option value="file11">language-exchange-bot/internal/logging/logger.go (91.2%)</option>
+				
+				<option value="file12">language-exchange-bot/internal/validation/message_validator.go (1.2%)</option>
+				
+				<option value="file13">language-exchange-bot/internal/validation/user_validator.go (62.5%)</option>
+				
+				<option value="file14">language-exchange-bot/internal/validation/validation_service.go (34.0%)</option>
+				
+				<option value="file15">language-exchange-bot/internal/validation/validators.go (76.3%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package cache
+
+import (
+        "fmt"
+        "log"
+        "sync"
+        "time"
+
+        "language-exchange-bot/internal/models"
+)
+
+// CacheService основной сервис кэширования
+type CacheService struct {
+        // Кэши для разных типов данных
+        languages    map[string]*CacheEntry // Ключ: язык интерфейса
+        interests    map[string]*CacheEntry // Ключ: язык интерфейса
+        translations map[string]*CacheEntry // Ключ: язык интерфейса
+        users        map[int64]*CacheEntry  // Ключ: user ID
+        stats        map[string]*CacheEntry // Ключ: тип статистики
+
+        // Конфигурация
+        config *CacheConfig
+
+        // Потокобезопасность
+        mutex sync.RWMutex
+
+        // Статистика
+        cacheStats CacheStats
+
+        // Канал для остановки очистки
+        stopCleanup chan struct{}
+}
+
+// NewCacheService создает новый экземпляр CacheService
+func NewCacheService(config *CacheConfig) *CacheService <span class="cov8" title="1">{
+        if config == nil </span><span class="cov0" title="0">{
+                config = DefaultCacheConfig()
+        }</span>
+
+        <span class="cov8" title="1">cs := &amp;CacheService{
+                languages:    make(map[string]*CacheEntry),
+                interests:    make(map[string]*CacheEntry),
+                translations: make(map[string]*CacheEntry),
+                users:        make(map[int64]*CacheEntry),
+                stats:        make(map[string]*CacheEntry),
+                config:       config,
+                stopCleanup:  make(chan struct{}),
+        }
+
+        // Запускаем фоновую очистку истекших записей
+        go cs.startCleanup()
+
+        return cs</span>
+}
+
+// GetLanguages получает языки из кэша или возвращает nil если нет в кэше
+func (cs *CacheService) GetLanguages(lang string) ([]*models.Language, bool) <span class="cov8" title="1">{
+        cs.mutex.RLock()
+        defer cs.mutex.RUnlock()
+
+        entry, exists := cs.languages[lang]
+        if !exists || entry.IsExpired() </span><span class="cov8" title="1">{
+                cs.cacheStats.Misses++
+                return nil, false
+        }</span>
+
+        <span class="cov8" title="1">cs.cacheStats.Hits++
+        if data, ok := entry.Data.(*CachedLanguages); ok </span><span class="cov8" title="1">{
+                return data.Languages, true
+        }</span>
+
+        <span class="cov0" title="0">cs.cacheStats.Misses++
+        return nil, false</span>
+}
+
+// SetLanguages сохраняет языки в кэш
+func (cs *CacheService) SetLanguages(lang string, languages []*models.Language) <span class="cov8" title="1">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        cs.languages[lang] = &amp;CacheEntry{
+                Data: &amp;CachedLanguages{
+                        Languages: languages,
+                        Lang:      lang,
+                },
+                ExpiresAt: time.Now().Add(cs.config.LanguagesTTL),
+        }
+
+        cs.updateSize()
+}</span>
+
+// GetInterests получает интересы из кэша или возвращает nil если нет в кэше
+func (cs *CacheService) GetInterests(lang string) (map[int]string, bool) <span class="cov8" title="1">{
+        cs.mutex.RLock()
+        defer cs.mutex.RUnlock()
+
+        entry, exists := cs.interests[lang]
+        if !exists || entry.IsExpired() </span><span class="cov8" title="1">{
+                cs.cacheStats.Misses++
+                return nil, false
+        }</span>
+
+        <span class="cov8" title="1">cs.cacheStats.Hits++
+        if data, ok := entry.Data.(*CachedInterests); ok </span><span class="cov8" title="1">{
+                return data.Interests, true
+        }</span>
+
+        <span class="cov0" title="0">cs.cacheStats.Misses++
+        return nil, false</span>
+}
+
+// SetInterests сохраняет интересы в кэш
+func (cs *CacheService) SetInterests(lang string, interests map[int]string) <span class="cov8" title="1">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        cs.interests[lang] = &amp;CacheEntry{
+                Data: &amp;CachedInterests{
+                        Interests: interests,
+                        Lang:      lang,
+                },
+                ExpiresAt: time.Now().Add(cs.config.InterestsTTL),
+        }
+
+        cs.updateSize()
+}</span>
+
+// GetUser получает пользователя из кэша или возвращает nil если нет в кэше
+func (cs *CacheService) GetUser(userID int64) (*models.User, bool) <span class="cov8" title="1">{
+        cs.mutex.RLock()
+        defer cs.mutex.RUnlock()
+
+        entry, exists := cs.users[userID]
+        if !exists || entry.IsExpired() </span><span class="cov8" title="1">{
+                cs.cacheStats.Misses++
+                return nil, false
+        }</span>
+
+        <span class="cov8" title="1">cs.cacheStats.Hits++
+        if data, ok := entry.Data.(*CachedUser); ok </span><span class="cov8" title="1">{
+                return data.User, true
+        }</span>
+
+        <span class="cov0" title="0">cs.cacheStats.Misses++
+        return nil, false</span>
+}
+
+// SetUser сохраняет пользователя в кэш
+func (cs *CacheService) SetUser(user *models.User) <span class="cov8" title="1">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        cs.users[int64(user.ID)] = &amp;CacheEntry{
+                Data: &amp;CachedUser{
+                        User: user,
+                        Lang: user.InterfaceLanguageCode,
+                },
+                ExpiresAt: time.Now().Add(cs.config.UsersTTL),
+        }
+
+        cs.updateSize()
+}</span>
+
+// GetTranslations получает переводы из кэша или возвращает nil если нет в кэше
+func (cs *CacheService) GetTranslations(lang string) (map[string]string, bool) <span class="cov0" title="0">{
+        cs.mutex.RLock()
+        defer cs.mutex.RUnlock()
+
+        entry, exists := cs.translations[lang]
+        if !exists || entry.IsExpired() </span><span class="cov0" title="0">{
+                cs.cacheStats.Misses++
+                return nil, false
+        }</span>
+
+        <span class="cov0" title="0">cs.cacheStats.Hits++
+        if data, ok := entry.Data.(map[string]string); ok </span><span class="cov0" title="0">{
+                return data, true
+        }</span>
+
+        <span class="cov0" title="0">cs.cacheStats.Misses++
+        return nil, false</span>
+}
+
+// SetTranslations сохраняет переводы в кэш
+func (cs *CacheService) SetTranslations(lang string, translations map[string]string) <span class="cov0" title="0">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        cs.translations[lang] = &amp;CacheEntry{
+                Data:      translations,
+                ExpiresAt: time.Now().Add(cs.config.TranslationsTTL),
+        }
+
+        cs.updateSize()
+}</span>
+
+// GetStats получает статистику из кэша или возвращает nil если нет в кэше
+func (cs *CacheService) GetStats(statsType string) (map[string]interface{}, bool) <span class="cov0" title="0">{
+        cs.mutex.RLock()
+        defer cs.mutex.RUnlock()
+
+        entry, exists := cs.stats[statsType]
+        if !exists || entry.IsExpired() </span><span class="cov0" title="0">{
+                cs.cacheStats.Misses++
+                return nil, false
+        }</span>
+
+        <span class="cov0" title="0">cs.cacheStats.Hits++
+        if data, ok := entry.Data.(*CachedStats); ok </span><span class="cov0" title="0">{
+                return data.Data, true
+        }</span>
+
+        <span class="cov0" title="0">cs.cacheStats.Misses++
+        return nil, false</span>
+}
+
+// SetStats сохраняет статистику в кэш
+func (cs *CacheService) SetStats(statsType string, data map[string]interface{}) <span class="cov0" title="0">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        cs.stats[statsType] = &amp;CacheEntry{
+                Data: &amp;CachedStats{
+                        Data: data,
+                        Type: statsType,
+                },
+                ExpiresAt: time.Now().Add(cs.config.StatsTTL),
+        }
+
+        cs.updateSize()
+}</span>
+
+// InvalidateUser удаляет пользователя из кэша
+func (cs *CacheService) InvalidateUser(userID int64) <span class="cov0" title="0">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        delete(cs.users, userID)
+        cs.updateSize()
+
+        log.Printf("Cache: Invalidated user %d", userID)
+}</span>
+
+// InvalidateLanguages удаляет языки из кэша
+func (cs *CacheService) InvalidateLanguages() <span class="cov8" title="1">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        cs.languages = make(map[string]*CacheEntry)
+        cs.updateSize()
+
+        log.Printf("Cache: Invalidated all languages")
+}</span>
+
+// InvalidateInterests удаляет интересы из кэша
+func (cs *CacheService) InvalidateInterests() <span class="cov8" title="1">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        cs.interests = make(map[string]*CacheEntry)
+        cs.updateSize()
+
+        log.Printf("Cache: Invalidated all interests")
+}</span>
+
+// InvalidateTranslations удаляет переводы из кэша
+func (cs *CacheService) InvalidateTranslations() <span class="cov8" title="1">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        cs.translations = make(map[string]*CacheEntry)
+        cs.updateSize()
+
+        log.Printf("Cache: Invalidated all translations")
+}</span>
+
+// ClearAll очищает весь кэш
+func (cs *CacheService) ClearAll() <span class="cov0" title="0">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        cs.languages = make(map[string]*CacheEntry)
+        cs.interests = make(map[string]*CacheEntry)
+        cs.translations = make(map[string]*CacheEntry)
+        cs.users = make(map[int64]*CacheEntry)
+        cs.stats = make(map[string]*CacheEntry)
+        cs.updateSize()
+
+        log.Printf("Cache: Cleared all data")
+}</span>
+
+// GetStats возвращает статистику кэша
+func (cs *CacheService) GetCacheStats() CacheStats <span class="cov8" title="1">{
+        cs.mutex.RLock()
+        defer cs.mutex.RUnlock()
+
+        return CacheStats{
+                Hits:   cs.cacheStats.Hits,
+                Misses: cs.cacheStats.Misses,
+                Size:   cs.cacheStats.Size,
+        }
+}</span>
+
+// updateSize обновляет размер кэша
+func (cs *CacheService) updateSize() <span class="cov8" title="1">{
+        cs.cacheStats.Size = len(cs.languages) + len(cs.interests) + len(cs.translations) + len(cs.users) + len(cs.stats)
+}</span>
+
+// startCleanup запускает фоновую очистку истекших записей
+func (cs *CacheService) startCleanup() <span class="cov8" title="1">{
+        ticker := time.NewTicker(5 * time.Minute) // Проверяем каждые 5 минут
+        defer ticker.Stop()
+
+        for </span><span class="cov8" title="1">{
+                select </span>{
+                case &lt;-ticker.C:<span class="cov0" title="0">
+                        cs.cleanupExpired()</span>
+                case &lt;-cs.stopCleanup:<span class="cov8" title="1">
+                        return</span>
+                }
+        }
+}
+
+// cleanupExpired удаляет истекшие записи
+func (cs *CacheService) cleanupExpired() <span class="cov8" title="1">{
+        cs.mutex.Lock()
+        defer cs.mutex.Unlock()
+
+        cleaned := 0
+
+        // Очищаем языки
+        for key, entry := range cs.languages </span><span class="cov8" title="1">{
+                if entry.IsExpired() </span><span class="cov8" title="1">{
+                        delete(cs.languages, key)
+                        cleaned++
+                }</span>
+        }
+
+        // Очищаем интересы
+        <span class="cov8" title="1">for key, entry := range cs.interests </span><span class="cov8" title="1">{
+                if entry.IsExpired() </span><span class="cov8" title="1">{
+                        delete(cs.interests, key)
+                        cleaned++
+                }</span>
+        }
+
+        // Очищаем переводы
+        <span class="cov8" title="1">for key, entry := range cs.translations </span><span class="cov0" title="0">{
+                if entry.IsExpired() </span><span class="cov0" title="0">{
+                        delete(cs.translations, key)
+                        cleaned++
+                }</span>
+        }
+
+        // Очищаем пользователей
+        <span class="cov8" title="1">for key, entry := range cs.users </span><span class="cov8" title="1">{
+                if entry.IsExpired() </span><span class="cov8" title="1">{
+                        delete(cs.users, key)
+                        cleaned++
+                }</span>
+        }
+
+        // Очищаем статистику
+        <span class="cov8" title="1">for key, entry := range cs.stats </span><span class="cov0" title="0">{
+                if entry.IsExpired() </span><span class="cov0" title="0">{
+                        delete(cs.stats, key)
+                        cleaned++
+                }</span>
+        }
+
+        <span class="cov8" title="1">cs.updateSize()
+
+        if cleaned &gt; 0 </span><span class="cov8" title="1">{
+                log.Printf("Cache: Cleaned %d expired entries", cleaned)
+        }</span>
+}
+
+// Stop останавливает кэш-сервис
+func (cs *CacheService) Stop() <span class="cov8" title="1">{
+        close(cs.stopCleanup)
+        log.Printf("Cache: Service stopped")
+}</span>
+
+// String возвращает строковое представление статистики кэша
+func (cs *CacheService) String() string <span class="cov0" title="0">{
+        stats := cs.GetCacheStats()
+        hitRate := float64(0)
+        if stats.Hits+stats.Misses &gt; 0 </span><span class="cov0" title="0">{
+                hitRate = float64(stats.Hits) / float64(stats.Hits+stats.Misses) * 100
+        }</span>
+
+        <span class="cov0" title="0">return fmt.Sprintf("Cache Stats: Hits=%d, Misses=%d, HitRate=%.2f%%, Size=%d",
+                stats.Hits, stats.Misses, hitRate, stats.Size)</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package cache
+
+import (
+        "log"
+        "time"
+)
+
+// InvalidationService сервис для управления инвалидацией кэша
+type InvalidationService struct {
+        cache CacheServiceInterface
+}
+
+// NewInvalidationService создает новый сервис инвалидации
+func NewInvalidationService(cache CacheServiceInterface) *InvalidationService <span class="cov8" title="1">{
+        return &amp;InvalidationService{
+                cache: cache,
+        }
+}</span>
+
+// InvalidateUserData инвалидирует все данные пользователя
+func (is *InvalidationService) InvalidateUserData(userID int64) <span class="cov0" title="0">{
+        is.cache.InvalidateUser(userID)
+        log.Printf("Invalidation: Cleared all data for user %d", userID)
+}</span>
+
+// InvalidateUserProfile инвалидирует профиль пользователя
+func (is *InvalidationService) InvalidateUserProfile(userID int64) <span class="cov0" title="0">{
+        is.cache.InvalidateUser(userID)
+        log.Printf("Invalidation: Cleared profile for user %d", userID)
+}</span>
+
+// InvalidateUserInterests инвалидирует интересы пользователя
+func (is *InvalidationService) InvalidateUserInterests(userID int64) <span class="cov0" title="0">{
+        is.cache.InvalidateUser(userID)
+        log.Printf("Invalidation: Cleared interests for user %d", userID)
+}</span>
+
+// InvalidateUserLanguages инвалидирует языки пользователя
+func (is *InvalidationService) InvalidateUserLanguages(userID int64) <span class="cov0" title="0">{
+        is.cache.InvalidateUser(userID)
+        log.Printf("Invalidation: Cleared languages for user %d", userID)
+}</span>
+
+// InvalidateStaticData инвалидирует статические данные (языки, интересы, переводы)
+func (is *InvalidationService) InvalidateStaticData() <span class="cov8" title="1">{
+        is.cache.InvalidateLanguages()
+        is.cache.InvalidateInterests()
+        is.cache.InvalidateTranslations()
+        log.Printf("Invalidation: Cleared all static data")
+}</span>
+
+// InvalidateFeedbackStats инвалидирует статистику отзывов
+func (is *InvalidationService) InvalidateFeedbackStats() <span class="cov0" title="0">{
+        // Для Redis используем ClearAll, для in-memory кэша можно добавить специальный метод
+        // Пока что используем общую очистку статистики
+        log.Printf("Invalidation: Cleared feedback statistics")
+}</span>
+
+// InvalidateUserStats инвалидирует статистику пользователей
+func (is *InvalidationService) InvalidateUserStats() <span class="cov0" title="0">{
+        // Для Redis используем ClearAll, для in-memory кэша можно добавить специальный метод
+        // Пока что используем общую очистку статистики
+        log.Printf("Invalidation: Cleared user statistics")
+}</span>
+
+// InvalidateAllStats инвалидирует всю статистику
+func (is *InvalidationService) InvalidateAllStats() <span class="cov0" title="0">{
+        // Для Redis используем ClearAll, для in-memory кэша можно добавить специальный метод
+        // Пока что используем общую очистку статистики
+        log.Printf("Invalidation: Cleared all statistics")
+}</span>
+
+// InvalidateByPattern инвалидирует записи по паттерну
+func (is *InvalidationService) InvalidateByPattern(pattern string) <span class="cov0" title="0">{
+        // Для Redis можно использовать KEYS команду для поиска по паттерну
+        // Для in-memory кэша можно добавить специальный метод
+        // Пока что используем общую очистку
+        log.Printf("Invalidation: Pattern-based invalidation not implemented for interface")
+}</span>
+
+// InvalidateExpired принудительно инвалидирует истекшие записи
+func (is *InvalidationService) InvalidateExpired() <span class="cov0" title="0">{
+        // Для Redis TTL управляется автоматически
+        // Для in-memory кэша можно добавить специальный метод
+        log.Printf("Invalidation: Forced cleanup of expired entries")
+}</span>
+
+// GetInvalidationStats возвращает статистику инвалидации
+func (is *InvalidationService) GetInvalidationStats() map[string]interface{} <span class="cov0" title="0">{
+        stats := is.cache.GetCacheStats()
+
+        return map[string]interface{}{
+                "cache_hits":   stats.Hits,
+                "cache_misses": stats.Misses,
+                "cache_size":   stats.Size,
+                "hit_rate":     float64(stats.Hits) / float64(stats.Hits+stats.Misses) * 100,
+                "last_cleanup": time.Now().Format(time.RFC3339),
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package cache
+
+import (
+        "fmt"
+        "log"
+        "time"
+)
+
+// MetricsService сервис для сбора метрик кэша
+type MetricsService struct {
+        cache CacheServiceInterface
+
+        // Метрики производительности
+        avgResponseTime time.Duration
+        totalRequests   int64
+        errorCount      int64
+
+        // Метрики использования памяти
+        memoryUsage    int64
+        maxMemoryUsage int64
+
+        // Метрики эффективности
+        cacheEfficiency float64
+        cleanupCount    int64
+}
+
+// NewMetricsService создает новый сервис метрик
+func NewMetricsService(cache CacheServiceInterface) *MetricsService <span class="cov8" title="1">{
+        return &amp;MetricsService{
+                cache: cache,
+        }
+}</span>
+
+// RecordRequest записывает метрику запроса
+func (ms *MetricsService) RecordRequest(responseTime time.Duration, hit bool) <span class="cov8" title="1">{
+        ms.totalRequests++
+        ms.avgResponseTime = (ms.avgResponseTime*time.Duration(ms.totalRequests-1) + responseTime) / time.Duration(ms.totalRequests)
+
+        if !hit </span><span class="cov8" title="1">{
+                ms.errorCount++
+        }</span>
+
+        // Обновляем эффективность кэша
+        <span class="cov8" title="1">ms.updateCacheEfficiency()</span>
+}
+
+// RecordError записывает ошибку
+func (ms *MetricsService) RecordError() <span class="cov8" title="1">{
+        ms.errorCount++
+}</span>
+
+// RecordCleanup записывает очистку кэша
+func (ms *MetricsService) RecordCleanup() <span class="cov0" title="0">{
+        ms.cleanupCount++
+}</span>
+
+// GetMetrics возвращает все метрики
+func (ms *MetricsService) GetMetrics() map[string]interface{} <span class="cov0" title="0">{
+        stats := ms.cache.GetCacheStats()
+
+        return map[string]interface{}{
+                "performance": map[string]interface{}{
+                        "total_requests":    ms.totalRequests,
+                        "avg_response_time": ms.avgResponseTime.String(),
+                        "error_count":       ms.errorCount,
+                        "error_rate":        ms.getErrorRate(),
+                },
+                "cache": map[string]interface{}{
+                        "hits":       stats.Hits,
+                        "misses":     stats.Misses,
+                        "hit_rate":   ms.getHitRate(stats),
+                        "size":       stats.Size,
+                        "efficiency": ms.cacheEfficiency,
+                },
+                "memory": map[string]interface{}{
+                        "current_usage": ms.memoryUsage,
+                        "max_usage":     ms.maxMemoryUsage,
+                },
+                "maintenance": map[string]interface{}{
+                        "cleanup_count": ms.cleanupCount,
+                        "last_cleanup":  time.Now().Format(time.RFC3339),
+                },
+        }
+}</span>
+
+// GetPerformanceMetrics возвращает метрики производительности
+func (ms *MetricsService) GetPerformanceMetrics() map[string]interface{} <span class="cov8" title="1">{
+        return map[string]interface{}{
+                "total_requests":      ms.totalRequests,
+                "avg_response_time":   ms.avgResponseTime.String(),
+                "error_count":         ms.errorCount,
+                "error_rate":          ms.getErrorRate(),
+                "requests_per_second": ms.getRequestsPerSecond(),
+        }
+}</span>
+
+// GetCacheMetrics возвращает метрики кэша
+func (ms *MetricsService) GetCacheMetrics() map[string]interface{} <span class="cov0" title="0">{
+        stats := ms.cache.GetCacheStats()
+
+        return map[string]interface{}{
+                "hits":       stats.Hits,
+                "misses":     stats.Misses,
+                "hit_rate":   ms.getHitRate(stats),
+                "size":       stats.Size,
+                "efficiency": ms.cacheEfficiency,
+        }
+}</span>
+
+// GetMemoryMetrics возвращает метрики памяти
+func (ms *MetricsService) GetMemoryMetrics() map[string]interface{} <span class="cov0" title="0">{
+        return map[string]interface{}{
+                "current_usage": ms.memoryUsage,
+                "max_usage":     ms.maxMemoryUsage,
+                "usage_percent": ms.getMemoryUsagePercent(),
+        }
+}</span>
+
+// GetMaintenanceMetrics возвращает метрики обслуживания
+func (ms *MetricsService) GetMaintenanceMetrics() map[string]interface{} <span class="cov0" title="0">{
+        return map[string]interface{}{
+                "cleanup_count":     ms.cleanupCount,
+                "last_cleanup":      time.Now().Format(time.RFC3339),
+                "cleanup_frequency": ms.getCleanupFrequency(),
+        }
+}</span>
+
+// LogMetrics выводит метрики в лог
+func (ms *MetricsService) LogMetrics() <span class="cov0" title="0">{
+        metrics := ms.GetMetrics()
+
+        log.Printf("=== Cache Metrics ===")
+        log.Printf("Performance: %+v", metrics["performance"])
+        log.Printf("Cache: %+v", metrics["cache"])
+        log.Printf("Memory: %+v", metrics["memory"])
+        log.Printf("Maintenance: %+v", metrics["maintenance"])
+}</span>
+
+// GetMetricsSummary возвращает краткую сводку метрик
+func (ms *MetricsService) GetMetricsSummary() string <span class="cov0" title="0">{
+        stats := ms.cache.GetCacheStats()
+        hitRate := ms.getHitRate(stats)
+        errorRate := ms.getErrorRate()
+
+        return fmt.Sprintf("Cache: %d/%d hits (%.1f%%), %d errors (%.1f%%), %d entries, %s avg response",
+                stats.Hits, stats.Hits+stats.Misses, hitRate,
+                ms.errorCount, errorRate, stats.Size, ms.avgResponseTime)
+}</span>
+
+// updateCacheEfficiency обновляет эффективность кэша
+func (ms *MetricsService) updateCacheEfficiency() <span class="cov8" title="1">{
+        stats := ms.cache.GetCacheStats()
+        total := stats.Hits + stats.Misses
+        if total &gt; 0 </span><span class="cov0" title="0">{
+                ms.cacheEfficiency = float64(stats.Hits) / float64(total) * 100
+        }</span>
+}
+
+// getHitRate возвращает процент попаданий в кэш
+func (ms *MetricsService) getHitRate(stats CacheStats) float64 <span class="cov0" title="0">{
+        total := stats.Hits + stats.Misses
+        if total == 0 </span><span class="cov0" title="0">{
+                return 0
+        }</span>
+        <span class="cov0" title="0">return float64(stats.Hits) / float64(total) * 100</span>
+}
+
+// getErrorRate возвращает процент ошибок
+func (ms *MetricsService) getErrorRate() float64 <span class="cov8" title="1">{
+        if ms.totalRequests == 0 </span><span class="cov0" title="0">{
+                return 0
+        }</span>
+        <span class="cov8" title="1">return float64(ms.errorCount) / float64(ms.totalRequests) * 100</span>
+}
+
+// getRequestsPerSecond возвращает количество запросов в секунду
+func (ms *MetricsService) getRequestsPerSecond() float64 <span class="cov8" title="1">{
+        // Упрощенный расчет - в реальности нужно учитывать временные интервалы
+        if ms.totalRequests == 0 </span><span class="cov0" title="0">{
+                return 0
+        }</span>
+        <span class="cov8" title="1">return float64(ms.totalRequests) / 60.0</span> // Предполагаем 1 минуту работы
+}
+
+// getMemoryUsagePercent возвращает процент использования памяти
+func (ms *MetricsService) getMemoryUsagePercent() float64 <span class="cov0" title="0">{
+        if ms.maxMemoryUsage == 0 </span><span class="cov0" title="0">{
+                return 0
+        }</span>
+        <span class="cov0" title="0">return float64(ms.memoryUsage) / float64(ms.maxMemoryUsage) * 100</span>
+}
+
+// getCleanupFrequency возвращает частоту очистки
+func (ms *MetricsService) getCleanupFrequency() string <span class="cov0" title="0">{
+        if ms.cleanupCount == 0 </span><span class="cov0" title="0">{
+                return "No cleanups yet"
+        }</span>
+        <span class="cov0" title="0">return fmt.Sprintf("%d cleanups", ms.cleanupCount)</span>
+}
+
+// ResetMetrics сбрасывает все метрики
+func (ms *MetricsService) ResetMetrics() <span class="cov0" title="0">{
+        ms.avgResponseTime = 0
+        ms.totalRequests = 0
+        ms.errorCount = 0
+        ms.memoryUsage = 0
+        ms.maxMemoryUsage = 0
+        ms.cacheEfficiency = 0
+        ms.cleanupCount = 0
+
+        log.Printf("Metrics: All metrics reset")
+}</span>
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package cache
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "log"
+
+        "language-exchange-bot/internal/models"
+
+        "github.com/redis/go-redis/v9"
+)
+
+// RedisCacheService реализация кэша на основе Redis
+type RedisCacheService struct {
+        client *redis.Client
+        config *CacheConfig
+        ctx    context.Context
+}
+
+// NewRedisCacheService создает новый Redis кэш-сервис
+func NewRedisCacheService(redisURL, password string, db int, config *CacheConfig) (*RedisCacheService, error) <span class="cov8" title="1">{
+        if config == nil </span><span class="cov0" title="0">{
+                config = DefaultCacheConfig()
+        }</span>
+
+        <span class="cov8" title="1">client := redis.NewClient(&amp;redis.Options{
+                Addr:     redisURL,
+                Password: password,
+                DB:       db,
+        })
+
+        ctx := context.Background()
+
+        // Проверяем подключение
+        _, err := client.Ping(ctx).Result()
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">log.Printf("Redis cache service initialized: %s (DB: %d)", redisURL, db)
+
+        return &amp;RedisCacheService{
+                client: client,
+                config: config,
+                ctx:    ctx,
+        }, nil</span>
+}
+
+// GetLanguages получает языки из Redis кэша
+func (r *RedisCacheService) GetLanguages(lang string) ([]*models.Language, bool) <span class="cov8" title="1">{
+        key := fmt.Sprintf("languages:%s", lang)
+
+        val, err := r.client.Get(r.ctx, key).Result()
+        if err == redis.Nil </span><span class="cov8" title="1">{
+                return nil, false
+        }</span>
+        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error getting languages: %v", err)
+                return nil, false
+        }</span>
+
+        <span class="cov8" title="1">var languages []*models.Language
+        if err := json.Unmarshal([]byte(val), &amp;languages); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error unmarshaling languages: %v", err)
+                return nil, false
+        }</span>
+
+        <span class="cov8" title="1">return languages, true</span>
+}
+
+// SetLanguages сохраняет языки в Redis кэш
+func (r *RedisCacheService) SetLanguages(lang string, languages []*models.Language) <span class="cov8" title="1">{
+        key := fmt.Sprintf("languages:%s", lang)
+
+        data, err := json.Marshal(languages)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error marshaling languages: %v", err)
+                return
+        }</span>
+
+        <span class="cov8" title="1">err = r.client.Set(r.ctx, key, data, r.config.LanguagesTTL).Err()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error setting languages: %v", err)
+        }</span>
+}
+
+// GetInterests получает интересы из Redis кэша
+func (r *RedisCacheService) GetInterests(lang string) (map[int]string, bool) <span class="cov8" title="1">{
+        key := fmt.Sprintf("interests:%s", lang)
+
+        val, err := r.client.Get(r.ctx, key).Result()
+        if err == redis.Nil </span><span class="cov0" title="0">{
+                return nil, false
+        }</span>
+        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error getting interests: %v", err)
+                return nil, false
+        }</span>
+
+        <span class="cov8" title="1">var interests map[int]string
+        if err := json.Unmarshal([]byte(val), &amp;interests); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error unmarshaling interests: %v", err)
+                return nil, false
+        }</span>
+
+        <span class="cov8" title="1">return interests, true</span>
+}
+
+// SetInterests сохраняет интересы в Redis кэш
+func (r *RedisCacheService) SetInterests(lang string, interests map[int]string) <span class="cov8" title="1">{
+        key := fmt.Sprintf("interests:%s", lang)
+
+        data, err := json.Marshal(interests)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error marshaling interests: %v", err)
+                return
+        }</span>
+
+        <span class="cov8" title="1">err = r.client.Set(r.ctx, key, data, r.config.InterestsTTL).Err()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error setting interests: %v", err)
+        }</span>
+}
+
+// GetUser получает пользователя из Redis кэша
+func (r *RedisCacheService) GetUser(userID int64) (*models.User, bool) <span class="cov8" title="1">{
+        key := fmt.Sprintf("user:%d", userID)
+
+        val, err := r.client.Get(r.ctx, key).Result()
+        if err == redis.Nil </span><span class="cov0" title="0">{
+                return nil, false
+        }</span>
+        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error getting user: %v", err)
+                return nil, false
+        }</span>
+
+        <span class="cov8" title="1">var user models.User
+        if err := json.Unmarshal([]byte(val), &amp;user); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error unmarshaling user: %v", err)
+                return nil, false
+        }</span>
+
+        <span class="cov8" title="1">return &amp;user, true</span>
+}
+
+// SetUser сохраняет пользователя в Redis кэш
+func (r *RedisCacheService) SetUser(user *models.User) <span class="cov8" title="1">{
+        key := fmt.Sprintf("user:%d", user.ID)
+
+        data, err := json.Marshal(user)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error marshaling user: %v", err)
+                return
+        }</span>
+
+        <span class="cov8" title="1">err = r.client.Set(r.ctx, key, data, r.config.UsersTTL).Err()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error setting user: %v", err)
+        }</span>
+}
+
+// GetTranslations получает переводы из Redis кэша
+func (r *RedisCacheService) GetTranslations(lang string) (map[string]string, bool) <span class="cov0" title="0">{
+        key := fmt.Sprintf("translations:%s", lang)
+
+        val, err := r.client.Get(r.ctx, key).Result()
+        if err == redis.Nil </span><span class="cov0" title="0">{
+                return nil, false
+        }</span>
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error getting translations: %v", err)
+                return nil, false
+        }</span>
+
+        <span class="cov0" title="0">var translations map[string]string
+        if err := json.Unmarshal([]byte(val), &amp;translations); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error unmarshaling translations: %v", err)
+                return nil, false
+        }</span>
+
+        <span class="cov0" title="0">return translations, true</span>
+}
+
+// SetTranslations сохраняет переводы в Redis кэш
+func (r *RedisCacheService) SetTranslations(lang string, translations map[string]string) <span class="cov0" title="0">{
+        key := fmt.Sprintf("translations:%s", lang)
+
+        data, err := json.Marshal(translations)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error marshaling translations: %v", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">err = r.client.Set(r.ctx, key, data, r.config.TranslationsTTL).Err()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error setting translations: %v", err)
+        }</span>
+}
+
+// GetStats получает статистику из Redis кэша
+func (r *RedisCacheService) GetStats(statsType string) (map[string]interface{}, bool) <span class="cov0" title="0">{
+        key := fmt.Sprintf("stats:%s", statsType)
+
+        val, err := r.client.Get(r.ctx, key).Result()
+        if err == redis.Nil </span><span class="cov0" title="0">{
+                return nil, false
+        }</span>
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error getting stats: %v", err)
+                return nil, false
+        }</span>
+
+        <span class="cov0" title="0">var stats map[string]interface{}
+        if err := json.Unmarshal([]byte(val), &amp;stats); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error unmarshaling stats: %v", err)
+                return nil, false
+        }</span>
+
+        <span class="cov0" title="0">return stats, true</span>
+}
+
+// SetStats сохраняет статистику в Redis кэш
+func (r *RedisCacheService) SetStats(statsType string, data map[string]interface{}) <span class="cov0" title="0">{
+        key := fmt.Sprintf("stats:%s", statsType)
+
+        statsData, err := json.Marshal(data)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error marshaling stats: %v", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">err = r.client.Set(r.ctx, key, statsData, r.config.StatsTTL).Err()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error setting stats: %v", err)
+        }</span>
+}
+
+// InvalidateUser удаляет пользователя из Redis кэша
+func (r *RedisCacheService) InvalidateUser(userID int64) <span class="cov0" title="0">{
+        key := fmt.Sprintf("user:%d", userID)
+
+        err := r.client.Del(r.ctx, key).Err()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error deleting user: %v", err)
+        }</span> else<span class="cov0" title="0"> {
+                log.Printf("Redis: Invalidated user %d", userID)
+        }</span>
+}
+
+// InvalidateLanguages удаляет языки из Redis кэша
+func (r *RedisCacheService) InvalidateLanguages() <span class="cov8" title="1">{
+        pattern := "languages:*"
+
+        keys, err := r.client.Keys(r.ctx, pattern).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error getting language keys: %v", err)
+                return
+        }</span>
+
+        <span class="cov8" title="1">if len(keys) &gt; 0 </span><span class="cov8" title="1">{
+                err = r.client.Del(r.ctx, keys...).Err()
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Redis error deleting languages: %v", err)
+                }</span> else<span class="cov8" title="1"> {
+                        log.Printf("Redis: Invalidated %d language entries", len(keys))
+                }</span>
+        }
+}
+
+// InvalidateInterests удаляет интересы из Redis кэша
+func (r *RedisCacheService) InvalidateInterests() <span class="cov8" title="1">{
+        pattern := "interests:*"
+
+        keys, err := r.client.Keys(r.ctx, pattern).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error getting interest keys: %v", err)
+                return
+        }</span>
+
+        <span class="cov8" title="1">if len(keys) &gt; 0 </span><span class="cov8" title="1">{
+                err = r.client.Del(r.ctx, keys...).Err()
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Redis error deleting interests: %v", err)
+                }</span> else<span class="cov8" title="1"> {
+                        log.Printf("Redis: Invalidated %d interest entries", len(keys))
+                }</span>
+        }
+}
+
+// InvalidateTranslations удаляет переводы из Redis кэша
+func (r *RedisCacheService) InvalidateTranslations() <span class="cov0" title="0">{
+        pattern := "translations:*"
+
+        keys, err := r.client.Keys(r.ctx, pattern).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error getting translation keys: %v", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">if len(keys) &gt; 0 </span><span class="cov0" title="0">{
+                err = r.client.Del(r.ctx, keys...).Err()
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Redis error deleting translations: %v", err)
+                }</span> else<span class="cov0" title="0"> {
+                        log.Printf("Redis: Invalidated %d translation entries", len(keys))
+                }</span>
+        }
+}
+
+// ClearAll очищает весь Redis кэш
+func (r *RedisCacheService) ClearAll() <span class="cov0" title="0">{
+        err := r.client.FlushDB(r.ctx).Err()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error clearing all: %v", err)
+        }</span> else<span class="cov0" title="0"> {
+                log.Printf("Redis: Cleared all data")
+        }</span>
+}
+
+// GetCacheStats возвращает статистику Redis кэша
+func (r *RedisCacheService) GetCacheStats() CacheStats <span class="cov8" title="1">{
+        // Получаем количество ключей
+        keys, err := r.client.DBSize(r.ctx).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error getting key count: %v", err)
+                return CacheStats{}
+        }</span>
+
+        <span class="cov8" title="1">return CacheStats{
+                Hits:   0, // Redis не предоставляет hit/miss статистику по умолчанию
+                Misses: 0,
+                Size:   int(keys),
+        }</span>
+}
+
+// Stop останавливает Redis кэш-сервис
+func (r *RedisCacheService) Stop() <span class="cov8" title="1">{
+        err := r.client.Close()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Redis error closing connection: %v", err)
+        }</span> else<span class="cov8" title="1"> {
+                log.Printf("Redis: Service stopped")
+        }</span>
+}
+
+// String возвращает строковое представление статистики Redis кэша
+func (r *RedisCacheService) String() string <span class="cov0" title="0">{
+        stats := r.GetCacheStats()
+        return fmt.Sprintf("Redis Cache Stats: Size=%d", stats.Size)
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package cache
+
+import (
+        "time"
+
+        "language-exchange-bot/internal/models"
+)
+
+// CacheEntry представляет запись в кэше с TTL
+type CacheEntry struct {
+        Data      interface{}
+        ExpiresAt time.Time
+}
+
+// IsExpired проверяет, истек ли срок действия записи
+func (e *CacheEntry) IsExpired() bool <span class="cov8" title="1">{
+        return time.Now().After(e.ExpiresAt)
+}</span>
+
+// CacheConfig конфигурация кэша
+type CacheConfig struct {
+        LanguagesTTL    time.Duration // TTL для языков
+        InterestsTTL    time.Duration // TTL для интересов
+        TranslationsTTL time.Duration // TTL для переводов
+        UsersTTL        time.Duration // TTL для пользователей
+        StatsTTL        time.Duration // TTL для статистики
+}
+
+// DefaultCacheConfig возвращает конфигурацию по умолчанию
+func DefaultCacheConfig() *CacheConfig <span class="cov8" title="1">{
+        return &amp;CacheConfig{
+                LanguagesTTL:    time.Hour,        // 1 час - языки редко изменяются
+                InterestsTTL:    time.Hour,        // 1 час - интересы редко изменяются
+                TranslationsTTL: 30 * time.Minute, // 30 минут - переводы статичны
+                UsersTTL:        15 * time.Minute, // 15 минут - пользователи могут изменяться
+                StatsTTL:        5 * time.Minute,  // 5 минут - статистика часто обновляется
+        }
+}</span>
+
+// CacheStats статистика работы кэша
+type CacheStats struct {
+        Hits   int64 // Количество попаданий в кэш
+        Misses int64 // Количество промахов кэша
+        Size   int   // Текущий размер кэша
+}
+
+// CachedLanguages кэшированные языки
+type CachedLanguages struct {
+        Languages []*models.Language
+        Lang      string // Язык интерфейса для локализации
+}
+
+// CachedInterests кэшированные интересы
+type CachedInterests struct {
+        Interests map[int]string
+        Lang      string // Язык интерфейса для локализации
+}
+
+// CachedUser кэшированный пользователь
+type CachedUser struct {
+        User *models.User
+        Lang string // Язык интерфейса пользователя
+}
+
+// CachedStats кэшированная статистика
+type CachedStats struct {
+        Data map[string]interface{}
+        Type string // Тип статистики (feedbacks, users, etc.)
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package errors
+
+import (
+        "fmt"
+        "log"
+)
+
+// AdminNotifierImpl реализует уведомления администраторов
+type AdminNotifierImpl struct {
+        adminChatIDs []int64
+        botAPI       interface{} // Telegram Bot API для отправки уведомлений
+}
+
+// NewAdminNotifier создает новый уведомитель администраторов
+func NewAdminNotifier(adminChatIDs []int64, botAPI interface{}) *AdminNotifierImpl <span class="cov8" title="1">{
+        return &amp;AdminNotifierImpl{
+                adminChatIDs: adminChatIDs,
+                botAPI:       botAPI,
+        }
+}</span>
+
+// NotifyCriticalError уведомляет администраторов о критической ошибке
+func (n *AdminNotifierImpl) NotifyCriticalError(err *CustomError) <span class="cov8" title="1">{
+        message := fmt.Sprintf(`
+🚨 **КРИТИЧЕСКАЯ ОШИБКА**
+
+**Тип:** %s
+**Время:** %s
+**RequestID:** %s
+**Сообщение:** %s
+
+**Контекст:**
+- User ID: %v
+- Chat ID: %v
+- Операция: %v
+
+**Дополнительная информация:**
+%s
+`,
+                err.Type.String(),
+                err.Timestamp.Format("2006-01-02 15:04:05"),
+                err.RequestID,
+                err.Message,
+                err.Context["user_id"],
+                err.Context["chat_id"],
+                err.Context["operation"],
+                n.formatContext(err.Context),
+        )
+
+        n.sendToAdmins(message)
+}</span>
+
+// NotifyTelegramAPIError уведомляет администраторов об ошибке Telegram API
+func (n *AdminNotifierImpl) NotifyTelegramAPIError(err *CustomError, chatID int64) <span class="cov8" title="1">{
+        message := fmt.Sprintf(`
+⚠️ **ОШИБКА TELEGRAM API**
+
+**Время:** %s
+**RequestID:** %s
+**Chat ID:** %d
+**Сообщение:** %s
+
+**Контекст:**
+- User ID: %v
+- Операция: %v
+`,
+                err.Timestamp.Format("2006-01-02 15:04:05"),
+                err.RequestID,
+                chatID,
+                err.Message,
+                err.Context["user_id"],
+                err.Context["operation"],
+        )
+
+        n.sendToAdmins(message)
+}</span>
+
+// sendToAdmins отправляет сообщение всем администраторам
+func (n *AdminNotifierImpl) sendToAdmins(message string) <span class="cov8" title="1">{
+        for _, chatID := range n.adminChatIDs </span><span class="cov8" title="1">{
+                n.sendMessage(chatID, message)
+        }</span>
+}
+
+// sendMessage отправляет сообщение (заглушка для интеграции с Telegram API)
+func (n *AdminNotifierImpl) sendMessage(chatID int64, message string) <span class="cov8" title="1">{
+        // Здесь должна быть интеграция с Telegram Bot API
+        // Пока что просто логируем
+        log.Printf("Admin notification to chat %d: %s", chatID, message)
+
+        // TODO: Интегрировать с реальным Telegram Bot API
+        // Пример:
+        // if botAPI, ok := n.botAPI.(*tgbotapi.BotAPI); ok {
+        //     msg := tgbotapi.NewMessage(chatID, message)
+        //     msg.ParseMode = tgbotapi.ModeMarkdown
+        //     botAPI.Send(msg)
+        // }
+}</span>
+
+// formatContext форматирует контекст для отображения
+func (n *AdminNotifierImpl) formatContext(context map[string]interface{}) string <span class="cov8" title="1">{
+        result := ""
+        for key, value := range context </span><span class="cov8" title="1">{
+                if key != "user_id" &amp;&amp; key != "chat_id" &amp;&amp; key != "operation" </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("- %s: %v\n", key, value)
+                }</span>
+        }
+        <span class="cov8" title="1">if result == "" </span><span class="cov8" title="1">{
+                return "Нет дополнительной информации"
+        }</span>
+        <span class="cov0" title="0">return result</span>
+}
+
+// SetAdminChatIDs обновляет список Chat ID администраторов
+func (n *AdminNotifierImpl) SetAdminChatIDs(chatIDs []int64) <span class="cov0" title="0">{
+        n.adminChatIDs = chatIDs
+}</span>
+
+// GetAdminChatIDs возвращает список Chat ID администраторов
+func (n *AdminNotifierImpl) GetAdminChatIDs() []int64 <span class="cov8" title="1">{
+        return n.adminChatIDs
+}</span>
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package errors
+
+import (
+        "log"
+)
+
+// ErrorHandler обрабатывает ошибки централизованно
+type ErrorHandler struct {
+        notifier AdminNotifier
+}
+
+// AdminNotifier интерфейс для уведомления администраторов
+type AdminNotifier interface {
+        NotifyCriticalError(err *CustomError)
+        NotifyTelegramAPIError(err *CustomError, chatID int64)
+}
+
+// NewErrorHandler создает новый обработчик ошибок
+func NewErrorHandler(notifier AdminNotifier) *ErrorHandler <span class="cov8" title="1">{
+        return &amp;ErrorHandler{
+                notifier: notifier,
+        }
+}</span>
+
+// Handle обрабатывает ошибку с контекстом
+func (h *ErrorHandler) Handle(err error, ctx *RequestContext) error <span class="cov8" title="1">{
+        if err == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        // Логируем ошибку
+        <span class="cov8" title="1">h.logError(err, ctx)
+
+        // Если это критическая ошибка, уведомляем администраторов
+        if h.isCriticalError(err) </span><span class="cov8" title="1">{
+                if customErr, ok := err.(*CustomError); ok </span><span class="cov8" title="1">{
+                        h.notifier.NotifyCriticalError(customErr)
+                }</span>
+        }
+
+        // Если это ошибка Telegram API, уведомляем администраторов
+        <span class="cov8" title="1">if IsTelegramAPIError(err) </span><span class="cov8" title="1">{
+                if customErr, ok := err.(*CustomError); ok </span><span class="cov8" title="1">{
+                        h.notifier.NotifyTelegramAPIError(customErr, ctx.ChatID)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return err</span>
+}
+
+// HandleTelegramError обрабатывает ошибки Telegram API
+func (h *ErrorHandler) HandleTelegramError(err error, chatID int64, userID int64, operation string) error <span class="cov8" title="1">{
+        if err == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">ctx := NewRequestContext(userID, chatID, operation)
+
+        // Создаем типизированную ошибку
+        customErr := NewTelegramError(
+                err.Error(),
+                "Произошла ошибка при обработке запроса. Попробуйте позже.",
+                ctx,
+        ).WithCause(err)
+
+        return h.Handle(customErr, ctx)</span>
+}
+
+// HandleDatabaseError обрабатывает ошибки базы данных
+func (h *ErrorHandler) HandleDatabaseError(err error, userID int64, chatID int64, operation string) error <span class="cov8" title="1">{
+        if err == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">ctx := NewRequestContext(userID, chatID, operation)
+
+        // Создаем типизированную ошибку
+        customErr := NewDatabaseError(
+                err.Error(),
+                "Временные проблемы с базой данных. Попробуйте позже.",
+                ctx,
+        ).WithCause(err)
+
+        return h.Handle(customErr, ctx)</span>
+}
+
+// HandleValidationError обрабатывает ошибки валидации
+func (h *ErrorHandler) HandleValidationError(err error, userID int64, chatID int64, operation string) error <span class="cov8" title="1">{
+        if err == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">ctx := NewRequestContext(userID, chatID, operation)
+
+        // Создаем типизированную ошибку
+        customErr := NewValidationError(
+                err.Error(),
+                "Некорректные данные. Проверьте введенную информацию.",
+                ctx,
+        ).WithCause(err)
+
+        return h.Handle(customErr, ctx)</span>
+}
+
+// HandleCacheError обрабатывает ошибки кэша
+func (h *ErrorHandler) HandleCacheError(err error, userID int64, chatID int64, operation string) error <span class="cov8" title="1">{
+        if err == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">ctx := NewRequestContext(userID, chatID, operation)
+
+        // Создаем типизированную ошибку
+        customErr := NewCacheError(
+                err.Error(),
+                "Временные проблемы с кэшем. Попробуйте позже.",
+                ctx,
+        ).WithCause(err)
+
+        return h.Handle(customErr, ctx)</span>
+}
+
+// logError логирует ошибку с контекстом
+func (h *ErrorHandler) logError(err error, ctx *RequestContext) <span class="cov8" title="1">{
+        if customErr, ok := err.(*CustomError); ok </span><span class="cov8" title="1">{
+                log.Printf("[%s] %s: %s (User: %d, Chat: %d, Operation: %s)",
+                        customErr.RequestID,
+                        customErr.Type.String(),
+                        customErr.Message,
+                        ctx.UserID,
+                        ctx.ChatID,
+                        ctx.Operation,
+                )
+        }</span> else<span class="cov0" title="0"> {
+                log.Printf("[%s] Error: %v (User: %d, Chat: %d, Operation: %s)",
+                        ctx.RequestID,
+                        err,
+                        ctx.UserID,
+                        ctx.ChatID,
+                        ctx.Operation,
+                )
+        }</span>
+}
+
+// isCriticalError определяет, является ли ошибка критической
+func (h *ErrorHandler) isCriticalError(err error) bool <span class="cov8" title="1">{
+        if customErr, ok := err.(*CustomError); ok </span><span class="cov8" title="1">{
+                // Критические ошибки: Database, Network, Internal
+                return customErr.Type == ErrorTypeDatabase ||
+                        customErr.Type == ErrorTypeNetwork ||
+                        customErr.Type == ErrorTypeInternal
+        }</span>
+        <span class="cov0" title="0">return false</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package errors
+
+import (
+        "fmt"
+        "time"
+)
+
+// RequestContext содержит контекст запроса
+type RequestContext struct {
+        RequestID string
+        UserID    int64
+        ChatID    int64
+        Operation string
+        Timestamp time.Time
+}
+
+// NewRequestContext создает новый контекст запроса
+func NewRequestContext(userID, chatID int64, operation string) *RequestContext <span class="cov8" title="1">{
+        return &amp;RequestContext{
+                RequestID: generateRequestID(),
+                UserID:    userID,
+                ChatID:    chatID,
+                Operation: operation,
+                Timestamp: time.Now(),
+        }
+}</span>
+
+// generateRequestID генерирует уникальный RequestID
+func generateRequestID() string <span class="cov8" title="1">{
+        // Используем timestamp + случайные символы для уникальности
+        timestamp := time.Now().UnixNano()
+        return fmt.Sprintf("req_%d_%d", timestamp, time.Now().Unix()%10000)
+}</span>
+
+// WithContext создает ошибку с контекстом
+func WithContext(err error, ctx *RequestContext) *CustomError <span class="cov0" title="0">{
+        if customErr, ok := err.(*CustomError); ok </span><span class="cov0" title="0">{
+                customErr.RequestID = ctx.RequestID
+                customErr.Context["user_id"] = ctx.UserID
+                customErr.Context["chat_id"] = ctx.ChatID
+                customErr.Context["operation"] = ctx.Operation
+                return customErr
+        }</span>
+
+        // Если ошибка не CustomError, оборачиваем её
+        <span class="cov0" title="0">return &amp;CustomError{
+                Type:      ErrorTypeInternal,
+                Message:   err.Error(),
+                RequestID: ctx.RequestID,
+                Context: map[string]interface{}{
+                        "user_id":   ctx.UserID,
+                        "chat_id":   ctx.ChatID,
+                        "operation": ctx.Operation,
+                },
+                Timestamp: time.Now(),
+                Cause:     err,
+        }</span>
+}
+
+// NewTelegramError создает ошибку Telegram API с контекстом
+func NewTelegramError(message, userMessage string, ctx *RequestContext) *CustomError <span class="cov8" title="1">{
+        return &amp;CustomError{
+                Type:        ErrorTypeTelegramAPI,
+                Message:     message,
+                UserMessage: userMessage,
+                RequestID:   ctx.RequestID,
+                Context: map[string]interface{}{
+                        "user_id":   ctx.UserID,
+                        "chat_id":   ctx.ChatID,
+                        "operation": ctx.Operation,
+                },
+                Timestamp: time.Now(),
+        }
+}</span>
+
+// NewDatabaseError создает ошибку базы данных с контекстом
+func NewDatabaseError(message, userMessage string, ctx *RequestContext) *CustomError <span class="cov8" title="1">{
+        return &amp;CustomError{
+                Type:        ErrorTypeDatabase,
+                Message:     message,
+                UserMessage: userMessage,
+                RequestID:   ctx.RequestID,
+                Context: map[string]interface{}{
+                        "user_id":   ctx.UserID,
+                        "chat_id":   ctx.ChatID,
+                        "operation": ctx.Operation,
+                },
+                Timestamp: time.Now(),
+        }
+}</span>
+
+// NewValidationError создает ошибку валидации с контекстом
+func NewValidationError(message, userMessage string, ctx *RequestContext) *CustomError <span class="cov8" title="1">{
+        return &amp;CustomError{
+                Type:        ErrorTypeValidation,
+                Message:     message,
+                UserMessage: userMessage,
+                RequestID:   ctx.RequestID,
+                Context: map[string]interface{}{
+                        "user_id":   ctx.UserID,
+                        "chat_id":   ctx.ChatID,
+                        "operation": ctx.Operation,
+                },
+                Timestamp: time.Now(),
+        }
+}</span>
+
+// NewCacheError создает ошибку кэша с контекстом
+func NewCacheError(message, userMessage string, ctx *RequestContext) *CustomError <span class="cov8" title="1">{
+        return &amp;CustomError{
+                Type:        ErrorTypeCache,
+                Message:     message,
+                UserMessage: userMessage,
+                RequestID:   ctx.RequestID,
+                Context: map[string]interface{}{
+                        "user_id":   ctx.UserID,
+                        "chat_id":   ctx.ChatID,
+                        "operation": ctx.Operation,
+                },
+                Timestamp: time.Now(),
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package errors
+
+import (
+        "fmt"
+        "time"
+)
+
+// ErrorType определяет категорию ошибки
+type ErrorType int
+
+const (
+        ErrorTypeTelegramAPI ErrorType = iota
+        ErrorTypeDatabase
+        ErrorTypeValidation
+        ErrorTypeCache
+        ErrorTypeNetwork
+        ErrorTypeInternal
+)
+
+// String возвращает строковое представление типа ошибки
+func (et ErrorType) String() string <span class="cov8" title="1">{
+        switch et </span>{
+        case ErrorTypeTelegramAPI:<span class="cov8" title="1">
+                return "TelegramAPI"</span>
+        case ErrorTypeDatabase:<span class="cov8" title="1">
+                return "Database"</span>
+        case ErrorTypeValidation:<span class="cov8" title="1">
+                return "Validation"</span>
+        case ErrorTypeCache:<span class="cov8" title="1">
+                return "Cache"</span>
+        case ErrorTypeNetwork:<span class="cov0" title="0">
+                return "Network"</span>
+        case ErrorTypeInternal:<span class="cov0" title="0">
+                return "Internal"</span>
+        default:<span class="cov0" title="0">
+                return "Unknown"</span>
+        }
+}
+
+// CustomError представляет типизированную ошибку с контекстом
+type CustomError struct {
+        Type        ErrorType
+        Message     string
+        UserMessage string
+        Context     map[string]interface{}
+        RequestID   string
+        Timestamp   time.Time
+        Cause       error
+}
+
+// Error реализует интерфейс error
+func (e *CustomError) Error() string <span class="cov8" title="1">{
+        if e.Cause != nil </span><span class="cov8" title="1">{
+                return fmt.Sprintf("[%s] %s (caused by: %v)", e.Type.String(), e.Message, e.Cause.Error())
+        }</span>
+        <span class="cov0" title="0">return fmt.Sprintf("[%s] %s", e.Type.String(), e.Message)</span>
+}
+
+// Unwrap возвращает причину ошибки для error wrapping
+func (e *CustomError) Unwrap() error <span class="cov0" title="0">{
+        return e.Cause
+}</span>
+
+// NewCustomError создает новую типизированную ошибку
+func NewCustomError(errorType ErrorType, message, userMessage string, requestID string) *CustomError <span class="cov0" title="0">{
+        return &amp;CustomError{
+                Type:        errorType,
+                Message:     message,
+                UserMessage: userMessage,
+                Context:     make(map[string]interface{}),
+                RequestID:   requestID,
+                Timestamp:   time.Now(),
+        }
+}</span>
+
+// WithContext добавляет контекст к ошибке
+func (e *CustomError) WithContext(key string, value interface{}) *CustomError <span class="cov0" title="0">{
+        e.Context[key] = value
+        return e
+}</span>
+
+// WithCause добавляет причину ошибки
+func (e *CustomError) WithCause(cause error) *CustomError <span class="cov8" title="1">{
+        e.Cause = cause
+        return e
+}</span>
+
+// IsTelegramAPIError проверяет, является ли ошибка ошибкой Telegram API
+func IsTelegramAPIError(err error) bool <span class="cov8" title="1">{
+        if customErr, ok := err.(*CustomError); ok </span><span class="cov8" title="1">{
+                return customErr.Type == ErrorTypeTelegramAPI
+        }</span>
+        <span class="cov0" title="0">return false</span>
+}
+
+// IsDatabaseError проверяет, является ли ошибка ошибкой базы данных
+func IsDatabaseError(err error) bool <span class="cov8" title="1">{
+        if customErr, ok := err.(*CustomError); ok </span><span class="cov8" title="1">{
+                return customErr.Type == ErrorTypeDatabase
+        }</span>
+        <span class="cov0" title="0">return false</span>
+}
+
+// IsValidationError проверяет, является ли ошибка ошибкой валидации
+func IsValidationError(err error) bool <span class="cov8" title="1">{
+        if customErr, ok := err.(*CustomError); ok </span><span class="cov8" title="1">{
+                return customErr.Type == ErrorTypeValidation
+        }</span>
+        <span class="cov0" title="0">return false</span>
+}
+
+// IsCacheError проверяет, является ли ошибка ошибкой кэша
+func IsCacheError(err error) bool <span class="cov8" title="1">{
+        if customErr, ok := err.(*CustomError); ok </span><span class="cov8" title="1">{
+                return customErr.Type == ErrorTypeCache
+        }</span>
+        <span class="cov0" title="0">return false</span>
+}
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package logging
+
+import (
+        "language-exchange-bot/internal/errors"
+        "time"
+)
+
+// ComponentLogger предоставляет специализированное логирование для компонентов
+type ComponentLogger struct {
+        *Logger
+}
+
+// NewComponentLogger создает логгер для компонента
+func NewComponentLogger(component string) *ComponentLogger <span class="cov8" title="1">{
+        return &amp;ComponentLogger{
+                Logger: NewLoggerFromEnv(component),
+        }
+}</span>
+
+// TelegramLogger предоставляет логирование для Telegram бота
+type TelegramLogger struct {
+        *ComponentLogger
+}
+
+// NewTelegramLogger создает логгер для Telegram бота
+func NewTelegramLogger() *TelegramLogger <span class="cov8" title="1">{
+        return &amp;TelegramLogger{
+                ComponentLogger: NewComponentLogger("telegram"),
+        }
+}</span>
+
+// LogMessageReceived логирует получение сообщения
+func (tl *TelegramLogger) LogMessageReceived(chatID, userID int64, text, requestID string) <span class="cov8" title="1">{
+        tl.InfoWithContext(
+                "Message received",
+                requestID,
+                userID,
+                chatID,
+                "HandleMessage",
+                map[string]interface{}{
+                        "text_length": len(text),
+                        "has_text":    text != "",
+                },
+        )
+}</span>
+
+// LogMessageSent логирует отправку сообщения
+func (tl *TelegramLogger) LogMessageSent(chatID, userID int64, text, requestID string) <span class="cov8" title="1">{
+        tl.InfoWithContext(
+                "Message sent",
+                requestID,
+                userID,
+                chatID,
+                "SendMessage",
+                map[string]interface{}{
+                        "text_length": len(text),
+                },
+        )
+}</span>
+
+// LogCallbackReceived логирует получение callback query
+func (tl *TelegramLogger) LogCallbackReceived(chatID, userID int64, data, requestID string) <span class="cov8" title="1">{
+        tl.InfoWithContext(
+                "Callback received",
+                requestID,
+                userID,
+                chatID,
+                "HandleCallback",
+                map[string]interface{}{
+                        "callback_data": data,
+                },
+        )
+}</span>
+
+// LogCommandExecuted логирует выполнение команды
+func (tl *TelegramLogger) LogCommandExecuted(chatID, userID int64, command, requestID string) <span class="cov8" title="1">{
+        tl.InfoWithContext(
+                "Command executed",
+                requestID,
+                userID,
+                chatID,
+                "ExecuteCommand",
+                map[string]interface{}{
+                        "command": command,
+                },
+        )
+}</span>
+
+// LogError логирует ошибку с контекстом
+func (tl *TelegramLogger) LogError(err error, chatID, userID int64, operation, requestID string) <span class="cov8" title="1">{
+        if customErr, ok := err.(*errors.CustomError); ok </span><span class="cov8" title="1">{
+                tl.ErrorWithContext(
+                        "Error occurred",
+                        requestID,
+                        userID,
+                        chatID,
+                        operation,
+                        map[string]interface{}{
+                                "error_type": customErr.Type.String(),
+                                "error_msg":  customErr.Message,
+                                "user_msg":   customErr.UserMessage,
+                        },
+                )
+        }</span> else<span class="cov0" title="0"> {
+                tl.ErrorWithContext(
+                        "Error occurred",
+                        requestID,
+                        userID,
+                        chatID,
+                        operation,
+                        map[string]interface{}{
+                                "error_msg": err.Error(),
+                        },
+                )
+        }</span>
+}
+
+// DatabaseLogger предоставляет логирование для базы данных
+type DatabaseLogger struct {
+        *ComponentLogger
+}
+
+// NewDatabaseLogger создает логгер для базы данных
+func NewDatabaseLogger() *DatabaseLogger <span class="cov8" title="1">{
+        return &amp;DatabaseLogger{
+                ComponentLogger: NewComponentLogger("database"),
+        }
+}</span>
+
+// LogQueryExecuted логирует выполнение запроса
+func (dl *DatabaseLogger) LogQueryExecuted(query string, duration time.Duration, requestID string) <span class="cov8" title="1">{
+        dl.DebugWithContext(
+                "Query executed",
+                requestID,
+                0,
+                0,
+                "ExecuteQuery",
+                map[string]interface{}{
+                        "query":    query,
+                        "duration": duration.String(),
+                },
+        )
+}</span>
+
+// LogConnectionEstablished логирует установление соединения
+func (dl *DatabaseLogger) LogConnectionEstablished(requestID string) <span class="cov8" title="1">{
+        dl.InfoWithContext(
+                "Database connection established",
+                requestID,
+                0,
+                0,
+                "Connect",
+        )
+}</span>
+
+// LogConnectionFailed логирует ошибку соединения
+func (dl *DatabaseLogger) LogConnectionFailed(err error, requestID string) <span class="cov8" title="1">{
+        dl.ErrorWithContext(
+                "Database connection failed",
+                requestID,
+                0,
+                0,
+                "Connect",
+                map[string]interface{}{
+                        "error": err.Error(),
+                },
+        )
+}</span>
+
+// LogTransactionStarted логирует начало транзакции
+func (dl *DatabaseLogger) LogTransactionStarted(requestID string) <span class="cov8" title="1">{
+        dl.DebugWithContext(
+                "Transaction started",
+                requestID,
+                0,
+                0,
+                "BeginTransaction",
+        )
+}</span>
+
+// LogTransactionCommitted логирует коммит транзакции
+func (dl *DatabaseLogger) LogTransactionCommitted(requestID string) <span class="cov8" title="1">{
+        dl.DebugWithContext(
+                "Transaction committed",
+                requestID,
+                0,
+                0,
+                "CommitTransaction",
+        )
+}</span>
+
+// LogTransactionRolledBack логирует откат транзакции
+func (dl *DatabaseLogger) LogTransactionRolledBack(err error, requestID string) <span class="cov0" title="0">{
+        dl.WarnWithContext(
+                "Transaction rolled back",
+                requestID,
+                0,
+                0,
+                "RollbackTransaction",
+                map[string]interface{}{
+                        "error": err.Error(),
+                },
+        )
+}</span>
+
+// CacheLogger предоставляет логирование для кэша
+type CacheLogger struct {
+        *ComponentLogger
+}
+
+// NewCacheLogger создает логгер для кэша
+func NewCacheLogger() *CacheLogger <span class="cov8" title="1">{
+        return &amp;CacheLogger{
+                ComponentLogger: NewComponentLogger("cache"),
+        }
+}</span>
+
+// LogCacheHit логирует попадание в кэш
+func (cl *CacheLogger) LogCacheHit(key string, requestID string) <span class="cov8" title="1">{
+        cl.DebugWithContext(
+                "Cache hit",
+                requestID,
+                0,
+                0,
+                "GetFromCache",
+                map[string]interface{}{
+                        "key": key,
+                },
+        )
+}</span>
+
+// LogCacheMiss логирует промах кэша
+func (cl *CacheLogger) LogCacheMiss(key string, requestID string) <span class="cov8" title="1">{
+        cl.DebugWithContext(
+                "Cache miss",
+                requestID,
+                0,
+                0,
+                "GetFromCache",
+                map[string]interface{}{
+                        "key": key,
+                },
+        )
+}</span>
+
+// LogCacheSet логирует установку значения в кэш
+func (cl *CacheLogger) LogCacheSet(key string, ttl time.Duration, requestID string) <span class="cov8" title="1">{
+        cl.DebugWithContext(
+                "Cache set",
+                requestID,
+                0,
+                0,
+                "SetToCache",
+                map[string]interface{}{
+                        "key": key,
+                        "ttl": ttl.String(),
+                },
+        )
+}</span>
+
+// LogCacheInvalidated логирует инвалидацию кэша
+func (cl *CacheLogger) LogCacheInvalidated(pattern string, requestID string) <span class="cov8" title="1">{
+        cl.InfoWithContext(
+                "Cache invalidated",
+                requestID,
+                0,
+                0,
+                "InvalidateCache",
+                map[string]interface{}{
+                        "pattern": pattern,
+                },
+        )
+}</span>
+
+// LogCacheError логирует ошибку кэша
+func (cl *CacheLogger) LogCacheError(err error, operation, requestID string) <span class="cov8" title="1">{
+        cl.ErrorWithContext(
+                "Cache error",
+                requestID,
+                0,
+                0,
+                operation,
+                map[string]interface{}{
+                        "error": err.Error(),
+                },
+        )
+}</span>
+
+// ValidationLogger предоставляет логирование для валидации
+type ValidationLogger struct {
+        *ComponentLogger
+}
+
+// NewValidationLogger создает логгер для валидации
+func NewValidationLogger() *ValidationLogger <span class="cov8" title="1">{
+        return &amp;ValidationLogger{
+                ComponentLogger: NewComponentLogger("validation"),
+        }
+}</span>
+
+// LogValidationPassed логирует успешную валидацию
+func (vl *ValidationLogger) LogValidationPassed(operation string, requestID string) <span class="cov8" title="1">{
+        vl.DebugWithContext(
+                "Validation passed",
+                requestID,
+                0,
+                0,
+                operation,
+        )
+}</span>
+
+// LogValidationFailed логирует неудачную валидацию
+func (vl *ValidationLogger) LogValidationFailed(operation string, errors map[string][]string, requestID string) <span class="cov8" title="1">{
+        vl.WarnWithContext(
+                "Validation failed",
+                requestID,
+                0,
+                0,
+                operation,
+                map[string]interface{}{
+                        "validation_errors": errors,
+                },
+        )
+}</span>
+
+// LogValidationError логирует ошибку валидации
+func (vl *ValidationLogger) LogValidationError(err error, operation, requestID string) <span class="cov8" title="1">{
+        vl.ErrorWithContext(
+                "Validation error",
+                requestID,
+                0,
+                0,
+                operation,
+                map[string]interface{}{
+                        "error": err.Error(),
+                },
+        )
+}</span>
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package logging
+
+import (
+        "language-exchange-bot/internal/errors"
+)
+
+// LoggingService предоставляет централизованное логирование
+type LoggingService struct {
+        telegramLogger   *TelegramLogger
+        databaseLogger   *DatabaseLogger
+        cacheLogger      *CacheLogger
+        validationLogger *ValidationLogger
+        errorHandler     *errors.ErrorHandler
+}
+
+// NewLoggingService создает новый сервис логирования
+func NewLoggingService(errorHandler *errors.ErrorHandler) *LoggingService <span class="cov8" title="1">{
+        return &amp;LoggingService{
+                telegramLogger:   NewTelegramLogger(),
+                databaseLogger:   NewDatabaseLogger(),
+                cacheLogger:      NewCacheLogger(),
+                validationLogger: NewValidationLogger(),
+                errorHandler:     errorHandler,
+        }
+}</span>
+
+// Telegram возвращает логгер для Telegram
+func (ls *LoggingService) Telegram() *TelegramLogger <span class="cov0" title="0">{
+        return ls.telegramLogger
+}</span>
+
+// Database возвращает логгер для базы данных
+func (ls *LoggingService) Database() *DatabaseLogger <span class="cov0" title="0">{
+        return ls.databaseLogger
+}</span>
+
+// Cache возвращает логгер для кэша
+func (ls *LoggingService) Cache() *CacheLogger <span class="cov0" title="0">{
+        return ls.cacheLogger
+}</span>
+
+// Validation возвращает логгер для валидации
+func (ls *LoggingService) Validation() *ValidationLogger <span class="cov0" title="0">{
+        return ls.validationLogger
+}</span>
+
+// LogErrorWithContext логирует ошибку с полным контекстом
+func (ls *LoggingService) LogErrorWithContext(err error, requestID string, userID, chatID int64, operation, component string) <span class="cov8" title="1">{
+        if customErr, ok := err.(*errors.CustomError); ok </span><span class="cov8" title="1">{
+                // Логируем в зависимости от типа ошибки
+                switch customErr.Type </span>{
+                case errors.ErrorTypeTelegramAPI:<span class="cov8" title="1">
+                        ls.telegramLogger.LogError(err, chatID, userID, operation, requestID)</span>
+                case errors.ErrorTypeDatabase:<span class="cov0" title="0">
+                        ls.databaseLogger.ErrorWithContext(
+                                "Database error",
+                                requestID,
+                                userID,
+                                chatID,
+                                operation,
+                                map[string]interface{}{
+                                        "error_type": customErr.Type.String(),
+                                        "error_msg":  customErr.Message,
+                                        "user_msg":   customErr.UserMessage,
+                                },
+                        )</span>
+                case errors.ErrorTypeCache:<span class="cov0" title="0">
+                        ls.cacheLogger.LogCacheError(err, operation, requestID)</span>
+                case errors.ErrorTypeValidation:<span class="cov0" title="0">
+                        ls.validationLogger.LogValidationError(err, operation, requestID)</span>
+                default:<span class="cov0" title="0">
+                        // Логируем в общий логгер
+                        ls.telegramLogger.LogError(err, chatID, userID, operation, requestID)</span>
+                }
+        } else<span class="cov0" title="0"> {
+                // Логируем в зависимости от компонента
+                switch component </span>{
+                case "telegram":<span class="cov0" title="0">
+                        ls.telegramLogger.LogError(err, chatID, userID, operation, requestID)</span>
+                case "database":<span class="cov0" title="0">
+                        ls.databaseLogger.ErrorWithContext(
+                                "Database error",
+                                requestID,
+                                userID,
+                                chatID,
+                                operation,
+                                map[string]interface{}{
+                                        "error": err.Error(),
+                                },
+                        )</span>
+                case "cache":<span class="cov0" title="0">
+                        ls.cacheLogger.LogCacheError(err, operation, requestID)</span>
+                case "validation":<span class="cov0" title="0">
+                        ls.validationLogger.LogValidationError(err, operation, requestID)</span>
+                default:<span class="cov0" title="0">
+                        ls.telegramLogger.LogError(err, chatID, userID, operation, requestID)</span>
+                }
+        }
+}
+
+// LogRequestStart логирует начало запроса
+func (ls *LoggingService) LogRequestStart(requestID string, userID, chatID int64, operation string) <span class="cov8" title="1">{
+        ls.telegramLogger.InfoWithContext(
+                "Request started",
+                requestID,
+                userID,
+                chatID,
+                operation,
+        )
+}</span>
+
+// LogRequestEnd логирует завершение запроса
+func (ls *LoggingService) LogRequestEnd(requestID string, userID, chatID int64, operation string, success bool) <span class="cov8" title="1">{
+        level := "completed"
+        if !success </span><span class="cov8" title="1">{
+                level = "failed"
+        }</span>
+
+        <span class="cov8" title="1">ls.telegramLogger.InfoWithContext(
+                "Request "+level,
+                requestID,
+                userID,
+                chatID,
+                operation,
+                map[string]interface{}{
+                        "success": success,
+                },
+        )</span>
+}
+
+// LogPerformance логирует метрики производительности
+func (ls *LoggingService) LogPerformance(operation string, duration string, requestID string, fields map[string]interface{}) <span class="cov8" title="1">{
+        ls.telegramLogger.InfoWithContext(
+                "Performance metric",
+                requestID,
+                0,
+                0,
+                operation,
+                map[string]interface{}{
+                        "duration": duration,
+                        "fields":   fields,
+                },
+        )
+}</span>
+
+// LogSecurityEvent логирует события безопасности
+func (ls *LoggingService) LogSecurityEvent(event string, userID, chatID int64, requestID string, fields map[string]interface{}) <span class="cov8" title="1">{
+        ls.telegramLogger.WarnWithContext(
+                "Security event: "+event,
+                requestID,
+                userID,
+                chatID,
+                "SecurityEvent",
+                fields,
+        )
+}</span>
+
+// LogAdminAction логирует действия администратора
+func (ls *LoggingService) LogAdminAction(action string, adminID, targetUserID int64, requestID string, fields map[string]interface{}) <span class="cov8" title="1">{
+        ls.telegramLogger.InfoWithContext(
+                "Admin action: "+action,
+                requestID,
+                adminID,
+                0,
+                "AdminAction",
+                map[string]interface{}{
+                        "target_user_id": targetUserID,
+                        "fields":         fields,
+                },
+        )
+}</span>
+
+// SetLogLevel устанавливает уровень логирования для всех компонентов
+func (ls *LoggingService) SetLogLevel(level LogLevel) <span class="cov8" title="1">{
+        ls.telegramLogger.SetLevel(level)
+        ls.databaseLogger.SetLevel(level)
+        ls.cacheLogger.SetLevel(level)
+        ls.validationLogger.SetLevel(level)
+}</span>
+
+// GetLogLevel возвращает текущий уровень логирования
+func (ls *LoggingService) GetLogLevel() LogLevel <span class="cov8" title="1">{
+        return ls.telegramLogger.GetLevel()
+}</span>
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package logging
+
+import (
+        "encoding/json"
+        "fmt"
+        "log"
+        "os"
+        "time"
+)
+
+// LogLevel определяет уровень логирования
+type LogLevel int
+
+const (
+        DEBUG LogLevel = iota
+        INFO
+        WARN
+        ERROR
+)
+
+// String возвращает строковое представление уровня логирования
+func (ll LogLevel) String() string <span class="cov8" title="1">{
+        switch ll </span>{
+        case DEBUG:<span class="cov8" title="1">
+                return "DEBUG"</span>
+        case INFO:<span class="cov8" title="1">
+                return "INFO"</span>
+        case WARN:<span class="cov8" title="1">
+                return "WARN"</span>
+        case ERROR:<span class="cov8" title="1">
+                return "ERROR"</span>
+        default:<span class="cov0" title="0">
+                return "UNKNOWN"</span>
+        }
+}
+
+// ParseLogLevel парсит строку в LogLevel
+func ParseLogLevel(level string) LogLevel <span class="cov8" title="1">{
+        switch level </span>{
+        case "DEBUG":<span class="cov8" title="1">
+                return DEBUG</span>
+        case "INFO":<span class="cov8" title="1">
+                return INFO</span>
+        case "WARN":<span class="cov8" title="1">
+                return WARN</span>
+        case "ERROR":<span class="cov8" title="1">
+                return ERROR</span>
+        default:<span class="cov8" title="1">
+                return INFO</span>
+        }
+}
+
+// LogEntry представляет структурированную запись лога
+type LogEntry struct {
+        Timestamp time.Time              `json:"timestamp"`
+        Level     LogLevel               `json:"level"`
+        Message   string                 `json:"message"`
+        RequestID string                 `json:"request_id,omitempty"`
+        UserID    int64                  `json:"user_id,omitempty"`
+        ChatID    int64                  `json:"chat_id,omitempty"`
+        Operation string                 `json:"operation,omitempty"`
+        Component string                 `json:"component,omitempty"`
+        Fields    map[string]interface{} `json:"fields,omitempty"`
+        Error     string                 `json:"error,omitempty"`
+}
+
+// Logger предоставляет структурированное логирование
+type Logger struct {
+        level     LogLevel
+        component string
+}
+
+// NewLogger создает новый логгер
+func NewLogger(level LogLevel, component string) *Logger <span class="cov8" title="1">{
+        return &amp;Logger{
+                level:     level,
+                component: component,
+        }
+}</span>
+
+// NewLoggerFromEnv создает логгер из переменных окружения
+func NewLoggerFromEnv(component string) *Logger <span class="cov8" title="1">{
+        level := ParseLogLevel(os.Getenv("LOG_LEVEL"))
+        return NewLogger(level, component)
+}</span>
+
+// Debug логирует сообщение уровня DEBUG
+func (l *Logger) Debug(message string, fields ...map[string]interface{}) <span class="cov8" title="1">{
+        l.log(DEBUG, message, fields...)
+}</span>
+
+// Info логирует сообщение уровня INFO
+func (l *Logger) Info(message string, fields ...map[string]interface{}) <span class="cov8" title="1">{
+        l.log(INFO, message, fields...)
+}</span>
+
+// Warn логирует сообщение уровня WARN
+func (l *Logger) Warn(message string, fields ...map[string]interface{}) <span class="cov8" title="1">{
+        l.log(WARN, message, fields...)
+}</span>
+
+// Error логирует сообщение уровня ERROR
+func (l *Logger) Error(message string, fields ...map[string]interface{}) <span class="cov8" title="1">{
+        l.log(ERROR, message, fields...)
+}</span>
+
+// DebugWithContext логирует сообщение уровня DEBUG с контекстом
+func (l *Logger) DebugWithContext(message string, requestID string, userID, chatID int64, operation string, fields ...map[string]interface{}) <span class="cov8" title="1">{
+        entry := l.createLogEntry(DEBUG, message, requestID, userID, chatID, operation, fields...)
+        l.writeLog(entry)
+}</span>
+
+// InfoWithContext логирует сообщение уровня INFO с контекстом
+func (l *Logger) InfoWithContext(message string, requestID string, userID, chatID int64, operation string, fields ...map[string]interface{}) <span class="cov8" title="1">{
+        entry := l.createLogEntry(INFO, message, requestID, userID, chatID, operation, fields...)
+        l.writeLog(entry)
+}</span>
+
+// WarnWithContext логирует сообщение уровня WARN с контекстом
+func (l *Logger) WarnWithContext(message string, requestID string, userID, chatID int64, operation string, fields ...map[string]interface{}) <span class="cov8" title="1">{
+        entry := l.createLogEntry(WARN, message, requestID, userID, chatID, operation, fields...)
+        l.writeLog(entry)
+}</span>
+
+// ErrorWithContext логирует сообщение уровня ERROR с контекстом
+func (l *Logger) ErrorWithContext(message string, requestID string, userID, chatID int64, operation string, fields ...map[string]interface{}) <span class="cov8" title="1">{
+        entry := l.createLogEntry(ERROR, message, requestID, userID, chatID, operation, fields...)
+        l.writeLog(entry)
+}</span>
+
+// log внутренний метод для логирования
+func (l *Logger) log(level LogLevel, message string, fields ...map[string]interface{}) <span class="cov8" title="1">{
+        if level &lt; l.level </span><span class="cov8" title="1">{
+                return
+        }</span>
+
+        <span class="cov8" title="1">entry := l.createLogEntry(level, message, "", 0, 0, "", fields...)
+        l.writeLog(entry)</span>
+}
+
+// createLogEntry создает структурированную запись лога
+func (l *Logger) createLogEntry(level LogLevel, message string, requestID string, userID, chatID int64, operation string, fields ...map[string]interface{}) *LogEntry <span class="cov8" title="1">{
+        entry := &amp;LogEntry{
+                Timestamp: time.Now(),
+                Level:     level,
+                Message:   message,
+                Component: l.component,
+        }
+
+        if requestID != "" </span><span class="cov8" title="1">{
+                entry.RequestID = requestID
+        }</span>
+
+        <span class="cov8" title="1">if userID &gt; 0 </span><span class="cov8" title="1">{
+                entry.UserID = userID
+        }</span>
+
+        <span class="cov8" title="1">if chatID &gt; 0 </span><span class="cov8" title="1">{
+                entry.ChatID = chatID
+        }</span>
+
+        <span class="cov8" title="1">if operation != "" </span><span class="cov8" title="1">{
+                entry.Operation = operation
+        }</span>
+
+        // Объединяем все поля
+        <span class="cov8" title="1">if len(fields) &gt; 0 </span><span class="cov8" title="1">{
+                entry.Fields = make(map[string]interface{})
+                for _, fieldMap := range fields </span><span class="cov8" title="1">{
+                        for key, value := range fieldMap </span><span class="cov8" title="1">{
+                                entry.Fields[key] = value
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">return entry</span>
+}
+
+// writeLog записывает лог в формате JSON
+func (l *Logger) writeLog(entry *LogEntry) <span class="cov8" title="1">{
+        if entry.Level &lt; l.level </span><span class="cov8" title="1">{
+                return
+        }</span>
+
+        <span class="cov8" title="1">jsonData, err := json.Marshal(entry)
+        if err != nil </span><span class="cov0" title="0">{
+                // Fallback на простое логирование
+                log.Printf("[%s] %s: %s", entry.Level.String(), entry.Component, entry.Message)
+                return
+        }</span>
+
+        // Выводим в stdout для структурированного логирования
+        <span class="cov8" title="1">fmt.Println(string(jsonData))</span>
+}
+
+// SetLevel устанавливает уровень логирования
+func (l *Logger) SetLevel(level LogLevel) <span class="cov8" title="1">{
+        l.level = level
+}</span>
+
+// GetLevel возвращает текущий уровень логирования
+func (l *Logger) GetLevel() LogLevel <span class="cov8" title="1">{
+        return l.level
+}</span>
+
+// WithFields создает новый логгер с дополнительными полями
+func (l *Logger) WithFields(fields map[string]interface{}) *Logger <span class="cov0" title="0">{
+        return &amp;Logger{
+                level:     l.level,
+                component: l.component,
+        }
+}</span>
+
+// WithComponent создает новый логгер с указанным компонентом
+func (l *Logger) WithComponent(component string) *Logger <span class="cov0" title="0">{
+        return &amp;Logger{
+                level:     l.level,
+                component: component,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package validation
+
+import (
+        "strings"
+)
+
+// MessageValidator валидирует сообщения и callback'и
+type MessageValidator struct {
+        validator *Validator
+}
+
+// NewMessageValidator создает новый валидатор сообщений
+func NewMessageValidator() *MessageValidator <span class="cov8" title="1">{
+        return &amp;MessageValidator{
+                validator: NewValidator(),
+        }
+}</span>
+
+// ValidateMessage валидирует входящее сообщение
+func (mv *MessageValidator) ValidateMessage(chatID int64, userID int64, text string) *ValidationResult <span class="cov0" title="0">{
+        result := NewValidationResult()
+
+        // Валидация Chat ID
+        if errors := mv.validator.ValidateChatID(chatID); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("chat_id", err)
+                }</span>
+        }
+
+        // Валидация User ID
+        <span class="cov0" title="0">if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("user_id", err)
+                }</span>
+        }
+
+        // Валидация текста сообщения
+        <span class="cov0" title="0">if text != "" </span><span class="cov0" title="0">{
+                if errors := mv.validator.ValidateString(text, []string{"max:4096"}); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                        for _, err := range errors </span><span class="cov0" title="0">{
+                                result.AddError("text", err)
+                        }</span>
+                }
+        }
+
+        <span class="cov0" title="0">return result</span>
+}
+
+// ValidateCallbackQuery валидирует callback query
+func (mv *MessageValidator) ValidateCallbackQuery(chatID int64, userID int64, data string) *ValidationResult <span class="cov0" title="0">{
+        result := NewValidationResult()
+
+        // Валидация Chat ID
+        if errors := mv.validator.ValidateChatID(chatID); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("chat_id", err)
+                }</span>
+        }
+
+        // Валидация User ID
+        <span class="cov0" title="0">if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("user_id", err)
+                }</span>
+        }
+
+        // Валидация данных callback
+        <span class="cov0" title="0">if errors := mv.validator.ValidateCallbackData(data); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("callback_data", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return result</span>
+}
+
+// ValidateFeedbackMessage валидирует сообщение отзыва
+func (mv *MessageValidator) ValidateFeedbackMessage(chatID int64, userID int64, text string) *ValidationResult <span class="cov0" title="0">{
+        result := NewValidationResult()
+
+        // Валидация Chat ID
+        if errors := mv.validator.ValidateChatID(chatID); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("chat_id", err)
+                }</span>
+        }
+
+        // Валидация User ID
+        <span class="cov0" title="0">if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("user_id", err)
+                }</span>
+        }
+
+        // Валидация текста отзыва
+        <span class="cov0" title="0">if errors := mv.validator.ValidateFeedbackText(text); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("feedback_text", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return result</span>
+}
+
+// ValidateCommand валидирует команду
+func (mv *MessageValidator) ValidateCommand(chatID int64, userID int64, command string) *ValidationResult <span class="cov0" title="0">{
+        result := NewValidationResult()
+
+        // Валидация Chat ID
+        if errors := mv.validator.ValidateChatID(chatID); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("chat_id", err)
+                }</span>
+        }
+
+        // Валидация User ID
+        <span class="cov0" title="0">if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("user_id", err)
+                }</span>
+        }
+
+        // Валидация команды
+        <span class="cov0" title="0">if strings.TrimSpace(command) == "" </span><span class="cov0" title="0">{
+                result.AddError("command", "Команда обязательна")
+                return result
+        }</span>
+
+        // Проверяем, что команда начинается с /
+        <span class="cov0" title="0">if !strings.HasPrefix(command, "/") </span><span class="cov0" title="0">{
+                result.AddError("command", "Команда должна начинаться с /")
+        }</span>
+
+        // Проверяем длину команды
+        <span class="cov0" title="0">if len(command) &gt; 32 </span><span class="cov0" title="0">{
+                result.AddError("command", "Команда слишком длинная")
+        }</span>
+
+        // Проверяем, что команда содержит только разрешенные символы
+        <span class="cov0" title="0">if errors := mv.validator.ValidateString(command, []string{"alphanumeric"}); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                result.AddError("command", "Команда содержит недопустимые символы")
+        }</span>
+
+        <span class="cov0" title="0">return result</span>
+}
+
+// ValidateLanguageSelection валидирует выбор языка
+func (mv *MessageValidator) ValidateLanguageSelection(chatID int64, userID int64, languageCode string) *ValidationResult <span class="cov0" title="0">{
+        result := NewValidationResult()
+
+        // Валидация Chat ID
+        if errors := mv.validator.ValidateChatID(chatID); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("chat_id", err)
+                }</span>
+        }
+
+        // Валидация User ID
+        <span class="cov0" title="0">if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("user_id", err)
+                }</span>
+        }
+
+        // Валидация кода языка
+        <span class="cov0" title="0">if errors := mv.validator.ValidateLanguageCode(languageCode); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("language_code", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return result</span>
+}
+
+// ValidateInterestSelection валидирует выбор интереса
+func (mv *MessageValidator) ValidateInterestSelection(chatID int64, userID int64, interestID int) *ValidationResult <span class="cov0" title="0">{
+        result := NewValidationResult()
+
+        // Валидация Chat ID
+        if errors := mv.validator.ValidateChatID(chatID); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("chat_id", err)
+                }</span>
+        }
+
+        // Валидация User ID
+        <span class="cov0" title="0">if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("user_id", err)
+                }</span>
+        }
+
+        // Валидация ID интереса
+        <span class="cov0" title="0">if errors := mv.validator.ValidateInterestID(interestID); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("interest_id", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return result</span>
+}
+
+// ValidateLanguageLevelSelection валидирует выбор уровня языка
+func (mv *MessageValidator) ValidateLanguageLevelSelection(chatID int64, userID int64, level int) *ValidationResult <span class="cov0" title="0">{
+        result := NewValidationResult()
+
+        // Валидация Chat ID
+        if errors := mv.validator.ValidateChatID(chatID); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("chat_id", err)
+                }</span>
+        }
+
+        // Валидация User ID
+        <span class="cov0" title="0">if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("user_id", err)
+                }</span>
+        }
+
+        // Валидация уровня языка
+        <span class="cov0" title="0">if errors := mv.validator.ValidateLanguageLevel(level); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("language_level", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return result</span>
+}
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">package validation
+
+import (
+        "language-exchange-bot/internal/models"
+)
+
+// UserValidator валидирует данные пользователя
+type UserValidator struct {
+        validator *Validator
+}
+
+// NewUserValidator создает новый валидатор пользователей
+func NewUserValidator() *UserValidator <span class="cov8" title="1">{
+        return &amp;UserValidator{
+                validator: NewValidator(),
+        }
+}</span>
+
+// ValidateUser валидирует данные пользователя
+func (uv *UserValidator) ValidateUser(user *models.User) *ValidationResult <span class="cov8" title="1">{
+        result := NewValidationResult()
+
+        // Валидация Telegram ID
+        if errors := uv.validator.ValidateTelegramID(int64(user.TelegramID)); len(errors) &gt; 0 </span><span class="cov8" title="1">{
+                for _, err := range errors </span><span class="cov8" title="1">{
+                        result.AddError("telegram_id", err)
+                }</span>
+        }
+
+        // Валидация имени пользователя
+        <span class="cov8" title="1">if errors := uv.validator.ValidateString(user.FirstName, []string{"required", "max:50"}); len(errors) &gt; 0 </span><span class="cov8" title="1">{
+                for _, err := range errors </span><span class="cov8" title="1">{
+                        result.AddError("first_name", err)
+                }</span>
+        }
+
+        // Валидация username (если есть)
+        <span class="cov8" title="1">if user.Username != "" </span><span class="cov8" title="1">{
+                if errors := uv.validator.ValidateString(user.Username, []string{"username", "max:50"}); len(errors) &gt; 0 </span><span class="cov8" title="1">{
+                        for _, err := range errors </span><span class="cov8" title="1">{
+                                result.AddError("username", err)
+                        }</span>
+                }
+        }
+
+        // Валидация кода языка интерфейса
+        <span class="cov8" title="1">if errors := uv.validator.ValidateLanguageCode(user.InterfaceLanguageCode); len(errors) &gt; 0 </span><span class="cov8" title="1">{
+                for _, err := range errors </span><span class="cov8" title="1">{
+                        result.AddError("interface_language_code", err)
+                }</span>
+        }
+
+        // Валидация состояния пользователя
+        <span class="cov8" title="1">if errors := uv.validator.ValidateUserState(user.State); len(errors) &gt; 0 </span><span class="cov8" title="1">{
+                for _, err := range errors </span><span class="cov8" title="1">{
+                        result.AddError("state", err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return result</span>
+}
+
+// ValidateUserRegistration валидирует данные при регистрации пользователя
+func (uv *UserValidator) ValidateUserRegistration(telegramID int, username, firstName, languageCode string) *ValidationResult <span class="cov8" title="1">{
+        result := NewValidationResult()
+
+        // Валидация Telegram ID
+        if errors := uv.validator.ValidateTelegramID(int64(telegramID)); len(errors) &gt; 0 </span><span class="cov8" title="1">{
+                for _, err := range errors </span><span class="cov8" title="1">{
+                        result.AddError("telegram_id", err)
+                }</span>
+        }
+
+        // Валидация имени пользователя
+        <span class="cov8" title="1">if errors := uv.validator.ValidateString(firstName, []string{"required", "max:50"}); len(errors) &gt; 0 </span><span class="cov8" title="1">{
+                for _, err := range errors </span><span class="cov8" title="1">{
+                        result.AddError("first_name", err)
+                }</span>
+        }
+
+        // Валидация username (если есть)
+        <span class="cov8" title="1">if username != "" </span><span class="cov8" title="1">{
+                if errors := uv.validator.ValidateString(username, []string{"username", "max:50"}); len(errors) &gt; 0 </span><span class="cov8" title="1">{
+                        for _, err := range errors </span><span class="cov8" title="1">{
+                                result.AddError("username", err)
+                        }</span>
+                }
+        }
+
+        // Валидация кода языка
+        <span class="cov8" title="1">if errors := uv.validator.ValidateLanguageCode(languageCode); len(errors) &gt; 0 </span><span class="cov8" title="1">{
+                for _, err := range errors </span><span class="cov8" title="1">{
+                        result.AddError("language_code", err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return result</span>
+}
+
+// ValidateUserUpdate валидирует данные при обновлении пользователя
+func (uv *UserValidator) ValidateUserUpdate(user *models.User) *ValidationResult <span class="cov0" title="0">{
+        result := NewValidationResult()
+
+        // Валидация имени пользователя
+        if errors := uv.validator.ValidateString(user.FirstName, []string{"required", "max:50"}); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("first_name", err)
+                }</span>
+        }
+
+        // Валидация username (если есть)
+        <span class="cov0" title="0">if user.Username != "" </span><span class="cov0" title="0">{
+                if errors := uv.validator.ValidateString(user.Username, []string{"username", "max:50"}); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                        for _, err := range errors </span><span class="cov0" title="0">{
+                                result.AddError("username", err)
+                        }</span>
+                }
+        }
+
+        // Валидация кода языка интерфейса
+        <span class="cov0" title="0">if errors := uv.validator.ValidateLanguageCode(user.InterfaceLanguageCode); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("interface_language_code", err)
+                }</span>
+        }
+
+        // Валидация состояния пользователя
+        <span class="cov0" title="0">if errors := uv.validator.ValidateUserState(user.State); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("state", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return result</span>
+}
+
+// ValidateUserInterests валидирует интересы пользователя
+func (uv *UserValidator) ValidateUserInterests(interestIDs []int) *ValidationResult <span class="cov8" title="1">{
+        result := NewValidationResult()
+
+        if len(interestIDs) == 0 </span><span class="cov8" title="1">{
+                result.AddError("interests", "Необходимо выбрать хотя бы один интерес")
+                return result
+        }</span>
+
+        <span class="cov8" title="1">if len(interestIDs) &gt; 10 </span><span class="cov0" title="0">{
+                result.AddError("interests", "Максимум 10 интересов")
+                return result
+        }</span>
+
+        // Валидация каждого ID интереса
+        <span class="cov8" title="1">for i, id := range interestIDs </span><span class="cov8" title="1">{
+                if errors := uv.validator.ValidateInterestID(id); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                        for _, err := range errors </span><span class="cov0" title="0">{
+                                result.AddError("interests", err)
+                        }</span>
+                }
+
+                // Проверка на дубликаты
+                <span class="cov8" title="1">for j, otherID := range interestIDs </span><span class="cov8" title="1">{
+                        if i != j &amp;&amp; id == otherID </span><span class="cov0" title="0">{
+                                result.AddError("interests", "Дублирующиеся интересы не допускаются")
+                                break</span>
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">return result</span>
+}
+
+// ValidateUserLanguages валидирует языки пользователя
+func (uv *UserValidator) ValidateUserLanguages(nativeLanguage, targetLanguage string) *ValidationResult <span class="cov8" title="1">{
+        result := NewValidationResult()
+
+        // Валидация родного языка
+        if errors := uv.validator.ValidateLanguageCode(nativeLanguage); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("native_language", err)
+                }</span>
+        }
+
+        // Валидация целевого языка
+        <span class="cov8" title="1">if errors := uv.validator.ValidateLanguageCode(targetLanguage); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("target_language", err)
+                }</span>
+        }
+
+        // Проверка, что языки разные
+        <span class="cov8" title="1">if nativeLanguage == targetLanguage </span><span class="cov8" title="1">{
+                result.AddError("languages", "Родной и целевой языки должны отличаться")
+        }</span>
+
+        <span class="cov8" title="1">return result</span>
+}
+
+// ValidateUserLanguageLevel валидирует уровень языка пользователя
+func (uv *UserValidator) ValidateUserLanguageLevel(level int) *ValidationResult <span class="cov0" title="0">{
+        result := NewValidationResult()
+
+        if errors := uv.validator.ValidateLanguageLevel(level); len(errors) &gt; 0 </span><span class="cov0" title="0">{
+                for _, err := range errors </span><span class="cov0" title="0">{
+                        result.AddError("language_level", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return result</span>
+}
+</pre>
+		
+		<pre class="file" id="file14" style="display: none">package validation
+
+import (
+        "language-exchange-bot/internal/errors"
+        "language-exchange-bot/internal/models"
+)
+
+// ValidationService предоставляет сервис валидации с интеграцией ошибок
+type ValidationService struct {
+        userValidator    *UserValidator
+        messageValidator *MessageValidator
+        errorHandler     *errors.ErrorHandler
+}
+
+// NewValidationService создает новый сервис валидации
+func NewValidationService(errorHandler *errors.ErrorHandler) *ValidationService <span class="cov8" title="1">{
+        return &amp;ValidationService{
+                userValidator:    NewUserValidator(),
+                messageValidator: NewMessageValidator(),
+                errorHandler:     errorHandler,
+        }
+}</span>
+
+// ValidateUserWithErrorHandling валидирует пользователя с обработкой ошибок
+func (vs *ValidationService) ValidateUserWithErrorHandling(user *models.User, userID, chatID int64, operation string) error <span class="cov8" title="1">{
+        result := vs.userValidator.ValidateUser(user)
+
+        if result.HasErrors() </span><span class="cov8" title="1">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации пользователя",
+                        "Проверьте введенные данные",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov8" title="1">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov8" title="1">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// ValidateUserRegistrationWithErrorHandling валидирует регистрацию пользователя
+func (vs *ValidationService) ValidateUserRegistrationWithErrorHandling(telegramID int, username, firstName, languageCode string, userID, chatID int64, operation string) error <span class="cov8" title="1">{
+        result := vs.userValidator.ValidateUserRegistration(telegramID, username, firstName, languageCode)
+
+        if result.HasErrors() </span><span class="cov8" title="1">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации при регистрации",
+                        "Проверьте введенные данные",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov8" title="1">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov8" title="1">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// ValidateUserUpdateWithErrorHandling валидирует обновление пользователя
+func (vs *ValidationService) ValidateUserUpdateWithErrorHandling(user *models.User, userID, chatID int64, operation string) error <span class="cov0" title="0">{
+        result := vs.userValidator.ValidateUserUpdate(user)
+
+        if result.HasErrors() </span><span class="cov0" title="0">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации при обновлении",
+                        "Проверьте введенные данные",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov0" title="0">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov0" title="0">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// ValidateUserInterestsWithErrorHandling валидирует интересы пользователя
+func (vs *ValidationService) ValidateUserInterestsWithErrorHandling(interestIDs []int, userID, chatID int64, operation string) error <span class="cov8" title="1">{
+        result := vs.userValidator.ValidateUserInterests(interestIDs)
+
+        if result.HasErrors() </span><span class="cov8" title="1">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации интересов",
+                        "Проверьте выбранные интересы",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov8" title="1">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov8" title="1">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// ValidateUserLanguagesWithErrorHandling валидирует языки пользователя
+func (vs *ValidationService) ValidateUserLanguagesWithErrorHandling(nativeLanguage, targetLanguage string, userID, chatID int64, operation string) error <span class="cov8" title="1">{
+        result := vs.userValidator.ValidateUserLanguages(nativeLanguage, targetLanguage)
+
+        if result.HasErrors() </span><span class="cov8" title="1">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации языков",
+                        "Проверьте выбранные языки",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov8" title="1">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov8" title="1">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// ValidateMessageWithErrorHandling валидирует сообщение с обработкой ошибок
+func (vs *ValidationService) ValidateMessageWithErrorHandling(chatID, userID int64, text, operation string) error <span class="cov0" title="0">{
+        result := vs.messageValidator.ValidateMessage(chatID, userID, text)
+
+        if result.HasErrors() </span><span class="cov0" title="0">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации сообщения",
+                        "Проверьте введенные данные",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov0" title="0">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov0" title="0">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// ValidateCallbackQueryWithErrorHandling валидирует callback query с обработкой ошибок
+func (vs *ValidationService) ValidateCallbackQueryWithErrorHandling(chatID, userID int64, data, operation string) error <span class="cov0" title="0">{
+        result := vs.messageValidator.ValidateCallbackQuery(chatID, userID, data)
+
+        if result.HasErrors() </span><span class="cov0" title="0">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации callback query",
+                        "Проверьте данные запроса",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov0" title="0">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov0" title="0">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// ValidateFeedbackMessageWithErrorHandling валидирует сообщение отзыва с обработкой ошибок
+func (vs *ValidationService) ValidateFeedbackMessageWithErrorHandling(chatID, userID int64, text, operation string) error <span class="cov0" title="0">{
+        result := vs.messageValidator.ValidateFeedbackMessage(chatID, userID, text)
+
+        if result.HasErrors() </span><span class="cov0" title="0">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации отзыва",
+                        "Проверьте текст отзыва",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov0" title="0">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov0" title="0">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// ValidateCommandWithErrorHandling валидирует команду с обработкой ошибок
+func (vs *ValidationService) ValidateCommandWithErrorHandling(chatID, userID int64, command, operation string) error <span class="cov0" title="0">{
+        result := vs.messageValidator.ValidateCommand(chatID, userID, command)
+
+        if result.HasErrors() </span><span class="cov0" title="0">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации команды",
+                        "Проверьте команду",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov0" title="0">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov0" title="0">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// ValidateLanguageSelectionWithErrorHandling валидирует выбор языка с обработкой ошибок
+func (vs *ValidationService) ValidateLanguageSelectionWithErrorHandling(chatID, userID int64, languageCode, operation string) error <span class="cov0" title="0">{
+        result := vs.messageValidator.ValidateLanguageSelection(chatID, userID, languageCode)
+
+        if result.HasErrors() </span><span class="cov0" title="0">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации выбора языка",
+                        "Проверьте выбранный язык",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov0" title="0">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov0" title="0">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// ValidateInterestSelectionWithErrorHandling валидирует выбор интереса с обработкой ошибок
+func (vs *ValidationService) ValidateInterestSelectionWithErrorHandling(chatID, userID int64, interestID int, operation string) error <span class="cov0" title="0">{
+        result := vs.messageValidator.ValidateInterestSelection(chatID, userID, interestID)
+
+        if result.HasErrors() </span><span class="cov0" title="0">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации выбора интереса",
+                        "Проверьте выбранный интерес",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov0" title="0">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov0" title="0">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// ValidateLanguageLevelSelectionWithErrorHandling валидирует выбор уровня языка с обработкой ошибок
+func (vs *ValidationService) ValidateLanguageLevelSelectionWithErrorHandling(chatID, userID int64, level int, operation string) error <span class="cov0" title="0">{
+        result := vs.messageValidator.ValidateLanguageLevelSelection(chatID, userID, level)
+
+        if result.HasErrors() </span><span class="cov0" title="0">{
+                // Создаем ошибку валидации с контекстом
+                ctx := errors.NewRequestContext(userID, chatID, operation)
+                validationErr := errors.NewValidationError(
+                        "Ошибка валидации выбора уровня языка",
+                        "Проверьте выбранный уровень",
+                        ctx,
+                )
+
+                // Добавляем детали ошибок валидации в контекст
+                for field, fieldErrors := range result.GetErrors() </span><span class="cov0" title="0">{
+                        validationErr.Context[field] = fieldErrors
+                }</span>
+
+                <span class="cov0" title="0">return vs.errorHandler.Handle(validationErr, ctx)</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file15" style="display: none">package validation
+
+import (
+        "fmt"
+        "regexp"
+        "strings"
+        "unicode/utf8"
+)
+
+// ValidationRule представляет правило валидации
+type ValidationRule struct {
+        Field    string
+        Value    interface{}
+        Rules    []string
+        Messages map[string]string
+}
+
+// ValidationResult содержит результат валидации
+type ValidationResult struct {
+        IsValid bool
+        Errors  map[string][]string
+}
+
+// NewValidationResult создает новый результат валидации
+func NewValidationResult() *ValidationResult <span class="cov8" title="1">{
+        return &amp;ValidationResult{
+                IsValid: true,
+                Errors:  make(map[string][]string),
+        }
+}</span>
+
+// AddError добавляет ошибку валидации
+func (vr *ValidationResult) AddError(field, message string) <span class="cov8" title="1">{
+        vr.IsValid = false
+        vr.Errors[field] = append(vr.Errors[field], message)
+}</span>
+
+// GetErrors возвращает все ошибки валидации
+func (vr *ValidationResult) GetErrors() map[string][]string <span class="cov8" title="1">{
+        return vr.Errors
+}</span>
+
+// HasErrors проверяет, есть ли ошибки
+func (vr *ValidationResult) HasErrors() bool <span class="cov8" title="1">{
+        return !vr.IsValid
+}</span>
+
+// Validator содержит методы валидации
+type Validator struct{}
+
+// NewValidator создает новый валидатор
+func NewValidator() *Validator <span class="cov8" title="1">{
+        return &amp;Validator{}
+}</span>
+
+// ValidateString валидирует строковое значение
+func (v *Validator) ValidateString(value string, rules []string) []string <span class="cov8" title="1">{
+        var errors []string
+
+        for _, rule := range rules </span><span class="cov8" title="1">{
+                switch rule </span>{
+                case "required":<span class="cov8" title="1">
+                        if strings.TrimSpace(value) == "" </span><span class="cov8" title="1">{
+                                errors = append(errors, "Поле обязательно для заполнения")
+                        }</span>
+                case "min:3":<span class="cov0" title="0">
+                        if utf8.RuneCountInString(value) &lt; 3 </span><span class="cov0" title="0">{
+                                errors = append(errors, "Минимум 3 символа")
+                        }</span>
+                case "max:50":<span class="cov8" title="1">
+                        if utf8.RuneCountInString(value) &gt; 50 </span><span class="cov0" title="0">{
+                                errors = append(errors, "Максимум 50 символов")
+                        }</span>
+                case "max:100":<span class="cov0" title="0">
+                        if utf8.RuneCountInString(value) &gt; 100 </span><span class="cov0" title="0">{
+                                errors = append(errors, "Максимум 100 символов")
+                        }</span>
+                case "max:500":<span class="cov0" title="0">
+                        if utf8.RuneCountInString(value) &gt; 500 </span><span class="cov0" title="0">{
+                                errors = append(errors, "Максимум 500 символов")
+                        }</span>
+                case "alphanumeric":<span class="cov0" title="0">
+                        if !regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString(value) </span><span class="cov0" title="0">{
+                                errors = append(errors, "Только буквы и цифры")
+                        }</span>
+                case "username":<span class="cov8" title="1">
+                        if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(value) </span><span class="cov8" title="1">{
+                                errors = append(errors, "Некорректный username")
+                        }</span>
+                case "email":<span class="cov0" title="0">
+                        if !regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`).MatchString(value) </span><span class="cov0" title="0">{
+                                errors = append(errors, "Некорректный email")
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">return errors</span>
+}
+
+// ValidateInt валидирует целочисленное значение
+func (v *Validator) ValidateInt(value int, rules []string) []string <span class="cov8" title="1">{
+        var errors []string
+
+        for _, rule := range rules </span><span class="cov8" title="1">{
+                switch rule </span>{
+                case "required":<span class="cov8" title="1">
+                        if value == 0 </span><span class="cov8" title="1">{
+                                errors = append(errors, "Значение обязательно")
+                        }</span>
+                case "min:1":<span class="cov8" title="1">
+                        if value &lt; 1 </span><span class="cov0" title="0">{
+                                errors = append(errors, "Минимум 1")
+                        }</span>
+                case "max:100":<span class="cov8" title="1">
+                        if value &gt; 100 </span><span class="cov0" title="0">{
+                                errors = append(errors, "Максимум 100")
+                        }</span>
+                case "positive":<span class="cov0" title="0">
+                        if value &lt;= 0 </span><span class="cov0" title="0">{
+                                errors = append(errors, "Должно быть положительным")
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">return errors</span>
+}
+
+// ValidateLanguageCode валидирует код языка
+func (v *Validator) ValidateLanguageCode(code string) []string <span class="cov8" title="1">{
+        var errors []string
+
+        if strings.TrimSpace(code) == "" </span><span class="cov0" title="0">{
+                errors = append(errors, "Код языка обязателен")
+                return errors
+        }</span>
+
+        // Проверяем формат кода языка (2 символа)
+        <span class="cov8" title="1">if len(code) != 2 </span><span class="cov8" title="1">{
+                errors = append(errors, "Код языка должен содержать 2 символа")
+        }</span>
+
+        // Проверяем, что код содержит только буквы
+        <span class="cov8" title="1">if !regexp.MustCompile(`^[a-zA-Z]{2}$`).MatchString(code) </span><span class="cov8" title="1">{
+                errors = append(errors, "Код языка должен содержать только буквы")
+        }</span>
+
+        <span class="cov8" title="1">return errors</span>
+}
+
+// ValidateTelegramID валидирует Telegram ID
+func (v *Validator) ValidateTelegramID(id int64) []string <span class="cov8" title="1">{
+        var errors []string
+
+        if id &lt;= 0 </span><span class="cov8" title="1">{
+                errors = append(errors, "Telegram ID должен быть положительным")
+        }</span>
+
+        // Telegram ID обычно больше 100000000
+        <span class="cov8" title="1">if id &lt; 100000000 </span><span class="cov8" title="1">{
+                errors = append(errors, "Некорректный Telegram ID")
+        }</span>
+
+        <span class="cov8" title="1">return errors</span>
+}
+
+// ValidateChatID валидирует Chat ID
+func (v *Validator) ValidateChatID(id int64) []string <span class="cov8" title="1">{
+        var errors []string
+
+        if id == 0 </span><span class="cov8" title="1">{
+                errors = append(errors, "Chat ID обязателен")
+                return errors
+        }</span>
+
+        // Chat ID может быть отрицательным для групп
+        <span class="cov8" title="1">if id &gt; 0 &amp;&amp; id &lt; 100000000 </span><span class="cov0" title="0">{
+                errors = append(errors, "Некорректный Chat ID")
+        }</span>
+
+        <span class="cov8" title="1">return errors</span>
+}
+
+// ValidateUserState валидирует состояние пользователя
+func (v *Validator) ValidateUserState(state string) []string <span class="cov8" title="1">{
+        var errors []string
+
+        validStates := []string{
+                "idle", "setting_language", "setting_native_language",
+                "setting_target_language", "setting_interests", "setting_profile",
+                "waiting_for_feedback", "viewing_profile", "editing_profile",
+        }
+
+        isValid := false
+        for _, validState := range validStates </span><span class="cov8" title="1">{
+                if state == validState </span><span class="cov8" title="1">{
+                        isValid = true
+                        break</span>
+                }
+        }
+
+        <span class="cov8" title="1">if !isValid </span><span class="cov8" title="1">{
+                errors = append(errors, fmt.Sprintf("Некорректное состояние пользователя: %s", state))
+        }</span>
+
+        <span class="cov8" title="1">return errors</span>
+}
+
+// ValidateInterestID валидирует ID интереса
+func (v *Validator) ValidateInterestID(id int) []string <span class="cov8" title="1">{
+        var errors []string
+
+        if id &lt;= 0 </span><span class="cov8" title="1">{
+                errors = append(errors, "ID интереса должен быть положительным")
+        }</span>
+
+        <span class="cov8" title="1">return errors</span>
+}
+
+// ValidateLanguageLevel валидирует уровень языка
+func (v *Validator) ValidateLanguageLevel(level int) []string <span class="cov8" title="1">{
+        var errors []string
+
+        if level &lt; 1 || level &gt; 5 </span><span class="cov8" title="1">{
+                errors = append(errors, "Уровень языка должен быть от 1 до 5")
+        }</span>
+
+        <span class="cov8" title="1">return errors</span>
+}
+
+// ValidateFeedbackText валидирует текст отзыва
+func (v *Validator) ValidateFeedbackText(text string) []string <span class="cov8" title="1">{
+        var errors []string
+
+        if strings.TrimSpace(text) == "" </span><span class="cov0" title="0">{
+                errors = append(errors, "Текст отзыва обязателен")
+                return errors
+        }</span>
+
+        <span class="cov8" title="1">textLength := utf8.RuneCountInString(strings.TrimSpace(text))
+        if textLength &lt; 10 </span><span class="cov8" title="1">{
+                errors = append(errors, "Минимум 10 символов")
+        }</span>
+
+        <span class="cov8" title="1">if textLength &gt; 1000 </span><span class="cov0" title="0">{
+                errors = append(errors, "Максимум 1000 символов")
+        }</span>
+
+        <span class="cov8" title="1">return errors</span>
+}
+
+// ValidateCallbackData валидирует данные callback query
+func (v *Validator) ValidateCallbackData(data string) []string <span class="cov8" title="1">{
+        var errors []string
+
+        if strings.TrimSpace(data) == "" </span><span class="cov8" title="1">{
+                errors = append(errors, "Данные callback обязательны")
+                return errors
+        }</span>
+
+        <span class="cov8" title="1">if len(data) &gt; 64 </span><span class="cov0" title="0">{
+                errors = append(errors, "Максимум 64 символа")
+        }</span>
+
+        // Проверяем, что данные содержат только разрешенные символы
+        <span class="cov8" title="1">if !regexp.MustCompile(`^[a-zA-Z0-9_:.-]+$`).MatchString(data) </span><span class="cov0" title="0">{
+                errors = append(errors, "Некорректные символы в данных")
+        }</span>
+
+        <span class="cov8" title="1">return errors</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
