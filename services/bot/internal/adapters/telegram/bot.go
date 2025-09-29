@@ -8,6 +8,7 @@ import (
 
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/database"
+	"language-exchange-bot/internal/errors"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -27,6 +28,7 @@ type TelegramBot struct {
 	debug          bool
 	adminChatIDs   []int64  // ID администраторов для уведомлений (resolved)
 	adminUsernames []string // Usernames администраторов (дополнительно храним для логов)
+	errorHandler   *errors.ErrorHandler
 }
 
 func NewTelegramBot(token string, db *database.DB, debug bool, adminChatIDs []int64) (*TelegramBot, error) {
@@ -35,7 +37,7 @@ func NewTelegramBot(token string, db *database.DB, debug bool, adminChatIDs []in
 		return nil, fmt.Errorf("failed to create telegram bot: %w", err)
 	}
 	bot.Debug = debug
-	service := core.NewBotService(db)
+	service := core.NewBotService(db, nil)
 	return &TelegramBot{
 		api:            bot,
 		service:        service,
@@ -55,7 +57,7 @@ func NewTelegramBotWithUsernames(token string, db *database.DB, debug bool, admi
 
 	tgBot := &TelegramBot{
 		api:            bot,
-		service:        core.NewBotService(db),
+		service:        core.NewBotService(db, nil),
 		debug:          debug,
 		adminChatIDs:   make([]int64, 0), // Будет установлен позже через SetAdminChatIDs
 		adminUsernames: make([]string, 0),
@@ -69,9 +71,7 @@ func NewTelegramBotWithUsernames(token string, db *database.DB, debug bool, admi
 		}
 
 		// Убираем @ если есть
-		if strings.HasPrefix(username, "@") {
-			username = strings.TrimPrefix(username, "@")
-		}
+		username = strings.TrimPrefix(username, "@")
 
 		tgBot.adminUsernames = append(tgBot.adminUsernames, username)
 		log.Printf("Добавлен администратор для проверки прав: @%s", username)
@@ -149,14 +149,19 @@ func (tb *TelegramBot) Start(ctx context.Context) error {
 
 	updates := tb.api.GetUpdatesChan(u)
 	// Передаем usernames администраторов в обработчик
-	handler := NewTelegramHandlerWithAdmins(tb.api, tb.service, tb.adminChatIDs, tb.adminUsernames)
+	handler := NewTelegramHandlerWithAdmins(tb.api, tb.service, tb.adminChatIDs, tb.adminUsernames, tb.errorHandler)
 
 	for {
 		select {
 		case update := <-updates:
 			go func(upd tgbotapi.Update) {
 				if err := handler.HandleUpdate(upd); err != nil {
-					log.Printf("Error handling update: %v", err)
+					// Используем новую систему обработки ошибок
+					if tb.errorHandler != nil {
+						tb.errorHandler.HandleTelegramError(err, 0, 0, "HandleUpdate")
+					} else {
+						log.Printf("Error handling update: %v", err)
+					}
 				}
 			}(update)
 		case <-ctx.Done():
@@ -232,13 +237,17 @@ func NewTelegramBotWithService(token string, service *core.BotService, debug boo
 		}
 
 		// Убираем @ если есть
-		if strings.HasPrefix(username, "@") {
-			username = strings.TrimPrefix(username, "@")
-		}
+		username = strings.TrimPrefix(username, "@")
 
 		tgBot.adminUsernames = append(tgBot.adminUsernames, username)
 		log.Printf("Добавлен username администратора: @%s", username)
 	}
 
 	return tgBot, nil
+}
+
+// SetErrorHandler устанавливает обработчик ошибок
+func (tb *TelegramBot) SetErrorHandler(errorHandler *errors.ErrorHandler) {
+	tb.errorHandler = errorHandler
+	log.Printf("Error handler установлен для TelegramBot")
 }

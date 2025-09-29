@@ -13,6 +13,7 @@ import (
 	"language-exchange-bot/internal/config"
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/database"
+	"language-exchange-bot/internal/errors"
 )
 
 func main() {
@@ -27,6 +28,10 @@ func main() {
 	defer db.Close()
 
 	log.Println("Connected to database successfully")
+
+	// Создаем систему обработки ошибок
+	adminNotifier := errors.NewAdminNotifier([]int64{}, nil) // TODO: Добавить реальные Chat ID администраторов
+	errorHandler := errors.NewErrorHandler(adminNotifier)
 
 	// Создаем контекст для graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -43,11 +48,11 @@ func main() {
 	// Telegram Bot
 	if cfg.EnableTelegram && cfg.TelegramToken != "" {
 		// Создаем сервис с Redis кэшем
-		service, err := core.NewBotServiceWithRedis(db, cfg.RedisURL, cfg.RedisPassword, cfg.RedisDB)
+		service, err := core.NewBotServiceWithRedis(db, cfg.RedisURL, cfg.RedisPassword, cfg.RedisDB, errorHandler)
 		if err != nil {
 			log.Printf("Failed to create Redis cache, falling back to in-memory cache: %v", err)
 			// Fallback на in-memory кэш если Redis недоступен
-			service = core.NewBotService(db)
+			service = core.NewBotService(db, errorHandler)
 		} else {
 			log.Printf("Redis cache initialized: %s", service.Cache.String())
 		}
@@ -57,6 +62,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to create Telegram bot: %v", err)
 		}
+
+		// Передаем errorHandler в TelegramBot
+		telegramBot.SetErrorHandler(errorHandler)
 
 		// Устанавливаем Chat ID для уведомлений
 		telegramBot.SetAdminChatIDs(cfg.AdminChatIDs)

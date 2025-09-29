@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/errors"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -13,15 +14,17 @@ type UtilityHandler interface {
 
 // UtilityHandlerImpl реализация вспомогательного обработчика
 type UtilityHandlerImpl struct {
-	service *core.BotService
-	bot     *tgbotapi.BotAPI
+	service      *core.BotService
+	bot          *tgbotapi.BotAPI
+	errorHandler *errors.ErrorHandler
 }
 
 // NewUtilityHandler создает новый вспомогательный обработчик
-func NewUtilityHandler(service *core.BotService, bot *tgbotapi.BotAPI) UtilityHandler {
+func NewUtilityHandler(service *core.BotService, bot *tgbotapi.BotAPI, errorHandler *errors.ErrorHandler) UtilityHandler {
 	return &UtilityHandlerImpl{
-		service: service,
-		bot:     bot,
+		service:      service,
+		bot:          bot,
+		errorHandler: errorHandler,
 	}
 }
 
@@ -29,5 +32,14 @@ func NewUtilityHandler(service *core.BotService, bot *tgbotapi.BotAPI) UtilityHa
 func (h *UtilityHandlerImpl) SendMessage(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)
 	_, err := h.bot.Send(msg)
-	return err
+	if err != nil {
+		// Используем новую систему обработки ошибок
+		return h.errorHandler.HandleTelegramError(
+			err,
+			chatID,
+			0, // UserID неизвестен в этом контексте
+			"SendMessage",
+		)
+	}
+	return nil
 }

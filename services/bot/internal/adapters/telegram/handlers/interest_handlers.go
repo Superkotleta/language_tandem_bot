@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -21,14 +22,16 @@ type InterestHandlerImpl struct {
 	service         *core.BotService
 	bot             *tgbotapi.BotAPI
 	keyboardBuilder *KeyboardBuilder
+	errorHandler    *errors.ErrorHandler
 }
 
 // NewInterestHandler создает новый обработчик интересов
-func NewInterestHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder) InterestHandler {
+func NewInterestHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, errorHandler *errors.ErrorHandler) InterestHandler {
 	return &InterestHandlerImpl{
 		service:         service,
 		bot:             bot,
 		keyboardBuilder: keyboardBuilder,
+		errorHandler:    errorHandler,
 	}
 }
 

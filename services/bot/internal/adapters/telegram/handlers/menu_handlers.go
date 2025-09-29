@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -14,14 +15,16 @@ type MenuHandler struct {
 	bot             *tgbotapi.BotAPI
 	service         *core.BotService
 	keyboardBuilder *KeyboardBuilder
+	errorHandler    *errors.ErrorHandler
 }
 
 // NewMenuHandler создает новый экземпляр MenuHandler
-func NewMenuHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuilder *KeyboardBuilder) *MenuHandler {
+func NewMenuHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuilder *KeyboardBuilder, errorHandler *errors.ErrorHandler) *MenuHandler {
 	return &MenuHandler{
 		bot:             bot,
 		service:         service,
 		keyboardBuilder: keyboardBuilder,
+		errorHandler:    errorHandler,
 	}
 }
 
@@ -33,8 +36,15 @@ func (mh *MenuHandler) HandleStartCommand(message *tgbotapi.Message, user *model
 
 	msg := tgbotapi.NewMessage(message.Chat.ID, menuText)
 	msg.ReplyMarkup = mh.keyboardBuilder.CreateMainMenuKeyboard(user.InterfaceLanguageCode)
+
 	if _, err := mh.bot.Send(msg); err != nil {
-		return err
+		// Используем новую систему обработки ошибок
+		return mh.errorHandler.HandleTelegramError(
+			err,
+			message.Chat.ID,
+			int64(user.ID),
+			"HandleStartCommand",
+		)
 	}
 
 	return nil

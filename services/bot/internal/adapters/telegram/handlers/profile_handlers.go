@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -17,15 +18,17 @@ type ProfileHandlerImpl struct {
 	service           *core.BotService
 	keyboardBuilder   *KeyboardBuilder
 	editInterestsTemp map[int64][]int // Временное хранение выбранных интересов для каждого пользователя
+	errorHandler      *errors.ErrorHandler
 }
 
 // NewProfileHandler создает новый экземпляр ProfileHandler
-func NewProfileHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuilder *KeyboardBuilder) *ProfileHandlerImpl {
+func NewProfileHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuilder *KeyboardBuilder, errorHandler *errors.ErrorHandler) *ProfileHandlerImpl {
 	return &ProfileHandlerImpl{
 		bot:               bot,
 		service:           service,
 		keyboardBuilder:   keyboardBuilder,
 		editInterestsTemp: make(map[int64][]int),
+		errorHandler:      errorHandler,
 	}
 }
 

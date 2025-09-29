@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -28,16 +29,18 @@ type AdminHandlerImpl struct {
 	keyboardBuilder *KeyboardBuilder
 	adminChatIDs    []int64
 	adminUsernames  []string
+	errorHandler    *errors.ErrorHandler
 }
 
 // NewAdminHandler создает новый административный обработчик
-func NewAdminHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, adminChatIDs []int64, adminUsernames []string) AdminHandler {
+func NewAdminHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, adminChatIDs []int64, adminUsernames []string, errorHandler *errors.ErrorHandler) AdminHandler {
 	return &AdminHandlerImpl{
 		service:         service,
 		bot:             bot,
 		keyboardBuilder: keyboardBuilder,
 		adminChatIDs:    adminChatIDs,
 		adminUsernames:  adminUsernames,
+		errorHandler:    errorHandler,
 	}
 }
 

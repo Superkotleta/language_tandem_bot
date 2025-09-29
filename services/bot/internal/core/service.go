@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"language-exchange-bot/internal/cache"
 	"language-exchange-bot/internal/database"
+	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/localization"
+	"language-exchange-bot/internal/logging"
 	"language-exchange-bot/internal/models"
+	"language-exchange-bot/internal/validation"
 	"log"
 	"strings"
 	"time"
@@ -19,10 +22,12 @@ type BotService struct {
 	InvalidationService      *cache.InvalidationService
 	MetricsService           *cache.MetricsService
 	BatchLoader              *database.BatchLoader
+	ValidationService        *validation.ValidationService
+	LoggingService           *logging.LoggingService
 	FeedbackNotificationFunc func(data map[string]interface{}) error // функция для отправки уведомлений
 }
 
-func NewBotService(db *database.DB) *BotService {
+func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 	// Создаем кэш с конфигурацией по умолчанию
 	cacheService := cache.NewCacheService(cache.DefaultCacheConfig())
 
@@ -33,6 +38,14 @@ func NewBotService(db *database.DB) *BotService {
 	// Создаем BatchLoader для оптимизации N+1 запросов
 	batchLoader := database.NewBatchLoader(db)
 
+	// Создаем ValidationService (пока без errorHandler для совместимости)
+	var validationService *validation.ValidationService
+	var loggingService *logging.LoggingService
+	if errorHandler != nil {
+		validationService = validation.NewValidationService(errorHandler.(*errors.ErrorHandler))
+		loggingService = logging.NewLoggingService(errorHandler.(*errors.ErrorHandler))
+	}
+
 	return &BotService{
 		DB:                  &databaseAdapter{db: db}, // Оборачиваем в адаптер
 		Localizer:           localization.NewLocalizer(db.GetConnection()),
@@ -40,11 +53,13 @@ func NewBotService(db *database.DB) *BotService {
 		InvalidationService: invalidationService,
 		MetricsService:      metricsService,
 		BatchLoader:         batchLoader,
+		ValidationService:   validationService,
+		LoggingService:      loggingService,
 	}
 }
 
 // NewBotServiceWithRedis создает BotService с Redis кэшем
-func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, redisDB int) (*BotService, error) {
+func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, redisDB int, errorHandler interface{}) (*BotService, error) {
 	// Создаем Redis кэш
 	redisCache, err := cache.NewRedisCacheService(redisURL, redisPassword, redisDB, cache.DefaultCacheConfig())
 	if err != nil {
@@ -58,6 +73,14 @@ func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, red
 	// Создаем BatchLoader для оптимизации N+1 запросов
 	batchLoader := database.NewBatchLoader(db)
 
+	// Создаем ValidationService и LoggingService
+	var validationService *validation.ValidationService
+	var loggingService *logging.LoggingService
+	if errorHandler != nil {
+		validationService = validation.NewValidationService(errorHandler.(*errors.ErrorHandler))
+		loggingService = logging.NewLoggingService(errorHandler.(*errors.ErrorHandler))
+	}
+
 	return &BotService{
 		DB:                  &databaseAdapter{db: db}, // Оборачиваем в адаптер
 		Localizer:           localization.NewLocalizer(db.GetConnection()),
@@ -65,6 +88,8 @@ func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, red
 		InvalidationService: invalidationService,
 		MetricsService:      metricsService,
 		BatchLoader:         batchLoader,
+		ValidationService:   validationService,
+		LoggingService:      loggingService,
 	}, nil
 }
 

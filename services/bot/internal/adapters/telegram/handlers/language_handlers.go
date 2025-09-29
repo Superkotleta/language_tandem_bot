@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 	"log"
 
@@ -24,14 +25,16 @@ type LanguageHandlerImpl struct {
 	service         *core.BotService
 	bot             *tgbotapi.BotAPI
 	keyboardBuilder *KeyboardBuilder
+	errorHandler    *errors.ErrorHandler
 }
 
 // NewLanguageHandler создает новый обработчик language операций
-func NewLanguageHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder) LanguageHandler {
+func NewLanguageHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, errorHandler *errors.ErrorHandler) LanguageHandler {
 	return &LanguageHandlerImpl{
 		service:         service,
 		bot:             bot,
 		keyboardBuilder: keyboardBuilder,
+		errorHandler:    errorHandler,
 	}
 }
 

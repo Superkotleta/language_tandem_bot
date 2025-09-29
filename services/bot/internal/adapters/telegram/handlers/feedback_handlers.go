@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -55,16 +55,18 @@ type FeedbackHandlerImpl struct {
 	keyboardBuilder *KeyboardBuilder
 	adminChatIDs    []int64
 	adminUsernames  []string
+	errorHandler    *errors.ErrorHandler
 }
 
 // NewFeedbackHandler создает новый экземпляр FeedbackHandler
-func NewFeedbackHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuilder *KeyboardBuilder, adminChatIDs []int64, adminUsernames []string) FeedbackHandler {
+func NewFeedbackHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuilder *KeyboardBuilder, adminChatIDs []int64, adminUsernames []string, errorHandler *errors.ErrorHandler) FeedbackHandler {
 	return &FeedbackHandlerImpl{
 		bot:             bot,
 		service:         service,
 		keyboardBuilder: keyboardBuilder,
 		adminChatIDs:    adminChatIDs,
 		adminUsernames:  adminUsernames,
+		errorHandler:    errorHandler,
 	}
 }
 
@@ -121,7 +123,16 @@ func (fh *FeedbackHandlerImpl) HandleMainFeedback(callback *tgbotapi.CallbackQue
 func (fh *FeedbackHandlerImpl) sendMessage(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)
 	_, err := fh.bot.Send(msg)
-	return err
+	if err != nil {
+		// Используем новую систему обработки ошибок
+		return fh.errorHandler.HandleTelegramError(
+			err,
+			chatID,
+			0, // UserID неизвестен в этом контексте
+			"SendMessage",
+		)
+	}
+	return nil
 }
 
 // editFeedbackStatistics редактирует сообщение со статистикой отзывов
@@ -174,7 +185,17 @@ func (fh *FeedbackHandlerImpl) showFeedbackStatistics(chatID int64, user *models
 	// Получаем все отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
 	if err != nil {
-		log.Printf("Ошибка получения отзывов: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to get feedbacks",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			chatID,
+			"GetAllFeedback",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 		return fh.sendMessage(chatID, "❌ Ошибка загрузки отзывов")
 	}
 
@@ -478,7 +499,18 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackMessage(message *tgbotapi.Message, 
 	}
 
 	// Логируем принятие отзыва
-	log.Printf("Отзыв принят: len=%d, has_username=%v", len([]rune(feedbackText)), user.Username != "")
+	fh.service.LoggingService.Telegram().InfoWithContext(
+		"Feedback received",
+		"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+		int64(user.ID),
+		message.Chat.ID,
+		"HandleFeedbackMessage",
+		map[string]interface{}{
+			"text_length":    len([]rune(feedbackText)),
+			"has_username":   user.Username != "",
+			"username":       user.Username,
+		},
+	)
 
 	// Сохраняем полный отзыв и отправляем уведомление
 	return fh.handleFeedbackComplete(message, user, feedbackText, nil)
@@ -538,7 +570,17 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 	// Сохраняем отзыв через сервис
 	err := fh.service.SaveUserFeedback(user.ID, feedbackText, contactInfo, adminIDs)
 	if err != nil {
-		log.Printf("Ошибка сохранения отзыва: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to save feedback",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			message.Chat.ID,
+			"SaveUserFeedback",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 		// Используем локализацию для ошибки
 		errorText := fh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_error_generic")
 		if errorText == "feedback_error_generic" { // fallback в случае отсутствия перевода
@@ -556,12 +598,32 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 	// Возвращаем пользователя в активное состояние
 	err = fh.service.DB.UpdateUserState(user.ID, models.StateActive)
 	if err != nil {
-		log.Printf("Ошибка обновления состояния пользователя: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to update user state",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			message.Chat.ID,
+			"UpdateUserState",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 	}
 
 	err = fh.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
 	if err != nil {
-		log.Printf("Ошибка обновления статуса пользователя: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to update user status",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			message.Chat.ID,
+			"UpdateUserStatus",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 	}
 
 	return fh.sendMessage(message.Chat.ID, successText)
@@ -600,7 +662,18 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackProcess(callback *tgbotapi.Callback
 	// Обновляем статус отзыва как обработанный
 	err = fh.service.UpdateFeedbackStatus(feedbackID, true)
 	if err != nil {
-		log.Printf("Ошибка обновления статуса отзыва %d: %v", feedbackID, err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to update feedback status",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"UpdateFeedbackStatus",
+			map[string]interface{}{
+				"feedback_id": feedbackID,
+				"error":       err.Error(),
+			},
+		)
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка обновления статуса")
 	}
 
@@ -609,7 +682,18 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackProcess(callback *tgbotapi.Callback
 	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, confirmMsg)
 	msg.ParseMode = tgbotapi.ModeHTML
 	if _, err := fh.bot.Send(msg); err != nil {
-		log.Printf("Ошибка отправки подтверждения обработки: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Telegram().ErrorWithContext(
+			"Failed to send processing confirmation",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"SendProcessingConfirmation",
+			map[string]interface{}{
+				"feedback_id": feedbackID,
+				"error":       err.Error(),
+			},
+		)
 	}
 
 	return nil
@@ -625,7 +709,18 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackUnprocess(callback *tgbotapi.Callba
 	// Возвращаем отзыв в необработанный статус
 	err = fh.service.UpdateFeedbackStatus(feedbackID, false)
 	if err != nil {
-		log.Printf("Ошибка возврата отзыва в обработку %d: %v", feedbackID, err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to return feedback to processing",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"UpdateFeedbackStatus",
+			map[string]interface{}{
+				"feedback_id": feedbackID,
+				"error":       err.Error(),
+			},
+		)
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка возврата статуса")
 	}
 
@@ -634,7 +729,18 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackUnprocess(callback *tgbotapi.Callba
 	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, confirmMsg)
 	msg.ParseMode = tgbotapi.ModeHTML
 	if _, err := fh.bot.Send(msg); err != nil {
-		log.Printf("Ошибка отправки подтверждения возврата: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Telegram().ErrorWithContext(
+			"Failed to send return confirmation",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"SendReturnConfirmation",
+			map[string]interface{}{
+				"feedback_id": feedbackID,
+				"error":       err.Error(),
+			},
+		)
 	}
 
 	return nil
@@ -650,7 +756,18 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackDelete(callback *tgbotapi.CallbackQ
 	// Удаляем отзыв
 	err = fh.service.DeleteFeedback(feedbackID)
 	if err != nil {
-		log.Printf("Ошибка удаления отзыва %d: %v", feedbackID, err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to delete feedback",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"DeleteFeedback",
+			map[string]interface{}{
+				"feedback_id": feedbackID,
+				"error":       err.Error(),
+			},
+		)
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка удаления отзыва")
 	}
 
@@ -659,7 +776,18 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackDelete(callback *tgbotapi.CallbackQ
 	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, deleteMsg)
 	msg.ParseMode = tgbotapi.ModeHTML
 	if _, err := fh.bot.Send(msg); err != nil {
-		log.Printf("Ошибка отправки подтверждения удаления: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Telegram().ErrorWithContext(
+			"Failed to send deletion confirmation",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"SendDeletionConfirmation",
+			map[string]interface{}{
+				"feedback_id": feedbackID,
+				"error":       err.Error(),
+			},
+		)
 	}
 
 	return nil
@@ -670,7 +798,17 @@ func (fh *FeedbackHandlerImpl) HandleShowActiveFeedbacks(callback *tgbotapi.Call
 	// Получаем все отзывы
 	feedbacks, err := fh.service.GetAllFeedback()
 	if err != nil {
-		log.Printf("Ошибка получения отзывов: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to get feedbacks",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"GetAllFeedback",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
@@ -699,7 +837,17 @@ func (fh *FeedbackHandlerImpl) HandleShowArchiveFeedbacks(callback *tgbotapi.Cal
 	// Получаем все отзывы
 	feedbacks, err := fh.service.GetAllFeedback()
 	if err != nil {
-		log.Printf("Ошибка получения отзывов: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to get feedbacks",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"GetAllFeedback",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
@@ -728,7 +876,17 @@ func (fh *FeedbackHandlerImpl) HandleShowAllFeedbacks(callback *tgbotapi.Callbac
 	// Получаем все отзывы
 	feedbacks, err := fh.service.GetAllFeedback()
 	if err != nil {
-		log.Printf("Ошибка получения отзывов: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to get feedbacks",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"GetAllFeedback",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
@@ -766,7 +924,17 @@ func (fh *FeedbackHandlerImpl) handleBrowseFeedbacks(callback *tgbotapi.Callback
 	// Получаем все отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
 	if err != nil {
-		log.Printf("Ошибка получения отзывов: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to get feedbacks",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"GetAllFeedback",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
@@ -811,7 +979,17 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 	// Получаем все активные отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
 	if err != nil {
-		log.Printf("Ошибка получения отзывов: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to get feedbacks",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"GetAllFeedback",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
@@ -836,7 +1014,18 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 	// Архивируем отзыв
 	err = fh.service.ArchiveFeedback(feedbackID)
 	if err != nil {
-		log.Printf("Ошибка архивирования отзыва: %v", err)
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to archive feedback",
+			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"ArchiveFeedback",
+			map[string]interface{}{
+				"feedback_id": feedbackID,
+				"error":       err.Error(),
+			},
+		)
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка архивирования отзыва")
 	}
 

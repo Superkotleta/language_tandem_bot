@@ -6,6 +6,7 @@ import (
 
 	"language-exchange-bot/internal/adapters/telegram/handlers"
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -25,18 +26,19 @@ type TelegramHandler struct {
 	interestHandler   handlers.InterestHandler
 	adminHandler      handlers.AdminHandler
 	utilityHandler    handlers.UtilityHandler
+	errorHandler      *errors.ErrorHandler
 }
 
 // NewTelegramHandler создает новый экземпляр TelegramHandler с базовой конфигурацией
-func NewTelegramHandler(bot *tgbotapi.BotAPI, service *core.BotService, adminChatIDs []int64) *TelegramHandler {
+func NewTelegramHandler(bot *tgbotapi.BotAPI, service *core.BotService, adminChatIDs []int64, errorHandler *errors.ErrorHandler) *TelegramHandler {
 	keyboardBuilder := handlers.NewKeyboardBuilder(service)
-	menuHandler := handlers.NewMenuHandler(bot, service, keyboardBuilder)
-	profileHandler := handlers.NewProfileHandler(bot, service, keyboardBuilder)
-	feedbackHandler := handlers.NewFeedbackHandler(bot, service, keyboardBuilder, adminChatIDs, make([]string, 0))
-	languageHandler := handlers.NewLanguageHandler(service, bot, keyboardBuilder)
-	interestHandler := handlers.NewInterestHandler(service, bot, keyboardBuilder)
-	adminHandler := handlers.NewAdminHandler(service, bot, keyboardBuilder, adminChatIDs, make([]string, 0))
-	utilityHandler := handlers.NewUtilityHandler(service, bot)
+	menuHandler := handlers.NewMenuHandler(bot, service, keyboardBuilder, errorHandler)
+	profileHandler := handlers.NewProfileHandler(bot, service, keyboardBuilder, errorHandler)
+	feedbackHandler := handlers.NewFeedbackHandler(bot, service, keyboardBuilder, adminChatIDs, make([]string, 0), errorHandler)
+	languageHandler := handlers.NewLanguageHandler(service, bot, keyboardBuilder, errorHandler)
+	interestHandler := handlers.NewInterestHandler(service, bot, keyboardBuilder, errorHandler)
+	adminHandler := handlers.NewAdminHandler(service, bot, keyboardBuilder, adminChatIDs, make([]string, 0), errorHandler)
+	utilityHandler := handlers.NewUtilityHandler(service, bot, errorHandler)
 
 	return &TelegramHandler{
 		bot:               bot,
@@ -52,19 +54,20 @@ func NewTelegramHandler(bot *tgbotapi.BotAPI, service *core.BotService, adminCha
 		interestHandler:   interestHandler,
 		adminHandler:      adminHandler,
 		utilityHandler:    utilityHandler,
+		errorHandler:      errorHandler,
 	}
 }
 
 // NewTelegramHandlerWithAdmins создает новый экземпляр TelegramHandler с полной конфигурацией администраторов
-func NewTelegramHandlerWithAdmins(bot *tgbotapi.BotAPI, service *core.BotService, adminChatIDs []int64, adminUsernames []string) *TelegramHandler {
+func NewTelegramHandlerWithAdmins(bot *tgbotapi.BotAPI, service *core.BotService, adminChatIDs []int64, adminUsernames []string, errorHandler *errors.ErrorHandler) *TelegramHandler {
 	keyboardBuilder := handlers.NewKeyboardBuilder(service)
-	menuHandler := handlers.NewMenuHandler(bot, service, keyboardBuilder)
-	profileHandler := handlers.NewProfileHandler(bot, service, keyboardBuilder)
-	feedbackHandler := handlers.NewFeedbackHandler(bot, service, keyboardBuilder, adminChatIDs, adminUsernames)
-	languageHandler := handlers.NewLanguageHandler(service, bot, keyboardBuilder)
-	interestHandler := handlers.NewInterestHandler(service, bot, keyboardBuilder)
-	adminHandler := handlers.NewAdminHandler(service, bot, keyboardBuilder, adminChatIDs, adminUsernames)
-	utilityHandler := handlers.NewUtilityHandler(service, bot)
+	menuHandler := handlers.NewMenuHandler(bot, service, keyboardBuilder, errorHandler)
+	profileHandler := handlers.NewProfileHandler(bot, service, keyboardBuilder, errorHandler)
+	feedbackHandler := handlers.NewFeedbackHandler(bot, service, keyboardBuilder, adminChatIDs, adminUsernames, errorHandler)
+	languageHandler := handlers.NewLanguageHandler(service, bot, keyboardBuilder, errorHandler)
+	interestHandler := handlers.NewInterestHandler(service, bot, keyboardBuilder, errorHandler)
+	adminHandler := handlers.NewAdminHandler(service, bot, keyboardBuilder, adminChatIDs, adminUsernames, errorHandler)
+	utilityHandler := handlers.NewUtilityHandler(service, bot, errorHandler)
 
 	return &TelegramHandler{
 		bot:               bot,
@@ -80,6 +83,7 @@ func NewTelegramHandlerWithAdmins(bot *tgbotapi.BotAPI, service *core.BotService
 		interestHandler:   interestHandler,
 		adminHandler:      adminHandler,
 		utilityHandler:    utilityHandler,
+		errorHandler:      errorHandler,
 	}
 }
 
@@ -103,8 +107,13 @@ func (h *TelegramHandler) handleMessage(message *tgbotapi.Message) error {
 		message.From.LanguageCode,
 	)
 	if err != nil {
-		log.Printf("Error handling user registration: %v", err)
-		return err
+		// Используем новую систему обработки ошибок
+		return h.errorHandler.HandleDatabaseError(
+			err,
+			int64(user.ID),
+			message.Chat.ID,
+			"HandleUserRegistration",
+		)
 	}
 
 	if message.IsCommand() {
