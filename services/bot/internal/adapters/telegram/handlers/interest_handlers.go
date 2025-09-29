@@ -40,11 +40,14 @@ func (h *InterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.Callbac
 		return err
 	}
 
-	// Получаем текущие выбранные интересы пользователя
-	selectedInterests, err := h.service.DB.GetUserSelectedInterests(user.ID)
+	// Получаем текущие выбранные интересы пользователя через Batch Loading
+	selectedInterestsMap, err := h.service.BatchLoadUserInterests([]int{user.ID})
+	var selectedInterests []int
 	if err != nil {
 		log.Printf("Error getting user interests, using empty list: %v", err)
 		selectedInterests = []int{} // fallback
+	} else {
+		selectedInterests = selectedInterestsMap[user.ID]
 	}
 
 	// Переключаем интерес (toggle)
@@ -89,12 +92,13 @@ func (h *InterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.Callbac
 func (h *InterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	log.Printf("InterestHandler.HandleInterestsContinue called for user ID: %d, Telegram ID: %d", user.ID, user.TelegramID)
 
-	// Проверяем, выбраны ли интересы
-	selectedInterests, err := h.service.DB.GetUserSelectedInterests(user.ID)
+	// Проверяем, выбраны ли интересы через Batch Loading
+	selectedInterestsMap, err := h.service.BatchLoadUserInterests([]int{user.ID})
 	if err != nil {
 		log.Printf("Error getting selected interests: %v", err)
 		return err
 	}
+	selectedInterests := selectedInterestsMap[user.ID]
 
 	log.Printf("User %d has %d selected interests: %v", user.ID, len(selectedInterests), selectedInterests)
 

@@ -216,17 +216,20 @@ func (ph *ProfileHandlerImpl) updateProfileCompletionLevel(userID int, completio
 }
 
 func (ph *ProfileHandlerImpl) HandleEditInterests(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	// Получаем все доступные интересы
-	interests, err := ph.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+	// Получаем все доступные интересы через кэш
+	interests, err := ph.service.GetCachedInterests(user.InterfaceLanguageCode)
 	if err != nil {
 		return err
 	}
 
-	// Получаем текущие выбранные интересы пользователя и сохраняем в кэше
-	selectedInterests, err := ph.service.DB.GetUserSelectedInterests(user.ID)
+	// Получаем текущие выбранные интересы пользователя через Batch Loading
+	selectedInterestsMap, err := ph.service.BatchLoadUserInterests([]int{user.ID})
+	var selectedInterests []int
 	if err != nil {
 		log.Printf("Error loading user interests: %v", err)
 		selectedInterests = []int{} // fallback
+	} else {
+		selectedInterests = selectedInterestsMap[user.ID]
 	}
 
 	// Инициализируем временное хранилище для сессии редактирования
@@ -462,12 +465,15 @@ func (ph *ProfileHandlerImpl) HandleEditInterestSelection(callback *tgbotapi.Cal
 
 	userID := int64(user.ID)
 
-	// Если временного хранилища нет, инициализируем его
+	// Если временного хранилища нет, инициализируем его через Batch Loading
 	if _, exists := ph.editInterestsTemp[userID]; !exists {
-		selectedInterests, err := ph.service.DB.GetUserSelectedInterests(user.ID)
+		selectedInterestsMap, err := ph.service.BatchLoadUserInterests([]int{user.ID})
+		var selectedInterests []int
 		if err != nil {
 			log.Printf("Error getting user interests, using empty list: %v", err)
 			selectedInterests = []int{}
+		} else {
+			selectedInterests = selectedInterestsMap[user.ID]
 		}
 		ph.editInterestsTemp[userID] = make([]int, len(selectedInterests))
 		copy(ph.editInterestsTemp[userID], selectedInterests)
@@ -489,8 +495,8 @@ func (ph *ProfileHandlerImpl) HandleEditInterestSelection(callback *tgbotapi.Cal
 		ph.editInterestsTemp[userID] = append(ph.editInterestsTemp[userID], interestID)
 	}
 
-	// Обновляем клавиатуру с новым состоянием
-	interests, err := ph.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+	// Обновляем клавиатуру с новым состоянием через кэш
+	interests, err := ph.service.GetCachedInterests(user.InterfaceLanguageCode)
 	if err != nil {
 		return err
 	}

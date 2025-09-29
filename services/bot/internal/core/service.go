@@ -18,6 +18,7 @@ type BotService struct {
 	Cache                    cache.CacheServiceInterface
 	InvalidationService      *cache.InvalidationService
 	MetricsService           *cache.MetricsService
+	BatchLoader              *database.BatchLoader
 	FeedbackNotificationFunc func(data map[string]interface{}) error // функция для отправки уведомлений
 }
 
@@ -29,12 +30,16 @@ func NewBotService(db *database.DB) *BotService {
 	invalidationService := cache.NewInvalidationService(cacheService)
 	metricsService := cache.NewMetricsService(cacheService)
 
+	// Создаем BatchLoader для оптимизации N+1 запросов
+	batchLoader := database.NewBatchLoader(db)
+
 	return &BotService{
 		DB:                  &databaseAdapter{db: db}, // Оборачиваем в адаптер
 		Localizer:           localization.NewLocalizer(db.GetConnection()),
 		Cache:               cacheService,
 		InvalidationService: invalidationService,
 		MetricsService:      metricsService,
+		BatchLoader:         batchLoader,
 	}
 }
 
@@ -50,12 +55,16 @@ func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, red
 	invalidationService := cache.NewInvalidationService(redisCache)
 	metricsService := cache.NewMetricsService(redisCache)
 
+	// Создаем BatchLoader для оптимизации N+1 запросов
+	batchLoader := database.NewBatchLoader(db)
+
 	return &BotService{
 		DB:                  &databaseAdapter{db: db}, // Оборачиваем в адаптер
 		Localizer:           localization.NewLocalizer(db.GetConnection()),
 		Cache:               redisCache,
 		InvalidationService: invalidationService,
 		MetricsService:      metricsService,
+		BatchLoader:         batchLoader,
 	}, nil
 }
 
@@ -740,4 +749,157 @@ func (s *BotService) GetCacheStats() map[string]interface{} {
 // StopCache останавливает кэш-сервис
 func (s *BotService) StopCache() {
 	s.Cache.Stop()
+}
+
+// ===== BATCH LOADING МЕТОДЫ =====
+
+// GetUserWithAllData получает пользователя со всеми связанными данными одним запросом
+func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAllData, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Пытаемся получить из кэша
+	if userData, found := s.Cache.GetUser(telegramID); found {
+		// Если пользователь есть в кэше, но нет полных данных, загружаем их
+		if userData != nil {
+			// Загружаем полные данные
+			return s.BatchLoader.GetUserWithAllData(telegramID)
+		}
+	}
+
+	// Загружаем из БД одним запросом
+	userData, err := s.BatchLoader.GetUserWithAllData(telegramID)
+	if err != nil {
+		s.MetricsService.RecordError()
+		return nil, err
+	}
+
+	// Сохраняем в кэш
+	s.Cache.SetUser(userData.User)
+
+	return userData, nil
+}
+
+// BatchLoadUsersWithInterests загружает нескольких пользователей с их интересами одним запросом
+func (s *BotService) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int64]*database.UserWithInterests, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Загружаем из БД одним запросом
+	users, err := s.BatchLoader.BatchLoadUsersWithInterests(telegramIDs)
+	if err != nil {
+		s.MetricsService.RecordError()
+		return nil, err
+	}
+
+	// Сохраняем пользователей в кэш
+	for _, userData := range users {
+		s.Cache.SetUser(userData.User)
+	}
+
+	return users, nil
+}
+
+// BatchLoadInterestsWithTranslations загружает интересы с переводами для нескольких языков
+func (s *BotService) BatchLoadInterestsWithTranslations(languages []string) (map[string]map[int]string, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Загружаем из БД одним запросом
+	interests, err := s.BatchLoader.BatchLoadInterestsWithTranslations(languages)
+	if err != nil {
+		s.MetricsService.RecordError()
+		return nil, err
+	}
+
+	// Сохраняем в кэш
+	for lang, langInterests := range interests {
+		s.Cache.SetInterests(lang, langInterests)
+	}
+
+	return interests, nil
+}
+
+// BatchLoadLanguagesWithTranslations загружает языки с переводами для нескольких языков
+func (s *BotService) BatchLoadLanguagesWithTranslations(languages []string) (map[string][]*models.Language, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Загружаем из БД одним запросом
+	langs, err := s.BatchLoader.BatchLoadLanguagesWithTranslations(languages)
+	if err != nil {
+		s.MetricsService.RecordError()
+		return nil, err
+	}
+
+	// Сохраняем в кэш
+	for lang, langList := range langs {
+		s.Cache.SetLanguages(lang, langList)
+	}
+
+	return langs, nil
+}
+
+// BatchLoadUserInterests загружает интересы для нескольких пользователей одним запросом
+func (s *BotService) BatchLoadUserInterests(userIDs []int) (map[int][]int, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Загружаем из БД одним запросом
+	interests, err := s.BatchLoader.BatchLoadUserInterests(userIDs)
+	if err != nil {
+		s.MetricsService.RecordError()
+		return nil, err
+	}
+
+	return interests, nil
+}
+
+// BatchLoadUsers загружает пользователей по Telegram ID одним запросом
+func (s *BotService) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.User, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Загружаем из БД одним запросом
+	users, err := s.BatchLoader.BatchLoadUsers(telegramIDs)
+	if err != nil {
+		s.MetricsService.RecordError()
+		return nil, err
+	}
+
+	// Сохраняем в кэш
+	for _, user := range users {
+		s.Cache.SetUser(user)
+	}
+
+	return users, nil
+}
+
+// BatchLoadStats загружает статистику для нескольких типов одним запросом
+func (s *BotService) BatchLoadStats(statTypes []string) (map[string]map[string]interface{}, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Загружаем из БД одним запросом
+	stats, err := s.BatchLoader.BatchLoadStats(statTypes)
+	if err != nil {
+		s.MetricsService.RecordError()
+		return nil, err
+	}
+
+	return stats, nil
 }
