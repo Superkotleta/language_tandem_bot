@@ -11,6 +11,7 @@ import (
 	"language-exchange-bot/internal/adapters"
 	"language-exchange-bot/internal/adapters/telegram"
 	"language-exchange-bot/internal/config"
+	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/database"
 )
 
@@ -41,8 +42,18 @@ func main() {
 
 	// Telegram Bot
 	if cfg.EnableTelegram && cfg.TelegramToken != "" {
+		// Создаем сервис с Redis кэшем
+		service, err := core.NewBotServiceWithRedis(db, cfg.RedisURL, cfg.RedisPassword, cfg.RedisDB)
+		if err != nil {
+			log.Printf("Failed to create Redis cache, falling back to in-memory cache: %v", err)
+			// Fallback на in-memory кэш если Redis недоступен
+			service = core.NewBotService(db)
+		} else {
+			log.Printf("Redis cache initialized: %s", service.Cache.String())
+		}
+
 		// Создаем бота с Chat ID для уведомлений и username для проверки прав
-		telegramBot, err := telegram.NewTelegramBotWithUsernames(cfg.TelegramToken, db, cfg.Debug, cfg.AdminUsernames)
+		telegramBot, err := telegram.NewTelegramBotWithService(cfg.TelegramToken, service, cfg.Debug, cfg.AdminUsernames)
 		if err != nil {
 			log.Fatalf("Failed to create Telegram bot: %v", err)
 		}
@@ -51,9 +62,9 @@ func main() {
 		telegramBot.SetAdminChatIDs(cfg.AdminChatIDs)
 
 		// Связываем бота с сервисом для отправки уведомлений о новых отзывах
-		service := telegramBot.GetService()
-		if service != nil {
-			service.SetFeedbackNotificationFunc(telegramBot.SendFeedbackNotification)
+		botService := telegramBot.GetService()
+		if botService != nil {
+			botService.SetFeedbackNotificationFunc(telegramBot.SendFeedbackNotification)
 			log.Printf("Связал функцию уведомлений с сервисом отзывов")
 		}
 
@@ -85,6 +96,17 @@ func main() {
 
 	// Останавливаем все боты
 	cancel()
+
+	// Останавливаем кэш-сервис
+	for _, bot := range bots {
+		if telegramBot, ok := bot.(*telegram.TelegramBot); ok {
+			service := telegramBot.GetService()
+			if service != nil {
+				service.StopCache()
+				log.Println("Cache service stopped")
+			}
+		}
+	}
 
 	// Ждем завершения всех горутин
 	done := make(chan struct{})

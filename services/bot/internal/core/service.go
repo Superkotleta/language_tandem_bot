@@ -3,24 +3,60 @@ package core
 import (
 	"database/sql"
 	"fmt"
+	"language-exchange-bot/internal/cache"
 	"language-exchange-bot/internal/database"
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 	"log"
 	"strings"
+	"time"
 )
 
 type BotService struct {
 	DB                       database.Database
 	Localizer                *localization.Localizer
+	Cache                    cache.CacheServiceInterface
+	InvalidationService      *cache.InvalidationService
+	MetricsService           *cache.MetricsService
 	FeedbackNotificationFunc func(data map[string]interface{}) error // функция для отправки уведомлений
 }
 
 func NewBotService(db *database.DB) *BotService {
+	// Создаем кэш с конфигурацией по умолчанию
+	cacheService := cache.NewCacheService(cache.DefaultCacheConfig())
+
+	// Создаем сервисы для управления кэшем
+	invalidationService := cache.NewInvalidationService(cacheService)
+	metricsService := cache.NewMetricsService(cacheService)
+
 	return &BotService{
-		DB:        &databaseAdapter{db: db}, // Оборачиваем в адаптер
-		Localizer: localization.NewLocalizer(db.GetConnection()),
+		DB:                  &databaseAdapter{db: db}, // Оборачиваем в адаптер
+		Localizer:           localization.NewLocalizer(db.GetConnection()),
+		Cache:               cacheService,
+		InvalidationService: invalidationService,
+		MetricsService:      metricsService,
 	}
+}
+
+// NewBotServiceWithRedis создает BotService с Redis кэшем
+func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, redisDB int) (*BotService, error) {
+	// Создаем Redis кэш
+	redisCache, err := cache.NewRedisCacheService(redisURL, redisPassword, redisDB, cache.DefaultCacheConfig())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Redis cache: %w", err)
+	}
+
+	// Создаем сервисы для управления кэшем
+	invalidationService := cache.NewInvalidationService(redisCache)
+	metricsService := cache.NewMetricsService(redisCache)
+
+	return &BotService{
+		DB:                  &databaseAdapter{db: db}, // Оборачиваем в адаптер
+		Localizer:           localization.NewLocalizer(db.GetConnection()),
+		Cache:               redisCache,
+		InvalidationService: invalidationService,
+		MetricsService:      metricsService,
+	}, nil
 }
 
 // databaseAdapter адаптер для совместимости с интерфейсом Database
@@ -35,16 +71,11 @@ func (a *databaseAdapter) FindOrCreateUser(telegramID int64, username, firstName
 }
 
 func (a *databaseAdapter) GetUserByTelegramID(telegramID int64) (*models.User, error) {
-	// Заглушка - используем FindOrCreateUser
-	return a.db.FindOrCreateUser(telegramID, "", "")
+	return a.db.GetUserByTelegramID(telegramID)
 }
 
 func (a *databaseAdapter) UpdateUser(user *models.User) error {
-	// Заглушка - обновляем основные поля
-	a.db.UpdateUserState(user.ID, user.State)
-	a.db.UpdateUserStatus(user.ID, user.Status)
-	a.db.UpdateUserInterfaceLanguage(user.ID, user.InterfaceLanguageCode)
-	return nil
+	return a.db.UpdateUser(user)
 }
 
 func (a *databaseAdapter) UpdateUserInterfaceLanguage(userID int, language string) error {
@@ -76,33 +107,15 @@ func (a *databaseAdapter) ResetUserProfile(userID int) error {
 }
 
 func (a *databaseAdapter) GetLanguages() ([]*models.Language, error) {
-	// Заглушка - возвращаем базовые языки
-	return []*models.Language{
-		{ID: 1, Code: "en", NameNative: "English", NameEn: "English"},
-		{ID: 2, Code: "ru", NameNative: "Русский", NameEn: "Russian"},
-		{ID: 3, Code: "es", NameNative: "Español", NameEn: "Spanish"},
-		{ID: 4, Code: "zh", NameNative: "中文", NameEn: "Chinese"},
-	}, nil
+	return a.db.GetLanguages()
 }
 
 func (a *databaseAdapter) GetLanguageByCode(code string) (*models.Language, error) {
-	languages, _ := a.GetLanguages()
-	for _, lang := range languages {
-		if lang.Code == code {
-			return lang, nil
-		}
-	}
-	return nil, sql.ErrNoRows
+	return a.db.GetLanguageByCode(code)
 }
 
 func (a *databaseAdapter) GetInterests() ([]*models.Interest, error) {
-	// Заглушка - возвращаем базовые интересы
-	return []*models.Interest{
-		{ID: 1, Name: "movies", Type: "entertainment"},
-		{ID: 2, Name: "music", Type: "entertainment"},
-		{ID: 3, Name: "sports", Type: "activity"},
-		{ID: 4, Name: "travel", Type: "activity"},
-	}, nil
+	return a.db.GetInterests()
 }
 
 func (a *databaseAdapter) GetUserSelectedInterests(userID int) ([]int, error) {
@@ -110,13 +123,7 @@ func (a *databaseAdapter) GetUserSelectedInterests(userID int) ([]int, error) {
 }
 
 func (a *databaseAdapter) SaveUserInterests(userID int64, interestIDs []int) error {
-	// Заглушка - сохраняем по одному
-	for _, id := range interestIDs {
-		if err := a.db.SaveUserInterest(int(userID), id, false); err != nil {
-			return err
-		}
-	}
-	return nil
+	return a.db.SaveUserInterests(userID, interestIDs)
 }
 
 func (a *databaseAdapter) SaveUserInterest(userID, interestID int, isPrimary bool) error {
@@ -600,4 +607,137 @@ func (s *BotService) UnarchiveFeedback(feedbackID int) error {
 	}
 
 	return nil
+}
+
+// ===== КЭШИРОВАННЫЕ МЕТОДЫ =====
+
+// GetCachedLanguages получает языки из кэша или загружает из БД
+func (s *BotService) GetCachedLanguages(lang string) ([]*models.Language, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Пытаемся получить из кэша
+	if languages, found := s.Cache.GetLanguages(lang); found {
+		return languages, nil
+	}
+
+	// Загружаем из БД
+	languages, err := s.DB.GetLanguages()
+	if err != nil {
+		s.MetricsService.RecordError()
+		return nil, err
+	}
+
+	// Сохраняем в кэш
+	s.Cache.SetLanguages(lang, languages)
+
+	return languages, nil
+}
+
+// GetCachedInterests получает интересы из кэша или загружает из БД
+func (s *BotService) GetCachedInterests(lang string) (map[int]string, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Пытаемся получить из кэша
+	if interests, found := s.Cache.GetInterests(lang); found {
+		return interests, nil
+	}
+
+	// Загружаем из БД и локализуем
+	interests, err := s.Localizer.GetInterests(lang)
+	if err != nil {
+		s.MetricsService.RecordError()
+		return nil, err
+	}
+
+	// Сохраняем в кэш
+	s.Cache.SetInterests(lang, interests)
+
+	return interests, nil
+}
+
+// GetCachedUser получает пользователя из кэша или загружает из БД
+func (s *BotService) GetCachedUser(telegramID int64) (*models.User, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Пытаемся получить из кэша
+	if user, found := s.Cache.GetUser(telegramID); found {
+		return user, nil
+	}
+
+	// Загружаем из БД
+	user, err := s.DB.GetUserByTelegramID(telegramID)
+	if err != nil {
+		s.MetricsService.RecordError()
+		return nil, err
+	}
+
+	// Сохраняем в кэш
+	s.Cache.SetUser(user)
+
+	return user, nil
+}
+
+// GetCachedTranslations получает переводы из кэша или загружает из файлов
+func (s *BotService) GetCachedTranslations(lang string) (map[string]string, error) {
+	start := time.Now()
+	defer func() {
+		s.MetricsService.RecordRequest(time.Since(start), true)
+	}()
+
+	// Пытаемся получить из кэша
+	if translations, found := s.Cache.GetTranslations(lang); found {
+		return translations, nil
+	}
+
+	// Загружаем из файлов локализации
+	// Здесь нужно будет добавить метод в Localizer для получения всех переводов
+	// Пока что возвращаем пустую карту
+	translations := make(map[string]string)
+
+	// Сохраняем в кэш
+	s.Cache.SetTranslations(lang, translations)
+
+	return translations, nil
+}
+
+// UpdateCachedUser обновляет пользователя в БД и кэше
+func (s *BotService) UpdateCachedUser(user *models.User) error {
+	// Обновляем в БД
+	if err := s.DB.UpdateUser(user); err != nil {
+		return err
+	}
+
+	// Обновляем в кэше
+	s.Cache.SetUser(user)
+
+	return nil
+}
+
+// InvalidateUserCache инвалидирует кэш пользователя
+func (s *BotService) InvalidateUserCache(userID int64) {
+	s.InvalidationService.InvalidateUserData(userID)
+}
+
+// InvalidateStaticDataCache инвалидирует кэш статических данных
+func (s *BotService) InvalidateStaticDataCache() {
+	s.InvalidationService.InvalidateStaticData()
+}
+
+// GetCacheStats возвращает статистику кэша
+func (s *BotService) GetCacheStats() map[string]interface{} {
+	return s.MetricsService.GetMetrics()
+}
+
+// StopCache останавливает кэш-сервис
+func (s *BotService) StopCache() {
+	s.Cache.Stop()
 }

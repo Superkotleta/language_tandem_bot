@@ -14,7 +14,6 @@ import (
 type InterestHandler interface {
 	HandleInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error
 	HandleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error
-	SendInterestsMenu(chatID int64, user *models.User) error
 }
 
 // InterestHandlerImpl реализация обработчика интересов
@@ -74,7 +73,7 @@ func (h *InterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.Callbac
 	}
 
 	// Обновляем клавиатуру с новым состоянием
-	interests, err := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+	interests, err := h.service.GetCachedInterests(user.InterfaceLanguageCode)
 	if err != nil {
 		log.Printf("Error getting interests: %v", err)
 		return err
@@ -111,7 +110,7 @@ func (h *InterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Callbac
 		fullText := warningMsg + "\n\n" + chooseInterestsText
 
 		// Получаем интересы и оставляем клавиатуру с интересами видимой, обновляя только текст
-		interests, _ := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+		interests, _ := h.service.GetCachedInterests(user.InterfaceLanguageCode)
 		keyboard := h.keyboardBuilder.CreateInterestsKeyboard(interests, []int{}, user.InterfaceLanguageCode)
 		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 			callback.Message.Chat.ID,
@@ -157,28 +156,6 @@ func (h *InterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Callbac
 	log.Printf("Successfully completed profile for user %d", user.ID)
 
 	return nil
-}
-
-// SendInterestsMenu отправляет меню выбора интересов
-func (h *InterestHandlerImpl) SendInterestsMenu(chatID int64, user *models.User) error {
-	interests, err := h.service.Localizer.GetInterests(user.InterfaceLanguageCode)
-	if err != nil {
-		return err
-	}
-
-	// Загружаем уже выбранные интересы пользователя
-	selectedInterests, err := h.service.DB.GetUserSelectedInterests(user.ID)
-	if err != nil {
-		log.Printf("Error loading user interests: %v", err)
-		selectedInterests = []int{} // fallback на пустой список
-	}
-
-	keyboard := h.keyboardBuilder.CreateInterestsKeyboard(interests, selectedInterests, user.InterfaceLanguageCode)
-	text := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
-	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ReplyMarkup = keyboard
-	_, err = h.bot.Send(msg)
-	return err
 }
 
 // updateProfileCompletionLevel обновляет уровень завершения профиля от 0 до 100

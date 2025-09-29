@@ -56,7 +56,7 @@ func (lh *LanguageHandlerImpl) HandleLanguagesContinueFilling(callback *tgbotapi
 		"language": langName,
 	})
 
-	keyboard := lh.keyboardBuilder.CreateLanguageLevelKeyboard(user.InterfaceLanguageCode, user.TargetLanguageCode)
+	keyboard := lh.keyboardBuilder.CreateLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, user.TargetLanguageCode, "level_", true)
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
@@ -105,7 +105,7 @@ func (lh *LanguageHandlerImpl) HandleLanguageLevelSelection(callback *tgbotapi.C
 	levelName := lh.service.Localizer.Get(user.InterfaceLanguageCode, "choose_level_"+levelCode)
 	confirmMsg := "🎯 " + levelName + "\n\n" + lh.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
 
-	interests, err := lh.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+	interests, err := lh.service.GetCachedInterests(user.InterfaceLanguageCode)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (lh *LanguageHandlerImpl) proceedToNextOnboardingStep(callback *tgbotapi.Ca
 			"language": langName,
 		})
 
-		keyboard := lh.keyboardBuilder.CreateLanguageLevelKeyboard(user.InterfaceLanguageCode, user.TargetLanguageCode)
+		keyboard := lh.keyboardBuilder.CreateLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, user.TargetLanguageCode, "level_", true)
 		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
@@ -218,7 +218,7 @@ func (lh *LanguageHandlerImpl) HandleTargetLanguageCallback(callback *tgbotapi.C
 		"language": langName,
 	})
 
-	keyboard := lh.keyboardBuilder.CreateLanguageLevelKeyboard(user.InterfaceLanguageCode, langCode)
+	keyboard := lh.keyboardBuilder.CreateLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, langCode, "level_", true)
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,

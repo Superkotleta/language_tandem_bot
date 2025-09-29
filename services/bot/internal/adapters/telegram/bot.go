@@ -207,3 +207,38 @@ func (tb *TelegramBot) SetAdminChatIDs(chatIDs []int64) {
 func (tb *TelegramBot) GetAdminCount() int {
 	return len(tb.adminChatIDs) + len(tb.adminUsernames)
 }
+
+// NewTelegramBotWithService создает бота с готовым сервисом (для Redis кэша)
+func NewTelegramBotWithService(token string, service *core.BotService, debug bool, adminUsernames []string) (*TelegramBot, error) {
+	bot, err := tgbotapi.NewBotAPI(token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create telegram bot: %w", err)
+	}
+	bot.Debug = debug
+
+	tgBot := &TelegramBot{
+		api:            bot,
+		service:        service,
+		debug:          debug,
+		adminChatIDs:   make([]int64, 0), // Будет установлен позже через SetAdminChatIDs
+		adminUsernames: make([]string, 0),
+	}
+
+	// Обрабатываем usernames для проверки прав
+	for _, username := range adminUsernames {
+		username = strings.TrimSpace(username)
+		if username == "" {
+			continue
+		}
+
+		// Убираем @ если есть
+		if strings.HasPrefix(username, "@") {
+			username = strings.TrimPrefix(username, "@")
+		}
+
+		tgBot.adminUsernames = append(tgBot.adminUsernames, username)
+		log.Printf("Добавлен username администратора: @%s", username)
+	}
+
+	return tgBot, nil
+}

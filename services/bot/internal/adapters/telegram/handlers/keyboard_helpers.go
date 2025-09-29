@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -23,9 +24,16 @@ func NewKeyboardBuilder(service *core.BotService) *KeyboardBuilder {
 
 // CreateLanguageKeyboard создает клавиатуру выбора языка
 func (kb *KeyboardBuilder) CreateLanguageKeyboard(interfaceLang, keyboardType string, excludeLang string, showBackButton bool) tgbotapi.InlineKeyboardMarkup {
-	type langOption struct{ code, flag string }
-	languages := []langOption{
-		{"en", "🇺🇸"}, {"ru", "🇷🇺"}, {"es", "🇪🇸"}, {"zh", "🇨🇳"},
+	// Получаем языки из кэша или БД
+	languages, err := kb.service.GetCachedLanguages(interfaceLang)
+	if err != nil {
+		// Fallback на хардкод если кэш не работает
+		languages = []*models.Language{
+			{ID: 1, Code: "en", NameNative: "English", NameEn: "English"},
+			{ID: 2, Code: "ru", NameNative: "Русский", NameEn: "Russian"},
+			{ID: 3, Code: "es", NameNative: "Español", NameEn: "Spanish"},
+			{ID: 4, Code: "zh", NameNative: "中文", NameEn: "Chinese"},
+		}
 	}
 
 	// Используем Map для автоматического удаления дубликатов
@@ -33,13 +41,15 @@ func (kb *KeyboardBuilder) CreateLanguageKeyboard(interfaceLang, keyboardType st
 
 	for _, lang := range languages {
 		// Исключаем указанный язык из списка
-		if lang.code == excludeLang {
+		if lang.Code == excludeLang {
 			continue
 		}
 
-		name := kb.service.Localizer.GetLanguageName(lang.code, interfaceLang)
-		label := fmt.Sprintf("%s %s", lang.flag, name)
-		callbackData := fmt.Sprintf("lang_%s_%s", keyboardType, lang.code)
+		// Получаем флаг для языка
+		flag := getLanguageFlag(lang.Code)
+		name := kb.service.Localizer.GetLanguageName(lang.Code, interfaceLang)
+		label := fmt.Sprintf("%s %s", flag, name)
+		callbackData := fmt.Sprintf("lang_%s_%s", keyboardType, lang.Code)
 
 		// Избегаем дубликатов по callback data (на случай если название языка совпадает)
 		if _, exists := uniqueButtons[callbackData]; !exists {
@@ -193,11 +203,6 @@ func (kb *KeyboardBuilder) CreateResetConfirmKeyboard(interfaceLang string) tgbo
 	return tgbotapi.NewInlineKeyboardMarkup([][]tgbotapi.InlineKeyboardButton{{yes}, {no}}...)
 }
 
-// CreateLanguageLevelKeyboard создает клавиатуру для выбора уровня языка
-func (kb *KeyboardBuilder) CreateLanguageLevelKeyboard(interfaceLang, targetLanguage string) tgbotapi.InlineKeyboardMarkup {
-	return kb.CreateLanguageLevelKeyboardWithPrefix(interfaceLang, targetLanguage, "level_", true)
-}
-
 // CreateLanguageLevelKeyboardWithPrefix создает клавиатуру уровня языка с кастомным префиксом
 func (kb *KeyboardBuilder) CreateLanguageLevelKeyboardWithPrefix(interfaceLang, targetLanguage, prefix string, showBackButton bool) tgbotapi.InlineKeyboardMarkup {
 	levels := []string{"beginner", "elementary", "intermediate", "upper_intermediate"}
@@ -348,4 +353,20 @@ func (kb *KeyboardBuilder) CreateFeedbackAdminKeyboard(interfaceLang string) tgb
 		{tgbotapi.NewInlineKeyboardButtonData("📋 Все", "show_all_feedbacks")},
 	}
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
+}
+
+// getLanguageFlag возвращает флаг для языка
+func getLanguageFlag(langCode string) string {
+	switch langCode {
+	case "ru":
+		return "🇷🇺"
+	case "en":
+		return "🇺🇸"
+	case "es":
+		return "🇪🇸"
+	case "zh":
+		return "🇨🇳"
+	default:
+		return "🌍"
+	}
 }

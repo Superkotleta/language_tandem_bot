@@ -17,7 +17,6 @@ type AdminHandler interface {
 	ShowFeedbackStatisticsEdit(callback *tgbotapi.CallbackQuery, user *models.User) error
 	HandleBrowseActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error
 	HandleBrowseArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error
-	ShowFeedbackItemWithNavigation(chatID int64, fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) error
 	ShowFeedbackItemWithNavigationEdit(callback *tgbotapi.CallbackQuery, fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) error
 	IsAdmin(chatID int64, username string) bool
 }
@@ -235,20 +234,6 @@ func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.Callb
 
 	// Показываем текущий отзыв с редактированием текущего сообщения
 	return h.ShowFeedbackItemWithNavigationEdit(callback, archivedFeedbacks[index], index, len(archivedFeedbacks), "archive")
-}
-
-// ShowFeedbackItemWithNavigation показывает отзыв с навигацией (отправляет новое сообщение)
-func (h *AdminHandlerImpl) ShowFeedbackItemWithNavigation(chatID int64, fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) error {
-	// Формируем текст отзыва
-	feedbackText := h.formatFeedbackText(fb, currentIndex, totalCount, feedbackType)
-
-	// Создаем клавиатуру навигации
-	keyboard := h.createFeedbackNavigationKeyboard(fb, currentIndex, totalCount, feedbackType)
-
-	msg := tgbotapi.NewMessage(chatID, feedbackText)
-	msg.ReplyMarkup = keyboard
-	_, err := h.bot.Send(msg)
-	return err
 }
 
 // ShowFeedbackItemWithNavigationEdit показывает отзыв с навигацией (редактирует текущее сообщение)

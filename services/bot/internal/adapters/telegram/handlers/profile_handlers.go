@@ -140,7 +140,7 @@ func (ph *ProfileHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Callbac
 		fullText := warningMsg + "\n\n" + chooseInterestsText
 
 		// Получаем интересы и оставляем клавиатуру с интересами видимой, обновляя только текст
-		interests, _ := ph.service.Localizer.GetInterests(user.InterfaceLanguageCode)
+		interests, _ := ph.service.GetCachedInterests(user.InterfaceLanguageCode)
 		keyboard := ph.keyboardBuilder.CreateInterestsKeyboard(interests, []int{}, user.InterfaceLanguageCode)
 		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 			callback.Message.Chat.ID,

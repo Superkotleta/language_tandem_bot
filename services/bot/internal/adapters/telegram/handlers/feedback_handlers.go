@@ -13,14 +13,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// min возвращает минимальное из двух чисел
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // FeedbackHandler интерфейс для обработчиков отзывов
 type FeedbackHandler interface {
 	HandleFeedbackCommand(message *tgbotapi.Message, user *models.User) error
