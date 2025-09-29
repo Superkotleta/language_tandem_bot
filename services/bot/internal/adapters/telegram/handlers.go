@@ -108,12 +108,17 @@ func (h *TelegramHandler) handleMessage(message *tgbotapi.Message) error {
 	)
 	if err != nil {
 		// Используем новую систему обработки ошибок
-		return h.errorHandler.HandleDatabaseError(
-			err,
-			int64(user.ID),
-			message.Chat.ID,
-			"HandleUserRegistration",
-		)
+		if h.errorHandler != nil {
+			return h.errorHandler.HandleDatabaseError(
+				err,
+				int64(user.ID),
+				message.Chat.ID,
+				"HandleUserRegistration",
+			)
+		}
+		// Fallback к простому логированию если errorHandler не инициализирован
+		log.Printf("Database error in HandleUserRegistration: %v", err)
+		return nil
 	}
 
 	if message.IsCommand() {

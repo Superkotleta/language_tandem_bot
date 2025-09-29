@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"language-exchange-bot/internal/models"
+
+	"github.com/lib/pq"
 )
 
 // BatchLoader оптимизирует загрузку данных для предотвращения N+1 запросов
@@ -197,7 +199,7 @@ func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, err
 		ORDER BY user_id, interest_id
 	`
 
-	rows, err := bl.db.conn.Query(query, userIDs)
+	rows, err := bl.db.conn.Query(query, pq.Array(userIDs))
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load user interests: %w", err)
 	}

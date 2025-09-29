@@ -28,8 +28,8 @@ BEGIN
 END$$;
 
 -- Права для сервисных пользователей
-GRANT CONNECT ON DATABASE languagebot TO profile_rw;
-GRANT CONNECT ON DATABASE languagebot TO matching_rw;
+GRANT CONNECT ON DATABASE language_exchange TO profile_rw;
+GRANT CONNECT ON DATABASE language_exchange TO matching_rw;
 
 GRANT USAGE, CREATE ON SCHEMA profile TO profile_rw;
 GRANT USAGE, CREATE ON SCHEMA matching TO matching_rw;

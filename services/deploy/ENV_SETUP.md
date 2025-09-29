@@ -14,13 +14,13 @@
 # ===========================================
 POSTGRES_DB=language_exchange
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=password
-DATABASE_URL=postgres://postgres:password@postgres:5432/language_exchange?sslmode=disable
+POSTGRES_PASSWORD=password123
+DATABASE_URL=postgres://postgres:password123@postgres:5432/language_exchange?sslmode=disable
 
 # Database Schema Configuration
 DB_SCHEMA=public
 
-# Database Passwords for Services
+# Database Passwords for Services (для будущих микросервисов)
 PROFILE_DB_PASS=profile_pwd
 MATCHING_DB_PASS=matching_pwd
 MATCHING_RO_DB_PASS=matching_ro_pwd
@@ -55,6 +55,13 @@ TELEGRAM_TOKEN=your_telegram_bot_token_here
 ADMIN_CHAT_IDS=
 
 # ===========================================
+# Redis Configuration
+# ===========================================
+REDIS_URL=redis:6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# ===========================================
 # Bot Settings
 # ===========================================
 DEBUG=false
@@ -83,18 +90,18 @@ PGADMIN_EMAIL=admin@local.host
 PGADMIN_PASSWORD=password
 
 # ===========================================
-# Service Ports (для микросервисов)
+# Service Ports (для будущих микросервисов)
 # ===========================================
-# Profile Service
+# Profile Service (временно отключен)
 HTTP_PORT=8081
 
-# Matcher Service  
+# Matcher Service (временно отключен)
 MATCHER_HTTP_PORT=8082
 
 # ===========================================
 # Migration Configuration
 # ===========================================
-# Migration directories for services
+# Migration directories for services (для будущих микросервисов)
 MIGRATIONS_DIR=/migrations
 ```
 
@@ -115,6 +122,13 @@ MIGRATIONS_DIR=/migrations
 
 - Настройки базы данных уже готовы для Docker
 - При необходимости измените пароли
+
+### 4. Redis кэширование
+
+- **REDIS_URL**: Адрес Redis сервера (по умолчанию: `redis:6379`)
+- **REDIS_PASSWORD**: Пароль Redis (опционально)
+- **REDIS_DB**: Номер базы данных Redis (по умолчанию: 0)
+- Система автоматически переключается на in-memory кэш при недоступности Redis
 
 ## Проверка настройки
 
