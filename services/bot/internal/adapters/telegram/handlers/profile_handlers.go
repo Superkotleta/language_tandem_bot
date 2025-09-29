@@ -111,10 +111,14 @@ func (ph *ProfileHandlerImpl) StartProfileSetup(callback *tgbotapi.CallbackQuery
 	text := ph.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
 	keyboard := ph.keyboardBuilder.CreateLanguageKeyboard(user.InterfaceLanguageCode, "native", "", true)
 
-	// Отправляем новое сообщение для начала настройки профиля
-	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, text)
-	msg.ReplyMarkup = keyboard
-	_, err := ph.bot.Send(msg)
+	// Редактируем существующее сообщение вместо создания нового
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err := ph.bot.Request(editMsg)
 	return err
 }
 

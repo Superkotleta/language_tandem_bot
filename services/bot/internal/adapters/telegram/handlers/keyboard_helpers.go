@@ -129,15 +129,7 @@ func (kb *KeyboardBuilder) CreateInterestsKeyboard(interests map[int]string, sel
 }
 
 // CreateMainMenuKeyboard создает главное меню
-func (kb *KeyboardBuilder) CreateMainMenuKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
-	viewProfile := tgbotapi.NewInlineKeyboardButtonData(
-		kb.service.Localizer.Get(interfaceLang, "main_menu_view_profile"),
-		"main_view_profile",
-	)
-	editProfile := tgbotapi.NewInlineKeyboardButtonData(
-		kb.service.Localizer.Get(interfaceLang, "main_menu_edit_profile"),
-		"main_edit_profile",
-	)
+func (kb *KeyboardBuilder) CreateMainMenuKeyboard(interfaceLang string, hasProfile bool) tgbotapi.InlineKeyboardMarkup {
 	changeLang := tgbotapi.NewInlineKeyboardButtonData(
 		kb.service.Localizer.Get(interfaceLang, "main_menu_change_lang"),
 		"main_change_language",
@@ -147,11 +139,34 @@ func (kb *KeyboardBuilder) CreateMainMenuKeyboard(interfaceLang string) tgbotapi
 		"main_feedback",
 	)
 
-	// Компонуем меню по 2 кнопки в ряд для лучшей организации
-	buttons := [][]tgbotapi.InlineKeyboardButton{
-		{viewProfile, editProfile},
-		{changeLang, feedback},
+	var buttons [][]tgbotapi.InlineKeyboardButton
+
+	if hasProfile {
+		// У пользователя есть профиль - показываем обычные кнопки
+		viewProfile := tgbotapi.NewInlineKeyboardButtonData(
+			kb.service.Localizer.Get(interfaceLang, "main_menu_view_profile"),
+			"main_view_profile",
+		)
+		editProfile := tgbotapi.NewInlineKeyboardButtonData(
+			kb.service.Localizer.Get(interfaceLang, "main_menu_edit_profile"),
+			"main_edit_profile",
+		)
+		buttons = [][]tgbotapi.InlineKeyboardButton{
+			{viewProfile, editProfile},
+			{changeLang, feedback},
+		}
+	} else {
+		// У пользователя нет профиля - показываем большую кнопку "Создать профиль"
+		createProfile := tgbotapi.NewInlineKeyboardButtonData(
+			kb.service.Localizer.Get(interfaceLang, "main_menu_create_profile"),
+			"start_profile_setup",
+		)
+		buttons = [][]tgbotapi.InlineKeyboardButton{
+			{createProfile},
+			{changeLang, feedback},
+		}
 	}
+
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
@@ -228,11 +243,19 @@ func (kb *KeyboardBuilder) CreateLanguageLevelKeyboardWithPrefix(interfaceLang, 
 
 // CreateProfileCompletedKeyboard создает клавиатуру для завершенного профиля
 func (kb *KeyboardBuilder) CreateProfileCompletedKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+	viewProfileButton := tgbotapi.NewInlineKeyboardButtonData(
+		kb.service.Localizer.Get(interfaceLang, "profile_completed_view"),
+		"profile_show",
+	)
 	mainMenuButton := tgbotapi.NewInlineKeyboardButtonData(
-		kb.service.Localizer.Get(interfaceLang, "main_menu_button"),
+		kb.service.Localizer.Get(interfaceLang, "profile_completed_main"),
 		"back_to_main_menu",
 	)
-	return tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{mainMenuButton})
+
+	buttons := [][]tgbotapi.InlineKeyboardButton{
+		{viewProfileButton, mainMenuButton},
+	}
+	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
 // CreateEditInterestsKeyboard создает клавиатуру для редактирования интересов

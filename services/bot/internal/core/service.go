@@ -324,11 +324,179 @@ func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 		interestsLine = fmt.Sprintf("🎯 %s: %d\n• %s", s.Localizer.Get(lang, "profile_field_interests"), len(picked), strings.Join(picked, ", "))
 	}
 
-	title := s.Localizer.Get(lang, "profile_summary_title")
-	native := fmt.Sprintf("%s %s: %s", nativeFlag, s.Localizer.Get(lang, "profile_field_native"), nativeName)
-	target := fmt.Sprintf("%s %s: %s", targetFlag, s.Localizer.Get(lang, "profile_field_target"), targetName)
+	// Добавляем информацию о пользователе
+	displayName := s.getDisplayName(user)
+	nameLine := fmt.Sprintf("👤 %s: %s", s.Localizer.Get(lang, "profile_field_name"), displayName)
+	usernameLine := ""
+	if user.Username != "" {
+		usernameLine = fmt.Sprintf("🔗 %s: @%s", s.Localizer.Get(lang, "profile_field_username"), user.Username)
+	}
 
-	return fmt.Sprintf("%s\n\n%s\n%s\n%s", title, native, target, interestsLine), nil
+	native := fmt.Sprintf("%s %s: %s", nativeFlag, s.Localizer.Get(lang, "profile_field_native"), nativeName)
+
+	// Форматируем уровень языка в читаемый вид
+	levelText := s.formatLanguageLevel(user.TargetLanguageLevel, lang)
+	target := fmt.Sprintf("%s %s: %s (%s)", targetFlag, s.Localizer.Get(lang, "profile_field_target"), targetName, levelText)
+
+	// Формируем итоговый текст
+	lines := []string{nameLine}
+	if usernameLine != "" {
+		lines = append(lines, usernameLine)
+	}
+	lines = append(lines, "", native, target, interestsLine)
+
+	// Добавляем временную доступность (показываем всегда)
+	availabilityText := s.formatTimeAvailability(user.TimeAvailability, lang)
+	lines = append(lines, "", fmt.Sprintf("⏰ %s: %s", s.Localizer.Get(lang, "profile_field_availability"), availabilityText))
+
+	// Добавляем предпочтения общения (показываем всегда)
+	communicationText := s.formatCommunicationPreferences(user.FriendshipPreferences, lang)
+	lines = append(lines, fmt.Sprintf("💬 %s: %s", s.Localizer.Get(lang, "profile_field_communication"), communicationText))
+
+	// Добавляем статус и время в системе
+	statusText := s.formatUserStatus(user, lang)
+	memberSinceText := s.formatMemberSince(user.CreatedAt, lang)
+	lines = append(lines, "", statusText, memberSinceText)
+
+	return strings.Join(lines, "\n"), nil
+}
+
+// formatTimeAvailability форматирует временную доступность
+func (s *BotService) formatTimeAvailability(ta *models.TimeAvailability, lang string) string {
+	if ta == nil {
+		return "Не указано"
+	}
+
+	var dayText string
+	switch ta.DayType {
+	case "weekdays":
+		dayText = s.Localizer.Get(lang, "time_weekdays")
+	case "weekends":
+		dayText = s.Localizer.Get(lang, "time_weekends")
+	case "any":
+		dayText = s.Localizer.Get(lang, "time_any")
+	case "specific":
+		if len(ta.SpecificDays) > 0 {
+			dayText = strings.Join(ta.SpecificDays, ", ")
+		} else {
+			dayText = s.Localizer.Get(lang, "time_any")
+		}
+	default:
+		dayText = s.Localizer.Get(lang, "time_any")
+	}
+
+	var timeText string
+	switch ta.TimeSlot {
+	case "morning":
+		timeText = s.Localizer.Get(lang, "time_morning")
+	case "day":
+		timeText = s.Localizer.Get(lang, "time_day")
+	case "evening":
+		timeText = s.Localizer.Get(lang, "time_evening")
+	case "late":
+		timeText = s.Localizer.Get(lang, "time_late")
+	default:
+		timeText = s.Localizer.Get(lang, "time_any")
+	}
+
+	return fmt.Sprintf("%s, %s", dayText, timeText)
+}
+
+// formatCommunicationPreferences форматирует предпочтения общения
+func (s *BotService) formatCommunicationPreferences(fp *models.FriendshipPreferences, lang string) string {
+	if fp == nil {
+		return "Не указано"
+	}
+
+	var styleText string
+	switch fp.CommunicationStyle {
+	case "text":
+		styleText = s.Localizer.Get(lang, "comm_text")
+	case "voice_msg":
+		styleText = s.Localizer.Get(lang, "comm_voice")
+	case "audio_call":
+		styleText = s.Localizer.Get(lang, "comm_audio")
+	case "video_call":
+		styleText = s.Localizer.Get(lang, "comm_video")
+	case "meet_person":
+		styleText = s.Localizer.Get(lang, "comm_meet")
+	default:
+		styleText = fp.CommunicationStyle
+	}
+
+	var freqText string
+	switch fp.CommunicationFreq {
+	case "spontaneous":
+		freqText = s.Localizer.Get(lang, "freq_spontaneous")
+	case "weekly":
+		freqText = s.Localizer.Get(lang, "freq_weekly")
+	case "daily":
+		freqText = s.Localizer.Get(lang, "freq_daily")
+	case "intensive":
+		freqText = s.Localizer.Get(lang, "freq_intensive")
+	default:
+		freqText = fp.CommunicationFreq
+	}
+
+	return fmt.Sprintf("%s, %s", styleText, freqText)
+}
+
+// formatUserStatus форматирует статус пользователя
+func (s *BotService) formatUserStatus(user *models.User, lang string) string {
+	var statusText string
+	var statusEmoji string
+
+	switch user.Status {
+	case "new":
+		statusText = s.Localizer.Get(lang, "status_new")
+		statusEmoji = "🆕"
+	case "filling_profile":
+		statusText = s.Localizer.Get(lang, "status_filling")
+		statusEmoji = "📝"
+	case "active":
+		statusText = s.Localizer.Get(lang, "status_active")
+		statusEmoji = "🟢"
+	case "paused":
+		statusText = s.Localizer.Get(lang, "status_paused")
+		statusEmoji = "⏸️"
+	default:
+		statusText = user.Status
+		statusEmoji = "❓"
+	}
+
+	return fmt.Sprintf("%s %s: %s", statusEmoji, s.Localizer.Get(lang, "profile_field_status"), statusText)
+}
+
+// formatMemberSince форматирует дату регистрации
+func (s *BotService) formatMemberSince(createdAt time.Time, lang string) string {
+	dateStr := createdAt.Format("02.01.2006")
+	return fmt.Sprintf("📅 %s: %s", s.Localizer.Get(lang, "profile_field_member_since"), dateStr)
+}
+
+// getDisplayName возвращает отображаемое имя пользователя
+func (s *BotService) getDisplayName(user *models.User) string {
+	if user.Username == "madam_di_5" {
+		return "Лисёнок 🦊"
+	}
+	return user.FirstName
+}
+
+// formatLanguageLevel форматирует уровень языка в читаемый вид
+func (s *BotService) formatLanguageLevel(level string, lang string) string {
+	switch level {
+	case "beginner":
+		return "A1-A2"
+	case "elementary":
+		return "A2-B1"
+	case "intermediate":
+		return "B1-B2"
+	case "upper_intermediate":
+		return "B2-C1"
+	case "advanced":
+		return "C1-C2"
+	default:
+		return level
+	}
 }
 
 // Методы работы с обратной связью

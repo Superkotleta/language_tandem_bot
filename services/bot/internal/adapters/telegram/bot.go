@@ -210,7 +210,14 @@ func (tb *TelegramBot) SetAdminChatIDs(chatIDs []int64) {
 
 // GetAdminCount возвращает количество настроенных администраторов
 func (tb *TelegramBot) GetAdminCount() int {
-	return len(tb.adminChatIDs) + len(tb.adminUsernames)
+	// Возвращаем максимум из двух списков, так как это одни и те же люди
+	chatCount := len(tb.adminChatIDs)
+	usernameCount := len(tb.adminUsernames)
+
+	if chatCount > usernameCount {
+		return chatCount
+	}
+	return usernameCount
 }
 
 // NewTelegramBotWithService создает бота с готовым сервисом (для Redis кэша)

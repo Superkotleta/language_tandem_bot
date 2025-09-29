@@ -35,7 +35,8 @@ func (mh *MenuHandler) HandleStartCommand(message *tgbotapi.Message, user *model
 	menuText := welcomeText + "\n\n" + mh.service.Localizer.Get(user.InterfaceLanguageCode, "main_menu_title")
 
 	msg := tgbotapi.NewMessage(message.Chat.ID, menuText)
-	msg.ReplyMarkup = mh.keyboardBuilder.CreateMainMenuKeyboard(user.InterfaceLanguageCode)
+	hasProfile := user.ProfileCompletionLevel > 0
+	msg.ReplyMarkup = mh.keyboardBuilder.CreateMainMenuKeyboard(user.InterfaceLanguageCode, hasProfile)
 
 	if _, err := mh.bot.Send(msg); err != nil {
 		// Используем новую систему обработки ошибок
@@ -93,7 +94,8 @@ func (mh *MenuHandler) HandleBackToMainMenu(callback *tgbotapi.CallbackQuery, us
 	welcomeText := mh.service.GetWelcomeMessage(user)
 	menuText := welcomeText + "\n\n" + mh.service.Localizer.Get(user.InterfaceLanguageCode, "main_menu_title")
 
-	keyboard := mh.keyboardBuilder.CreateMainMenuKeyboard(user.InterfaceLanguageCode)
+	hasProfile := user.ProfileCompletionLevel > 0
+	keyboard := mh.keyboardBuilder.CreateMainMenuKeyboard(user.InterfaceLanguageCode, hasProfile)
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
@@ -133,10 +135,14 @@ func (mh *MenuHandler) HandleMainViewProfile(callback *tgbotapi.CallbackQuery, u
 
 		keyboard := tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{setupButton})
 
-		// Отправляем новое сообщение вместо редактирования существующего
-		newMsg := tgbotapi.NewMessage(callback.Message.Chat.ID, text)
-		newMsg.ReplyMarkup = keyboard
-		_, err := mh.bot.Send(newMsg)
+		// Редактируем существующее сообщение вместо создания нового
+		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+			callback.Message.Chat.ID,
+			callback.Message.MessageID,
+			text,
+			keyboard,
+		)
+		_, err := mh.bot.Request(editMsg)
 		return err
 	}
 
@@ -151,11 +157,57 @@ func (mh *MenuHandler) HandleMainEditProfile(callback *tgbotapi.CallbackQuery, u
 
 // HandleMainFeedback обрабатывает переход к отзывам
 func (mh *MenuHandler) HandleMainFeedback(callback *tgbotapi.CallbackQuery, user *models.User, feedbackHandler FeedbackHandler) error {
-	// Создаем message объект для handleFeedbackCommand
-	message := &tgbotapi.Message{
-		Chat: callback.Message.Chat,
+	// Получаем текст обратной связи
+	text := mh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_text")
+
+	// Создаем клавиатуру для обратной связи
+	keyboard := mh.createFeedbackKeyboard(user.InterfaceLanguageCode)
+
+	// Редактируем сообщение вместо отправки нового
+	return mh.editMessageTextAndMarkup(callback.Message.Chat.ID, callback.Message.MessageID, text, &keyboard)
+}
+
+// HandleFeedbackHelp обрабатывает помощь по обратной связи
+func (mh *MenuHandler) HandleFeedbackHelp(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	helpTitle := mh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_help_title")
+	helpContent := mh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_help_content")
+	helpText := helpTitle + "\n\n" + helpContent
+
+	keyboard := mh.createFeedbackKeyboard(user.InterfaceLanguageCode)
+
+	// Редактируем сообщение с помощью
+	return mh.editMessageTextAndMarkup(callback.Message.Chat.ID, callback.Message.MessageID, helpText, &keyboard)
+}
+
+// createFeedbackKeyboard создает клавиатуру для обратной связи
+func (mh *MenuHandler) createFeedbackKeyboard(lang string) tgbotapi.InlineKeyboardMarkup {
+	keyboard := [][]tgbotapi.InlineKeyboardButton{
+		{
+			tgbotapi.NewInlineKeyboardButtonData(mh.service.Localizer.Get(lang, "feedback_back_to_main"), "back_to_main_menu"),
+		},
+		{
+			tgbotapi.NewInlineKeyboardButtonData(mh.service.Localizer.Get(lang, "feedback_help"), "feedback_help"),
+		},
 	}
-	return feedbackHandler.HandleFeedbackCommand(message, user)
+	return tgbotapi.NewInlineKeyboardMarkup(keyboard...)
+}
+
+// editMessageTextAndMarkup редактирует сообщение с клавиатурой
+func (mh *MenuHandler) editMessageTextAndMarkup(chatID int64, messageID int, text string, keyboard *tgbotapi.InlineKeyboardMarkup) error {
+	edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
+	if keyboard != nil {
+		edit.ReplyMarkup = keyboard
+	}
+	_, err := mh.bot.Send(edit)
+	if err != nil {
+		return mh.errorHandler.HandleTelegramError(
+			err,
+			chatID,
+			0, // UserID неизвестен в этом контексте
+			"EditFeedbackMessage",
+		)
+	}
+	return nil
 }
 
 // sendMessage отправляет простое текстовое сообщение

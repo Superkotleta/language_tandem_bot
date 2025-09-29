@@ -131,7 +131,13 @@ func (h *InterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Callbac
 
 	// Если интересы выбраны, завершаем настройку профиля
 	completionMsg := h.service.Localizer.Get(user.InterfaceLanguageCode, "profile_completed")
-	editMsg := tgbotapi.NewEditMessageText(callback.Message.Chat.ID, callback.Message.MessageID, completionMsg)
+	keyboard := h.keyboardBuilder.CreateProfileCompletedKeyboard(user.InterfaceLanguageCode)
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		completionMsg,
+		keyboard,
+	)
 	_, err = h.bot.Request(editMsg)
 	if err != nil {
 		return err

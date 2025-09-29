@@ -230,7 +230,9 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 	case data == "main_edit_profile":
 		return h.menuHandler.HandleMainEditProfile(callback, user, h.profileHandler)
 	case data == "main_feedback":
-		return h.feedbackHandler.HandleMainFeedback(callback, user)
+		return h.menuHandler.HandleMainFeedback(callback, user, h.feedbackHandler)
+	case data == "feedback_help":
+		return h.menuHandler.HandleFeedbackHelp(callback, user)
 	case data == "start_profile_setup":
 		return h.profileHandler.StartProfileSetup(callback, user)
 	case data == "back_to_main_menu":

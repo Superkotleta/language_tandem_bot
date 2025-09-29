@@ -119,6 +119,37 @@ func (fh *FeedbackHandlerImpl) HandleMainFeedback(callback *tgbotapi.CallbackQue
 	return fh.HandleFeedbackCommand(message, user)
 }
 
+// editMessageTextAndMarkup редактирует сообщение с клавиатурой
+func (fh *FeedbackHandlerImpl) editMessageTextAndMarkup(chatID int64, messageID int, text string, keyboard *tgbotapi.InlineKeyboardMarkup) error {
+	edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
+	if keyboard != nil {
+		edit.ReplyMarkup = keyboard
+	}
+	_, err := fh.bot.Send(edit)
+	if err != nil {
+		return fh.errorHandler.HandleTelegramError(
+			err,
+			chatID,
+			0, // UserID неизвестен в этом контексте
+			"EditFeedbackMessage",
+		)
+	}
+	return nil
+}
+
+// createFeedbackKeyboard создает клавиатуру для обратной связи
+func (fh *FeedbackHandlerImpl) createFeedbackKeyboard(lang string) tgbotapi.InlineKeyboardMarkup {
+	keyboard := [][]tgbotapi.InlineKeyboardButton{
+		{
+			tgbotapi.NewInlineKeyboardButtonData("🏠 Главное меню", "back_to_main_menu"),
+		},
+		{
+			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад", "back_to_main_menu"),
+		},
+	}
+	return tgbotapi.NewInlineKeyboardMarkup(keyboard...)
+}
+
 // sendMessage отправляет сообщение
 func (fh *FeedbackHandlerImpl) sendMessage(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)

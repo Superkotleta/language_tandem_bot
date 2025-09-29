@@ -38,4 +38,22 @@ type User struct {
 	CreatedAt              time.Time `db:"created_at"`
 	UpdatedAt              time.Time `db:"updated_at"`
 	Interests              []int     `db:"-"` // Не храним в БД, загружаем отдельно
+
+	// Дополнительные поля для расширенного профиля
+	TimeAvailability      *TimeAvailability      `db:"-"` // Временная доступность
+	FriendshipPreferences *FriendshipPreferences `db:"-"` // Предпочтения общения
+}
+
+// TimeAvailability - временная доступность пользователя
+type TimeAvailability struct {
+	DayType      string   `db:"day_type"`      // weekdays, weekends, any, specific
+	SpecificDays []string `db:"specific_days"` // массив дней для specific
+	TimeSlot     string   `db:"time_slot"`     // morning, day, evening, late
+}
+
+// FriendshipPreferences - предпочтения по общению
+type FriendshipPreferences struct {
+	ActivityType       string `db:"activity_type"`           // movies, games, casual_chat, creative, active, educational
+	CommunicationStyle string `db:"communication_style"`     // text, voice_msg, audio_call, video_call, meet_person
+	CommunicationFreq  string `db:"communication_frequency"` // spontaneous, weekly, daily, intensive
 }

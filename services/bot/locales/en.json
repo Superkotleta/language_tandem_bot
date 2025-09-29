@@ -20,14 +20,44 @@
   "profile_reset": "Profile reset functionality",
 
   "profile_summary_title": "👤 Your profile",
+  "profile_field_name": "Name",
+  "profile_field_username": "Username",
   "profile_field_native": "Native language",
   "profile_field_target": "Learning language",
   "profile_field_interests": "Interests",
+  "profile_field_availability": "Availability",
+  "profile_field_communication": "Communication",
+  "profile_field_status": "Status",
+  "profile_field_member_since": "Registration Date",
   "profile_actions": "What would you like to do?",
   "profile_show": "👤 Show profile",
   "profile_reconfigure": "🔁 Reconfigure",
   "profile_edit_interests": "🎯 Edit interests",
   "profile_edit_languages": "🌍 Edit languages",
+  
+  "time_weekdays": "weekdays",
+  "time_weekends": "weekends", 
+  "time_any": "any time",
+  "time_morning": "morning",
+  "time_day": "day",
+  "time_evening": "evening",
+  "time_late": "late",
+  
+  "comm_text": "text",
+  "comm_voice": "voice",
+  "comm_audio": "audio calls",
+  "comm_video": "video calls",
+  "comm_meet": "in-person meetings",
+  
+  "freq_spontaneous": "spontaneously",
+  "freq_weekly": "weekly",
+  "freq_daily": "daily",
+  "freq_intensive": "intensively",
+  
+  "status_new": "New",
+  "status_filling": "Filling profile",
+  "status_active": "Active",
+  "status_paused": "Paused",
 
   "profile_reset_title": "♻️ Reset profile",
   "profile_reset_warning": "This will clear your languages and interests. Are you sure?",
@@ -66,7 +96,10 @@
   "main_menu_change_lang": "🌐 Interface Language",
   "main_menu_view_profile": "👤 My Profile",
   "main_menu_edit_profile": "🔄 Edit Profile",
+  "main_menu_create_profile": "✨ Create Profile",
   "main_menu_feedback": "💬 Feedback",
+  "profile_completed_view": "👤 View Profile",
+  "profile_completed_main": "🏠 Main Menu",
   "feedback_text": "💌 Thanks for your feedback!\n\nPlease write what worries you or what ideas you have to improve the bot.\n\n📝 Feedback should be 10 to 1000 characters long.",
   "feedback_char_count": "Character count: {count}/1000",
   "feedback_too_short": "❌ Feedback too short!\n\nMinimum: 10 characters\nCurrent: {count} characters",
@@ -91,5 +124,11 @@
   "cancel_button": "Cancel ❌",
   "back_to_main": "🏠 Back to main menu",
   "target_language_explanation": "🎯 What is your Russian level?",
-  "access_denied": "❌ You don't have permission to execute this command"
+  "access_denied": "❌ You don't have permission to execute this command",
+  
+  "feedback_back_to_main": "🏠 Main Menu",
+  "feedback_help": "❓ Help",
+  
+  "feedback_help_title": "❓ Feedback Help",
+  "feedback_help_content": "📝 How to write feedback:\n\n• Describe a problem: \"Slow loading\", \"Profile setup is confusing\"\n• Suggest improvement: \"Add new languages\", \"Improve interface\"\n• Ask a question: \"How does matching work?\", \"When will new features be available?\"\n\n⏰ Response time: We respond within 24 hours\n📏 Limitations: From 10 to 1000 characters\n\n💡 Examples of good feedback:\n• \"Great bot! Would love to add Japanese language support\"\n• \"Interface is intuitive, but navigation could be improved\"\n• \"Quickly found a conversation partner for English practice\"\n• \"Would like more notification settings\""
 }
