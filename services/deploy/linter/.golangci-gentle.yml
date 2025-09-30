@@ -1,0 +1,114 @@
+# Мягкая конфигурация линтера
+# Для постепенного внедрения улучшений
+
+run:
+  timeout: 5m
+  tests: false
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    # === БАЗОВЫЕ ЛИНТЕРЫ ===
+    - unused
+    - gofmt
+    - goimports
+    - govet
+    - ineffassign
+    - gosimple
+    - staticcheck
+    
+    # === БЕЗОПАСНОСТЬ (мягкие настройки) ===
+    - gosec
+    - errcheck
+    
+    # === ПРОИЗВОДИТЕЛЬНОСТЬ (мягкие настройки) ===
+    - prealloc
+    - perfsprint
+    
+    # === СТИЛЬ КОДА (мягкие настройки) ===
+    - goconst
+    - gocyclo
+    - funlen
+    - gocognit
+    - nestif
+    
+    # === КАЧЕСТВО КОДА (мягкие настройки) ===
+    - gochecknoinits
+    - gochecknoglobals
+    - mnd
+    
+    # === ДОПОЛНИТЕЛЬНЫЕ (мягкие настройки) ===
+    - misspell
+    - whitespace
+
+linters-settings:
+  # Настройки govet
+  govet:
+    enable:
+      - assign
+      - atomic
+      - bools
+      - buildtag
+      - errorsas
+      - httpresponse
+      - loopclosure
+      - lostcancel
+      - nilfunc
+      - printf
+      - shadow
+      - shift
+      - sortslice
+      - tests
+      - timeformat
+      - unusedwrite
+  
+  # Настройки gosec (мягкие)
+  gosec:
+    severity: high
+    confidence: high
+    excludes:
+      - G204  # subprocess launched with variable
+      - G304  # file path provided as taint input
+      - G306  # file permissions
+  
+  # Настройки gocyclo (мягкие)
+  gocyclo:
+    min-complexity: 20  # Менее строго
+  
+  # Настройки funlen (мягкие)
+  funlen:
+    lines: 150          # Менее строго
+    statements: 75
+  
+  # Настройки gocognit (мягкие)
+  gocognit:
+    min-complexity: 30  # Менее строго
+  
+  # Настройки nestif (мягкие)
+  nestif:
+    min-complexity: 8   # Менее строго
+  
+  # Настройки mnd (мягкие)
+  mnd:
+    ignored-numbers: "0,1,2,3,4,5,10,100,1000,60,30,15,32,50,500,64"
+    ignored-functions: "strings.Split,strings.Join,time.Sleep,time.Now,os.ReadFile,os.WriteFile"
+
+issues:
+  # Мягкие лимиты
+  max-issues-per-linter: 100
+  max-same-issues: 50
+  max-from-linter: 50
+  
+  # Исключения для тестов
+  exclude-rules:
+    - linters: [gocyclo, funlen, gocognit, nestif]
+      path: ".*_test.go$"
+    
+    - linters: [gocyclo, funlen, gocognit, nestif]
+      path: ".*_mock.go$"
+    
+    - linters: [gosec]
+      path: ".*_test.go$"
+  
+  new: false
+  fix: false

@@ -1,0 +1,39 @@
+# Совместимая конфигурация golangci-lint
+run:
+  timeout: 5m
+  tests: false
+
+linters:
+  enable:
+    - unused
+    - gofmt
+    - goimports
+    - govet
+    - ineffassign
+    - gosimple
+    - staticcheck
+
+linters-settings:
+  govet:
+    enable:
+      - assign
+      - atomic
+      - bools
+      - buildtag
+      - errorsas
+      - httpresponse
+      - loopclosure
+      - lostcancel
+      - nilfunc
+      - printf
+      - shadow
+      - shift
+      - sortslice
+      - tests
+      - timeformat
+      - unusedwrite
+
+issues:
+  exclude-rules:
+    - linters: [golint]
+      text: "should have comment"

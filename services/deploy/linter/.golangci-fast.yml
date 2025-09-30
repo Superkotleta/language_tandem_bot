@@ -1,0 +1,63 @@
+# Быстрая конфигурация линтера
+# Для быстрой разработки с основными проверками
+
+run:
+  timeout: 3m
+  tests: false
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    # Только быстрые линтеры
+    - gofmt
+    - goimports
+    - govet
+    - ineffassign
+    - gosimple
+    - unused
+    - goconst
+    - gocyclo
+    - funlen
+    - gocognit
+    - nestif
+    - misspell
+    - whitespace
+    - wsl
+    - tagalign
+    - tagliatelle
+    - gochecknoinits
+    - gochecknoglobals
+    - mnd
+    - gomoddirectives
+    - gomodguard
+    - depguard
+    - prealloc
+    - makezero
+    - perfsprint
+    - fatcontext
+    - noctx
+    - bodyclose
+    - sqlclosecheck
+    - errcheck
+    - gosec
+
+linters-settings:
+  gocyclo:
+    min-complexity: 20  # Менее строго
+  funlen:
+    lines: 150          # Менее строго
+    statements: 75
+  gocognit:
+    min-complexity: 25  # Менее строго
+  nestif:
+    min-complexity: 7   # Менее строго
+  mnd:
+    ignored-numbers: "0,1,2,3,4,5,10,100,1000"
+    ignored-functions: "strings.Split,strings.Join,time.Sleep"
+
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 10
+  max-from-linter: 20
+  new: false
+  fix: false

@@ -1,0 +1,193 @@
+# Улучшенная конфигурация golangci-lint
+# Основана на практиках крупных компаний (Google, Uber, Netflix, etc.)
+
+run:
+  timeout: 10m
+  tests: true
+  modules-download-mode: readonly
+  skip-dirs:
+    - vendor
+    - node_modules
+    - .git
+  skip-files:
+    - ".*_test.go$"
+    - ".*_mock.go$"
+  go: "1.22"
+
+linters:
+  enable:
+    # === БАЗОВЫЕ ЛИНТЕРЫ ===
+    - unused          # неиспользуемый код
+    - gofmt          # форматирование
+    - goimports      # импорты
+    - govet          # go vet проверки
+    - ineffassign    # неэффективные присваивания
+    - gosimple       # упрощения кода
+    - staticcheck    # статический анализ
+    
+    # === БЕЗОПАСНОСТЬ ===
+    - gosec          # проверки безопасности
+    - errcheck       # проверка ошибок
+    - bodyclose      # закрытие HTTP соединений
+    - noctx          # контекст в HTTP запросах
+    - sqlclosecheck  # закрытие SQL соединений
+    
+    # === ПРОИЗВОДИТЕЛЬНОСТЬ ===
+    - prealloc       # предварительное выделение памяти
+    - perfsprint     # оптимизация форматирования
+    - fatcontext     # проверка контекстов
+    - makezero       # инициализация слайсов
+    
+    # === СТИЛЬ КОДА ===
+    - gocritic       # критические замечания
+    - revive         # современный golint
+    - goconst        # константы вместо магических строк
+    - gocyclo        # цикломатическая сложность
+    - funlen         # длина функций
+    - gocognit       # когнитивная сложность
+    - nestif         # вложенные if
+    
+    # === ТЕСТИРОВАНИЕ ===
+    - testifylint    # проверки testify
+    - paralleltest   # параллельные тесты
+    - testpackage    # изоляция тестов
+    - thelper        # тестовые хелперы
+    
+    # === КАЧЕСТВО КОДА ===
+    - gochecknoinits # отсутствие init функций
+    - gochecknoglobals # отсутствие глобальных переменных
+    - mnd          # магические числа
+    - gomoddirectives # директивы go.mod
+    - gomodguard     # защита зависимостей
+    - depguard       # контроль импортов
+    
+    # === ДОПОЛНИТЕЛЬНЫЕ ===
+    - misspell       # проверка орфографии
+    - whitespace     # пробелы
+    - wsl            # пустые строки
+    - tagalign       # выравнивание тегов
+    - tagliatelle    # проверка тегов
+
+linters-settings:
+  # Настройки govet
+  govet:
+    enable:
+      - assign
+      - atomic
+      - bools
+      - buildtag
+      - errorsas
+      - httpresponse
+      - loopclosure
+      - lostcancel
+      - nilfunc
+      - printf
+      - shadow
+      - shift
+      - sortslice
+      - tests
+      - timeformat
+      - unusedwrite
+    disable:
+      - fieldalignment  # может быть слишком строгим
+  
+  # Настройки gocritic
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+  
+  # Настройки gosec
+  gosec:
+    severity: medium
+    confidence: medium
+    excludes:
+      - G204  # subprocess launched with variable
+      - G304  # file path provided as taint input
+  
+  # Настройки gocyclo
+  gocyclo:
+    min-complexity: 15
+  
+  # Настройки funlen
+  funlen:
+    lines: 100
+    statements: 50
+  
+  # Настройки gocognit
+  gocognit:
+    min-complexity: 20
+  
+  # Настройки nestif
+  nestif:
+    min-complexity: 5
+  
+  # Настройки mnd
+  mnd:
+    # Исключения для магических чисел
+    ignored-numbers: "0,1,2,3,4,5"
+    ignored-functions: "strings.Split,strings.Join"
+  
+  # Настройки depguard
+  depguard:
+    rules:
+      main:
+        deny:
+          - pkg: "github.com/sirupsen/logrus"
+            desc: "use log/slog instead"
+  
+  # Настройки gomodguard
+  gomodguard:
+    allowed:
+      modules: []
+      domains: []
+    blocked:
+      modules: []
+      versions: []
+      local_replace_directories: []
+
+issues:
+  # Исключения
+  exclude-rules:
+    # Исключить устаревшие линтеры
+    - linters: [golint]
+      text: "should have comment"
+    
+    # Исключить некоторые проверки для тестов
+    - linters: [gocyclo, funlen, gocognit]
+      path: ".*_test.go$"
+    
+    # Исключить проверки для моков
+    - linters: [gocyclo, funlen, gocognit, nestif]
+      path: ".*_mock.go$"
+    
+    # Исключить проверки для vendor
+    - linters: [all]
+      path: "vendor/.*"
+  
+  # Максимальные лимиты
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  max-from-linter: 0
+  
+  # Новые проблемы
+  new: false
+  
+  # Исправления
+  fix: false
+
+# Настройки вывода
+output:
+  format: colored-line-number
+  print-issued-line: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true

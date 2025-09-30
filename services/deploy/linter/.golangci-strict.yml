@@ -1,0 +1,117 @@
+# Строгая конфигурация линтера
+# Для production кода с максимальными требованиями
+
+run:
+  timeout: 15m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    # Все линтеры из enhanced + дополнительные
+    - unused
+    - gofmt
+    - goimports
+    - govet
+    - ineffassign
+    - gosimple
+    - staticcheck
+    - gosec
+    - errcheck
+    - bodyclose
+    - noctx
+    - sqlclosecheck
+    - prealloc
+    - perfsprint
+    - fatcontext
+    - makezero
+    - gocritic
+    - revive
+    - goconst
+    - gocyclo
+    - funlen
+    - gocognit
+    - nestif
+    - testifylint
+    - paralleltest
+    - testpackage
+    - thelper
+    - gochecknoinits
+    - gochecknoglobals
+    - mnd
+    - gomoddirectives
+    - gomodguard
+    - depguard
+    - misspell
+    - whitespace
+    - wsl
+    - tagalign
+    - tagliatelle
+    # Дополнительные строгие линтеры
+    - exhaustive
+    - exhaustruct
+    - forbidigo
+    - gochecksumtype
+    - gocognit
+    - godot
+    - godox
+    - goheader
+    - goprintffuncname
+    - gosmopolitan
+    - grouper
+    - importas
+    - inamedparam
+    - interfacebloat
+    - intrange
+    - ireturn
+    - lll
+    - loggercheck
+    - maintidx
+    - mirror
+    - musttag
+    - nakedret
+    - nilerr
+    - nilnil
+    - nlreturn
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - stylecheck
+    - tenv
+    - testableexamples
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - varnamelen
+    - wastedassign
+    - wrapcheck
+    - zerologlint
+
+linters-settings:
+  gocyclo:
+    min-complexity: 10  # Более строго
+  funlen:
+    lines: 50           # Более строго
+    statements: 25
+  gocognit:
+    min-complexity: 15  # Более строго
+  nestif:
+    min-complexity: 3   # Более строго
+  lll:
+    line-length: 100    # Максимальная длина строки
+  mnd:
+    ignored-numbers: "0,1"  # Только 0 и 1 разрешены
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  max-from-linter: 0
+  new: false
+  fix: false
