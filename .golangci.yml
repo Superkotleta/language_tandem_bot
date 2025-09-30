@@ -1,4 +1,6 @@
 # .golangci.yml
+version: "2"
+
 linters:
   enable:
     - unused        # заменяет deadcode, structcheck, varcheck
@@ -12,16 +14,3 @@ linters:
     - gofmt         # форматирование кода
     - goimports     # импорты
 
-linters-settings:
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-      - experimental
-  gosec:
-    severity: medium
-    confidence: medium

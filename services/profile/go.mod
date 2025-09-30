@@ -1,6 +1,6 @@
 module profile
 
-go 1.22
+go 1.25.0
 
 require (
 	github.com/golang-migrate/migrate/v4 v4.17.0

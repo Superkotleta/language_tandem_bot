@@ -1,0 +1,27 @@
+# Упрощенная конфигурация golangci-lint
+linters:
+  enable:
+    - unused
+    - gofmt
+    - goimports
+    - govet
+
+linters-settings:
+  govet:
+    enable:
+      - assign
+      - atomic
+      - bools
+      - buildtag
+      - errorsas
+      - httpresponse
+      - loopclosure
+      - lostcancel
+      - nilfunc
+      - printf
+      - shadow
+      - shift
+      - sortslice
+      - tests
+      - timeformat
+      - unusedwrite
