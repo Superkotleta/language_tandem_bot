@@ -127,13 +127,13 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 	// Читаем файл
 	data, err := os.ReadFile(cleanPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	// Парсим JSON
 	var config InterestsConfig
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
 	return &config, nil
@@ -153,15 +153,19 @@ func SaveInterestsConfig(config *InterestsConfig) error {
 
 	// Создаем директорию если не существует
 	if err := os.MkdirAll(filepath.Dir(configPath), defaultDirectoryPermissions); err != nil {
-		return err
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
 	// Сериализуем в JSON
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
 	// Записываем в файл
-	return os.WriteFile(configPath, data, defaultFilePermissions) // Более безопасные права доступа
+	if err := os.WriteFile(configPath, data, defaultFilePermissions); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
 }

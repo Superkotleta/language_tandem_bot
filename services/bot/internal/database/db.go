@@ -44,7 +44,12 @@ func NewDB(databaseURL string) (*DB, error) {
 
 // Close закрывает подключение к базе данных.
 func (db *DB) Close() error {
-	return db.conn.Close()
+	err := db.conn.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close database connection: %w", err)
+	}
+
+	return nil
 }
 
 // GetConnection возвращает подключение к базе данных.
@@ -108,9 +113,11 @@ func (db *DB) GetLanguageByCode(code string) (*models.Language, error) {
 	`
 	lang := &models.Language{}
 
-	err := db.conn.QueryRowContext(context.Background(), query, code).Scan(&lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn)
+	err := db.conn.QueryRowContext(context.Background(), query, code).Scan(
+		&lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn,
+	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	return lang, nil
@@ -183,7 +190,7 @@ func (db *DB) GetUserByTelegramID(telegramID int64) (*models.User, error) {
 		&user.State, &user.ProfileCompletionLevel, &user.Status,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	return user, nil
@@ -203,7 +210,7 @@ func (db *DB) UpdateUser(user *models.User) error {
 		user.InterfaceLanguageCode, user.State, user.Status,
 		user.ProfileCompletionLevel, user.ID)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // SaveUserInterests сохраняет интересы пользователя.
@@ -211,14 +218,14 @@ func (db *DB) SaveUserInterests(userID int64, interestIDs []int) error {
 	// Сначала удаляем все интересы пользователя
 	err := db.ClearUserInterests(int(userID))
 	if err != nil {
-		return err
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Затем добавляем новые
 	for _, interestID := range interestIDs {
 		err := db.SaveUserInterest(int(userID), interestID, false)
 		if err != nil {
-			return err
+			return fmt.Errorf("operation failed: %w", err)
 		}
 	}
 
@@ -249,7 +256,7 @@ func (db *DB) FindOrCreateUser(telegramID int64, username, firstName string) (*m
 		&user.State, &user.ProfileCompletionLevel, &user.Status,
 	)
 
-	return user, err
+	return user, fmt.Errorf("operation failed: %w", err)
 }
 
 // UpdateUserState обновляет состояние пользователя.
@@ -258,7 +265,7 @@ func (db *DB) UpdateUserState(userID int, state string) error {
         UPDATE users SET state = $1, updated_at = NOW() WHERE id = $2
     `, state, userID)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // UpdateUserStatus обновляет статус пользователя.
@@ -267,7 +274,7 @@ func (db *DB) UpdateUserStatus(userID int, status string) error {
         UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2
     `, status, userID)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // UpdateUserInterfaceLanguage обновляет язык интерфейса пользователя.
@@ -276,7 +283,7 @@ func (db *DB) UpdateUserInterfaceLanguage(userID int, langCode string) error {
         UPDATE users SET interface_language_code = $1, updated_at = NOW() WHERE id = $2
     `, langCode, userID)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // UpdateUserNativeLanguage обновляет родной язык пользователя.
@@ -286,7 +293,7 @@ func (db *DB) UpdateUserNativeLanguage(userID int, langCode string) error {
 		langCode, userID,
 	)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // UpdateUserTargetLanguage обновляет целевой язык пользователя.
@@ -296,7 +303,7 @@ func (db *DB) UpdateUserTargetLanguage(userID int, langCode string) error {
 		langCode, userID,
 	)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // UpdateUserTargetLanguageLevel обновляет уровень целевого языка пользователя.
@@ -306,7 +313,7 @@ func (db *DB) UpdateUserTargetLanguageLevel(userID int, level string) error {
 		level, userID,
 	)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // SaveNativeLanguage сохраняет родной язык пользователя.
@@ -327,7 +334,7 @@ func (db *DB) SaveUserInterest(userID, interestID int, isPrimary bool) error {
         ON CONFLICT (user_id, interest_id) DO NOTHING
     `, userID, interestID, isPrimary)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // GetUserSelectedInterests возвращает выбранные пользователем интересы.
@@ -337,7 +344,7 @@ func (db *DB) GetUserSelectedInterests(userID int) ([]int, error) {
         WHERE user_id = $1
     `, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	defer func() {
@@ -371,7 +378,7 @@ func (db *DB) RemoveUserInterest(userID, interestID int) error {
         WHERE user_id = $1 AND interest_id = $2
     `, userID, interestID)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // ClearUserInterests удаляет все интересы пользователя.
@@ -380,14 +387,14 @@ func (db *DB) ClearUserInterests(userID int) error {
         DELETE FROM user_interests WHERE user_id = $1
     `, userID)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // ResetUserProfile очищает языки и интересы, переводит пользователя в начало онбординга.
 func (db *DB) ResetUserProfile(userID int) error {
 	tx, err := db.conn.BeginTx(context.Background(), nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	defer func() {
@@ -395,8 +402,9 @@ func (db *DB) ResetUserProfile(userID int) error {
 	}()
 
 	// Удаляем интересы
-	if _, err := tx.ExecContext(context.Background(), `DELETE FROM user_interests WHERE user_id = $1`, userID); err != nil {
-		return err
+	query := `DELETE FROM user_interests WHERE user_id = $1`
+	if _, err := tx.ExecContext(context.Background(), query, userID); err != nil {
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сбрасываем языки и состояние (интерфейсный язык не трогаем)
@@ -411,10 +419,14 @@ func (db *DB) ResetUserProfile(userID int) error {
 		    updated_at = NOW()
 		WHERE id = $3
 	`, models.StateWaitingLanguage, models.StatusFilling, userID); err != nil {
-		return err
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 // Методы работы с отзывами пользователей
@@ -428,7 +440,7 @@ func (db *DB) SaveUserFeedback(userID int, feedbackText string, contactInfo *str
 
 	_, err := db.conn.ExecContext(context.Background(), query, userID, feedbackText, contactInfo)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // GetUserFeedbackByUserID получает отзывы пользователя.
@@ -442,7 +454,7 @@ func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, err
 
 	rows, err := db.conn.QueryContext(context.Background(), query, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	defer func() {
@@ -501,7 +513,7 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 
 	rows, err := db.conn.QueryContext(context.Background(), query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	defer func() {
@@ -556,7 +568,7 @@ func (db *DB) scanFeedbackRow(rows *sql.Rows) (map[string]interface{}, error) {
 
 	err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &username, &telegramID, &firstName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	feedback := map[string]interface{}{
@@ -593,5 +605,5 @@ func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error 
 
 	_, err := db.conn.ExecContext(context.Background(), query, adminResponse, feedbackID)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }

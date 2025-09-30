@@ -40,7 +40,7 @@ func (s *InterestService) GetInterestCategories() ([]models.InterestCategory, er
 
 	rows, err := s.db.QueryContext(context.Background(), query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query interests: %w", err)
 	}
 
 	defer func() {
@@ -58,7 +58,7 @@ func (s *InterestService) GetInterestCategories() ([]models.InterestCategory, er
 
 		err := rows.Scan(&category.ID, &category.KeyName, &category.DisplayOrder, &category.CreatedAt)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan interest category: %w", err)
 		}
 
 		categories = append(categories, category)
@@ -78,7 +78,7 @@ func (s *InterestService) GetInterestsByCategory(categoryID int) ([]models.Inter
 
 	rows, err := s.db.QueryContext(context.Background(), query, categoryID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query interests by category: %w", err)
 	}
 
 	defer func() {
@@ -97,7 +97,7 @@ func (s *InterestService) GetInterestsByCategory(categoryID int) ([]models.Inter
 		err := rows.Scan(&interest.ID, &interest.KeyName, &interest.CategoryID,
 			&interest.DisplayOrder, &interest.Type, &interest.CreatedAt)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan interest: %w", err)
 		}
 
 		interests = append(interests, interest)
@@ -117,7 +117,7 @@ func (s *InterestService) GetUserInterestSelections(userID int) ([]models.Intere
 
 	rows, err := s.db.QueryContext(context.Background(), query, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query user interests: %w", err)
 	}
 
 	defer func() {
@@ -136,7 +136,7 @@ func (s *InterestService) GetUserInterestSelections(userID int) ([]models.Intere
 		err := rows.Scan(&selection.ID, &selection.UserID, &selection.InterestID,
 			&selection.IsPrimary, &selection.SelectionOrder, &selection.CreatedAt)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan user interest selection: %w", err)
 		}
 
 		selections = append(selections, selection)
@@ -154,7 +154,7 @@ func (s *InterestService) AddUserInterestSelection(userID, interestID int, isPri
 
 	err := s.db.QueryRowContext(context.Background(), checkQuery, userID, interestID).Scan(&exists)
 	if err != nil {
-		return err
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	if exists {
@@ -168,7 +168,7 @@ func (s *InterestService) AddUserInterestSelection(userID, interestID int, isPri
 
 	err = s.db.QueryRowContext(context.Background(), orderQuery, userID).Scan(&nextOrder)
 	if err != nil {
-		return err
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Если это основной интерес, проверяем лимиты
@@ -179,7 +179,7 @@ func (s *InterestService) AddUserInterestSelection(userID, interestID int, isPri
 
 		err = s.db.QueryRowContext(context.Background(), countQuery, userID).Scan(&primaryCount)
 		if err != nil {
-			return err
+			return fmt.Errorf("operation failed: %w", err)
 		}
 
 		// Получаем конфигурацию лимитов
@@ -200,7 +200,7 @@ func (s *InterestService) AddUserInterestSelection(userID, interestID int, isPri
 	`
 	_, err = s.db.ExecContext(context.Background(), insertQuery, userID, interestID, isPrimary, nextOrder)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // RemoveUserInterestSelection удаляет выбор пользователя.
@@ -208,7 +208,7 @@ func (s *InterestService) RemoveUserInterestSelection(userID, interestID int) er
 	query := `DELETE FROM user_interest_selections WHERE user_id = $1 AND interest_id = $2`
 	_, err := s.db.ExecContext(context.Background(), query, userID, interestID)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // SetPrimaryInterest устанавливает интерес как основной.
@@ -221,12 +221,12 @@ func (s *InterestService) SetPrimaryInterest(userID, interestID int, isPrimary b
 
 		err := s.db.QueryRowContext(context.Background(), countQuery, userID).Scan(&primaryCount)
 		if err != nil {
-			return err
+			return fmt.Errorf("operation failed: %w", err)
 		}
 
 		limits, err := s.GetInterestLimitsConfig()
 		if err != nil {
-			return err
+			return fmt.Errorf("operation failed: %w", err)
 		}
 
 		if primaryCount >= limits.MaxPrimaryInterests {
@@ -237,14 +237,14 @@ func (s *InterestService) SetPrimaryInterest(userID, interestID int, isPrimary b
 	query := `UPDATE user_interest_selections SET is_primary = $3 WHERE user_id = $1 AND interest_id = $2`
 	_, err := s.db.ExecContext(context.Background(), query, userID, interestID, isPrimary)
 
-	return err
+	return fmt.Errorf("operation failed: %w", err)
 }
 
 // GetInterestLimitsConfig возвращает конфигурацию лимитов из файла.
 func (s *InterestService) GetInterestLimitsConfig() (*config.InterestLimitsConfig, error) {
 	interestsConfig, err := config.LoadInterestsConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	return &interestsConfig.InterestLimits, nil
@@ -254,7 +254,7 @@ func (s *InterestService) GetInterestLimitsConfig() (*config.InterestLimitsConfi
 func (s *InterestService) GetMatchingConfig() (*config.MatchingConfig, error) {
 	interestsConfig, err := config.LoadInterestsConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	return &interestsConfig.Matching, nil
@@ -292,7 +292,7 @@ type UserInterestMaps struct {
 func (s *InterestService) buildUserInterestMaps(userID int) (*UserInterestMaps, error) {
 	interests, err := s.GetUserInterestSelections(userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	allMap := make(map[int]bool)
@@ -312,7 +312,10 @@ func (s *InterestService) buildUserInterestMaps(userID int) (*UserInterestMaps, 
 }
 
 // calculateCompatibilityScore вычисляет балл совместимости.
-func (s *InterestService) calculateCompatibilityScore(user1Maps, user2Maps *UserInterestMaps, config *config.MatchingConfig) int {
+func (s *InterestService) calculateCompatibilityScore(
+	user1Maps, user2Maps *UserInterestMaps,
+	config *config.MatchingConfig,
+) int {
 	score := 0
 
 	for interestID := range user1Maps.AllInterests {
@@ -325,7 +328,11 @@ func (s *InterestService) calculateCompatibilityScore(user1Maps, user2Maps *User
 }
 
 // calculateInterestScore вычисляет балл за конкретный интерес.
-func (s *InterestService) calculateInterestScore(interestID int, user1Maps, user2Maps *UserInterestMaps, config *config.MatchingConfig) int {
+func (s *InterestService) calculateInterestScore(
+	interestID int,
+	user1Maps, user2Maps *UserInterestMaps,
+	config *config.MatchingConfig,
+) int {
 	switch {
 	case user1Maps.PrimaryInterests[interestID] && user2Maps.PrimaryInterests[interestID]:
 		// Оба пользователя считают этот интерес основным
@@ -343,7 +350,7 @@ func (s *InterestService) calculateInterestScore(interestID int, user1Maps, user
 func (s *InterestService) GetUserInterestSummary(userID int) (*models.UserInterestSummary, error) {
 	selections, err := s.GetUserInterestSelections(userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	summary := &models.UserInterestSummary{
@@ -387,10 +394,11 @@ func (s *InterestService) GetInterestByID(interestID int) (*models.Interest, err
 
 	var interest models.Interest
 
-	err := s.db.QueryRowContext(context.Background(), query, interestID).Scan(&interest.ID, &interest.KeyName, &interest.CategoryID,
+	err := s.db.QueryRowContext(context.Background(), query, interestID).Scan(
+		&interest.ID, &interest.KeyName, &interest.CategoryID,
 		&interest.DisplayOrder, &interest.Type, &interest.CreatedAt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	return &interest, nil
@@ -402,9 +410,11 @@ func (s *InterestService) GetCategoryByID(categoryID int) (*models.InterestCateg
 
 	var category models.InterestCategory
 
-	err := s.db.QueryRowContext(context.Background(), query, categoryID).Scan(&category.ID, &category.KeyName, &category.DisplayOrder, &category.CreatedAt)
+	err := s.db.QueryRowContext(context.Background(), query, categoryID).Scan(
+		&category.ID, &category.KeyName, &category.DisplayOrder, &category.CreatedAt,
+	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	return &category, nil
@@ -414,7 +424,7 @@ func (s *InterestService) GetCategoryByID(categoryID int) (*models.InterestCateg
 func (s *InterestService) ValidateInterestSelection(userID, totalInterests int) error {
 	limits, err := s.GetInterestLimitsConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Вычисляем рекомендуемое количество основных интересов
@@ -439,7 +449,7 @@ func (s *InterestService) ValidateInterestSelection(userID, totalInterests int) 
 
 	err = s.db.QueryRowContext(context.Background(), countQuery, userID).Scan(&currentPrimary)
 	if err != nil {
-		return err
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	if currentPrimary < limits.MinPrimaryInterests {

@@ -123,7 +123,7 @@ func (bl *BatchLoader) scanUserWithInterestRow(rows *sql.Rows) (models.User, sql
 		&interestID,
 	)
 
-	return user, interestID, err
+	return user, interestID, fmt.Errorf("operation failed: %w", err)
 }
 
 // BatchLoadInterestsWithTranslations загружает интересы с переводами для нескольких языков.
@@ -390,7 +390,9 @@ func getUserWithAllDataQuery() string {
 }
 
 // processUserDataRows обрабатывает строки результата запроса.
-func (bl *BatchLoader) processUserDataRows(rows *sql.Rows) (*UserWithAllData, []int, map[int]string, []*models.Language) {
+func (bl *BatchLoader) processUserDataRows(
+	rows *sql.Rows,
+) (*UserWithAllData, []int, map[int]string, []*models.Language) {
 	var userData *UserWithAllData
 
 	interests := make([]int, 0)
@@ -439,7 +441,9 @@ func (bl *BatchLoader) processUserDataRows(rows *sql.Rows) (*UserWithAllData, []
 }
 
 // scanUserDataRow сканирует одну строку результата запроса.
-func (bl *BatchLoader) scanUserDataRow(rows *sql.Rows) (models.User, sql.NullInt64, sql.NullString, sql.NullInt64, sql.NullString, sql.NullString, sql.NullString, error) {
+func (bl *BatchLoader) scanUserDataRow(
+	rows *sql.Rows,
+) (models.User, sql.NullInt64, sql.NullString, sql.NullInt64, sql.NullString, sql.NullString, sql.NullString, error) {
 	var (
 		user                                 models.User
 		interestID                           sql.NullInt64
@@ -457,7 +461,8 @@ func (bl *BatchLoader) scanUserDataRow(rows *sql.Rows) (models.User, sql.NullInt
 		&langID, &langCode, &langNameNative, &langNameEn,
 	)
 
-	return user, interestID, interestName, langID, langCode, langNameNative, langNameEn, err
+	return user, interestID, interestName, langID, langCode, langNameNative, langNameEn,
+		fmt.Errorf("operation failed: %w", err)
 }
 
 // BatchLoadStats загружает статистику для нескольких типов одним запросом.
@@ -490,7 +495,9 @@ func (bl *BatchLoader) loadUserStats() map[string]interface{} {
 		fmt.Printf("Error getting total users count: %v\n", err)
 	}
 
-	err = bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM users WHERE status = 'active'").Scan(&activeUsers)
+	query := "SELECT COUNT(*) FROM users WHERE status = 'active'"
+
+	err = bl.db.conn.QueryRowContext(context.Background(), query).Scan(&activeUsers)
 	if err != nil {
 		fmt.Printf("Error getting active users count: %v\n", err)
 	}
@@ -536,7 +543,9 @@ func (bl *BatchLoader) loadFeedbackStats() map[string]interface{} {
 		fmt.Printf("Error getting total feedbacks count: %v\n", err)
 	}
 
-	err = bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM user_feedback WHERE is_processed = true").Scan(&processedFeedbacks)
+	query := "SELECT COUNT(*) FROM user_feedback WHERE is_processed = true"
+
+	err = bl.db.conn.QueryRowContext(context.Background(), query).Scan(&processedFeedbacks)
 	if err != nil {
 		fmt.Printf("Error getting processed feedbacks count: %v\n", err)
 	}

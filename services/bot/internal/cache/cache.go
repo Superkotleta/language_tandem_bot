@@ -350,7 +350,8 @@ func (cs *Service) cleanupExpired() {
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
 
-	cleaned := cs.cleanupLanguages() + cs.cleanupInterests() + cs.cleanupTranslations() + cs.cleanupUsers() + cs.cleanupStats()
+	cleaned := cs.cleanupLanguages() + cs.cleanupInterests() + cs.cleanupTranslations() +
+		cs.cleanupUsers() + cs.cleanupStats()
 
 	cs.updateSize()
 

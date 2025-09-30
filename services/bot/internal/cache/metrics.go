@@ -40,7 +40,8 @@ func NewMetricsService(cache ServiceInterface) *MetricsService {
 // RecordRequest записывает метрику запроса.
 func (ms *MetricsService) RecordRequest(responseTime time.Duration, hit bool) {
 	ms.totalRequests++
-	ms.avgResponseTime = (ms.avgResponseTime*time.Duration(ms.totalRequests-1) + responseTime) / time.Duration(ms.totalRequests)
+	ms.avgResponseTime = (ms.avgResponseTime*time.Duration(ms.totalRequests-1) + responseTime) /
+		time.Duration(ms.totalRequests)
 
 	if !hit {
 		ms.errorCount++

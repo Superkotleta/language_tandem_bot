@@ -2,6 +2,7 @@
 package validation
 
 import (
+	"fmt"
 	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 )
@@ -40,14 +41,19 @@ func (vs *Service) ValidateUserWithErrorHandling(user *models.User, userID, chat
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
 }
 
 // ValidateUserRegistrationWithErrorHandling валидирует регистрацию пользователя.
-func (vs *Service) ValidateUserRegistrationWithErrorHandling(telegramID int, username, firstName, languageCode string, userID, chatID int64, operation string) error {
+func (vs *Service) ValidateUserRegistrationWithErrorHandling(
+	telegramID int,
+	username, firstName, languageCode string,
+	userID, chatID int64,
+	operation string,
+) error {
 	result := vs.userValidator.ValidateUserRegistration(telegramID, username, firstName, languageCode)
 
 	if result.HasErrors() {
@@ -64,14 +70,18 @@ func (vs *Service) ValidateUserRegistrationWithErrorHandling(telegramID int, use
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
 }
 
 // ValidateUserUpdateWithErrorHandling валидирует обновление пользователя.
-func (vs *Service) ValidateUserUpdateWithErrorHandling(user *models.User, userID, chatID int64, operation string) error {
+func (vs *Service) ValidateUserUpdateWithErrorHandling(
+	user *models.User,
+	userID, chatID int64,
+	operation string,
+) error {
 	result := vs.userValidator.ValidateUserUpdate(user)
 
 	if result.HasErrors() {
@@ -88,14 +98,18 @@ func (vs *Service) ValidateUserUpdateWithErrorHandling(user *models.User, userID
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
 }
 
 // ValidateUserInterestsWithErrorHandling валидирует интересы пользователя.
-func (vs *Service) ValidateUserInterestsWithErrorHandling(interestIDs []int, userID, chatID int64, operation string) error {
+func (vs *Service) ValidateUserInterestsWithErrorHandling(
+	interestIDs []int,
+	userID, chatID int64,
+	operation string,
+) error {
 	result := vs.userValidator.ValidateUserInterests(interestIDs)
 
 	if result.HasErrors() {
@@ -112,14 +126,18 @@ func (vs *Service) ValidateUserInterestsWithErrorHandling(interestIDs []int, use
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
 }
 
 // ValidateUserLanguagesWithErrorHandling валидирует языки пользователя.
-func (vs *Service) ValidateUserLanguagesWithErrorHandling(nativeLanguage, targetLanguage string, userID, chatID int64, operation string) error {
+func (vs *Service) ValidateUserLanguagesWithErrorHandling(
+	nativeLanguage, targetLanguage string,
+	userID, chatID int64,
+	operation string,
+) error {
 	result := vs.userValidator.ValidateUserLanguages(nativeLanguage, targetLanguage)
 
 	if result.HasErrors() {
@@ -136,7 +154,7 @@ func (vs *Service) ValidateUserLanguagesWithErrorHandling(nativeLanguage, target
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
@@ -160,7 +178,7 @@ func (vs *Service) ValidateMessageWithErrorHandling(chatID, userID int64, text, 
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
@@ -184,7 +202,7 @@ func (vs *Service) ValidateCallbackQueryWithErrorHandling(chatID, userID int64, 
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
@@ -208,7 +226,7 @@ func (vs *Service) ValidateFeedbackMessageWithErrorHandling(chatID, userID int64
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
@@ -232,14 +250,17 @@ func (vs *Service) ValidateCommandWithErrorHandling(chatID, userID int64, comman
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
 }
 
 // ValidateLanguageSelectionWithErrorHandling валидирует выбор языка с обработкой ошибок.
-func (vs *Service) ValidateLanguageSelectionWithErrorHandling(chatID, userID int64, languageCode, operation string) error {
+func (vs *Service) ValidateLanguageSelectionWithErrorHandling(
+	chatID, userID int64,
+	languageCode, operation string,
+) error {
 	result := vs.messageValidator.ValidateLanguageSelection(chatID, userID, languageCode)
 
 	if result.HasErrors() {
@@ -256,14 +277,18 @@ func (vs *Service) ValidateLanguageSelectionWithErrorHandling(chatID, userID int
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
 }
 
 // ValidateInterestSelectionWithErrorHandling валидирует выбор интереса с обработкой ошибок.
-func (vs *Service) ValidateInterestSelectionWithErrorHandling(chatID, userID int64, interestID int, operation string) error {
+func (vs *Service) ValidateInterestSelectionWithErrorHandling(
+	chatID, userID int64,
+	interestID int,
+	operation string,
+) error {
 	result := vs.messageValidator.ValidateInterestSelection(chatID, userID, interestID)
 
 	if result.HasErrors() {
@@ -280,14 +305,18 @@ func (vs *Service) ValidateInterestSelectionWithErrorHandling(chatID, userID int
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil
 }
 
 // ValidateLanguageLevelSelectionWithErrorHandling валидирует выбор уровня языка с обработкой ошибок.
-func (vs *Service) ValidateLanguageLevelSelectionWithErrorHandling(chatID, userID int64, level int, operation string) error {
+func (vs *Service) ValidateLanguageLevelSelectionWithErrorHandling(
+	chatID, userID int64,
+	level int,
+	operation string,
+) error {
 	result := vs.messageValidator.ValidateLanguageLevelSelection(chatID, userID, level)
 
 	if result.HasErrors() {
@@ -304,7 +333,7 @@ func (vs *Service) ValidateLanguageLevelSelectionWithErrorHandling(chatID, userI
 			validationErr.Context[field] = fieldErrors
 		}
 
-		return vs.errorHandler.Handle(validationErr, ctx)
+		return fmt.Errorf("validation error handling failed: %w", vs.errorHandler.Handle(validationErr, ctx))
 	}
 
 	return nil

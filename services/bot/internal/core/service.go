@@ -74,7 +74,12 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 }
 
 // NewBotServiceWithRedis создает BotService с Redis кэшем.
-func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, redisDB int, errorHandler interface{}) (*BotService, error) {
+func NewBotServiceWithRedis(
+	db *database.DB,
+	redisURL, redisPassword string,
+	redisDB int,
+	errorHandler interface{},
+) (*BotService, error) {
 	// Создаем Redis кэш
 	redisCache, err := cache.NewRedisCacheService(redisURL, redisPassword, redisDB, cache.DefaultConfig())
 	if err != nil {
@@ -118,87 +123,192 @@ type databaseAdapter struct {
 // Реализуем все методы интерфейса, делегируя к db или создавая заглушки
 
 func (a *databaseAdapter) FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error) {
-	return a.db.FindOrCreateUser(telegramID, username, firstName)
+	user, err := a.db.FindOrCreateUser(telegramID, username, firstName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find or create user: %w", err)
+	}
+
+	return user, nil
 }
 
 func (a *databaseAdapter) GetUserByTelegramID(telegramID int64) (*models.User, error) {
-	return a.db.GetUserByTelegramID(telegramID)
+	user, err := a.db.GetUserByTelegramID(telegramID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by telegram ID: %w", err)
+	}
+
+	return user, nil
 }
 
 func (a *databaseAdapter) UpdateUser(user *models.User) error {
-	return a.db.UpdateUser(user)
+	err := a.db.UpdateUser(user)
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) UpdateUserInterfaceLanguage(userID int, language string) error {
-	return a.db.UpdateUserInterfaceLanguage(userID, language)
+	err := a.db.UpdateUserInterfaceLanguage(userID, language)
+	if err != nil {
+		return fmt.Errorf("failed to update user interface language: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) UpdateUserState(userID int, state string) error {
-	return a.db.UpdateUserState(userID, state)
+	err := a.db.UpdateUserState(userID, state)
+	if err != nil {
+		return fmt.Errorf("failed to update user state: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) UpdateUserStatus(userID int, status string) error {
-	return a.db.UpdateUserStatus(userID, status)
+	err := a.db.UpdateUserStatus(userID, status)
+	if err != nil {
+		return fmt.Errorf("failed to update user status: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) UpdateUserNativeLanguage(userID int, langCode string) error {
-	return a.db.UpdateUserNativeLanguage(userID, langCode)
+	err := a.db.UpdateUserNativeLanguage(userID, langCode)
+	if err != nil {
+		return fmt.Errorf("failed to update user native language: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) UpdateUserTargetLanguage(userID int, langCode string) error {
-	return a.db.UpdateUserTargetLanguage(userID, langCode)
+	err := a.db.UpdateUserTargetLanguage(userID, langCode)
+	if err != nil {
+		return fmt.Errorf("failed to update user target language: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) UpdateUserTargetLanguageLevel(userID int, level string) error {
-	return a.db.UpdateUserTargetLanguageLevel(userID, level)
+	err := a.db.UpdateUserTargetLanguageLevel(userID, level)
+	if err != nil {
+		return fmt.Errorf("failed to update user target language level: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) ResetUserProfile(userID int) error {
-	return a.db.ResetUserProfile(userID)
+	err := a.db.ResetUserProfile(userID)
+	if err != nil {
+		return fmt.Errorf("failed to reset user profile: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) GetLanguages() ([]*models.Language, error) {
-	return a.db.GetLanguages()
+	languages, err := a.db.GetLanguages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get languages: %w", err)
+	}
+
+	return languages, nil
 }
 
 func (a *databaseAdapter) GetLanguageByCode(code string) (*models.Language, error) {
-	return a.db.GetLanguageByCode(code)
+	language, err := a.db.GetLanguageByCode(code)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get language by code: %w", err)
+	}
+
+	return language, nil
 }
 
 func (a *databaseAdapter) GetInterests() ([]*models.Interest, error) {
-	return a.db.GetInterests()
+	interests, err := a.db.GetInterests()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get interests: %w", err)
+	}
+
+	return interests, nil
 }
 
 func (a *databaseAdapter) GetUserSelectedInterests(userID int) ([]int, error) {
-	return a.db.GetUserSelectedInterests(userID)
+	interests, err := a.db.GetUserSelectedInterests(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user selected interests: %w", err)
+	}
+
+	return interests, nil
 }
 
 func (a *databaseAdapter) SaveUserInterests(userID int64, interestIDs []int) error {
-	return a.db.SaveUserInterests(userID, interestIDs)
+	err := a.db.SaveUserInterests(userID, interestIDs)
+	if err != nil {
+		return fmt.Errorf("failed to save user interests: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) SaveUserInterest(userID, interestID int, isPrimary bool) error {
-	return a.db.SaveUserInterest(userID, interestID, isPrimary)
+	err := a.db.SaveUserInterest(userID, interestID, isPrimary)
+	if err != nil {
+		return fmt.Errorf("failed to save user interest: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) RemoveUserInterest(userID, interestID int) error {
-	return a.db.RemoveUserInterest(userID, interestID)
+	err := a.db.RemoveUserInterest(userID, interestID)
+	if err != nil {
+		return fmt.Errorf("failed to remove user interest: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) ClearUserInterests(userID int) error {
-	return a.db.ClearUserInterests(userID)
+	err := a.db.ClearUserInterests(userID)
+	if err != nil {
+		return fmt.Errorf("failed to clear user interests: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error {
-	return a.db.SaveUserFeedback(userID, feedbackText, contactInfo)
+	err := a.db.SaveUserFeedback(userID, feedbackText, contactInfo)
+	if err != nil {
+		return fmt.Errorf("failed to save user feedback: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
-	return a.db.GetUnprocessedFeedback()
+	feedback, err := a.db.GetUnprocessedFeedback()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get unprocessed feedback: %w", err)
+	}
+
+	return feedback, nil
 }
 
 func (a *databaseAdapter) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
-	return a.db.MarkFeedbackProcessed(feedbackID, adminResponse)
+	err := a.db.MarkFeedbackProcessed(feedbackID, adminResponse)
+	if err != nil {
+		return fmt.Errorf("failed to mark feedback processed: %w", err)
+	}
+
+	return nil
 }
 
 func (a *databaseAdapter) GetConnection() *sql.DB {
@@ -206,7 +316,12 @@ func (a *databaseAdapter) GetConnection() *sql.DB {
 }
 
 func (a *databaseAdapter) Close() error {
-	return a.db.Close()
+	err := a.db.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close database: %w", err)
+	}
+
+	return nil
 }
 
 // NewBotServiceWithInterface создает BotService с интерфейсом Database (для тестов).
@@ -237,10 +352,13 @@ func (s *BotService) DetectLanguage(telegramLangCode string) string {
 }
 
 // HandleUserRegistration обрабатывает регистрацию нового пользователя.
-func (s *BotService) HandleUserRegistration(telegramID int64, username, firstName, telegramLangCode string) (*models.User, error) {
+func (s *BotService) HandleUserRegistration(
+	telegramID int64,
+	username, firstName, telegramLangCode string,
+) (*models.User, error) {
 	user, err := s.DB.FindOrCreateUser(telegramID, username, firstName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	detected := s.DetectLanguage(telegramLangCode)
@@ -285,7 +403,12 @@ func (s *BotService) GetLocalizedLanguageName(langCode, interfaceLangCode string
 
 // GetLocalizedInterests возвращает локализованные интересы для указанного языка.
 func (s *BotService) GetLocalizedInterests(langCode string) (map[int]string, error) {
-	return s.Localizer.GetInterests(langCode)
+	interests, err := s.Localizer.GetInterests(langCode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get interests: %w", err)
+	}
+
+	return interests, nil
 }
 
 // IsProfileCompleted проверяет наличие языков и хотя бы одного интереса.
@@ -296,7 +419,7 @@ func (s *BotService) IsProfileCompleted(user *models.User) (bool, error) {
 
 	ids, err := s.DB.GetUserSelectedInterests(user.ID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("operation failed: %w", err)
 	}
 
 	return len(ids) > 0, nil
@@ -349,7 +472,12 @@ func (s *BotService) buildLanguageProfileInfo(user *models.User, lang string) st
 	native := fmt.Sprintf("%s %s: %s", nativeFlag, s.Localizer.Get(lang, "profile_field_native"), nativeName)
 
 	levelText := s.formatLanguageLevel(user.TargetLanguageLevel)
-	target := fmt.Sprintf("%s %s: %s (%s)", targetFlag, s.Localizer.Get(lang, "profile_field_target"), targetName, levelText)
+	target := fmt.Sprintf("%s %s: %s (%s)",
+		targetFlag,
+		s.Localizer.Get(lang, "profile_field_target"),
+		targetName,
+		levelText,
+	)
 
 	return native + "\n" + target
 }
@@ -374,7 +502,11 @@ func (s *BotService) buildInterestsProfileInfo(user *models.User, lang string) s
 	interestsLine := fmt.Sprintf("🎯 %s: %d", s.Localizer.Get(lang, "profile_field_interests"), len(picked))
 
 	if len(picked) > 0 {
-		interestsLine = fmt.Sprintf("🎯 %s: %d\n• %s", s.Localizer.Get(lang, "profile_field_interests"), len(picked), strings.Join(picked, ", "))
+		interestsLine = fmt.Sprintf("🎯 %s: %d\n• %s",
+			s.Localizer.Get(lang, "profile_field_interests"),
+			len(picked),
+			strings.Join(picked, ", "),
+		)
 	}
 
 	return interestsLine
@@ -622,7 +754,7 @@ func (s *BotService) ValidateFeedback(feedbackText string) error {
 func (s *BotService) SaveUserFeedback(userID int, feedbackText string, contactInfo *string, admins []int64) error {
 	// Валидируем отзыв
 	if err := s.ValidateFeedback(feedbackText); err != nil {
-		return err
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сохраняем в базу данных
@@ -676,7 +808,7 @@ func (s *BotService) GetUserDataForFeedback(userID int) (map[string]interface{},
 		FROM users WHERE id = $1
 	`, userID).Scan(&telegramID, &username, &firstName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	result := map[string]interface{}{
@@ -693,7 +825,12 @@ func (s *BotService) GetUserDataForFeedback(userID int) (map[string]interface{},
 
 // GetAllUnprocessedFeedback получает все необработанные отзывы для администратора.
 func (s *BotService) GetAllUnprocessedFeedback() ([]map[string]interface{}, error) {
-	return s.DB.GetUnprocessedFeedback()
+	feedback, err := s.DB.GetUnprocessedFeedback()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get unprocessed feedback: %w", err)
+	}
+
+	return feedback, nil
 }
 
 // GetAllFeedback получает все отзывы для администратора.
@@ -702,7 +839,7 @@ func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
 
 	rows, err := s.DB.GetConnection().QueryContext(context.Background(), query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	defer func() {
@@ -760,7 +897,7 @@ func (s *BotService) scanFeedbackRow(rows *sql.Rows) (map[string]interface{}, er
 	err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &isProcessed,
 		&username, &telegramID, &firstName, &adminResp)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	feedback := map[string]interface{}{
@@ -862,7 +999,12 @@ func (s *BotService) DeleteFeedback(feedbackID int) error {
 
 // MarkFeedbackProcessed помечает отзыв как обработанный с ответом.
 func (s *BotService) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
-	return s.DB.MarkFeedbackProcessed(feedbackID, adminResponse)
+	err := s.DB.MarkFeedbackProcessed(feedbackID, adminResponse)
+	if err != nil {
+		return fmt.Errorf("failed to mark feedback processed: %w", err)
+	}
+
+	return nil
 }
 
 // DeleteAllProcessedFeedbacks удаляет все обработанные отзывы.
@@ -927,7 +1069,7 @@ func (s *BotService) GetCachedLanguages(lang string) ([]*models.Language, error)
 	if err != nil {
 		s.MetricsService.RecordError()
 
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сохраняем в кэш
@@ -954,7 +1096,7 @@ func (s *BotService) GetCachedInterests(lang string) (map[int]string, error) {
 	if err != nil {
 		s.MetricsService.RecordError()
 
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сохраняем в кэш
@@ -981,7 +1123,7 @@ func (s *BotService) GetCachedUser(telegramID int64) (*models.User, error) {
 	if err != nil {
 		s.MetricsService.RecordError()
 
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сохраняем в кэш
@@ -1019,7 +1161,7 @@ func (s *BotService) UpdateCachedUser(user *models.User) error {
 	// Обновляем в БД
 	err := s.DB.UpdateUser(user)
 	if err != nil {
-		return err
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Обновляем в кэше
@@ -1063,7 +1205,12 @@ func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAll
 		// Если пользователь есть в кэше, но нет полных данных, загружаем их
 		if userData != nil {
 			// Загружаем полные данные
-			return s.BatchLoader.GetUserWithAllData(telegramID)
+			userData, err := s.BatchLoader.GetUserWithAllData(telegramID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get user with all data: %w", err)
+			}
+
+			return userData, nil
 		}
 	}
 
@@ -1072,7 +1219,7 @@ func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAll
 	if err != nil {
 		s.MetricsService.RecordError()
 
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сохраняем в кэш
@@ -1094,7 +1241,7 @@ func (s *BotService) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int64
 	if err != nil {
 		s.MetricsService.RecordError()
 
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сохраняем пользователей в кэш
@@ -1118,7 +1265,7 @@ func (s *BotService) BatchLoadInterestsWithTranslations(languages []string) (map
 	if err != nil {
 		s.MetricsService.RecordError()
 
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сохраняем в кэш
@@ -1142,7 +1289,7 @@ func (s *BotService) BatchLoadLanguagesWithTranslations(languages []string) (map
 	if err != nil {
 		s.MetricsService.RecordError()
 
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сохраняем в кэш
@@ -1166,7 +1313,7 @@ func (s *BotService) BatchLoadUserInterests(userIDs []int) (map[int][]int, error
 	if err != nil {
 		s.MetricsService.RecordError()
 
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	return interests, nil
@@ -1185,7 +1332,7 @@ func (s *BotService) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.User
 	if err != nil {
 		s.MetricsService.RecordError()
 
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сохраняем в кэш
@@ -1209,7 +1356,7 @@ func (s *BotService) BatchLoadStats(statTypes []string) (map[string]map[string]i
 	if err != nil {
 		s.MetricsService.RecordError()
 
-		return nil, err
+		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	return stats, nil
