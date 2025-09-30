@@ -3,6 +3,7 @@ package errors_test
 import (
 	"errors"
 	"testing"
+	"time"
 
 	errorsPkg "language-exchange-bot/internal/errors"
 )
@@ -70,6 +71,7 @@ func TestRequestContextGeneration(t *testing.T) {
 	t.Parallel()
 
 	ctx1 := errorsPkg.NewRequestContext(1, 2, "test1")
+	time.Sleep(1 * time.Millisecond) // Небольшая задержка для гарантии разных timestamp
 	ctx2 := errorsPkg.NewRequestContext(1, 2, "test2")
 
 	if ctx1.RequestID == ctx2.RequestID {

@@ -2,7 +2,6 @@ package telegram
 
 import (
 	"fmt"
-	"sort"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -73,137 +72,6 @@ func (h *TelegramHandler) createProfileCompletedKeyboard(interfaceLang string) t
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-func (h *TelegramHandler) createSaveEditsKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
-	save := tgbotapi.NewInlineKeyboardButtonData(
-		h.service.Localizer.Get(interfaceLang, "save_button"),
-		"save_edits",
-	)
-	cancel := tgbotapi.NewInlineKeyboardButtonData(
-		h.service.Localizer.Get(interfaceLang, "cancel_button"),
-		"cancel_edits",
-	)
-	buttons := [][]tgbotapi.InlineKeyboardButton{
-		{save, cancel},
-	}
-	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
-}
-
-func (h *TelegramHandler) createInterestsKeyboard(interests map[int]string, selectedInterests []int, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
-	var buttonRows [][]tgbotapi.InlineKeyboardButton
-
-	// Создаём мапу для быстрой проверки выбранных
-	selectedMap := make(map[int]bool)
-	for _, id := range selectedInterests {
-		selectedMap[id] = true
-	}
-
-	// Получаем отсортированные ID для стабильного порядка
-	var sortedIDs []int
-	for id := range interests {
-		sortedIDs = append(sortedIDs, id)
-	}
-	sort.Ints(sortedIDs)
-
-	// Создаём кнопки по 2 в ряд для более компактного вида
-	var currentRow []tgbotapi.InlineKeyboardButton
-
-	for _, id := range sortedIDs {
-		name := interests[id]
-		var label string
-		if selectedMap[id] {
-			label = "✅ " + name
-		} else {
-			label = name
-		}
-
-		button := tgbotapi.NewInlineKeyboardButtonData(label, fmt.Sprintf("interest_%d", id))
-		currentRow = append(currentRow, button)
-
-		// Когда в ряду 2 кнопки, добавляем ряд полностью
-		if len(currentRow) == 2 {
-			buttonRows = append(buttonRows, currentRow)
-			currentRow = []tgbotapi.InlineKeyboardButton{}
-		}
-	}
-
-	// Добавляем остаток последнего ряда
-	if len(currentRow) > 0 {
-		buttonRows = append(buttonRows, currentRow)
-	}
-
-	// Нижний блок с кнопками управления
-	var controlRow []tgbotapi.InlineKeyboardButton
-
-	// Кнопка "Продолжить" всегда видна
-	continueText := h.service.Localizer.Get(interfaceLang, "interests_continue")
-	continueButton := tgbotapi.NewInlineKeyboardButtonData(
-		continueText,
-		"interests_continue",
-	)
-	controlRow = append(controlRow, continueButton)
-
-	// Добавляем кнопку "Назад"
-	backButton := tgbotapi.NewInlineKeyboardButtonData(
-		h.service.Localizer.Get(interfaceLang, "back_button"),
-		"back_to_previous_step",
-	)
-	controlRow = append(controlRow, backButton)
-
-	buttonRows = append(buttonRows, controlRow)
-
-	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
-}
-
-func (h *TelegramHandler) createEditInterestsKeyboard(interests map[int]string, selectedInterests []int, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
-	var buttonRows [][]tgbotapi.InlineKeyboardButton
-
-	// Создаём мапу для быстрой проверки выбранных
-	selectedMap := make(map[int]bool)
-	for _, id := range selectedInterests {
-		selectedMap[id] = true
-	}
-
-	// Получаем отсортированные ID для стабильного порядка
-	var sortedIDs []int
-	for id := range interests {
-		sortedIDs = append(sortedIDs, id)
-	}
-	sort.Ints(sortedIDs)
-
-	// Создаём кнопки по 2 в ряд для более компактного вида
-	var currentRow []tgbotapi.InlineKeyboardButton
-
-	for _, id := range sortedIDs {
-		name := interests[id]
-		var label string
-		if selectedMap[id] {
-			label = "✅ " + name
-		} else {
-			label = name
-		}
-
-		button := tgbotapi.NewInlineKeyboardButtonData(label, fmt.Sprintf("edit_interest_%d", id))
-		currentRow = append(currentRow, button)
-
-		// Когда в ряду 2 кнопки, добавляем ряд полностью
-		if len(currentRow) == 2 {
-			buttonRows = append(buttonRows, currentRow)
-			currentRow = []tgbotapi.InlineKeyboardButton{}
-		}
-	}
-
-	// Добавляем остаток последнего ряда
-	if len(currentRow) > 0 {
-		buttonRows = append(buttonRows, currentRow)
-	}
-
-	// Добавляем кнопки сохранить/отменить вместо продолжить/назад
-	saveCancelRow := h.createSaveEditsKeyboard(interfaceLang).InlineKeyboard[0]
-	buttonRows = append(buttonRows, []tgbotapi.InlineKeyboardButton{saveCancelRow[0], saveCancelRow[1]})
-
-	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
-}
-
 // Создание клавиатуры подтверждения выбора языков
 func (h *TelegramHandler) createLanguageConfirmationKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	continueButton := tgbotapi.NewInlineKeyboardButtonData(
@@ -256,61 +124,6 @@ func (h *TelegramHandler) createLanguageLevelKeyboardWithPrefix(interfaceLang, l
 		)
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{backButton})
 	}
-
-	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
-}
-
-func (h *TelegramHandler) createEditLanguagesKeyboard(interfaceLang, currentNative, currentTarget, currentLevel string) tgbotapi.InlineKeyboardMarkup {
-	nativeName := h.service.Localizer.GetLanguageName(currentNative, interfaceLang)
-	targetName := h.service.Localizer.GetLanguageName(currentTarget, interfaceLang)
-	levelName := h.service.Localizer.Get(interfaceLang, "choose_level_"+currentLevel)
-
-	// Определяем флаг для текущего родного языка
-	var nativeFlag string
-	switch currentNative {
-	case "ru":
-		nativeFlag = "🇷🇺"
-	case "en":
-		nativeFlag = "🇺🇸"
-	case "es":
-		nativeFlag = "🇪🇸"
-	case "zh":
-		nativeFlag = "🇨🇳"
-	default:
-		nativeFlag = "🌍"
-	}
-
-	editNative := tgbotapi.NewInlineKeyboardButtonData(
-		fmt.Sprintf("%s %s: %s", nativeFlag, h.service.Localizer.Get(interfaceLang, "languages_selected_native"), nativeName),
-		"edit_native_lang",
-	)
-
-	// Добавляем кнопки save/cancel
-	saveCancelRow := h.createSaveEditsKeyboard(interfaceLang).InlineKeyboard[0]
-
-	var buttons [][]tgbotapi.InlineKeyboardButton
-
-	// Всегда добавляем кнопку редактирования родного языка
-	buttons = append(buttons, []tgbotapi.InlineKeyboardButton{editNative})
-
-	// Добавляем кнопку редактирования изучаемого языка только если родной - русский
-	if currentNative == "ru" {
-		editTarget := tgbotapi.NewInlineKeyboardButtonData(
-			fmt.Sprintf("📚 %s: %s", h.service.Localizer.Get(interfaceLang, "languages_selected_target"), targetName),
-			"edit_target_lang",
-		)
-		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{editTarget})
-	}
-
-	// Всегда добавляем кнопку редактирования уровня владения языком
-	editLevel := tgbotapi.NewInlineKeyboardButtonData(
-		fmt.Sprintf("🎯 %s: %s", "Уровень языка", levelName),
-		"edit_level",
-	)
-	buttons = append(buttons, []tgbotapi.InlineKeyboardButton{editLevel})
-
-	// Добавляем save/cancel внизу
-	buttons = append(buttons, []tgbotapi.InlineKeyboardButton{saveCancelRow[0], saveCancelRow[1]})
 
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }

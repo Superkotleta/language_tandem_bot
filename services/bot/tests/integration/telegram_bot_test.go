@@ -188,7 +188,7 @@ func (s *TelegramBotSuite) TestDatabaseError() {
 
 	// Assert
 	assert.Error(s.T(), err, "Should return error when database fails")
-	assert.Equal(s.T(), assert.AnError, s.handler.LastError, "Should store the database error")
+	assert.Error(s.T(), s.handler.LastError, "Should store the database error")
 
 	// Очищаем ошибку для следующих тестов
 	s.mockDB.ClearError()

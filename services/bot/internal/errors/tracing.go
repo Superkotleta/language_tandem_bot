@@ -36,8 +36,9 @@ func NewRequestContext(userID, chatID int64, operation string) *RequestContext {
 func generateRequestID() string {
 	// Используем timestamp + случайные символы для уникальности
 	timestamp := time.Now().UnixNano()
+	randomPart := time.Now().UnixNano() % maxRandomValue
 
-	return fmt.Sprintf("req_%d_%d", timestamp, time.Now().Unix()%maxRandomValue)
+	return fmt.Sprintf("req_%d_%d", timestamp, randomPart)
 }
 
 // WithContext создает ошибку с контекстом.

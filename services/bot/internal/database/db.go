@@ -266,7 +266,10 @@ func (db *DB) FindOrCreateUser(telegramID int64, username, firstName string) (*m
 		&user.State, &user.ProfileCompletionLevel, &user.Status,
 	)
 
-	return user, fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("operation failed: %w", err)
+	}
+	return user, nil
 }
 
 // UpdateUserState обновляет состояние пользователя.
@@ -275,7 +278,10 @@ func (db *DB) UpdateUserState(userID int, state string) error {
         UPDATE users SET state = $1, updated_at = NOW() WHERE id = $2
     `, state, userID)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // UpdateUserStatus обновляет статус пользователя.
@@ -284,7 +290,10 @@ func (db *DB) UpdateUserStatus(userID int, status string) error {
         UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2
     `, status, userID)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // UpdateUserInterfaceLanguage обновляет язык интерфейса пользователя.
@@ -293,7 +302,10 @@ func (db *DB) UpdateUserInterfaceLanguage(userID int, langCode string) error {
         UPDATE users SET interface_language_code = $1, updated_at = NOW() WHERE id = $2
     `, langCode, userID)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // UpdateUserNativeLanguage обновляет родной язык пользователя.
@@ -303,7 +315,10 @@ func (db *DB) UpdateUserNativeLanguage(userID int, langCode string) error {
 		langCode, userID,
 	)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // UpdateUserTargetLanguage обновляет целевой язык пользователя.
@@ -313,7 +328,10 @@ func (db *DB) UpdateUserTargetLanguage(userID int, langCode string) error {
 		langCode, userID,
 	)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // UpdateUserTargetLanguageLevel обновляет уровень целевого языка пользователя.
@@ -323,7 +341,10 @@ func (db *DB) UpdateUserTargetLanguageLevel(userID int, level string) error {
 		level, userID,
 	)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // SaveNativeLanguage сохраняет родной язык пользователя.
@@ -344,7 +365,10 @@ func (db *DB) SaveUserInterest(userID, interestID int, isPrimary bool) error {
         ON CONFLICT (user_id, interest_id) DO NOTHING
     `, userID, interestID, isPrimary)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // GetUserSelectedInterests возвращает выбранные пользователем интересы.
@@ -399,10 +423,13 @@ func (db *DB) RemoveUserInterest(userID, interestID int) error {
 // ClearUserInterests удаляет все интересы пользователя.
 func (db *DB) ClearUserInterests(userID int) error {
 	_, err := db.conn.ExecContext(context.Background(), `
-        DELETE FROM user_interests WHERE user_id = $1
+        DELETE FROM user_interest_selections WHERE user_id = $1
     `, userID)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // ResetUserProfile очищает языки и интересы, переводит пользователя в начало онбординга.

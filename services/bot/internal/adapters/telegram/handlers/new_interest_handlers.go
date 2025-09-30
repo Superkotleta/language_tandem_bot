@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 
@@ -17,9 +19,9 @@ type NewInterestHandler interface {
 	HandleInterestCategorySelection(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error
 	HandleInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error
 	HandlePrimaryInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error
+	HandleBackToCategories(callback *tgbotapi.CallbackQuery, user *models.User) error
 	HandleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error
 	HandlePrimaryInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error
-	HandleBackToCategories(callback *tgbotapi.CallbackQuery, user *models.User) error
 	HandleBackToInterests(callback *tgbotapi.CallbackQuery, user *models.User) error
 }
 
@@ -140,8 +142,20 @@ func (h *NewInterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.Call
 		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ToggleInterestSelection")
 	}
 
+	// Получаем интерес и его категорию для обновления клавиатуры
+	interest, err := h.interestService.GetInterestByID(interestID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestByID")
+	}
+
+	// Получаем категорию по ID
+	category, err := h.interestService.GetInterestCategoryByID(interest.CategoryID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestCategoryByID")
+	}
+
 	// Обновляем клавиатуру
-	return h.updateCategoryInterestsKeyboard(callback, user, interestIDStr)
+	return h.updateCategoryInterestsKeyboard(callback, user, category.KeyName)
 }
 
 // HandlePrimaryInterestSelection обрабатывает выбор основного интереса
@@ -290,8 +304,26 @@ func (h *NewInterestHandlerImpl) showPrimaryInterestsSelection(callback *tgbotap
 	// Создаем клавиатуру для выбора основных интересов
 	keyboard := h.keyboardBuilder.CreatePrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode)
 
-	// Создаем текст сообщения
-	messageText := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests")
+	// Получаем рекомендуемое количество основных интересов
+	limits, err := h.interestService.GetInterestLimitsConfig()
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestLimitsConfig")
+	}
+
+	// Вычисляем рекомендуемое количество основных интересов
+	totalInterests := len(userSelections)
+	recommendedPrimary := int(math.Ceil(float64(totalInterests) * limits.PrimaryPercentage))
+
+	// Ограничиваем минимумом и максимумом
+	if recommendedPrimary < limits.MinPrimaryInterests {
+		recommendedPrimary = limits.MinPrimaryInterests
+	}
+	if recommendedPrimary > limits.MaxPrimaryInterests {
+		recommendedPrimary = limits.MaxPrimaryInterests
+	}
+
+	// Создаем текст сообщения с динамическим количеством
+	messageText := fmt.Sprintf("⭐ Выбери до %d основных интересов из выбранных:", recommendedPrimary)
 
 	// Обновляем сообщение
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(

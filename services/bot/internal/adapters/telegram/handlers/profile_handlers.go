@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"log"
-	"strconv"
 
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/errors"
@@ -14,21 +13,19 @@ import (
 
 // ProfileHandlerImpl обрабатывает все операции с профилем пользователя
 type ProfileHandlerImpl struct {
-	bot               *tgbotapi.BotAPI
-	service           *core.BotService
-	keyboardBuilder   *KeyboardBuilder
-	editInterestsTemp map[int64][]int // Временное хранение выбранных интересов для каждого пользователя
-	errorHandler      *errors.ErrorHandler
+	bot             *tgbotapi.BotAPI
+	service         *core.BotService
+	keyboardBuilder *KeyboardBuilder
+	errorHandler    *errors.ErrorHandler
 }
 
 // NewProfileHandler создает новый экземпляр ProfileHandler
 func NewProfileHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuilder *KeyboardBuilder, errorHandler *errors.ErrorHandler) *ProfileHandlerImpl {
 	return &ProfileHandlerImpl{
-		bot:               bot,
-		service:           service,
-		keyboardBuilder:   keyboardBuilder,
-		editInterestsTemp: make(map[int64][]int),
-		errorHandler:      errorHandler,
+		bot:             bot,
+		service:         service,
+		keyboardBuilder: keyboardBuilder,
+		errorHandler:    errorHandler,
 	}
 }
 
@@ -221,43 +218,6 @@ func (ph *ProfileHandlerImpl) updateProfileCompletionLevel(userID int, completio
 	return nil
 }
 
-func (ph *ProfileHandlerImpl) HandleEditInterests(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	// Получаем все доступные интересы через кэш
-	interests, err := ph.service.GetCachedInterests(user.InterfaceLanguageCode)
-	if err != nil {
-		return err
-	}
-
-	// Получаем текущие выбранные интересы пользователя через Batch Loading
-	selectedInterestsMap, err := ph.service.BatchLoadUserInterests([]int{user.ID})
-	var selectedInterests []int
-	if err != nil {
-		log.Printf("Error loading user interests: %v", err)
-		selectedInterests = []int{} // fallback
-	} else {
-		selectedInterests = selectedInterestsMap[user.ID]
-	}
-
-	// Инициализируем временное хранилище для сессии редактирования
-	userID := int64(user.ID)
-	ph.editInterestsTemp[userID] = make([]int, len(selectedInterests))
-	copy(ph.editInterestsTemp[userID], selectedInterests)
-
-	keyboard := ph.keyboardBuilder.CreateEditInterestsKeyboard(interests, selectedInterests, user.InterfaceLanguageCode)
-	text := ph.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests") +
-		"\n\n" + ph.service.Localizer.Get(user.InterfaceLanguageCode, "save_button") +
-		" или " + ph.service.Localizer.Get(user.InterfaceLanguageCode, "cancel_button")
-
-	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
-		callback.Message.Chat.ID,
-		callback.Message.MessageID,
-		text,
-		keyboard,
-	)
-	_, err = ph.bot.Request(editMsg)
-	return err
-}
-
 // HandleEditLanguages позволяет редактировать языки пользователя
 func (ph *ProfileHandlerImpl) HandleEditLanguages(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Показываем текущие настройки языков с кнопками редактирования
@@ -280,44 +240,6 @@ func (ph *ProfileHandlerImpl) HandleEditLanguages(callback *tgbotapi.CallbackQue
 	)
 	_, err := ph.bot.Request(editMsg)
 	return err
-}
-
-// HandleSaveEdits сохраняет изменения и возвращается к просмотру профиля
-func (ph *ProfileHandlerImpl) HandleSaveEdits(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	userID := int64(user.ID)
-
-	// Если есть временное хранилище интересов, применяем изменения в БД
-	if tempInterests, exists := ph.editInterestsTemp[userID]; exists {
-		// Очищаем текущие интересы в БД
-		err := ph.service.DB.ClearUserInterests(user.ID)
-		if err != nil {
-			log.Printf("Error clearing user interests: %v", err)
-			return err
-		}
-
-		// Сохраняем новые интересы
-		for _, interestID := range tempInterests {
-			err := ph.service.DB.SaveUserInterest(user.ID, interestID, false)
-			if err != nil {
-				log.Printf("Error saving user interest %d: %v", interestID, err)
-				return err
-			}
-		}
-
-		// Удаляем временное хранилище
-		delete(ph.editInterestsTemp, userID)
-	}
-
-	// Показываем профиль с обновленными данными
-	return ph.HandleProfileShow(callback, user)
-}
-
-// HandleCancelEdits отменяет изменения и возвращается к просмотру профиля
-func (ph *ProfileHandlerImpl) HandleCancelEdits(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	userID := int64(user.ID)
-	// Удаляем временное хранилище без сохранения
-	delete(ph.editInterestsTemp, userID)
-	return ph.HandleProfileShow(callback, user)
 }
 
 // HandleEditNativeLang редактирует родной язык пользователя
@@ -455,67 +377,6 @@ func (ph *ProfileHandlerImpl) HandleEditTargetLanguage(callback *tgbotapi.Callba
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		title,
-		keyboard,
-	)
-	_, err = ph.bot.Request(editMsg)
-	return err
-}
-
-// HandleEditInterestSelection обрабатывает выбор/отмену интереса при редактировании
-func (ph *ProfileHandlerImpl) HandleEditInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
-	interestID, err := strconv.Atoi(interestIDStr)
-	if err != nil {
-		log.Printf("Error parsing interest ID: %v", err)
-		return err
-	}
-
-	userID := int64(user.ID)
-
-	// Если временного хранилища нет, инициализируем его через Batch Loading
-	if _, exists := ph.editInterestsTemp[userID]; !exists {
-		selectedInterestsMap, err := ph.service.BatchLoadUserInterests([]int{user.ID})
-		var selectedInterests []int
-		if err != nil {
-			log.Printf("Error getting user interests, using empty list: %v", err)
-			selectedInterests = []int{}
-		} else {
-			selectedInterests = selectedInterestsMap[user.ID]
-		}
-		ph.editInterestsTemp[userID] = make([]int, len(selectedInterests))
-		copy(ph.editInterestsTemp[userID], selectedInterests)
-	}
-
-	// Переключаем интерес в временном хранилище (toggle)
-	isCurrentlySelected := false
-	for i, id := range ph.editInterestsTemp[userID] {
-		if id == interestID {
-			// Убираем из списка
-			ph.editInterestsTemp[userID] = append(ph.editInterestsTemp[userID][:i], ph.editInterestsTemp[userID][i+1:]...)
-			isCurrentlySelected = true
-			break
-		}
-	}
-
-	if !isCurrentlySelected {
-		// Добавляем в список
-		ph.editInterestsTemp[userID] = append(ph.editInterestsTemp[userID], interestID)
-	}
-
-	// Обновляем клавиатуру с новым состоянием через кэш
-	interests, err := ph.service.GetCachedInterests(user.InterfaceLanguageCode)
-	if err != nil {
-		return err
-	}
-
-	keyboard := ph.keyboardBuilder.CreateEditInterestsKeyboard(interests, ph.editInterestsTemp[userID], user.InterfaceLanguageCode)
-	text := ph.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests") +
-		"\n\n" + ph.service.Localizer.Get(user.InterfaceLanguageCode, "save_button") +
-		" или " + ph.service.Localizer.Get(user.InterfaceLanguageCode, "cancel_button")
-
-	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
-		callback.Message.Chat.ID,
-		callback.Message.MessageID,
-		text,
 		keyboard,
 	)
 	_, err = ph.bot.Request(editMsg)

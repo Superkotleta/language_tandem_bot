@@ -215,7 +215,10 @@ func (s *InterestService) AddUserInterestSelection(userID, interestID int, isPri
 	`
 	_, err = s.db.ExecContext(context.Background(), insertQuery, userID, interestID, isPrimary, nextOrder)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // RemoveUserInterestSelection удаляет выбор пользователя.
@@ -223,7 +226,10 @@ func (s *InterestService) RemoveUserInterestSelection(userID, interestID int) er
 	query := `DELETE FROM user_interest_selections WHERE user_id = $1 AND interest_id = $2`
 	_, err := s.db.ExecContext(context.Background(), query, userID, interestID)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // SetPrimaryInterest устанавливает интерес как основной.
@@ -252,7 +258,10 @@ func (s *InterestService) SetPrimaryInterest(userID, interestID int, isPrimary b
 	query := `UPDATE user_interest_selections SET is_primary = $3 WHERE user_id = $1 AND interest_id = $2`
 	_, err := s.db.ExecContext(context.Background(), query, userID, interestID, isPrimary)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+	return nil
 }
 
 // GetInterestLimitsConfig возвращает конфигурацию лимитов из файла.
@@ -473,4 +482,25 @@ func (s *InterestService) ValidateInterestSelection(userID, totalInterests int) 
 	}
 
 	return nil
+}
+
+// GetInterestCategoryByID возвращает категорию интереса по ID.
+func (s *InterestService) GetInterestCategoryByID(categoryID int) (*models.InterestCategory, error) {
+	var category models.InterestCategory
+	err := s.db.QueryRowContext(context.Background(), `
+		SELECT id, key_name, display_order, created_at 
+		FROM interest_categories 
+		WHERE id = $1
+	`, categoryID).Scan(
+		&category.ID,
+		&category.KeyName,
+		&category.DisplayOrder,
+		&category.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get interest category by ID %d: %w", categoryID, err)
+	}
+
+	return &category, nil
 }

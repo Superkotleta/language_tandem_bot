@@ -140,6 +140,11 @@ func TestCacheServiceStats(t *testing.T) {
 	cacheService := cache.NewService(config)
 	defer cacheService.Stop()
 
+	// Выполняем операции с кэшем для генерации статистики
+	_, _ = cacheService.GetLanguages("en")
+	_, _ = cacheService.GetInterests("en")
+	_, _ = cacheService.GetTranslations("en")
+
 	stats := cacheService.GetCacheStats()
 	if stats.Hits == 0 && stats.Misses == 0 {
 		t.Error("Expected some cache activity")
