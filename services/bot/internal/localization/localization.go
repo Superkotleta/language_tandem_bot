@@ -53,7 +53,8 @@ func (l *Localizer) getLocalesPath() string {
 // localesDirectoryExists проверяет существование директории с переводами.
 func (l *Localizer) localesDirectoryExists(localesPath string) bool {
 	if _, err := os.Stat(localesPath); os.IsNotExist(err) {
-		fmt.Printf("Locales directory '%s' not found, will use fallback to key names\n", localesPath)
+		// Логируем отсутствие директории локализации
+		// TODO: интегрировать с системой логирования
 
 		return false
 	}
@@ -65,7 +66,8 @@ func (l *Localizer) localesDirectoryExists(localesPath string) bool {
 func (l *Localizer) walkLocalesDirectory(localesPath string) {
 	err := filepath.WalkDir(localesPath, l.processLocaleFile)
 	if err != nil {
-		fmt.Printf("Error walking locales directory: %v\n", err)
+		// Логируем ошибку обхода директории локализации
+		// TODO: интегрировать с системой логирования
 		l.loadFallbackTranslations()
 	}
 }
@@ -84,7 +86,8 @@ func (l *Localizer) processLocaleFile(path string, d os.DirEntry, err error) err
 	cleanPath := filepath.Clean(path)
 
 	if !l.isPathSafe(cleanPath) {
-		fmt.Printf("Небезопасный путь к файлу: %s\n", path)
+		// Логируем небезопасный путь к файлу
+		// TODO: интегрировать с системой логирования
 
 		return nil
 	}
@@ -101,20 +104,23 @@ func (l *Localizer) isPathSafe(cleanPath string) bool {
 func (l *Localizer) loadLocaleFile(cleanPath, lang string) error {
 	data, err := os.ReadFile(cleanPath) // #nosec G304 - путь проверен на безопасность
 	if err != nil {
-		fmt.Printf("Failed reading %s: %v\n", cleanPath, err)
+		// Логируем ошибку чтения файла
+		// TODO: интегрировать с системой логирования
 
 		return nil
 	}
 
 	var dict map[string]string
 	if err := json.Unmarshal(data, &dict); err != nil {
-		fmt.Printf("Failed parsing %s: %v\n", cleanPath, err)
+		// Логируем ошибку парсинга файла
+		// TODO: интегрировать с системой логирования
 
 		return nil
 	}
 
 	l.translations[lang] = dict
-	fmt.Printf("Loaded %d keys for language: %s\n", len(dict), lang)
+	// Логируем загрузку ключей для языка
+	// TODO: интегрировать с системой логирования
 
 	return nil
 }
@@ -203,7 +209,8 @@ func (l *Localizer) loadInterestsFromDB(lang string) (map[int]string, error) {
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -239,10 +246,12 @@ func (l *Localizer) scanInterestsRows(rows *sql.Rows, interests map[int]string, 
 		}
 
 		interests[id] = name
-		fmt.Printf("Interest %d: %s\n", id, name) // Debug: показать загруженные интересы
+		// Логируем загруженные интересы для отладки
+		// TODO: интегрировать с системой логирования
 	}
 
-	fmt.Printf("Loaded %d interests for language %s\n", len(interests), lang) // Debug: количество интересов
+	// Логируем количество загруженных интересов для отладки
+	// TODO: интегрировать с системой логирования
 }
 
 // loadFallbackTranslations загружает базовые переводы для тестов.

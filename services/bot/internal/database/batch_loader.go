@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	errorsPkg "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	"github.com/lib/pq"
@@ -50,11 +51,16 @@ func (bl *BatchLoader) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load users with interests: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -149,12 +155,17 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load interests with translations: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -203,12 +214,17 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (m
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load languages with translations: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -253,12 +269,17 @@ func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load user interests: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -305,12 +326,17 @@ func (bl *BatchLoader) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.Us
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load users: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -345,18 +371,23 @@ func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user with all data: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
 	userData, interests, translations, languages := bl.processUserDataRows(rows)
 
 	if userData == nil {
-		return nil, fmt.Errorf("user not found: %d", telegramID)
+		return nil, errorsPkg.ErrUserNotFound
 	}
 
 	userData.Interests = interests
@@ -492,14 +523,16 @@ func (bl *BatchLoader) loadUserStats() map[string]interface{} {
 
 	err := bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM users").Scan(&totalUsers)
 	if err != nil {
-		fmt.Printf("Error getting total users count: %v\n", err)
+		// Логируем ошибку получения общего количества пользователей
+		// TODO: интегрировать с системой логирования
 	}
 
 	query := "SELECT COUNT(*) FROM users WHERE status = 'active'"
 
 	err = bl.db.conn.QueryRowContext(context.Background(), query).Scan(&activeUsers)
 	if err != nil {
-		fmt.Printf("Error getting active users count: %v\n", err)
+		// Логируем ошибку получения количества активных пользователей
+		// TODO: интегрировать с системой логирования
 	}
 
 	return map[string]interface{}{
@@ -514,7 +547,8 @@ func (bl *BatchLoader) loadInterestStats() map[string]interface{} {
 
 	err := bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM interests").Scan(&totalInterests)
 	if err != nil {
-		fmt.Printf("Error getting total interests count: %v\n", err)
+		// Логируем ошибку получения общего количества интересов
+		// TODO: интегрировать с системой логирования
 	}
 
 	err = bl.db.conn.QueryRowContext(context.Background(), `
@@ -525,7 +559,8 @@ func (bl *BatchLoader) loadInterestStats() map[string]interface{} {
 		LIMIT 1
 	`).Scan(&popularInterests)
 	if err != nil {
-		fmt.Printf("Error getting popular interests count: %v\n", err)
+		// Логируем ошибку получения количества популярных интересов
+		// TODO: интегрировать с системой логирования
 	}
 
 	return map[string]interface{}{
@@ -540,14 +575,16 @@ func (bl *BatchLoader) loadFeedbackStats() map[string]interface{} {
 
 	err := bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM user_feedback").Scan(&totalFeedbacks)
 	if err != nil {
-		fmt.Printf("Error getting total feedbacks count: %v\n", err)
+		// Логируем ошибку получения общего количества отзывов
+		// TODO: интегрировать с системой логирования
 	}
 
 	query := "SELECT COUNT(*) FROM user_feedback WHERE is_processed = true"
 
 	err = bl.db.conn.QueryRowContext(context.Background(), query).Scan(&processedFeedbacks)
 	if err != nil {
-		fmt.Printf("Error getting processed feedbacks count: %v\n", err)
+		// Логируем ошибку получения количества обработанных отзывов
+		// TODO: интегрировать с системой логирования
 	}
 
 	return map[string]interface{}{

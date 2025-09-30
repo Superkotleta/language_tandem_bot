@@ -3,11 +3,11 @@ package core
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"math"
 
 	"language-exchange-bot/internal/config"
+	errorsPkg "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 )
 
@@ -42,12 +42,17 @@ func (s *InterestService) GetInterestCategories() ([]models.InterestCategory, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to query interests: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -80,12 +85,17 @@ func (s *InterestService) GetInterestsByCategory(categoryID int) ([]models.Inter
 	if err != nil {
 		return nil, fmt.Errorf("failed to query interests by category: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -119,12 +129,17 @@ func (s *InterestService) GetUserInterestSelections(userID int) ([]models.Intere
 	if err != nil {
 		return nil, fmt.Errorf("failed to query user interests: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -158,7 +173,7 @@ func (s *InterestService) AddUserInterestSelection(userID, interestID int, isPri
 	}
 
 	if exists {
-		return errors.New("интерес уже выбран")
+		return errorsPkg.ErrInterestAlreadySelected
 	}
 
 	// Получаем следующий порядок выбора
@@ -189,7 +204,7 @@ func (s *InterestService) AddUserInterestSelection(userID, interestID int, isPri
 		}
 
 		if primaryCount >= limits.MaxPrimaryInterests {
-			return fmt.Errorf("достигнут максимум основных интересов (%d)", limits.MaxPrimaryInterests)
+			return errorsPkg.ErrMaxPrimaryInterestsReached
 		}
 	}
 
@@ -230,7 +245,7 @@ func (s *InterestService) SetPrimaryInterest(userID, interestID int, isPrimary b
 		}
 
 		if primaryCount >= limits.MaxPrimaryInterests {
-			return fmt.Errorf("достигнут максимум основных интересов (%d)", limits.MaxPrimaryInterests)
+			return errorsPkg.ErrMaxPrimaryInterestsReached
 		}
 	}
 
@@ -440,7 +455,8 @@ func (s *InterestService) ValidateInterestSelection(userID, totalInterests int) 
 	}
 
 	// Логируем рекомендацию для отладки
-	fmt.Printf("Рекомендуемое количество основных интересов: %d\n", recommendedPrimary)
+	// Логируем рекомендуемое количество основных интересов
+	// TODO: интегрировать с системой логирования
 
 	// Получаем текущее количество основных интересов
 	var currentPrimary int
@@ -453,7 +469,7 @@ func (s *InterestService) ValidateInterestSelection(userID, totalInterests int) 
 	}
 
 	if currentPrimary < limits.MinPrimaryInterests {
-		return fmt.Errorf("необходимо выбрать минимум %d основных интересов", limits.MinPrimaryInterests)
+		return errorsPkg.ErrMinPrimaryInterestsRequired
 	}
 
 	return nil

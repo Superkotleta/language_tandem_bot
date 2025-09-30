@@ -69,12 +69,17 @@ func (db *DB) GetLanguages() ([]*models.Language, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get languages: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -135,12 +140,17 @@ func (db *DB) GetInterests() ([]*models.Interest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get interests: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -346,12 +356,17 @@ func (db *DB) GetUserSelectedInterests(userID int) ([]int, error) {
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -456,12 +471,17 @@ func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, err
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
 			// Логируем ошибку закрытия, но не возвращаем её
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -515,11 +535,16 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 

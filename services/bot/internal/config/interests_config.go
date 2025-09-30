@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	errorsPkg "language-exchange-bot/internal/errors"
 )
 
 // Константы для конфигурации интересов.
@@ -121,7 +123,7 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 
 	// Проверяем, что путь не содержит опасные символы
 	if strings.Contains(cleanPath, "..") || strings.Contains(cleanPath, "~") {
-		return nil, fmt.Errorf("небезопасный путь к файлу: %s", configPath)
+		return nil, errorsPkg.ErrUnsafeFilePath
 	}
 
 	// Читаем файл

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"language-exchange-bot/internal/cache"
 	"language-exchange-bot/internal/database"
-	"language-exchange-bot/internal/errors"
+	errorsPkg "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/logging"
 	"language-exchange-bot/internal/models"
@@ -57,8 +57,8 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 	var loggingService *logging.LoggingService
 
 	if errorHandler != nil {
-		validationService = validation.NewService(errorHandler.(*errors.ErrorHandler))
-		loggingService = logging.NewLoggingService(errorHandler.(*errors.ErrorHandler))
+		validationService = validation.NewService(errorHandler.(*errorsPkg.ErrorHandler))
+		loggingService = logging.NewLoggingService(errorHandler.(*errorsPkg.ErrorHandler))
 	}
 
 	return &BotService{
@@ -99,8 +99,8 @@ func NewBotServiceWithRedis(
 	var loggingService *logging.LoggingService
 
 	if errorHandler != nil {
-		validationService = validation.NewService(errorHandler.(*errors.ErrorHandler))
-		loggingService = logging.NewLoggingService(errorHandler.(*errors.ErrorHandler))
+		validationService = validation.NewService(errorHandler.(*errorsPkg.ErrorHandler))
+		loggingService = logging.NewLoggingService(errorHandler.(*errorsPkg.ErrorHandler))
 	}
 
 	return &BotService{
@@ -740,11 +740,11 @@ func (s *BotService) ValidateFeedback(feedbackText string) error {
 	length := len([]rune(feedbackText)) // Учитываем Unicode
 
 	if length < minFeedbackLength {
-		return fmt.Errorf("feedback too short: %d characters, minimum %d", length, minFeedbackLength)
+		return errorsPkg.ErrFeedbackTooShort
 	}
 
 	if length > maxFeedbackLength {
-		return fmt.Errorf("feedback too long: %d characters, maximum %d", length, maxFeedbackLength)
+		return errorsPkg.ErrFeedbackTooLong
 	}
 
 	return nil
@@ -845,7 +845,8 @@ func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
-			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+			// Логируем предупреждение о неудачном закрытии rows
+			// TODO: интегрировать с системой логирования
 		}
 	}()
 
@@ -945,7 +946,7 @@ func (s *BotService) UpdateFeedbackStatus(feedbackID int, isProcessed bool) erro
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("отзыв с ID %d не найден", feedbackID)
+		return errorsPkg.ErrFeedbackNotFound
 	}
 
 	return nil
@@ -970,7 +971,7 @@ func (s *BotService) ArchiveFeedback(feedbackID int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("отзыв с ID %d не найден", feedbackID)
+		return errorsPkg.ErrFeedbackNotFound
 	}
 
 	return nil
@@ -991,7 +992,7 @@ func (s *BotService) DeleteFeedback(feedbackID int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("отзыв с ID %d не найден", feedbackID)
+		return errorsPkg.ErrFeedbackNotFound
 	}
 
 	return nil
@@ -1043,7 +1044,7 @@ func (s *BotService) UnarchiveFeedback(feedbackID int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("отзыв с ID %d не найден", feedbackID)
+		return errorsPkg.ErrFeedbackNotFound
 	}
 
 	return nil

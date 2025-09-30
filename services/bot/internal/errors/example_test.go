@@ -16,7 +16,7 @@ func TestErrorHandlingExample(t *testing.T) {
 	errorHandler := errorsPkg.NewErrorHandler(adminNotifier)
 
 	// Симулируем ошибку Telegram API
-	telegramErr := errors.New("telegram API error: rate limit exceeded")
+	telegramErr := errorsPkg.ErrTelegramAPIRateLimit
 	handledErr := errorHandler.HandleTelegramError(telegramErr, 67890, 12345, "SendMessage")
 
 	// Проверяем, что ошибка обработана правильно

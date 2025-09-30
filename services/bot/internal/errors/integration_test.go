@@ -1,7 +1,6 @@
 package errors_test
 
 import (
-	"errors"
 	"testing"
 
 	errorsPkg "language-exchange-bot/internal/errors"
@@ -14,7 +13,7 @@ func TestErrorHandlingTelegramAPI(t *testing.T) {
 	adminNotifier := errorsPkg.NewAdminNotifier([]int64{123456789, 987654321}, nil)
 	errorHandler := errorsPkg.NewErrorHandler(adminNotifier)
 
-	telegramErr := errors.New("telegram API rate limit exceeded")
+	telegramErr := errorsPkg.ErrTelegramAPIRateLimit
 
 	handledErr := errorHandler.HandleTelegramError(telegramErr, 12345, 67890, "SendMessage")
 	if handledErr == nil {
@@ -35,7 +34,7 @@ func TestErrorHandlingDatabase(t *testing.T) {
 	adminNotifier := errorsPkg.NewAdminNotifier([]int64{123456789, 987654321}, nil)
 	errorHandler := errorsPkg.NewErrorHandler(adminNotifier)
 
-	dbErr := errors.New("database connection failed")
+	dbErr := errorsPkg.ErrDatabaseConnectionFailed
 
 	handledErr := errorHandler.HandleDatabaseError(dbErr, 12345, 67890, "GetUser")
 	if handledErr == nil {
@@ -56,7 +55,7 @@ func TestErrorHandlingValidation(t *testing.T) {
 	adminNotifier := errorsPkg.NewAdminNotifier([]int64{123456789, 987654321}, nil)
 	errorHandler := errorsPkg.NewErrorHandler(adminNotifier)
 
-	validationErr := errors.New("invalid user input")
+	validationErr := errorsPkg.ErrInvalidUserInput
 
 	handledErr := errorHandler.HandleValidationError(validationErr, 12345, 67890, "ValidateInput")
 	if handledErr == nil {
@@ -77,7 +76,7 @@ func TestErrorHandlingCache(t *testing.T) {
 	adminNotifier := errorsPkg.NewAdminNotifier([]int64{123456789, 987654321}, nil)
 	errorHandler := errorsPkg.NewErrorHandler(adminNotifier)
 
-	cacheErr := errors.New("redis connection failed")
+	cacheErr := errorsPkg.ErrRedisConnectionFailed
 
 	handledErr := errorHandler.HandleCacheError(cacheErr, 12345, 67890, "GetCachedData")
 	if handledErr == nil {
