@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"fmt"
+	"log"
+
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
-	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )

@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+// Константы для метрик
+const (
+	// secondsPerMinute - количество секунд в минуте для расчета запросов в секунду
+	secondsPerMinute = 60.0
+)
+
 // MetricsService сервис для сбора метрик кэша
 type MetricsService struct {
 	cache CacheServiceInterface
@@ -150,7 +156,9 @@ func (ms *MetricsService) GetMetricsSummary() string {
 // updateCacheEfficiency обновляет эффективность кэша
 func (ms *MetricsService) updateCacheEfficiency() {
 	stats := ms.cache.GetCacheStats()
+
 	total := stats.Hits + stats.Misses
+
 	if total > 0 {
 		ms.cacheEfficiency = float64(stats.Hits) / float64(total) * 100
 	}
@@ -162,6 +170,7 @@ func (ms *MetricsService) getHitRate(stats CacheStats) float64 {
 	if total == 0 {
 		return 0
 	}
+
 	return float64(stats.Hits) / float64(total) * 100
 }
 
@@ -170,6 +179,7 @@ func (ms *MetricsService) getErrorRate() float64 {
 	if ms.totalRequests == 0 {
 		return 0
 	}
+
 	return float64(ms.errorCount) / float64(ms.totalRequests) * 100
 }
 
@@ -179,7 +189,8 @@ func (ms *MetricsService) getRequestsPerSecond() float64 {
 	if ms.totalRequests == 0 {
 		return 0
 	}
-	return float64(ms.totalRequests) / 60.0 // Предполагаем 1 минуту работы
+
+	return float64(ms.totalRequests) / secondsPerMinute // Предполагаем 1 минуту работы
 }
 
 // getMemoryUsagePercent возвращает процент использования памяти
@@ -187,6 +198,7 @@ func (ms *MetricsService) getMemoryUsagePercent() float64 {
 	if ms.maxMemoryUsage == 0 {
 		return 0
 	}
+
 	return float64(ms.memoryUsage) / float64(ms.maxMemoryUsage) * 100
 }
 
@@ -195,6 +207,7 @@ func (ms *MetricsService) getCleanupFrequency() string {
 	if ms.cleanupCount == 0 {
 		return "No cleanups yet"
 	}
+
 	return fmt.Sprintf("%d cleanups", ms.cleanupCount)
 }
 

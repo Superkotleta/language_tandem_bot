@@ -41,18 +41,23 @@ func (db *DB) GetLanguages() ([]*models.Language, error) {
 		ORDER BY id
 	`
 	rows, err := db.conn.Query(query)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get languages: %w", err)
 	}
+
 	defer rows.Close()
 
 	var languages []*models.Language
+
 	for rows.Next() {
 		lang := &models.Language{}
 		err := rows.Scan(&lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn)
+
 		if err != nil {
 			continue
 		}
+
 		languages = append(languages, lang)
 	}
 
@@ -76,10 +81,13 @@ func (db *DB) GetLanguageByCode(code string) (*models.Language, error) {
 		WHERE code = $1
 	`
 	lang := &models.Language{}
+
 	err := db.conn.QueryRow(query, code).Scan(&lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn)
+
 	if err != nil {
 		return nil, err
 	}
+
 	return lang, nil
 }
 
@@ -91,18 +99,23 @@ func (db *DB) GetInterests() ([]*models.Interest, error) {
 		ORDER BY id
 	`
 	rows, err := db.conn.Query(query)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get interests: %w", err)
 	}
+
 	defer rows.Close()
 
 	var interests []*models.Interest
+
 	for rows.Next() {
 		interest := &models.Interest{}
 		err := rows.Scan(&interest.ID, &interest.KeyName, &interest.Type)
+
 		if err != nil {
 			continue
 		}
+
 		interests = append(interests, interest)
 	}
 
@@ -208,6 +221,7 @@ func (db *DB) UpdateUserState(userID int, state string) error {
 	_, err := db.conn.Exec(`
         UPDATE users SET state = $1, updated_at = NOW() WHERE id = $2
     `, state, userID)
+
 	return err
 }
 
@@ -215,6 +229,7 @@ func (db *DB) UpdateUserStatus(userID int, status string) error {
 	_, err := db.conn.Exec(`
         UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2
     `, status, userID)
+
 	return err
 }
 
@@ -222,6 +237,7 @@ func (db *DB) UpdateUserInterfaceLanguage(userID int, langCode string) error {
 	_, err := db.conn.Exec(`
         UPDATE users SET interface_language_code = $1, updated_at = NOW() WHERE id = $2
     `, langCode, userID)
+
 	return err
 }
 
@@ -231,6 +247,7 @@ func (db *DB) UpdateUserNativeLanguage(userID int, langCode string) error {
 		"UPDATE users SET native_language_code = $1, updated_at = NOW() WHERE id = $2",
 		langCode, userID,
 	)
+
 	return err
 }
 
@@ -239,6 +256,7 @@ func (db *DB) UpdateUserTargetLanguage(userID int, langCode string) error {
 		"UPDATE users SET target_language_code = $1, updated_at = NOW() WHERE id = $2",
 		langCode, userID,
 	)
+
 	return err
 }
 
@@ -247,6 +265,7 @@ func (db *DB) UpdateUserTargetLanguageLevel(userID int, level string) error {
 		"UPDATE users SET target_language_level = $1, updated_at = NOW() WHERE id = $2",
 		level, userID,
 	)
+
 	return err
 }
 
@@ -265,6 +284,7 @@ func (db *DB) SaveUserInterest(userID, interestID int, isPrimary bool) error {
         VALUES ($1, $2, $3, NOW()) 
         ON CONFLICT (user_id, interest_id) DO NOTHING
     `, userID, interestID, isPrimary)
+
 	return err
 }
 
@@ -276,16 +296,21 @@ func (db *DB) GetUserSelectedInterests(userID int) ([]int, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var interests []int
+
 	for rows.Next() {
 		var interestID int
+
 		if err := rows.Scan(&interestID); err != nil {
 			continue
 		}
+
 		interests = append(interests, interestID)
 	}
+
 	return interests, nil
 }
 
@@ -294,6 +319,7 @@ func (db *DB) RemoveUserInterest(userID, interestID int) error {
         DELETE FROM user_interests 
         WHERE user_id = $1 AND interest_id = $2
     `, userID, interestID)
+
 	return err
 }
 
@@ -301,15 +327,18 @@ func (db *DB) ClearUserInterests(userID int) error {
 	_, err := db.conn.Exec(`
         DELETE FROM user_interests WHERE user_id = $1
     `, userID)
+
 	return err
 }
 
 // ResetUserProfile очищает языки и интересы, переводит пользователя в начало онбординга.
 func (db *DB) ResetUserProfile(userID int) error {
 	tx, err := db.conn.Begin()
+
 	if err != nil {
 		return err
 	}
+
 	defer func() {
 		_ = tx.Rollback()
 	}()
@@ -347,6 +376,7 @@ func (db *DB) SaveUserFeedback(userID int, feedbackText string, contactInfo *str
     `
 
 	_, err := db.conn.Exec(query, userID, feedbackText, contactInfo)
+
 	return err
 }
 
@@ -363,9 +393,11 @@ func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, err
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var feedbacks []map[string]interface{}
+
 	for rows.Next() {
 		var (
 			id            int
@@ -418,12 +450,15 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
     `
 
 	rows, err := db.conn.Query(query)
+
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var feedbacks []map[string]interface{}
+
 	for rows.Next() {
 		var (
 			id           int
@@ -475,5 +510,6 @@ func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error 
     `
 
 	_, err := db.conn.Exec(query, adminResponse, feedbackID)
+
 	return err
 }

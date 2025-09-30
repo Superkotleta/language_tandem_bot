@@ -32,6 +32,7 @@ func (s *UserService) SaveLanguages(userID int, nativeLang, targetLang string) e
 	if err := s.db.SaveNativeLanguage(userID, nativeLang); err != nil {
 		return err
 	}
+
 	return s.db.SaveTargetLanguage(userID, targetLang)
 }
 

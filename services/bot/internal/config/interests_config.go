@@ -6,6 +6,18 @@ import (
 	"path/filepath"
 )
 
+// Константы для конфигурации интересов
+const (
+	// defaultPrimaryPercentage - процент основных интересов от общего количества (30%)
+	defaultPrimaryPercentage = 0.3
+
+	// defaultDirectoryPermissions - права доступа для создания директорий (0755)
+	defaultDirectoryPermissions = 0755
+
+	// defaultFilePermissions - права доступа для файлов конфигурации (0600)
+	defaultFilePermissions = 0600
+)
+
 // InterestsConfig представляет конфигурацию системы интересов
 type InterestsConfig struct {
 	Matching       MatchingConfig            `json:"matching"`
@@ -34,14 +46,8 @@ type CategoryConfig struct {
 	MaxPrimaryPerCategory int `json:"max_primary_per_category"`
 }
 
-var interestsConfig *InterestsConfig
-
 // LoadInterestsConfig загружает конфигурацию интересов из файла
 func LoadInterestsConfig() (*InterestsConfig, error) {
-	if interestsConfig != nil {
-		return interestsConfig, nil
-	}
-
 	// Ищем файл конфигурации в разных местах
 	configPaths := []string{
 		"config/interests.json",          // из корня проекта
@@ -51,6 +57,7 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 	}
 
 	var configPath string
+
 	for _, path := range configPaths {
 		if _, err := os.Stat(path); err == nil {
 			configPath = path
@@ -60,7 +67,7 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 
 	if configPath == "" {
 		// Если файл не найден, создаем с дефолтными значениями
-		interestsConfig = &InterestsConfig{
+		config := &InterestsConfig{
 			Matching: MatchingConfig{
 				PrimaryInterestScore:    3,
 				AdditionalInterestScore: 1,
@@ -70,7 +77,7 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 			InterestLimits: InterestLimitsConfig{
 				MinPrimaryInterests: 1,
 				MaxPrimaryInterests: 5,
-				PrimaryPercentage:   0.3,
+				PrimaryPercentage:   defaultPrimaryPercentage, // 30% от общего количества интересов
 			},
 			Categories: map[string]CategoryConfig{
 				"entertainment": {DisplayOrder: 1, MaxPrimaryPerCategory: 2},
@@ -80,7 +87,8 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 				"social":        {DisplayOrder: 5, MaxPrimaryPerCategory: 2},
 			},
 		}
-		return interestsConfig, nil
+
+		return config, nil
 	}
 
 	// Читаем файл
@@ -95,17 +103,13 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 		return nil, err
 	}
 
-	interestsConfig = &config
-	return interestsConfig, nil
+	return &config, nil
 }
 
 // GetInterestsConfig возвращает загруженную конфигурацию
 func GetInterestsConfig() *InterestsConfig {
-	if interestsConfig == nil {
-		config, _ := LoadInterestsConfig()
-		return config
-	}
-	return interestsConfig
+	config, _ := LoadInterestsConfig()
+	return config
 }
 
 // SaveInterestsConfig сохраняет конфигурацию в файл
@@ -114,7 +118,7 @@ func SaveInterestsConfig(config *InterestsConfig) error {
 	configPath := "config/interests.json"
 
 	// Создаем директорию если не существует
-	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(configPath), defaultDirectoryPermissions); err != nil {
 		return err
 	}
 
@@ -125,5 +129,5 @@ func SaveInterestsConfig(config *InterestsConfig) error {
 	}
 
 	// Записываем в файл
-	return os.WriteFile(configPath, data, 0644)
+	return os.WriteFile(configPath, data, defaultFilePermissions) // Более безопасные права доступа
 }

@@ -180,7 +180,6 @@ func (h *InterestHandlerImpl) updateProfileCompletionLevel(userID int, completio
 		SET profile_completion_level = $1, updated_at = NOW()
 		WHERE id = $2
 	`, completionLevel, userID)
-
 	if err != nil {
 		log.Printf("Error in updateProfileCompletionLevel: %v", err)
 		return err

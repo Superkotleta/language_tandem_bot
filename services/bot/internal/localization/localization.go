@@ -20,6 +20,7 @@ func NewLocalizer(db *sql.DB) *Localizer {
 		translations: make(map[string]map[string]string),
 	}
 	l.loadTranslations()
+
 	return l
 }
 
@@ -34,10 +35,11 @@ func (l *Localizer) loadTranslations() {
 		fmt.Printf("Locales directory '%s' not found, will use fallback to key names\n", localesPath)
 		// Добавляем базовые переводы для тестов
 		l.loadFallbackTranslations()
+
 		return
 	}
 
-	filepath.WalkDir(localesPath, func(path string, d os.DirEntry, err error) error {
+	if err := filepath.WalkDir(localesPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -61,7 +63,10 @@ func (l *Localizer) loadTranslations() {
 		l.translations[lang] = dict
 		fmt.Printf("Loaded %d keys for language: %s\n", len(dict), lang)
 		return nil
-	})
+	}); err != nil {
+		fmt.Printf("Error walking locales directory: %v\n", err)
+		l.loadFallbackTranslations()
+	}
 }
 
 func (l *Localizer) Get(lang, key string) string {
@@ -82,10 +87,12 @@ func (l *Localizer) Get(lang, key string) string {
 
 func (l *Localizer) GetWithParams(lang, key string, params map[string]string) string {
 	text := l.Get(lang, key)
+
 	for k, v := range params {
 		placeholder := "{" + k + "}"
 		text = strings.ReplaceAll(text, placeholder, v)
 	}
+
 	return text
 }
 
@@ -112,6 +119,7 @@ func (l *Localizer) GetInterests(lang string) (map[int]string, error) {
 				4: "Путешествия",
 			}
 		}
+
 		return interests, nil
 	}
 
@@ -141,10 +149,13 @@ func (l *Localizer) GetInterests(lang string) (map[int]string, error) {
 
 	for rows.Next() {
 		var id int
+
 		var name string
+
 		if err := rows.Scan(&id, &name); err != nil {
 			continue
 		}
+
 		interests[id] = name
 		fmt.Printf("Interest %d: %s\n", id, name) // Debug: показать загруженные интересы
 	}

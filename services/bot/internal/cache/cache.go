@@ -65,11 +65,13 @@ func (cs *CacheService) GetLanguages(lang string) ([]*models.Language, bool) {
 	}
 
 	cs.cacheStats.Hits++
+
 	if data, ok := entry.Data.(*CachedLanguages); ok {
 		return data.Languages, true
 	}
 
 	cs.cacheStats.Misses++
+
 	return nil, false
 }
 
@@ -101,11 +103,13 @@ func (cs *CacheService) GetInterests(lang string) (map[int]string, bool) {
 	}
 
 	cs.cacheStats.Hits++
+
 	if data, ok := entry.Data.(*CachedInterests); ok {
 		return data.Interests, true
 	}
 
 	cs.cacheStats.Misses++
+
 	return nil, false
 }
 
@@ -137,11 +141,13 @@ func (cs *CacheService) GetUser(userID int64) (*models.User, bool) {
 	}
 
 	cs.cacheStats.Hits++
+
 	if data, ok := entry.Data.(*CachedUser); ok {
 		return data.User, true
 	}
 
 	cs.cacheStats.Misses++
+
 	return nil, false
 }
 
@@ -173,11 +179,13 @@ func (cs *CacheService) GetTranslations(lang string) (map[string]string, bool) {
 	}
 
 	cs.cacheStats.Hits++
+
 	if data, ok := entry.Data.(map[string]string); ok {
 		return data, true
 	}
 
 	cs.cacheStats.Misses++
+
 	return nil, false
 }
 
@@ -206,11 +214,13 @@ func (cs *CacheService) GetStats(statsType string) (map[string]interface{}, bool
 	}
 
 	cs.cacheStats.Hits++
+
 	if data, ok := entry.Data.(*CachedStats); ok {
 		return data.Data, true
 	}
 
 	cs.cacheStats.Misses++
+
 	return nil, false
 }
 
@@ -332,6 +342,7 @@ func (cs *CacheService) cleanupExpired() {
 	for key, entry := range cs.languages {
 		if entry.IsExpired() {
 			delete(cs.languages, key)
+
 			cleaned++
 		}
 	}
@@ -340,6 +351,7 @@ func (cs *CacheService) cleanupExpired() {
 	for key, entry := range cs.interests {
 		if entry.IsExpired() {
 			delete(cs.interests, key)
+
 			cleaned++
 		}
 	}
@@ -348,6 +360,7 @@ func (cs *CacheService) cleanupExpired() {
 	for key, entry := range cs.translations {
 		if entry.IsExpired() {
 			delete(cs.translations, key)
+
 			cleaned++
 		}
 	}
@@ -356,6 +369,7 @@ func (cs *CacheService) cleanupExpired() {
 	for key, entry := range cs.users {
 		if entry.IsExpired() {
 			delete(cs.users, key)
+
 			cleaned++
 		}
 	}
@@ -364,6 +378,7 @@ func (cs *CacheService) cleanupExpired() {
 	for key, entry := range cs.stats {
 		if entry.IsExpired() {
 			delete(cs.stats, key)
+
 			cleaned++
 		}
 	}
@@ -384,7 +399,9 @@ func (cs *CacheService) Stop() {
 // String возвращает строковое представление статистики кэша
 func (cs *CacheService) String() string {
 	stats := cs.GetCacheStats()
+
 	hitRate := float64(0)
+
 	if stats.Hits+stats.Misses > 0 {
 		hitRate = float64(stats.Hits) / float64(stats.Hits+stats.Misses) * 100
 	}

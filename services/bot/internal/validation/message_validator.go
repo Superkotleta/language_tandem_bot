@@ -132,7 +132,7 @@ func (mv *MessageValidator) ValidateCommand(chatID int64, userID int64, command 
 	}
 
 	// Проверяем длину команды
-	if len(command) > 32 {
+	if len(command) > maxCommandLength {
 		result.AddError("command", "Команда слишком длинная")
 	}
 

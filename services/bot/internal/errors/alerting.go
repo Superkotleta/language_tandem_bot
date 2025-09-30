@@ -100,14 +100,17 @@ func (n *AdminNotifierImpl) sendMessage(chatID int64, message string) {
 // formatContext форматирует контекст для отображения
 func (n *AdminNotifierImpl) formatContext(context map[string]interface{}) string {
 	result := ""
+
 	for key, value := range context {
 		if key != "user_id" && key != "chat_id" && key != "operation" {
 			result += fmt.Sprintf("- %s: %v\n", key, value)
 		}
 	}
+
 	if result == "" {
 		return "Нет дополнительной информации"
 	}
+
 	return result
 }
 

@@ -1,9 +1,10 @@
 package validation
 
 import (
+	"testing"
+
 	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
-	"testing"
 )
 
 // TestValidationService тестирует сервис валидации

@@ -66,6 +66,7 @@ func (bl *BatchLoader) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int
 
 	for rows.Next() {
 		var user models.User
+
 		var interestID sql.NullInt64
 
 		err := rows.Scan(
@@ -126,7 +127,9 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 
 	for rows.Next() {
 		var langCode string
+
 		var id int
+
 		var name string
 
 		err := rows.Scan(&langCode, &id, &name)
@@ -138,6 +141,7 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 		if interests[langCode] == nil {
 			interests[langCode] = make(map[int]string)
 		}
+
 		interests[langCode][id] = name
 	}
 
@@ -169,6 +173,7 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (m
 
 	for rows.Next() {
 		var langCode string
+
 		var lang models.Language
 
 		err := rows.Scan(&langCode, &lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn)
@@ -180,6 +185,7 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (m
 		if langs[langCode] == nil {
 			langs[langCode] = make([]*models.Language, 0)
 		}
+
 		langs[langCode] = append(langs[langCode], &lang)
 	}
 
@@ -219,6 +225,7 @@ func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, err
 		if interests[userID] == nil {
 			interests[userID] = make([]int, 0)
 		}
+
 		interests[userID] = append(interests[userID], interestID)
 	}
 
@@ -299,15 +306,22 @@ func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, e
 	defer rows.Close()
 
 	var userData *UserWithAllData
+
 	interests := make([]int, 0)
+
 	translations := make(map[int]string)
+
 	languages := make([]*models.Language, 0)
 
 	for rows.Next() {
 		var user models.User
+
 		var interestID sql.NullInt64
+
 		var interestName sql.NullString
+
 		var langID sql.NullInt64
+
 		var langCode, langNameNative, langNameEn sql.NullString
 
 		err := rows.Scan(
@@ -336,6 +350,7 @@ func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, e
 		// Добавляем интерес, если он есть
 		if interestID.Valid {
 			interests = append(interests, int(interestID.Int64))
+
 			if interestName.Valid {
 				translations[int(interestID.Int64)] = interestName.String
 			}
@@ -389,8 +404,13 @@ func (bl *BatchLoader) BatchLoadStats(statTypes []string) (map[string]map[string
 func (bl *BatchLoader) loadUserStats() map[string]interface{} {
 	var totalUsers, activeUsers int
 
-	bl.db.conn.QueryRow("SELECT COUNT(*) FROM users").Scan(&totalUsers)
-	bl.db.conn.QueryRow("SELECT COUNT(*) FROM users WHERE status = 'active'").Scan(&activeUsers)
+	if err := bl.db.conn.QueryRow("SELECT COUNT(*) FROM users").Scan(&totalUsers); err != nil {
+		fmt.Printf("Error getting total users count: %v\n", err)
+	}
+
+	if err := bl.db.conn.QueryRow("SELECT COUNT(*) FROM users WHERE status = 'active'").Scan(&activeUsers); err != nil {
+		fmt.Printf("Error getting active users count: %v\n", err)
+	}
 
 	return map[string]interface{}{
 		"total_users":  totalUsers,
@@ -402,14 +422,19 @@ func (bl *BatchLoader) loadUserStats() map[string]interface{} {
 func (bl *BatchLoader) loadInterestStats() map[string]interface{} {
 	var totalInterests, popularInterests int
 
-	bl.db.conn.QueryRow("SELECT COUNT(*) FROM interests").Scan(&totalInterests)
-	bl.db.conn.QueryRow(`
+	if err := bl.db.conn.QueryRow("SELECT COUNT(*) FROM interests").Scan(&totalInterests); err != nil {
+		fmt.Printf("Error getting total interests count: %v\n", err)
+	}
+
+	if err := bl.db.conn.QueryRow(`
 		SELECT COUNT(*) FROM user_interests ui 
 		JOIN interests i ON ui.interest_id = i.id 
 		GROUP BY ui.interest_id 
 		ORDER BY COUNT(*) DESC 
 		LIMIT 1
-	`).Scan(&popularInterests)
+	`).Scan(&popularInterests); err != nil {
+		fmt.Printf("Error getting popular interests count: %v\n", err)
+	}
 
 	return map[string]interface{}{
 		"total_interests":   totalInterests,
@@ -421,8 +446,13 @@ func (bl *BatchLoader) loadInterestStats() map[string]interface{} {
 func (bl *BatchLoader) loadFeedbackStats() map[string]interface{} {
 	var totalFeedbacks, processedFeedbacks int
 
-	bl.db.conn.QueryRow("SELECT COUNT(*) FROM user_feedback").Scan(&totalFeedbacks)
-	bl.db.conn.QueryRow("SELECT COUNT(*) FROM user_feedback WHERE is_processed = true").Scan(&processedFeedbacks)
+	if err := bl.db.conn.QueryRow("SELECT COUNT(*) FROM user_feedback").Scan(&totalFeedbacks); err != nil {
+		fmt.Printf("Error getting total feedbacks count: %v\n", err)
+	}
+
+	if err := bl.db.conn.QueryRow("SELECT COUNT(*) FROM user_feedback WHERE is_processed = true").Scan(&processedFeedbacks); err != nil {
+		fmt.Printf("Error getting processed feedbacks count: %v\n", err)
+	}
 
 	return map[string]interface{}{
 		"total_feedbacks":     totalFeedbacks,

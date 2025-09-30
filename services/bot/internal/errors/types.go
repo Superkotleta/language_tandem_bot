@@ -53,6 +53,7 @@ func (e *CustomError) Error() string {
 	if e.Cause != nil {
 		return fmt.Sprintf("[%s] %s (caused by: %v)", e.Type.String(), e.Message, e.Cause.Error())
 	}
+
 	return fmt.Sprintf("[%s] %s", e.Type.String(), e.Message)
 }
 
@@ -90,6 +91,7 @@ func IsTelegramAPIError(err error) bool {
 	if customErr, ok := err.(*CustomError); ok {
 		return customErr.Type == ErrorTypeTelegramAPI
 	}
+
 	return false
 }
 
@@ -98,6 +100,7 @@ func IsDatabaseError(err error) bool {
 	if customErr, ok := err.(*CustomError); ok {
 		return customErr.Type == ErrorTypeDatabase
 	}
+
 	return false
 }
 
@@ -106,6 +109,7 @@ func IsValidationError(err error) bool {
 	if customErr, ok := err.(*CustomError); ok {
 		return customErr.Type == ErrorTypeValidation
 	}
+
 	return false
 }
 
@@ -114,5 +118,6 @@ func IsCacheError(err error) bool {
 	if customErr, ok := err.(*CustomError); ok {
 		return customErr.Type == ErrorTypeCache
 	}
+
 	return false
 }

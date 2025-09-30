@@ -1,10 +1,27 @@
 package validation
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"unicode/utf8"
+)
+
+// Константы для валидации
+const (
+	// minTelegramID - минимальный ID пользователя Telegram (обычно больше 100000000)
+	minTelegramID = 100000000
+
+	// maxUsernameLength - максимальная длина имени пользователя
+	maxUsernameLength = 50
+
+	// maxBioLength - максимальная длина биографии пользователя
+	maxBioLength = 500
+
+	// maxContactInfoLength - максимальная длина контактной информации
+	maxContactInfoLength = 64
+
+	// maxCommandLength - максимальная длина команды
+	maxCommandLength = 32
 )
 
 // ValidationRule представляет правило валидации
@@ -68,7 +85,7 @@ func (v *Validator) ValidateString(value string, rules []string) []string {
 				errors = append(errors, "Минимум 3 символа")
 			}
 		case "max:50":
-			if utf8.RuneCountInString(value) > 50 {
+			if utf8.RuneCountInString(value) > maxUsernameLength {
 				errors = append(errors, "Максимум 50 символов")
 			}
 		case "max:100":
@@ -76,7 +93,7 @@ func (v *Validator) ValidateString(value string, rules []string) []string {
 				errors = append(errors, "Максимум 100 символов")
 			}
 		case "max:500":
-			if utf8.RuneCountInString(value) > 500 {
+			if utf8.RuneCountInString(value) > maxBioLength {
 				errors = append(errors, "Максимум 500 символов")
 			}
 		case "alphanumeric":
@@ -155,8 +172,8 @@ func (v *Validator) ValidateTelegramID(id int64) []string {
 		errors = append(errors, "Telegram ID должен быть положительным")
 	}
 
-	// Telegram ID обычно больше 100000000
-	if id < 100000000 {
+	// Telegram ID обычно больше minTelegramID
+	if id < minTelegramID {
 		errors = append(errors, "Некорректный Telegram ID")
 	}
 
@@ -191,6 +208,7 @@ func (v *Validator) ValidateUserState(state string) []string {
 	}
 
 	isValid := false
+
 	for _, validState := range validStates {
 		if state == validState {
 			isValid = true
@@ -199,7 +217,7 @@ func (v *Validator) ValidateUserState(state string) []string {
 	}
 
 	if !isValid {
-		errors = append(errors, fmt.Sprintf("Некорректное состояние пользователя: %s", state))
+		errors = append(errors, "Некорректное состояние пользователя: "+state)
 	}
 
 	return errors
@@ -257,7 +275,7 @@ func (v *Validator) ValidateCallbackData(data string) []string {
 		return errors
 	}
 
-	if len(data) > 64 {
+	if len(data) > maxContactInfoLength {
 		errors = append(errors, "Максимум 64 символа")
 	}
 

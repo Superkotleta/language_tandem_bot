@@ -150,5 +150,6 @@ func (h *ErrorHandler) isCriticalError(err error) bool {
 			customErr.Type == ErrorTypeNetwork ||
 			customErr.Type == ErrorTypeInternal
 	}
+
 	return false
 }

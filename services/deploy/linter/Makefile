@@ -42,38 +42,28 @@ help:
 
 # Линтер для всех сервисов (базовая конфигурация)
 lint:
-	@echo "$(GREEN)Запуск линтера на всех сервисах (базовая конфигурация)...$(NC)"
+	@echo "$(GREEN)Запуск линтера на bot сервисе (базовая конфигурация)...$(NC)"
 	@$(MAKE) lint-bot
-	@$(MAKE) lint-matcher  
-	@$(MAKE) lint-profile
 
 # Улучшенный линтер для всех сервисов
 lint-enhanced:
-	@echo "$(GREEN)Запуск улучшенного линтера на всех сервисах...$(NC)"
+	@echo "$(GREEN)Запуск улучшенного линтера на bot сервисе...$(NC)"
 	@$(GOLANGCI_LINT) run --config=$(ENHANCED_CONFIG) ../../bot/internal/errors/ ../../bot/internal/localization/ ../../bot/internal/adapters/ ../../bot/internal/cache/ ../../bot/internal/config/ ../../bot/internal/core/ ../../bot/internal/database/ ../../bot/internal/models/ ../../bot/internal/validation/
-	@$(GOLANGCI_LINT) run --config=$(ENHANCED_CONFIG) ../../matcher/internal/
-	@$(GOLANGCI_LINT) run --config=$(ENHANCED_CONFIG) ../../profile/internal/
 
 # Строгий линтер для всех сервисов
 lint-strict:
-	@echo "$(GREEN)Запуск строгого линтера на всех сервисах...$(NC)"
+	@echo "$(GREEN)Запуск строгого линтера на bot сервисе...$(NC)"
 	@$(GOLANGCI_LINT) run --config=$(STRICT_CONFIG) ../../bot/internal/errors/ ../../bot/internal/localization/ ../../bot/internal/adapters/ ../../bot/internal/cache/ ../../bot/internal/config/ ../../bot/internal/core/ ../../bot/internal/database/ ../../bot/internal/models/ ../../bot/internal/validation/
-	@$(GOLANGCI_LINT) run --config=$(STRICT_CONFIG) ../../matcher/internal/
-	@$(GOLANGCI_LINT) run --config=$(STRICT_CONFIG) ../../profile/internal/
 
 # Быстрый линтер для всех сервисов
 lint-fast:
-	@echo "$(GREEN)Запуск быстрого линтера на всех сервисах...$(NC)"
+	@echo "$(GREEN)Запуск быстрого линтера на bot сервисе...$(NC)"
 	@$(GOLANGCI_LINT) run --config=$(FAST_CONFIG) ../../bot/internal/errors/ ../../bot/internal/localization/ ../../bot/internal/adapters/ ../../bot/internal/cache/ ../../bot/internal/config/ ../../bot/internal/core/ ../../bot/internal/database/ ../../bot/internal/models/ ../../bot/internal/validation/
-	@$(GOLANGCI_LINT) run --config=$(FAST_CONFIG) ../../matcher/internal/
-	@$(GOLANGCI_LINT) run --config=$(FAST_CONFIG) ../../profile/internal/
 
 # Мягкий линтер для всех сервисов
 lint-gentle:
-	@echo "$(GREEN)Запуск мягкого линтера на всех сервисах...$(NC)"
+	@echo "$(GREEN)Запуск мягкого линтера на bot сервисе...$(NC)"
 	@$(GOLANGCI_LINT) run --config=$(GENTLE_CONFIG) ../../bot/internal/errors/ ../../bot/internal/localization/ ../../bot/internal/adapters/ ../../bot/internal/cache/ ../../bot/internal/config/ ../../bot/internal/core/ ../../bot/internal/database/ ../../bot/internal/models/ ../../bot/internal/validation/
-	@$(GOLANGCI_LINT) run --config=$(GENTLE_CONFIG) ../../matcher/internal/
-	@$(GOLANGCI_LINT) run --config=$(GENTLE_CONFIG) ../../profile/internal/
 
 # Линтер для bot сервиса
 lint-bot:

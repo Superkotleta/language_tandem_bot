@@ -59,9 +59,11 @@ func Load() *Config {
 		if path == "" {
 			return ""
 		}
+
 		if b, err := os.ReadFile(path); err == nil {
 			return strings.TrimSpace(string(b))
 		}
+
 		return ""
 	}
 
@@ -86,6 +88,7 @@ func Load() *Config {
 
 	// Парсим Admin Chat IDs для уведомлений
 	adminChatIDsStr := getEnv("ADMIN_CHAT_IDS", "")
+
 	var adminChatIDs []int64
 
 	if adminChatIDsStr != "" {
@@ -106,6 +109,7 @@ func Load() *Config {
 
 	// Парсим Admin Usernames для проверки прав
 	adminUsernamesStr := getEnv("ADMIN_USERNAMES", "")
+
 	var adminUsernames []string
 
 	if adminUsernamesStr != "" {
@@ -116,9 +120,7 @@ func Load() *Config {
 			}
 
 			// Убираем @ если есть
-			if strings.HasPrefix(username, "@") {
-				username = strings.TrimPrefix(username, "@")
-			}
+			username = strings.TrimPrefix(username, "@")
 			adminUsernames = append(adminUsernames, username)
 		}
 	}
@@ -161,5 +163,6 @@ func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
+
 	return defaultValue
 }

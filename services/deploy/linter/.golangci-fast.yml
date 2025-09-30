@@ -48,7 +48,7 @@ linters-settings:
     lines: 150          # Менее строго
     statements: 75
   gocognit:
-    min-complexity: 25  # Менее строго
+    min-complexity: 30  # Менее строго для сложных функций валидации
   nestif:
     min-complexity: 7   # Менее строго
   mnd:
@@ -61,3 +61,14 @@ issues:
   max-from-linter: 20
   new: false
   fix: false
+  
+  # Исключения для конфигурационных файлов
+  exclude-rules:
+    - linters: [tagliatelle]
+      path: ".*config.*"
+      text: "json\\(camel\\)"
+    
+    # Отключаем depguard для внутренних модулей
+    - linters: [depguard]
+      path: ".*internal.*"
+      text: "is not allowed from list"

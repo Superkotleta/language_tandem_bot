@@ -40,7 +40,9 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 
 	// Создаем ValidationService (пока без errorHandler для совместимости)
 	var validationService *validation.ValidationService
+
 	var loggingService *logging.LoggingService
+
 	if errorHandler != nil {
 		validationService = validation.NewValidationService(errorHandler.(*errors.ErrorHandler))
 		loggingService = logging.NewLoggingService(errorHandler.(*errors.ErrorHandler))
@@ -75,7 +77,9 @@ func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, red
 
 	// Создаем ValidationService и LoggingService
 	var validationService *validation.ValidationService
+
 	var loggingService *logging.LoggingService
+
 	if errorHandler != nil {
 		validationService = validation.NewValidationService(errorHandler.(*errors.ErrorHandler))
 		loggingService = logging.NewLoggingService(errorHandler.(*errors.ErrorHandler))
@@ -234,8 +238,10 @@ func (s *BotService) HandleUserRegistration(telegramID int64, username, firstNam
 		} else {
 			user.InterfaceLanguageCode = detected
 		}
+
 		_ = s.DB.UpdateUserInterfaceLanguage(user.ID, user.InterfaceLanguageCode)
 	}
+
 	return user, nil
 }
 
@@ -247,9 +253,11 @@ func (s *BotService) GetWelcomeMessage(user *models.User) string {
 
 func (s *BotService) GetLanguagePrompt(user *models.User, promptType string) string {
 	key := "choose_native_language"
+
 	if promptType == "target" {
 		key = "choose_target_language"
 	}
+
 	return s.Localizer.Get(user.InterfaceLanguageCode, key)
 }
 
@@ -266,10 +274,13 @@ func (s *BotService) IsProfileCompleted(user *models.User) (bool, error) {
 	if user.NativeLanguageCode == "" || user.TargetLanguageCode == "" {
 		return false, nil
 	}
+
 	ids, err := s.DB.GetUserSelectedInterests(user.ID)
+
 	if err != nil {
 		return false, err
 	}
+
 	return len(ids) > 0, nil
 }
 
@@ -281,6 +292,7 @@ func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 
 	// Определяем флаги языков
 	var nativeFlag, targetFlag string
+
 	switch user.NativeLanguageCode {
 	case "ru":
 		nativeFlag = "🇷🇺"
@@ -308,26 +320,34 @@ func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 	}
 
 	ids, err := s.DB.GetUserSelectedInterests(user.ID)
+
 	if err != nil {
 		ids = []int{}
 	}
+
 	allInterests, _ := s.Localizer.GetInterests(lang)
 
 	var picked []string
+
 	for _, id := range ids {
 		if name, ok := allInterests[id]; ok {
 			picked = append(picked, name)
 		}
 	}
+
 	interestsLine := fmt.Sprintf("🎯 %s: %d", s.Localizer.Get(lang, "profile_field_interests"), len(picked))
+
 	if len(picked) > 0 {
 		interestsLine = fmt.Sprintf("🎯 %s: %d\n• %s", s.Localizer.Get(lang, "profile_field_interests"), len(picked), strings.Join(picked, ", "))
 	}
 
 	// Добавляем информацию о пользователе
 	displayName := s.getDisplayName(user)
+
 	nameLine := fmt.Sprintf("👤 %s: %s", s.Localizer.Get(lang, "profile_field_name"), displayName)
+
 	usernameLine := ""
+
 	if user.Username != "" {
 		usernameLine = fmt.Sprintf("🔗 %s: @%s", s.Localizer.Get(lang, "profile_field_username"), user.Username)
 	}
@@ -340,9 +360,11 @@ func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 
 	// Формируем итоговый текст
 	lines := []string{nameLine}
+
 	if usernameLine != "" {
 		lines = append(lines, usernameLine)
 	}
+
 	lines = append(lines, "", native, target, interestsLine)
 
 	// Добавляем временную доступность (показываем всегда)
@@ -368,6 +390,7 @@ func (s *BotService) formatTimeAvailability(ta *models.TimeAvailability, lang st
 	}
 
 	var dayText string
+
 	switch ta.DayType {
 	case "weekdays":
 		dayText = s.Localizer.Get(lang, "time_weekdays")
@@ -381,11 +404,13 @@ func (s *BotService) formatTimeAvailability(ta *models.TimeAvailability, lang st
 		} else {
 			dayText = s.Localizer.Get(lang, "time_any")
 		}
+
 	default:
 		dayText = s.Localizer.Get(lang, "time_any")
 	}
 
 	var timeText string
+
 	switch ta.TimeSlot {
 	case "morning":
 		timeText = s.Localizer.Get(lang, "time_morning")
@@ -409,6 +434,7 @@ func (s *BotService) formatCommunicationPreferences(fp *models.FriendshipPrefere
 	}
 
 	var styleText string
+
 	switch fp.CommunicationStyle {
 	case "text":
 		styleText = s.Localizer.Get(lang, "comm_text")
@@ -425,6 +451,7 @@ func (s *BotService) formatCommunicationPreferences(fp *models.FriendshipPrefere
 	}
 
 	var freqText string
+
 	switch fp.CommunicationFreq {
 	case "spontaneous":
 		freqText = s.Localizer.Get(lang, "freq_spontaneous")
@@ -444,6 +471,7 @@ func (s *BotService) formatCommunicationPreferences(fp *models.FriendshipPrefere
 // formatUserStatus форматирует статус пользователя
 func (s *BotService) formatUserStatus(user *models.User, lang string) string {
 	var statusText string
+
 	var statusEmoji string
 
 	switch user.Status {
@@ -478,6 +506,7 @@ func (s *BotService) getDisplayName(user *models.User) string {
 	if user.Username == "madam_di_5" {
 		return "Лисёнок 🦊"
 	}
+
 	return user.FirstName
 }
 
@@ -523,8 +552,9 @@ func (s *BotService) SendFeedbackNotification(feedbackData map[string]interface{
 		feedbackData["telegram_id"].(int64),
 		func() string {
 			if username, ok := feedbackData["username"].(*string); ok && username != nil {
-				return fmt.Sprintf("👤 Username: @%s", *username)
+				return "👤 Username: @" + *username
 			}
+
 			return "👤 Username: отсутствует"
 		}(),
 		feedbackData["feedback_text"].(string),
@@ -532,7 +562,7 @@ func (s *BotService) SendFeedbackNotification(feedbackData map[string]interface{
 
 	// Добавляем контактную информацию, если есть
 	if contactInfo, ok := feedbackData["contact_info"].(*string); ok && contactInfo != nil {
-		adminMsg += fmt.Sprintf("\n📞 Контакты: %s", *contactInfo)
+		adminMsg += "\n📞 Контакты: " + *contactInfo
 	}
 
 	// Пока что просто логируем уведомление
@@ -544,12 +574,15 @@ func (s *BotService) SendFeedbackNotification(feedbackData map[string]interface{
 // ValidateFeedback проверяет корректность отзыва по длине
 func (s *BotService) ValidateFeedback(feedbackText string) error {
 	length := len([]rune(feedbackText)) // Учитываем Unicode
+
 	if length < 10 {
 		return fmt.Errorf("feedback too short: %d characters, minimum 10", length)
 	}
+
 	if length > 1000 {
 		return fmt.Errorf("feedback too long: %d characters, maximum 1000", length)
 	}
+
 	return nil
 }
 
@@ -574,7 +607,9 @@ func (s *BotService) SaveUserFeedback(userID int, feedbackText string, contactIn
 
 	// Объединяем данные с отзывом
 	fbData := userData
+
 	fbData["feedback_text"] = feedbackText
+
 	if contactInfo != nil {
 		fbData["contact_info"] = contactInfo
 	}
@@ -599,7 +634,9 @@ func (s *BotService) SaveUserFeedback(userID int, feedbackText string, contactIn
 func (s *BotService) GetUserDataForFeedback(userID int) (map[string]interface{}, error) {
 	// Получаем пользователя по ID (нужно добавить метод в DB)
 	var telegramID int64
+
 	var username, firstName string
+
 	err := s.DB.GetConnection().QueryRow(`
 		SELECT telegram_id, username, first_name
 		FROM users WHERE id = $1
@@ -643,6 +680,7 @@ func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
 	defer rows.Close()
 
 	var feedbacks []map[string]interface{}
+
 	for rows.Next() {
 		var (
 			id           int
@@ -774,7 +812,9 @@ func (s *BotService) MarkFeedbackProcessed(feedbackID int, adminResponse string)
 // DeleteAllProcessedFeedbacks удаляет все обработанные отзывы
 func (s *BotService) DeleteAllProcessedFeedbacks() (int, error) {
 	query := `DELETE FROM user_feedback WHERE is_processed = true`
+
 	result, err := s.DB.GetConnection().Exec(query)
+
 	if err != nil {
 		return 0, fmt.Errorf("ошибка удаления обработанных отзывов: %w", err)
 	}
@@ -794,7 +834,9 @@ func (s *BotService) UnarchiveFeedback(feedbackID int) error {
 		SET is_processed = false, updated_at = NOW()
 		WHERE id = $1
 	`
+
 	result, err := s.DB.GetConnection().Exec(query, feedbackID)
+
 	if err != nil {
 		return fmt.Errorf("ошибка возврата отзыва в активные: %w", err)
 	}

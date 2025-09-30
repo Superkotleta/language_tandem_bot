@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+
 	"language-exchange-bot/internal/models"
 )
 

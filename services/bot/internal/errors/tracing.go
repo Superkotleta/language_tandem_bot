@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+// Константы для трассировки
+const (
+	// maxRandomValue - максимальное значение для генерации случайной части RequestID
+	maxRandomValue = 10000
+)
+
 // RequestContext содержит контекст запроса
 type RequestContext struct {
 	RequestID string
@@ -29,7 +35,7 @@ func NewRequestContext(userID, chatID int64, operation string) *RequestContext {
 func generateRequestID() string {
 	// Используем timestamp + случайные символы для уникальности
 	timestamp := time.Now().UnixNano()
-	return fmt.Sprintf("req_%d_%d", timestamp, time.Now().Unix()%10000)
+	return fmt.Sprintf("req_%d_%d", timestamp, time.Now().Unix()%maxRandomValue)
 }
 
 // WithContext создает ошибку с контекстом
@@ -39,6 +45,7 @@ func WithContext(err error, ctx *RequestContext) *CustomError {
 		customErr.Context["user_id"] = ctx.UserID
 		customErr.Context["chat_id"] = ctx.ChatID
 		customErr.Context["operation"] = ctx.Operation
+
 		return customErr
 	}
 
