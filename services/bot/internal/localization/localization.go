@@ -1,6 +1,8 @@
+// Package localization provides internationalization and translation functionality.
 package localization
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -9,11 +11,13 @@ import (
 	"strings"
 )
 
+// Localizer предоставляет функциональность локализации.
 type Localizer struct {
 	db           *sql.DB
 	translations map[string]map[string]string
 }
 
+// NewLocalizer создает новый экземпляр Localizer.
 func NewLocalizer(db *sql.DB) *Localizer {
 	l := &Localizer{
 		db:           db,
@@ -39,36 +43,51 @@ func (l *Localizer) loadTranslations() {
 		return
 	}
 
-	if err := filepath.WalkDir(localesPath, func(path string, d os.DirEntry, err error) error {
+	err := filepath.WalkDir(localesPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if d.IsDir() || !strings.HasSuffix(strings.ToLower(d.Name()), ".json") {
 			return nil
 		}
 
 		lang := strings.TrimSuffix(d.Name(), ".json")
-		data, err := os.ReadFile(path)
+
+		cleanPath := filepath.Clean(path)
+
+		if strings.Contains(cleanPath, "..") || strings.Contains(cleanPath, "~") {
+			fmt.Printf("Небезопасный путь к файлу: %s\n", path)
+
+			return nil
+		}
+
+		data, err := os.ReadFile(cleanPath)
 		if err != nil {
-			fmt.Printf("Failed reading %s: %v\n", path, err)
+			fmt.Printf("Failed reading %s: %v\n", cleanPath, err)
+
 			return nil
 		}
 
 		var dict map[string]string
 		if err := json.Unmarshal(data, &dict); err != nil {
 			fmt.Printf("Failed parsing %s: %v\n", path, err)
+
 			return nil
 		}
 
 		l.translations[lang] = dict
 		fmt.Printf("Loaded %d keys for language: %s\n", len(dict), lang)
+
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		fmt.Printf("Error walking locales directory: %v\n", err)
 		l.loadFallbackTranslations()
 	}
 }
 
+// Get возвращает локализованную строку по ключу.
 func (l *Localizer) Get(lang, key string) string {
 	if dict, ok := l.translations[lang]; ok {
 		if val, found := dict[key]; found {
@@ -85,6 +104,7 @@ func (l *Localizer) Get(lang, key string) string {
 	return key
 }
 
+// GetWithParams возвращает локализованную строку с подстановкой параметров.
 func (l *Localizer) GetWithParams(lang, key string, params map[string]string) string {
 	text := l.Get(lang, key)
 
@@ -96,12 +116,15 @@ func (l *Localizer) GetWithParams(lang, key string, params map[string]string) st
 	return text
 }
 
+// GetLanguageName возвращает локализованное название языка.
 func (l *Localizer) GetLanguageName(lang, interfaceLang string) string {
 	// Используем ключи типа "language_ru", "language_en" в JSON
 	key := "language_" + lang
+
 	return l.Get(interfaceLang, key)
 }
 
+// GetInterests возвращает локализованные интересы для указанного языка.
 func (l *Localizer) GetInterests(lang string) (map[int]string, error) {
 	// Если БД не инициализирована (тесты), возвращаем заглушки
 	if l.db == nil {
@@ -137,22 +160,30 @@ func (l *Localizer) GetInterests(lang string) (map[int]string, error) {
 		ORDER BY i.id
 	`
 
-	rows, err := l.db.Query(query, lang)
+	rows, err := l.db.QueryContext(context.Background(), query, lang)
 	if err != nil {
 		// Fallback на английский при ошибке
-		rows, err = l.db.Query(query, "en")
+		rows, err = l.db.QueryContext(context.Background(), query, "en")
 		if err != nil {
 			return nil, fmt.Errorf("failed to load interests: %w", err)
 		}
 	}
-	defer rows.Close()
+
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			// Логируем ошибку закрытия, но не возвращаем её
+			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+		}
+	}()
 
 	for rows.Next() {
 		var id int
 
 		var name string
 
-		if err := rows.Scan(&id, &name); err != nil {
+		err := rows.Scan(&id, &name)
+		if err != nil {
 			continue
 		}
 
@@ -165,7 +196,7 @@ func (l *Localizer) GetInterests(lang string) (map[int]string, error) {
 	return interests, nil
 }
 
-// loadFallbackTranslations загружает базовые переводы для тестов
+// loadFallbackTranslations загружает базовые переводы для тестов.
 func (l *Localizer) loadFallbackTranslations() {
 	// Английский
 	l.translations["en"] = map[string]string{

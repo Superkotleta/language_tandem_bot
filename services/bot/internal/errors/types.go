@@ -1,13 +1,15 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
 
-// ErrorType определяет категорию ошибки
+// ErrorType определяет категорию ошибки.
 type ErrorType int
 
+// Типы ошибок для категоризации.
 const (
 	ErrorTypeTelegramAPI ErrorType = iota
 	ErrorTypeDatabase
@@ -17,7 +19,7 @@ const (
 	ErrorTypeInternal
 )
 
-// String возвращает строковое представление типа ошибки
+// String возвращает строковое представление типа ошибки.
 func (et ErrorType) String() string {
 	switch et {
 	case ErrorTypeTelegramAPI:
@@ -37,7 +39,7 @@ func (et ErrorType) String() string {
 	}
 }
 
-// CustomError представляет типизированную ошибку с контекстом
+// CustomError представляет типизированную ошибку с контекстом.
 type CustomError struct {
 	Type        ErrorType
 	Message     string
@@ -48,7 +50,7 @@ type CustomError struct {
 	Cause       error
 }
 
-// Error реализует интерфейс error
+// Error реализует интерфейс error.
 func (e *CustomError) Error() string {
 	if e.Cause != nil {
 		return fmt.Sprintf("[%s] %s (caused by: %v)", e.Type.String(), e.Message, e.Cause.Error())
@@ -57,13 +59,13 @@ func (e *CustomError) Error() string {
 	return fmt.Sprintf("[%s] %s", e.Type.String(), e.Message)
 }
 
-// Unwrap возвращает причину ошибки для error wrapping
+// Unwrap возвращает причину ошибки для error wrapping.
 func (e *CustomError) Unwrap() error {
 	return e.Cause
 }
 
-// NewCustomError создает новую типизированную ошибку
-func NewCustomError(errorType ErrorType, message, userMessage string, requestID string) *CustomError {
+// NewCustomError создает новую типизированную ошибку.
+func NewCustomError(errorType ErrorType, message, userMessage, requestID string) *CustomError {
 	return &CustomError{
 		Type:        errorType,
 		Message:     message,
@@ -74,48 +76,54 @@ func NewCustomError(errorType ErrorType, message, userMessage string, requestID 
 	}
 }
 
-// WithContext добавляет контекст к ошибке
+// WithContext добавляет контекст к ошибке.
 func (e *CustomError) WithContext(key string, value interface{}) *CustomError {
 	e.Context[key] = value
+
 	return e
 }
 
-// WithCause добавляет причину ошибки
+// WithCause добавляет причину ошибки.
 func (e *CustomError) WithCause(cause error) *CustomError {
 	e.Cause = cause
+
 	return e
 }
 
-// IsTelegramAPIError проверяет, является ли ошибка ошибкой Telegram API
+// IsTelegramAPIError проверяет, является ли ошибка ошибкой Telegram API.
 func IsTelegramAPIError(err error) bool {
-	if customErr, ok := err.(*CustomError); ok {
+	customErr := &CustomError{}
+	if errors.As(err, &customErr) {
 		return customErr.Type == ErrorTypeTelegramAPI
 	}
 
 	return false
 }
 
-// IsDatabaseError проверяет, является ли ошибка ошибкой базы данных
+// IsDatabaseError проверяет, является ли ошибка ошибкой базы данных.
 func IsDatabaseError(err error) bool {
-	if customErr, ok := err.(*CustomError); ok {
+	customErr := &CustomError{}
+	if errors.As(err, &customErr) {
 		return customErr.Type == ErrorTypeDatabase
 	}
 
 	return false
 }
 
-// IsValidationError проверяет, является ли ошибка ошибкой валидации
+// IsValidationError проверяет, является ли ошибка ошибкой валидации.
 func IsValidationError(err error) bool {
-	if customErr, ok := err.(*CustomError); ok {
+	customErr := &CustomError{}
+	if errors.As(err, &customErr) {
 		return customErr.Type == ErrorTypeValidation
 	}
 
 	return false
 }
 
-// IsCacheError проверяет, является ли ошибка ошибкой кэша
+// IsCacheError проверяет, является ли ошибка ошибкой кэша.
 func IsCacheError(err error) bool {
-	if customErr, ok := err.(*CustomError); ok {
+	customErr := &CustomError{}
+	if errors.As(err, &customErr) {
 		return customErr.Type == ErrorTypeCache
 	}
 

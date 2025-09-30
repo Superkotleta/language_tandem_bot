@@ -1,7 +1,7 @@
 # Makefile для проекта Language Tandem Bot
 
 # Переменные
-GOLANGCI_LINT = ./golangci-lint
+GOLANGCI_LINT = $(shell pwd)/golangci-lint
 LINT_CONFIG = ./.golangci-compatible.yml
 ENHANCED_CONFIG = ./.golangci-enhanced.yml
 STRICT_CONFIG = ./.golangci-strict.yml
@@ -48,44 +48,44 @@ lint:
 # Улучшенный линтер для всех сервисов
 lint-enhanced:
 	@echo "$(GREEN)Запуск улучшенного линтера на bot сервисе...$(NC)"
-	@$(GOLANGCI_LINT) run --config=$(ENHANCED_CONFIG) ../../bot/internal/errors/ ../../bot/internal/localization/ ../../bot/internal/adapters/ ../../bot/internal/cache/ ../../bot/internal/config/ ../../bot/internal/core/ ../../bot/internal/database/ ../../bot/internal/models/ ../../bot/internal/validation/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(ENHANCED_CONFIG) ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
 
 # Строгий линтер для всех сервисов
 lint-strict:
 	@echo "$(GREEN)Запуск строгого линтера на bot сервисе...$(NC)"
-	@$(GOLANGCI_LINT) run --config=$(STRICT_CONFIG) ../../bot/internal/errors/ ../../bot/internal/localization/ ../../bot/internal/adapters/ ../../bot/internal/cache/ ../../bot/internal/config/ ../../bot/internal/core/ ../../bot/internal/database/ ../../bot/internal/models/ ../../bot/internal/validation/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(STRICT_CONFIG) ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
 
 # Быстрый линтер для всех сервисов
 lint-fast:
 	@echo "$(GREEN)Запуск быстрого линтера на bot сервисе...$(NC)"
-	@$(GOLANGCI_LINT) run --config=$(FAST_CONFIG) ../../bot/internal/errors/ ../../bot/internal/localization/ ../../bot/internal/adapters/ ../../bot/internal/cache/ ../../bot/internal/config/ ../../bot/internal/core/ ../../bot/internal/database/ ../../bot/internal/models/ ../../bot/internal/validation/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(FAST_CONFIG) ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
 
 # Мягкий линтер для всех сервисов
 lint-gentle:
 	@echo "$(GREEN)Запуск мягкого линтера на bot сервисе...$(NC)"
-	@$(GOLANGCI_LINT) run --config=$(GENTLE_CONFIG) ../../bot/internal/errors/ ../../bot/internal/localization/ ../../bot/internal/adapters/ ../../bot/internal/cache/ ../../bot/internal/config/ ../../bot/internal/core/ ../../bot/internal/database/ ../../bot/internal/models/ ../../bot/internal/validation/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(GENTLE_CONFIG) ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
 
 # Линтер для bot сервиса
 lint-bot:
 	@echo "$(GREEN)Запуск линтера на bot сервисе...$(NC)"
-	@$(GOLANGCI_LINT) run --config=$(LINT_CONFIG) ../../bot/internal/errors/ ../../bot/internal/localization/ ../../bot/internal/adapters/ ../../bot/internal/cache/ ../../bot/internal/config/ ../../bot/internal/core/ ../../bot/internal/database/ ../../bot/internal/models/ ../../bot/internal/validation/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(LINT_CONFIG) ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
 
 # Линтер для matcher сервиса
 lint-matcher:
 	@echo "$(GREEN)Запуск линтера на matcher сервисе...$(NC)"
-	@$(GOLANGCI_LINT) run --config=$(LINT_CONFIG) ../../matcher/internal/
+	@cd ../../matcher && $(GOLANGCI_LINT) run --config=../deploy/linter/$(LINT_CONFIG) ./internal/...
 
 # Линтер для profile сервиса
 lint-profile:
 	@echo "$(GREEN)Запуск линтера на profile сервисе...$(NC)"
-	@$(GOLANGCI_LINT) run --config=$(LINT_CONFIG) ../../profile/internal/
+	@cd ../../profile && $(GOLANGCI_LINT) run --config=../deploy/linter/$(LINT_CONFIG) ./internal/...
 
 # Линтер с подробным выводом
 lint-all:
 	@echo "$(GREEN)Запуск линтера с подробным выводом...$(NC)"
-	@$(GOLANGCI_LINT) run --config=$(LINT_CONFIG) --verbose ../../bot/internal/errors/ ../../bot/internal/localization/ ../../bot/internal/adapters/ ../../bot/internal/cache/ ../../bot/internal/config/ ../../bot/internal/core/ ../../bot/internal/database/ ../../bot/internal/models/ ../../bot/internal/validation/
-	@$(GOLANGCI_LINT) run --config=$(LINT_CONFIG) --verbose ../../matcher/internal/
-	@$(GOLANGCI_LINT) run --config=$(LINT_CONFIG) --verbose ../../profile/internal/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(LINT_CONFIG) --verbose ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
+	@cd ../../matcher && $(GOLANGCI_LINT) run --config=../deploy/linter/$(LINT_CONFIG) --verbose ./internal/...
+	@cd ../../profile && $(GOLANGCI_LINT) run --config=../deploy/linter/$(LINT_CONFIG) --verbose ./internal/...
 
 # Форматирование кода
 fmt:

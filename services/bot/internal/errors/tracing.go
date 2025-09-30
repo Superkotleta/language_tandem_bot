@@ -1,17 +1,18 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
 
-// Константы для трассировки
+// Константы для трассировки.
 const (
-	// maxRandomValue - максимальное значение для генерации случайной части RequestID
+	// maxRandomValue - максимальное значение для генерации случайной части RequestID.
 	maxRandomValue = 10000
 )
 
-// RequestContext содержит контекст запроса
+// RequestContext содержит контекст запроса.
 type RequestContext struct {
 	RequestID string
 	UserID    int64
@@ -20,7 +21,7 @@ type RequestContext struct {
 	Timestamp time.Time
 }
 
-// NewRequestContext создает новый контекст запроса
+// NewRequestContext создает новый контекст запроса.
 func NewRequestContext(userID, chatID int64, operation string) *RequestContext {
 	return &RequestContext{
 		RequestID: generateRequestID(),
@@ -31,16 +32,18 @@ func NewRequestContext(userID, chatID int64, operation string) *RequestContext {
 	}
 }
 
-// generateRequestID генерирует уникальный RequestID
+// generateRequestID генерирует уникальный RequestID.
 func generateRequestID() string {
 	// Используем timestamp + случайные символы для уникальности
 	timestamp := time.Now().UnixNano()
+
 	return fmt.Sprintf("req_%d_%d", timestamp, time.Now().Unix()%maxRandomValue)
 }
 
-// WithContext создает ошибку с контекстом
+// WithContext создает ошибку с контекстом.
 func WithContext(err error, ctx *RequestContext) *CustomError {
-	if customErr, ok := err.(*CustomError); ok {
+	customErr := &CustomError{}
+	if errors.As(err, &customErr) {
 		customErr.RequestID = ctx.RequestID
 		customErr.Context["user_id"] = ctx.UserID
 		customErr.Context["chat_id"] = ctx.ChatID
@@ -64,7 +67,7 @@ func WithContext(err error, ctx *RequestContext) *CustomError {
 	}
 }
 
-// NewTelegramError создает ошибку Telegram API с контекстом
+// NewTelegramError создает ошибку Telegram API с контекстом.
 func NewTelegramError(message, userMessage string, ctx *RequestContext) *CustomError {
 	return &CustomError{
 		Type:        ErrorTypeTelegramAPI,
@@ -80,7 +83,7 @@ func NewTelegramError(message, userMessage string, ctx *RequestContext) *CustomE
 	}
 }
 
-// NewDatabaseError создает ошибку базы данных с контекстом
+// NewDatabaseError создает ошибку базы данных с контекстом.
 func NewDatabaseError(message, userMessage string, ctx *RequestContext) *CustomError {
 	return &CustomError{
 		Type:        ErrorTypeDatabase,
@@ -96,7 +99,7 @@ func NewDatabaseError(message, userMessage string, ctx *RequestContext) *CustomE
 	}
 }
 
-// NewValidationError создает ошибку валидации с контекстом
+// NewValidationError создает ошибку валидации с контекстом.
 func NewValidationError(message, userMessage string, ctx *RequestContext) *CustomError {
 	return &CustomError{
 		Type:        ErrorTypeValidation,
@@ -112,7 +115,7 @@ func NewValidationError(message, userMessage string, ctx *RequestContext) *Custo
 	}
 }
 
-// NewCacheError создает ошибку кэша с контекстом
+// NewCacheError создает ошибку кэша с контекстом.
 func NewCacheError(message, userMessage string, ctx *RequestContext) *CustomError {
 	return &CustomError{
 		Type:        ErrorTypeCache,

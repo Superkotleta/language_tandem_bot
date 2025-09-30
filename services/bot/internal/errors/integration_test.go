@@ -1,84 +1,102 @@
-package errors
+package errors_test
 
 import (
-	"fmt"
+	"errors"
 	"testing"
+
+	errorsPkg "language-exchange-bot/internal/errors"
 )
 
-// TestErrorHandlingIntegration тестирует интеграцию всей системы обработки ошибок
-func TestErrorHandlingIntegration(t *testing.T) {
-	// Создаем полную систему обработки ошибок
-	adminNotifier := NewAdminNotifier([]int64{123456789, 987654321}, nil)
-	errorHandler := NewErrorHandler(adminNotifier)
+// TestErrorHandlingTelegramAPI тестирует обработку ошибок Telegram API.
+func TestErrorHandlingTelegramAPI(t *testing.T) {
+	t.Parallel()
 
-	// Тестируем разные сценарии ошибок
-	t.Run("TelegramAPI Error", func(t *testing.T) {
-		telegramErr := fmt.Errorf("telegram API rate limit exceeded")
-		handledErr := errorHandler.HandleTelegramError(telegramErr, 12345, 67890, "SendMessage")
+	adminNotifier := errorsPkg.NewAdminNotifier([]int64{123456789, 987654321}, nil)
+	errorHandler := errorsPkg.NewErrorHandler(adminNotifier)
 
-		if handledErr == nil {
-			t.Fatal("Expected error, got nil")
-		}
+	telegramErr := errors.New("telegram API rate limit exceeded")
 
-		if !IsTelegramAPIError(handledErr) {
-			t.Error("Expected TelegramAPI error type")
-		}
+	handledErr := errorHandler.HandleTelegramError(telegramErr, 12345, 67890, "SendMessage")
+	if handledErr == nil {
+		t.Fatal("Expected error, got nil")
+	}
 
-		t.Logf("TelegramAPI error handled: %v", handledErr)
-	})
+	if !errorsPkg.IsTelegramAPIError(handledErr) {
+		t.Error("Expected TelegramAPI error type")
+	}
 
-	t.Run("Database Error", func(t *testing.T) {
-		dbErr := fmt.Errorf("database connection failed")
-		handledErr := errorHandler.HandleDatabaseError(dbErr, 12345, 67890, "GetUser")
-
-		if handledErr == nil {
-			t.Fatal("Expected error, got nil")
-		}
-
-		if !IsDatabaseError(handledErr) {
-			t.Error("Expected Database error type")
-		}
-
-		t.Logf("Database error handled: %v", handledErr)
-	})
-
-	t.Run("Validation Error", func(t *testing.T) {
-		validationErr := fmt.Errorf("invalid user input")
-		handledErr := errorHandler.HandleValidationError(validationErr, 12345, 67890, "ValidateInput")
-
-		if handledErr == nil {
-			t.Fatal("Expected error, got nil")
-		}
-
-		if !IsValidationError(handledErr) {
-			t.Error("Expected Validation error type")
-		}
-
-		t.Logf("Validation error handled: %v", handledErr)
-	})
-
-	t.Run("Cache Error", func(t *testing.T) {
-		cacheErr := fmt.Errorf("redis connection failed")
-		handledErr := errorHandler.HandleCacheError(cacheErr, 12345, 67890, "GetCachedData")
-
-		if handledErr == nil {
-			t.Fatal("Expected error, got nil")
-		}
-
-		if !IsCacheError(handledErr) {
-			t.Error("Expected Cache error type")
-		}
-
-		t.Logf("Cache error handled: %v", handledErr)
-	})
-
-	t.Log("All error handling scenarios completed successfully")
+	t.Logf("TelegramAPI error handled: %v", handledErr)
 }
 
-// TestRequestContextIntegration тестирует интеграцию RequestContext
+// TestErrorHandlingDatabase тестирует обработку ошибок базы данных.
+func TestErrorHandlingDatabase(t *testing.T) {
+	t.Parallel()
+
+	adminNotifier := errorsPkg.NewAdminNotifier([]int64{123456789, 987654321}, nil)
+	errorHandler := errorsPkg.NewErrorHandler(adminNotifier)
+
+	dbErr := errors.New("database connection failed")
+
+	handledErr := errorHandler.HandleDatabaseError(dbErr, 12345, 67890, "GetUser")
+	if handledErr == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	if !errorsPkg.IsDatabaseError(handledErr) {
+		t.Error("Expected Database error type")
+	}
+
+	t.Logf("Database error handled: %v", handledErr)
+}
+
+// TestErrorHandlingValidation тестирует обработку ошибок валидации.
+func TestErrorHandlingValidation(t *testing.T) {
+	t.Parallel()
+
+	adminNotifier := errorsPkg.NewAdminNotifier([]int64{123456789, 987654321}, nil)
+	errorHandler := errorsPkg.NewErrorHandler(adminNotifier)
+
+	validationErr := errors.New("invalid user input")
+
+	handledErr := errorHandler.HandleValidationError(validationErr, 12345, 67890, "ValidateInput")
+	if handledErr == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	if !errorsPkg.IsValidationError(handledErr) {
+		t.Error("Expected Validation error type")
+	}
+
+	t.Logf("Validation error handled: %v", handledErr)
+}
+
+// TestErrorHandlingCache тестирует обработку ошибок кэша.
+func TestErrorHandlingCache(t *testing.T) {
+	t.Parallel()
+
+	adminNotifier := errorsPkg.NewAdminNotifier([]int64{123456789, 987654321}, nil)
+	errorHandler := errorsPkg.NewErrorHandler(adminNotifier)
+
+	cacheErr := errors.New("redis connection failed")
+
+	handledErr := errorHandler.HandleCacheError(cacheErr, 12345, 67890, "GetCachedData")
+	if handledErr == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	if !errorsPkg.IsCacheError(handledErr) {
+		t.Error("Expected Cache error type")
+	}
+
+	t.Logf("Cache error handled: %v", handledErr)
+}
+
+// TestRequestContextIntegration тестирует интеграцию RequestContext.
 func TestRequestContextIntegration(t *testing.T) {
+	t.Parallel()
+
 	// Создаем контекст запроса
-	ctx := NewRequestContext(12345, 67890, "TestOperation")
+	ctx := errorsPkg.NewRequestContext(12345, 67890, "TestOperation")
 
 	// Проверяем, что RequestID генерируется
 	if ctx.RequestID == "" {
@@ -101,9 +119,11 @@ func TestRequestContextIntegration(t *testing.T) {
 	t.Logf("RequestContext created successfully: %+v", ctx)
 }
 
-// TestAdminNotifierIntegration тестирует интеграцию уведомлений администраторов
+// TestAdminNotifierIntegration тестирует интеграцию уведомлений администраторов.
 func TestAdminNotifierIntegration(t *testing.T) {
-	adminNotifier := NewAdminNotifier([]int64{123456789, 987654321}, nil)
+	t.Parallel()
+
+	adminNotifier := errorsPkg.NewAdminNotifier([]int64{123456789, 987654321}, nil)
 
 	// Проверяем, что список администраторов установлен
 	chatIDs := adminNotifier.GetAdminChatIDs()

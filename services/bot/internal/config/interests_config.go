@@ -2,51 +2,75 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-// Константы для конфигурации интересов
+// Константы для конфигурации интересов.
 const (
-	// defaultPrimaryPercentage - процент основных интересов от общего количества (30%)
+	// defaultPrimaryPercentage - процент основных интересов от общего количества (30%).
 	defaultPrimaryPercentage = 0.3
 
-	// defaultDirectoryPermissions - права доступа для создания директорий (0755)
+	// defaultDirectoryPermissions - права доступа для создания директорий (0755).
 	defaultDirectoryPermissions = 0755
 
-	// defaultFilePermissions - права доступа для файлов конфигурации (0600)
+	// defaultFilePermissions - права доступа для файлов конфигурации (0600).
 	defaultFilePermissions = 0600
+
+	// defaultMaxMatchesPerUser - максимальное количество совпадений на пользователя.
+	defaultMaxMatchesPerUser = 10
+
+	// Константы для алгоритма сопоставления.
+	defaultPrimaryInterestScore    = 3
+	defaultAdditionalInterestScore = 1
+	defaultMinCompatibilityScore   = 5
+
+	// Константы для лимитов интересов.
+	defaultMinPrimaryInterests = 1
+	defaultMaxPrimaryInterests = 5
+
+	// Константы для категорий.
+	defaultMaxPrimaryPerCategory = 2
+
+	// Константы для порядка отображения категорий.
+	entertainmentDisplayOrder = 1
+	educationDisplayOrder     = 2
+	activeDisplayOrder        = 3
+	creativeDisplayOrder      = 4
+	socialDisplayOrder        = 5
 )
 
-// InterestsConfig представляет конфигурацию системы интересов
+// InterestsConfig представляет конфигурацию системы интересов.
 type InterestsConfig struct {
 	Matching       MatchingConfig            `json:"matching"`
-	InterestLimits InterestLimitsConfig      `json:"interest_limits"`
+	InterestLimits InterestLimitsConfig      `json:"interestLimits"`
 	Categories     map[string]CategoryConfig `json:"categories"`
 }
 
-// MatchingConfig конфигурация для алгоритма сопоставления
+// MatchingConfig конфигурация для алгоритма сопоставления.
 type MatchingConfig struct {
-	PrimaryInterestScore    int `json:"primary_interest_score"`
-	AdditionalInterestScore int `json:"additional_interest_score"`
-	MinCompatibilityScore   int `json:"min_compatibility_score"`
-	MaxMatchesPerUser       int `json:"max_matches_per_user"`
+	PrimaryInterestScore    int `json:"primaryInterestScore"`
+	AdditionalInterestScore int `json:"additionalInterestScore"`
+	MinCompatibilityScore   int `json:"minCompatibilityScore"`
+	MaxMatchesPerUser       int `json:"maxMatchesPerUser"`
 }
 
-// InterestLimitsConfig конфигурация лимитов интересов
+// InterestLimitsConfig конфигурация лимитов интересов.
 type InterestLimitsConfig struct {
-	MinPrimaryInterests int     `json:"min_primary_interests"`
-	MaxPrimaryInterests int     `json:"max_primary_interests"`
-	PrimaryPercentage   float64 `json:"primary_percentage"`
+	MinPrimaryInterests int     `json:"minPrimaryInterests"`
+	MaxPrimaryInterests int     `json:"maxPrimaryInterests"`
+	PrimaryPercentage   float64 `json:"primaryPercentage"`
 }
 
-// CategoryConfig конфигурация категории
+// CategoryConfig конфигурация категории.
 type CategoryConfig struct {
-	DisplayOrder          int `json:"display_order"`
-	MaxPrimaryPerCategory int `json:"max_primary_per_category"`
+	DisplayOrder          int `json:"displayOrder"`
+	MaxPrimaryPerCategory int `json:"maxPrimaryPerCategory"`
 }
 
-// LoadInterestsConfig загружает конфигурацию интересов из файла
+// LoadInterestsConfig загружает конфигурацию интересов из файла.
 func LoadInterestsConfig() (*InterestsConfig, error) {
 	// Ищем файл конфигурации в разных местах
 	configPaths := []string{
@@ -61,6 +85,7 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 	for _, path := range configPaths {
 		if _, err := os.Stat(path); err == nil {
 			configPath = path
+
 			break
 		}
 	}
@@ -69,30 +94,38 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 		// Если файл не найден, создаем с дефолтными значениями
 		config := &InterestsConfig{
 			Matching: MatchingConfig{
-				PrimaryInterestScore:    3,
-				AdditionalInterestScore: 1,
-				MinCompatibilityScore:   5,
-				MaxMatchesPerUser:       10,
+				PrimaryInterestScore:    defaultPrimaryInterestScore,
+				AdditionalInterestScore: defaultAdditionalInterestScore,
+				MinCompatibilityScore:   defaultMinCompatibilityScore,
+				MaxMatchesPerUser:       defaultMaxMatchesPerUser,
 			},
 			InterestLimits: InterestLimitsConfig{
-				MinPrimaryInterests: 1,
-				MaxPrimaryInterests: 5,
+				MinPrimaryInterests: defaultMinPrimaryInterests,
+				MaxPrimaryInterests: defaultMaxPrimaryInterests,
 				PrimaryPercentage:   defaultPrimaryPercentage, // 30% от общего количества интересов
 			},
 			Categories: map[string]CategoryConfig{
-				"entertainment": {DisplayOrder: 1, MaxPrimaryPerCategory: 2},
-				"education":     {DisplayOrder: 2, MaxPrimaryPerCategory: 2},
-				"active":        {DisplayOrder: 3, MaxPrimaryPerCategory: 2},
-				"creative":      {DisplayOrder: 4, MaxPrimaryPerCategory: 2},
-				"social":        {DisplayOrder: 5, MaxPrimaryPerCategory: 2},
+				"entertainment": {DisplayOrder: entertainmentDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
+				"education":     {DisplayOrder: educationDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
+				"active":        {DisplayOrder: activeDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
+				"creative":      {DisplayOrder: creativeDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
+				"social":        {DisplayOrder: socialDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
 			},
 		}
 
 		return config, nil
 	}
 
+	// Очищаем путь для безопасности
+	cleanPath := filepath.Clean(configPath)
+
+	// Проверяем, что путь не содержит опасные символы
+	if strings.Contains(cleanPath, "..") || strings.Contains(cleanPath, "~") {
+		return nil, fmt.Errorf("небезопасный путь к файлу: %s", configPath)
+	}
+
 	// Читаем файл
-	data, err := os.ReadFile(configPath)
+	data, err := os.ReadFile(cleanPath)
 	if err != nil {
 		return nil, err
 	}
@@ -106,13 +139,14 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 	return &config, nil
 }
 
-// GetInterestsConfig возвращает загруженную конфигурацию
+// GetInterestsConfig возвращает загруженную конфигурацию.
 func GetInterestsConfig() *InterestsConfig {
 	config, _ := LoadInterestsConfig()
+
 	return config
 }
 
-// SaveInterestsConfig сохраняет конфигурацию в файл
+// SaveInterestsConfig сохраняет конфигурацию в файл.
 func SaveInterestsConfig(config *InterestsConfig) error {
 	// Определяем путь для сохранения
 	configPath := "config/interests.json"

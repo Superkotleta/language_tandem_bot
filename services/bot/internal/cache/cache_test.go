@@ -1,146 +1,176 @@
-package cache
+package cache_test
 
 import (
 	"testing"
 	"time"
 
+	"language-exchange-bot/internal/cache"
 	"language-exchange-bot/internal/models"
 )
 
-func TestCacheService(t *testing.T) {
-	// Создаем кэш с коротким TTL для тестов
-	config := &CacheConfig{
+func TestCacheServiceLanguages(t *testing.T) {
+	t.Parallel()
+
+	config := createTestCacheConfig()
+
+	cacheService := cache.NewService(config)
+	defer cacheService.Stop()
+
+	languages := []*models.Language{
+		{ID: 1, Code: "en", NameNative: "English", NameEn: "English"},
+		{ID: 2, Code: "ru", NameNative: "Русский", NameEn: "Russian"},
+	}
+
+	// Сохраняем в кэш
+	cacheService.SetLanguages("en", languages)
+
+	// Получаем из кэша
+	cached, found := cacheService.GetLanguages("en")
+	if !found {
+		t.Error("Expected to find languages in cache")
+	}
+
+	if len(cached) != 2 {
+		t.Errorf("Expected 2 languages, got %d", len(cached))
+	}
+
+	// Проверяем, что данные корректны
+	if cached[0].Code != "en" {
+		t.Errorf("Expected first language to be 'en', got %s", cached[0].Code)
+	}
+}
+
+func TestCacheServiceInterests(t *testing.T) {
+	t.Parallel()
+
+	config := createTestCacheConfig()
+
+	cacheService := cache.NewService(config)
+	defer cacheService.Stop()
+
+	interests := map[int]string{
+		1: "movies",
+		2: "music",
+	}
+
+	// Сохраняем в кэш
+	cacheService.SetInterests("en", interests)
+
+	// Получаем из кэша
+	cached, found := cacheService.GetInterests("en")
+	if !found {
+		t.Error("Expected to find interests in cache")
+	}
+
+	if len(cached) != 2 {
+		t.Errorf("Expected 2 interests, got %d", len(cached))
+	}
+
+	// Проверяем, что данные корректны
+	if cached[1] != "movies" {
+		t.Errorf("Expected interest 1 to be 'movies', got %s", cached[1])
+	}
+}
+
+func TestCacheServiceUsers(t *testing.T) {
+	t.Parallel()
+
+	config := createTestCacheConfig()
+
+	cacheService := cache.NewService(config)
+	defer cacheService.Stop()
+
+	user := &models.User{
+		ID:                    1,
+		TelegramID:            12345,
+		Username:              "testuser",
+		FirstName:             "Test",
+		InterfaceLanguageCode: "en",
+		NativeLanguageCode:    "en",
+		TargetLanguageCode:    "ru",
+	}
+
+	// Сохраняем в кэш
+	cacheService.SetUser(user)
+
+	// Получаем из кэша
+	cached, found := cacheService.GetUser(1)
+	if !found {
+		t.Error("Expected to find user in cache")
+	}
+
+	if cached != nil && cached.TelegramID != 12345 {
+		t.Errorf("Expected user TelegramID to be 12345, got %d", cached.TelegramID)
+	}
+}
+
+func TestCacheServiceTTLExpiration(t *testing.T) {
+	t.Parallel()
+
+	config := createTestCacheConfig()
+
+	cacheService := cache.NewService(config)
+	defer cacheService.Stop()
+
+	// Ждем истечения TTL
+	time.Sleep(150 * time.Millisecond)
+
+	// Проверяем, что данные истекли
+	_, found := cacheService.GetLanguages("en")
+	if found {
+		t.Error("Expected languages to be expired")
+	}
+
+	_, found = cacheService.GetInterests("en")
+	if found {
+		t.Error("Expected interests to be expired")
+	}
+
+	_, found = cacheService.GetUser(1)
+	if found {
+		t.Error("Expected user to be expired")
+	}
+}
+
+func TestCacheServiceStats(t *testing.T) {
+	t.Parallel()
+
+	config := createTestCacheConfig()
+
+	cacheService := cache.NewService(config)
+	defer cacheService.Stop()
+
+	stats := cacheService.GetCacheStats()
+	if stats.Hits == 0 && stats.Misses == 0 {
+		t.Error("Expected some cache activity")
+	}
+}
+
+// createTestCacheConfig создает конфигурацию кэша для тестов.
+func createTestCacheConfig() *cache.Config {
+	return &cache.Config{
 		LanguagesTTL:    100 * time.Millisecond,
 		InterestsTTL:    100 * time.Millisecond,
 		TranslationsTTL: 100 * time.Millisecond,
 		UsersTTL:        100 * time.Millisecond,
 		StatsTTL:        100 * time.Millisecond,
 	}
-
-	cache := NewCacheService(config)
-	defer cache.Stop()
-
-	// Тест языков
-	t.Run("Languages", func(t *testing.T) {
-		languages := []*models.Language{
-			{ID: 1, Code: "en", NameNative: "English", NameEn: "English"},
-			{ID: 2, Code: "ru", NameNative: "Русский", NameEn: "Russian"},
-		}
-
-		// Сохраняем в кэш
-		cache.SetLanguages("en", languages)
-
-		// Получаем из кэша
-		cached, found := cache.GetLanguages("en")
-		if !found {
-			t.Error("Expected to find languages in cache")
-		}
-		if len(cached) != 2 {
-			t.Errorf("Expected 2 languages, got %d", len(cached))
-		}
-
-		// Проверяем, что данные корректны
-		if cached[0].Code != "en" {
-			t.Errorf("Expected first language to be 'en', got %s", cached[0].Code)
-		}
-	})
-
-	// Тест интересов
-	t.Run("Interests", func(t *testing.T) {
-		interests := map[int]string{
-			1: "movies",
-			2: "music",
-		}
-
-		// Сохраняем в кэш
-		cache.SetInterests("en", interests)
-
-		// Получаем из кэша
-		cached, found := cache.GetInterests("en")
-		if !found {
-			t.Error("Expected to find interests in cache")
-		}
-		if len(cached) != 2 {
-			t.Errorf("Expected 2 interests, got %d", len(cached))
-		}
-
-		// Проверяем, что данные корректны
-		if cached[1] != "movies" {
-			t.Errorf("Expected interest 1 to be 'movies', got %s", cached[1])
-		}
-	})
-
-	// Тест пользователей
-	t.Run("Users", func(t *testing.T) {
-		user := &models.User{
-			ID:                    1,
-			TelegramID:            12345,
-			Username:              "testuser",
-			FirstName:             "Test",
-			InterfaceLanguageCode: "en",
-			NativeLanguageCode:    "en",
-			TargetLanguageCode:    "ru",
-		}
-
-		// Сохраняем в кэш
-		cache.SetUser(user)
-
-		// Получаем из кэша
-		cached, found := cache.GetUser(1)
-		if !found {
-			t.Error("Expected to find user in cache")
-		}
-		if cached != nil && cached.TelegramID != 12345 {
-			t.Errorf("Expected user TelegramID to be 12345, got %d", cached.TelegramID)
-		}
-	})
-
-	// Тест истечения TTL
-	t.Run("TTL Expiration", func(t *testing.T) {
-		// Ждем истечения TTL
-		time.Sleep(150 * time.Millisecond)
-
-		// Запускаем очистку
-		cache.cleanupExpired()
-
-		// Проверяем, что данные истекли
-		_, found := cache.GetLanguages("en")
-		if found {
-			t.Error("Expected languages to be expired")
-		}
-
-		_, found = cache.GetInterests("en")
-		if found {
-			t.Error("Expected interests to be expired")
-		}
-
-		_, found = cache.GetUser(1)
-		if found {
-			t.Error("Expected user to be expired")
-		}
-	})
-
-	// Тест статистики
-	t.Run("Stats", func(t *testing.T) {
-		stats := cache.GetCacheStats()
-		if stats.Hits == 0 && stats.Misses == 0 {
-			t.Error("Expected some cache activity")
-		}
-	})
 }
 
 func TestInvalidationService(t *testing.T) {
-	cache := NewCacheService(DefaultCacheConfig())
-	defer cache.Stop()
+	t.Parallel()
 
-	invalidation := NewInvalidationService(cache)
+	cacheService := cache.NewService(cache.DefaultConfig())
+	defer cacheService.Stop()
+
+	invalidation := cache.NewInvalidationService(cacheService)
 
 	// Добавляем тестовые данные
-	cache.SetLanguages("en", []*models.Language{{ID: 1, Code: "en"}})
-	cache.SetInterests("en", map[int]string{1: "test"})
+	cacheService.SetLanguages("en", []*models.Language{{ID: 1, Code: "en"}})
+	cacheService.SetInterests("en", map[int]string{1: "test"})
 
 	// Проверяем, что данные есть
-	_, found := cache.GetLanguages("en")
+	_, found := cacheService.GetLanguages("en")
 	if !found {
 		t.Error("Expected languages to be in cache")
 	}
@@ -149,17 +179,19 @@ func TestInvalidationService(t *testing.T) {
 	invalidation.InvalidateStaticData()
 
 	// Проверяем, что данные удалены
-	_, found = cache.GetLanguages("en")
+	_, found = cacheService.GetLanguages("en")
 	if found {
 		t.Error("Expected languages to be invalidated")
 	}
 }
 
 func TestMetricsService(t *testing.T) {
-	cache := NewCacheService(DefaultCacheConfig())
-	defer cache.Stop()
+	t.Parallel()
 
-	metrics := NewMetricsService(cache)
+	cacheService := cache.NewService(cache.DefaultConfig())
+	defer cacheService.Stop()
+
+	metrics := cache.NewMetricsService(cacheService)
 
 	// Записываем несколько метрик
 	metrics.RecordRequest(10*time.Millisecond, true)

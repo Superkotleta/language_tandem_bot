@@ -1,29 +1,34 @@
 # Мягкая конфигурация линтера
 # Для постепенного внедрения улучшений
+version: 2
 
 run:
   timeout: 5m
   tests: false
   modules-download-mode: readonly
+  go: "1.25"
 
 linters:
   enable:
     # === БАЗОВЫЕ ЛИНТЕРЫ ===
     - unused
-    - gofmt
-    - goimports
     - govet
     - ineffassign
-    - gosimple
     - staticcheck
     
     # === БЕЗОПАСНОСТЬ (мягкие настройки) ===
     - gosec
     - errcheck
+    - bodyclose
+    - noctx
+    - sqlclosecheck
     
     # === ПРОИЗВОДИТЕЛЬНОСТЬ (мягкие настройки) ===
     - prealloc
     - perfsprint
+    - makezero
+    - copyloopvar
+    - intrange
     
     # === СТИЛЬ КОДА (мягкие настройки) ===
     - goconst
@@ -31,15 +36,71 @@ linters:
     - funlen
     - gocognit
     - nestif
+    - cyclop
     
     # === КАЧЕСТВО КОДА (мягкие настройки) ===
     - gochecknoinits
     - gochecknoglobals
     - mnd
+    - gomoddirectives
+    - unparam
+    - unconvert
+    - nakedret
+    - nlreturn
+    
+    # === СОВРЕМЕННЫЕ МЯГКИЕ ЛИНТЕРЫ ===
+    - sloglint
+    - usestdlibvars
+    - exptostd
+    - durationcheck
+    - gochecksumtype
+    - godoclint
+    - godot
+    - goheader
+    - goprintffuncname
+    - grouper
+    - iface
+    - inamedparam
+    - iotamixing
+    - ireturn
+    - loggercheck
+    - mirror
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - predeclared
+    - protogetter
+    - reassign
+    - recvcheck
+    - spancheck
+    - testableexamples
+    - unqueryvet
+    - usetesting
+    - wastedassign
+    - zerologlint
     
     # === ДОПОЛНИТЕЛЬНЫЕ (мягкие настройки) ===
     - misspell
     - whitespace
+    - wsl_v5
+    - tagalign
+    - tagliatelle
+    - asciicheck
+    - bidichk
+    - canonicalheader
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - embeddedstructfieldcheck
+    - exhaustive
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - godox
+    - importas
 
 linters-settings:
   # Настройки govet

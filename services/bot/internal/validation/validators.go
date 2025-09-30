@@ -1,120 +1,166 @@
 package validation
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"unicode/utf8"
 )
 
-// Константы для валидации
+// Константы для валидации.
 const (
-	// minTelegramID - минимальный ID пользователя Telegram (обычно больше 100000000)
+	// minTelegramID - минимальный ID пользователя Telegram (обычно больше 100000000).
 	minTelegramID = 100000000
 
-	// maxUsernameLength - максимальная длина имени пользователя
+	// maxUsernameLength - максимальная длина имени пользователя.
 	maxUsernameLength = 50
 
-	// maxBioLength - максимальная длина биографии пользователя
+	// maxBioLength - максимальная длина биографии пользователя.
 	maxBioLength = 500
 
-	// maxContactInfoLength - максимальная длина контактной информации
+	// maxContactInfoLength - максимальная длина контактной информации.
 	maxContactInfoLength = 64
 
-	// maxCommandLength - максимальная длина команды
+	// maxCommandLength - максимальная длина команды.
 	maxCommandLength = 32
+
+	// maxStringLength - максимальная длина строки для валидации.
+	maxStringLength = 100
+
+	// maxInterestCount - максимальное количество интересов.
+	maxInterestCount = 10
+
+	// minTextLength - минимальная длина текста.
+	minTextLength = 10
+
+	// maxTextLength - максимальная длина текста.
+	maxTextLength = 1000
+
+	// Константы для валидации.
+	minStringLength    = 3
+	languageCodeLength = 2
 )
 
-// ValidationRule представляет правило валидации
-type ValidationRule struct {
+// Rule представляет правило валидации.
+type Rule struct {
 	Field    string
 	Value    interface{}
 	Rules    []string
 	Messages map[string]string
 }
 
-// ValidationResult содержит результат валидации
-type ValidationResult struct {
+// Result содержит результат валидации.
+type Result struct {
 	IsValid bool
 	Errors  map[string][]string
 }
 
-// NewValidationResult создает новый результат валидации
-func NewValidationResult() *ValidationResult {
-	return &ValidationResult{
+// NewResult создает новый результат валидации.
+func NewResult() *Result {
+	return &Result{
 		IsValid: true,
 		Errors:  make(map[string][]string),
 	}
 }
 
-// AddError добавляет ошибку валидации
-func (vr *ValidationResult) AddError(field, message string) {
+// AddError добавляет ошибку валидации.
+func (vr *Result) AddError(field, message string) {
 	vr.IsValid = false
 	vr.Errors[field] = append(vr.Errors[field], message)
 }
 
-// GetErrors возвращает все ошибки валидации
-func (vr *ValidationResult) GetErrors() map[string][]string {
+// GetErrors возвращает все ошибки валидации.
+func (vr *Result) GetErrors() map[string][]string {
 	return vr.Errors
 }
 
-// HasErrors проверяет, есть ли ошибки
-func (vr *ValidationResult) HasErrors() bool {
+// HasErrors проверяет, есть ли ошибки.
+func (vr *Result) HasErrors() bool {
 	return !vr.IsValid
 }
 
-// Validator содержит методы валидации
+// Validator содержит методы валидации.
 type Validator struct{}
 
-// NewValidator создает новый валидатор
+// NewValidator создает новый валидатор.
 func NewValidator() *Validator {
 	return &Validator{}
 }
 
-// ValidateString валидирует строковое значение
+// ValidateString валидирует строковое значение.
 func (v *Validator) ValidateString(value string, rules []string) []string {
 	var errors []string
 
 	for _, rule := range rules {
-		switch rule {
-		case "required":
-			if strings.TrimSpace(value) == "" {
-				errors = append(errors, "Поле обязательно для заполнения")
-			}
-		case "min:3":
-			if utf8.RuneCountInString(value) < 3 {
-				errors = append(errors, "Минимум 3 символа")
-			}
-		case "max:50":
-			if utf8.RuneCountInString(value) > maxUsernameLength {
-				errors = append(errors, "Максимум 50 символов")
-			}
-		case "max:100":
-			if utf8.RuneCountInString(value) > 100 {
-				errors = append(errors, "Максимум 100 символов")
-			}
-		case "max:500":
-			if utf8.RuneCountInString(value) > maxBioLength {
-				errors = append(errors, "Максимум 500 символов")
-			}
-		case "alphanumeric":
-			if !regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString(value) {
-				errors = append(errors, "Только буквы и цифры")
-			}
-		case "username":
-			if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(value) {
-				errors = append(errors, "Некорректный username")
-			}
-		case "email":
-			if !regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`).MatchString(value) {
-				errors = append(errors, "Некорректный email")
-			}
+		if err := v.validateStringRule(value, rule); err != "" {
+			errors = append(errors, err)
 		}
 	}
 
 	return errors
 }
 
-// ValidateInt валидирует целочисленное значение
+// validateStringRule валидирует одно правило для строки.
+func (v *Validator) validateStringRule(value, rule string) string {
+	switch rule {
+	case "required":
+		return v.validateRequired(value)
+	case "min:3":
+		return v.validateMinLength(value, minStringLength)
+	case "max:50":
+		return v.validateMaxLength(value, maxUsernameLength, "50 символов")
+	case "max:100":
+		return v.validateMaxLength(value, maxStringLength, "100 символов")
+	case "max:500":
+		return v.validateMaxLength(value, maxBioLength, "500 символов")
+	case "alphanumeric":
+		return v.validatePattern(value, `^[a-zA-Z0-9]+$`, "Только буквы и цифры")
+	case "username":
+		return v.validatePattern(value, `^[a-zA-Z0-9_]+$`, "Некорректный username")
+	case "email":
+		return v.validatePattern(value, `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`, "Некорректный email")
+	}
+
+	return ""
+}
+
+// validateRequired проверяет обязательность поля.
+func (v *Validator) validateRequired(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "Поле обязательно для заполнения"
+	}
+
+	return ""
+}
+
+// validateMinLength проверяет минимальную длину.
+func (v *Validator) validateMinLength(value string, minLen int) string {
+	if utf8.RuneCountInString(value) < minLen {
+		return fmt.Sprintf("Минимум %d символов", minLen)
+	}
+
+	return ""
+}
+
+// validateMaxLength проверяет максимальную длину.
+func (v *Validator) validateMaxLength(value string, maxLen int, message string) string {
+	if utf8.RuneCountInString(value) > maxLen {
+		return "Максимум " + message
+	}
+
+	return ""
+}
+
+// validatePattern проверяет соответствие паттерну.
+func (v *Validator) validatePattern(value, pattern, message string) string {
+	if !regexp.MustCompile(pattern).MatchString(value) {
+		return message
+	}
+
+	return ""
+}
+
+// ValidateInt валидирует целочисленное значение.
 func (v *Validator) ValidateInt(value int, rules []string) []string {
 	var errors []string
 
@@ -129,7 +175,7 @@ func (v *Validator) ValidateInt(value int, rules []string) []string {
 				errors = append(errors, "Минимум 1")
 			}
 		case "max:100":
-			if value > 100 {
+			if value > maxStringLength {
 				errors = append(errors, "Максимум 100")
 			}
 		case "positive":
@@ -142,17 +188,18 @@ func (v *Validator) ValidateInt(value int, rules []string) []string {
 	return errors
 }
 
-// ValidateLanguageCode валидирует код языка
+// ValidateLanguageCode валидирует код языка.
 func (v *Validator) ValidateLanguageCode(code string) []string {
 	var errors []string
 
 	if strings.TrimSpace(code) == "" {
 		errors = append(errors, "Код языка обязателен")
+
 		return errors
 	}
 
 	// Проверяем формат кода языка (2 символа)
-	if len(code) != 2 {
+	if len(code) != languageCodeLength {
 		errors = append(errors, "Код языка должен содержать 2 символа")
 	}
 
@@ -164,7 +211,7 @@ func (v *Validator) ValidateLanguageCode(code string) []string {
 	return errors
 }
 
-// ValidateTelegramID валидирует Telegram ID
+// ValidateTelegramID валидирует Telegram ID.
 func (v *Validator) ValidateTelegramID(id int64) []string {
 	var errors []string
 
@@ -180,12 +227,13 @@ func (v *Validator) ValidateTelegramID(id int64) []string {
 	return errors
 }
 
-// ValidateChatID валидирует Chat ID
+// ValidateChatID валидирует Chat ID.
 func (v *Validator) ValidateChatID(id int64) []string {
 	var errors []string
 
 	if id == 0 {
 		errors = append(errors, "Chat ID обязателен")
+
 		return errors
 	}
 
@@ -197,7 +245,7 @@ func (v *Validator) ValidateChatID(id int64) []string {
 	return errors
 }
 
-// ValidateUserState валидирует состояние пользователя
+// ValidateUserState валидирует состояние пользователя.
 func (v *Validator) ValidateUserState(state string) []string {
 	var errors []string
 
@@ -212,6 +260,7 @@ func (v *Validator) ValidateUserState(state string) []string {
 	for _, validState := range validStates {
 		if state == validState {
 			isValid = true
+
 			break
 		}
 	}
@@ -223,7 +272,7 @@ func (v *Validator) ValidateUserState(state string) []string {
 	return errors
 }
 
-// ValidateInterestID валидирует ID интереса
+// ValidateInterestID валидирует ID интереса.
 func (v *Validator) ValidateInterestID(id int) []string {
 	var errors []string
 
@@ -234,7 +283,7 @@ func (v *Validator) ValidateInterestID(id int) []string {
 	return errors
 }
 
-// ValidateLanguageLevel валидирует уровень языка
+// ValidateLanguageLevel валидирует уровень языка.
 func (v *Validator) ValidateLanguageLevel(level int) []string {
 	var errors []string
 
@@ -245,33 +294,35 @@ func (v *Validator) ValidateLanguageLevel(level int) []string {
 	return errors
 }
 
-// ValidateFeedbackText валидирует текст отзыва
+// ValidateFeedbackText валидирует текст отзыва.
 func (v *Validator) ValidateFeedbackText(text string) []string {
 	var errors []string
 
 	if strings.TrimSpace(text) == "" {
 		errors = append(errors, "Текст отзыва обязателен")
+
 		return errors
 	}
 
 	textLength := utf8.RuneCountInString(strings.TrimSpace(text))
-	if textLength < 10 {
+	if textLength < minTextLength {
 		errors = append(errors, "Минимум 10 символов")
 	}
 
-	if textLength > 1000 {
+	if textLength > maxTextLength {
 		errors = append(errors, "Максимум 1000 символов")
 	}
 
 	return errors
 }
 
-// ValidateCallbackData валидирует данные callback query
+// ValidateCallbackData валидирует данные callback query.
 func (v *Validator) ValidateCallbackData(data string) []string {
 	var errors []string
 
 	if strings.TrimSpace(data) == "" {
 		errors = append(errors, "Данные callback обязательны")
+
 		return errors
 	}
 

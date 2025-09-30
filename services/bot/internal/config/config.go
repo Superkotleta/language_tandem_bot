@@ -1,14 +1,17 @@
+// Package config provides configuration management for the application.
 package config
 
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
 )
 
+// Config represents the application configuration.
 type Config struct {
 	// Telegram Bot
 	TelegramToken string
@@ -39,54 +42,87 @@ type Config struct {
 	PrimaryPercentage   float64 // Процент основных интересов от общего количества
 }
 
+// Load loads configuration from environment variables and .env file.
 func Load() *Config {
-	// Ищем .env файл в папке deploy (относительно корня проекта)
-	envPaths := []string{
-		"../../deploy/.env", // из services/bot/cmd/bot/
-		"../deploy/.env",    // из services/bot/
-		"deploy/.env",       // из корня проекта
-		".env",              // текущая директория (fallback)
+	loadEnvFile()
+
+	getFromFile := createFileReader()
+
+	config := &Config{
+		TelegramToken:           getTelegramToken(getFromFile),
+		DatabaseURL:             getDatabaseURL(getFromFile),
+		RedisURL:                getEnv("REDIS_URL", "localhost:6379"),
+		RedisPassword:           getEnv("REDIS_PASSWORD", ""),
+		RedisDB:                 getRedisDB(),
+		Port:                    getEnv("PORT", "8080"),
+		Debug:                   getDebug(),
+		WebhookURL:              getEnv("WEBHOOK_URL", ""),
+		EnableTelegram:          getEnableTelegram(),
+		EnableDiscord:           getEnableDiscord(),
+		AdminChatIDs:            parseAdminChatIDs(),
+		AdminUsernames:          parseAdminUsernames(),
+		PrimaryInterestScore:    getPrimaryInterestScore(),
+		AdditionalInterestScore: getAdditionalInterestScore(),
+		MinCompatibilityScore:   getMinCompatibilityScore(),
+		MaxMatchesPerUser:       getMaxMatchesPerUser(),
+		MinPrimaryInterests:     getMinPrimaryInterests(),
+		MaxPrimaryInterests:     getMaxPrimaryInterests(),
+		PrimaryPercentage:       getPrimaryPercentage(),
 	}
 
-	for _, path := range envPaths {
-		if err := godotenv.Load(path); err == nil {
-			log.Printf("Загружен .env файл из: %s", path)
-			break
-		}
-	}
+	return config
+}
 
-	getFromFile := func(path string) string {
-		if path == "" {
-			return ""
-		}
-
-		if b, err := os.ReadFile(path); err == nil {
-			return strings.TrimSpace(string(b))
-		}
-
-		return ""
-	}
-
+// getTelegramToken получает токен Telegram из переменных окружения или файла.
+func getTelegramToken(getFromFile func(string) string) string {
 	telegramToken := os.Getenv("TELEGRAM_TOKEN")
 	if telegramToken == "" {
 		telegramToken = getFromFile(os.Getenv("TELEGRAM_TOKEN_FILE"))
 	}
 
+	return telegramToken
+}
+
+// getDatabaseURL получает URL базы данных из переменных окружения или файла.
+func getDatabaseURL(getFromFile func(string) string) string {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		databaseURL = getFromFile(os.Getenv("DATABASE_URL_FILE"))
 	}
 
-	// Redis configuration
-	redisURL := getEnv("REDIS_URL", "localhost:6379")
-	redisPassword := getEnv("REDIS_PASSWORD", "")
+	return databaseURL
+}
+
+// getRedisDB получает номер базы данных Redis.
+func getRedisDB() int {
 	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
 
+	return redisDB
+}
+
+// getDebug получает флаг отладки.
+func getDebug() bool {
 	debug, _ := strconv.ParseBool(getEnv("DEBUG", "false"))
+
+	return debug
+}
+
+// getEnableTelegram получает флаг включения Telegram.
+func getEnableTelegram() bool {
 	enableTelegram, _ := strconv.ParseBool(getEnv("ENABLE_TELEGRAM", "true"))
+
+	return enableTelegram
+}
+
+// getEnableDiscord получает флаг включения Discord.
+func getEnableDiscord() bool {
 	enableDiscord, _ := strconv.ParseBool(getEnv("ENABLE_DISCORD", "false"))
 
-	// Парсим Admin Chat IDs для уведомлений
+	return enableDiscord
+}
+
+// parseAdminChatIDs парсит ID чатов администраторов.
+func parseAdminChatIDs() []int64 {
 	adminChatIDsStr := getEnv("ADMIN_CHAT_IDS", "")
 
 	var adminChatIDs []int64
@@ -98,7 +134,6 @@ func Load() *Config {
 				continue
 			}
 
-			// Парсим числовой ID
 			if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
 				adminChatIDs = append(adminChatIDs, id)
 			} else {
@@ -107,7 +142,11 @@ func Load() *Config {
 		}
 	}
 
-	// Парсим Admin Usernames для проверки прав
+	return adminChatIDs
+}
+
+// parseAdminUsernames парсит имена пользователей администраторов.
+func parseAdminUsernames() []string {
 	adminUsernamesStr := getEnv("ADMIN_USERNAMES", "")
 
 	var adminUsernames []string
@@ -119,44 +158,61 @@ func Load() *Config {
 				continue
 			}
 
-			// Убираем @ если есть
 			username = strings.TrimPrefix(username, "@")
 			adminUsernames = append(adminUsernames, username)
 		}
 	}
 
-	// Matching configuration
-	primaryInterestScore, _ := strconv.Atoi(getEnv("PRIMARY_INTEREST_SCORE", "3"))
-	additionalInterestScore, _ := strconv.Atoi(getEnv("ADDITIONAL_INTEREST_SCORE", "1"))
-	minCompatibilityScore, _ := strconv.Atoi(getEnv("MIN_COMPATIBILITY_SCORE", "5"))
-	maxMatchesPerUser, _ := strconv.Atoi(getEnv("MAX_MATCHES_PER_USER", "10"))
+	return adminUsernames
+}
 
-	// Interest limits
-	minPrimaryInterests, _ := strconv.Atoi(getEnv("MIN_PRIMARY_INTERESTS", "1"))
-	maxPrimaryInterests, _ := strconv.Atoi(getEnv("MAX_PRIMARY_INTERESTS", "5"))
-	primaryPercentage, _ := strconv.ParseFloat(getEnv("PRIMARY_PERCENTAGE", "0.3"), 64)
+// getPrimaryInterestScore получает баллы за основные интересы.
+func getPrimaryInterestScore() int {
+	score, _ := strconv.Atoi(getEnv("PRIMARY_INTEREST_SCORE", "3"))
 
-	return &Config{
-		TelegramToken:           telegramToken,
-		DatabaseURL:             databaseURL,
-		RedisURL:                redisURL,
-		RedisPassword:           redisPassword,
-		RedisDB:                 redisDB,
-		Port:                    getEnv("PORT", "8080"),
-		Debug:                   debug,
-		WebhookURL:              getEnv("WEBHOOK_URL", ""),
-		EnableTelegram:          enableTelegram,
-		EnableDiscord:           enableDiscord,
-		AdminChatIDs:            adminChatIDs,
-		AdminUsernames:          adminUsernames,
-		PrimaryInterestScore:    primaryInterestScore,
-		AdditionalInterestScore: additionalInterestScore,
-		MinCompatibilityScore:   minCompatibilityScore,
-		MaxMatchesPerUser:       maxMatchesPerUser,
-		MinPrimaryInterests:     minPrimaryInterests,
-		MaxPrimaryInterests:     maxPrimaryInterests,
-		PrimaryPercentage:       primaryPercentage,
-	}
+	return score
+}
+
+// getAdditionalInterestScore получает баллы за дополнительные интересы.
+func getAdditionalInterestScore() int {
+	score, _ := strconv.Atoi(getEnv("ADDITIONAL_INTEREST_SCORE", "1"))
+
+	return score
+}
+
+// getMinCompatibilityScore получает минимальный балл совместимости.
+func getMinCompatibilityScore() int {
+	score, _ := strconv.Atoi(getEnv("MIN_COMPATIBILITY_SCORE", "5"))
+
+	return score
+}
+
+// getMaxMatchesPerUser получает максимальное количество совпадений на пользователя.
+func getMaxMatchesPerUser() int {
+	matches, _ := strconv.Atoi(getEnv("MAX_MATCHES_PER_USER", "10"))
+
+	return matches
+}
+
+// getMinPrimaryInterests получает минимальное количество основных интересов.
+func getMinPrimaryInterests() int {
+	interests, _ := strconv.Atoi(getEnv("MIN_PRIMARY_INTERESTS", "1"))
+
+	return interests
+}
+
+// getMaxPrimaryInterests получает максимальное количество основных интересов.
+func getMaxPrimaryInterests() int {
+	interests, _ := strconv.Atoi(getEnv("MAX_PRIMARY_INTERESTS", "5"))
+
+	return interests
+}
+
+// getPrimaryPercentage получает процент основных интересов.
+func getPrimaryPercentage() float64 {
+	percentage, _ := strconv.ParseFloat(getEnv("PRIMARY_PERCENTAGE", "0.3"), 64)
+
+	return percentage
 }
 
 func getEnv(key, defaultValue string) string {
@@ -165,4 +221,46 @@ func getEnv(key, defaultValue string) string {
 	}
 
 	return defaultValue
+}
+
+// loadEnvFile загружает .env файл из возможных путей.
+func loadEnvFile() {
+	envPaths := []string{
+		"../../deploy/.env", // из services/bot/cmd/bot/
+		"../deploy/.env",    // из services/bot/
+		"deploy/.env",       // из корня проекта
+		".env",              // текущая директория (fallback)
+	}
+
+	for _, path := range envPaths {
+		err := godotenv.Load(path)
+		if err == nil {
+			log.Printf("Загружен .env файл из: %s", path)
+
+			break
+		}
+	}
+}
+
+// createFileReader создает функцию для чтения файлов.
+func createFileReader() func(string) string {
+	return func(path string) string {
+		if path == "" {
+			return ""
+		}
+
+		// Очищаем путь для безопасности
+		cleanPath := filepath.Clean(path)
+
+		// Проверяем, что путь не содержит опасные символы
+		if strings.Contains(cleanPath, "..") || strings.Contains(cleanPath, "~") {
+			return ""
+		}
+
+		if b, err := os.ReadFile(cleanPath); err == nil {
+			return strings.TrimSpace(string(b))
+		}
+
+		return ""
+	}
 }

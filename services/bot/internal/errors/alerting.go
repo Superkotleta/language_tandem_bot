@@ -5,13 +5,13 @@ import (
 	"log"
 )
 
-// AdminNotifierImpl реализует уведомления администраторов
+// AdminNotifierImpl реализует уведомления администраторов.
 type AdminNotifierImpl struct {
 	adminChatIDs []int64
 	botAPI       interface{} // Telegram Bot API для отправки уведомлений
 }
 
-// NewAdminNotifier создает новый уведомитель администраторов
+// NewAdminNotifier создает новый уведомитель администраторов.
 func NewAdminNotifier(adminChatIDs []int64, botAPI interface{}) *AdminNotifierImpl {
 	return &AdminNotifierImpl{
 		adminChatIDs: adminChatIDs,
@@ -19,7 +19,7 @@ func NewAdminNotifier(adminChatIDs []int64, botAPI interface{}) *AdminNotifierIm
 	}
 }
 
-// NotifyCriticalError уведомляет администраторов о критической ошибке
+// NotifyCriticalError уведомляет администраторов о критической ошибке.
 func (n *AdminNotifierImpl) NotifyCriticalError(err *CustomError) {
 	message := fmt.Sprintf(`
 🚨 **КРИТИЧЕСКАЯ ОШИБКА**
@@ -50,7 +50,7 @@ func (n *AdminNotifierImpl) NotifyCriticalError(err *CustomError) {
 	n.sendToAdmins(message)
 }
 
-// NotifyTelegramAPIError уведомляет администраторов об ошибке Telegram API
+// NotifyTelegramAPIError уведомляет администраторов об ошибке Telegram API.
 func (n *AdminNotifierImpl) NotifyTelegramAPIError(err *CustomError, chatID int64) {
 	message := fmt.Sprintf(`
 ⚠️ **ОШИБКА TELEGRAM API**
@@ -75,19 +75,16 @@ func (n *AdminNotifierImpl) NotifyTelegramAPIError(err *CustomError, chatID int6
 	n.sendToAdmins(message)
 }
 
-// sendToAdmins отправляет сообщение всем администраторам
+// sendToAdmins отправляет сообщение всем администраторам.
 func (n *AdminNotifierImpl) sendToAdmins(message string) {
 	for _, chatID := range n.adminChatIDs {
 		n.sendMessage(chatID, message)
 	}
 }
 
-// sendMessage отправляет сообщение (заглушка для интеграции с Telegram API)
+// sendMessage отправляет сообщение (заглушка для интеграции с Telegram API).
 func (n *AdminNotifierImpl) sendMessage(chatID int64, message string) {
 	// Здесь должна быть интеграция с Telegram Bot API
-	// Пока что просто логируем
-	log.Printf("Admin notification to chat %d: %s", chatID, message)
-
 	// TODO: Интегрировать с реальным Telegram Bot API
 	// Пример:
 	// if botAPI, ok := n.botAPI.(*tgbotapi.BotAPI); ok {
@@ -95,9 +92,11 @@ func (n *AdminNotifierImpl) sendMessage(chatID int64, message string) {
 	//     msg.ParseMode = tgbotapi.ModeMarkdown
 	//     botAPI.Send(msg)
 	// }
+	// Пока что просто логируем
+	log.Printf("Admin notification to chat %d: %s", chatID, message)
 }
 
-// formatContext форматирует контекст для отображения
+// formatContext форматирует контекст для отображения.
 func (n *AdminNotifierImpl) formatContext(context map[string]interface{}) string {
 	result := ""
 
@@ -114,12 +113,12 @@ func (n *AdminNotifierImpl) formatContext(context map[string]interface{}) string
 	return result
 }
 
-// SetAdminChatIDs обновляет список Chat ID администраторов
+// SetAdminChatIDs обновляет список Chat ID администраторов.
 func (n *AdminNotifierImpl) SetAdminChatIDs(chatIDs []int64) {
 	n.adminChatIDs = chatIDs
 }
 
-// GetAdminChatIDs возвращает список Chat ID администраторов
+// GetAdminChatIDs возвращает список Chat ID администраторов.
 func (n *AdminNotifierImpl) GetAdminChatIDs() []int64 {
 	return n.adminChatIDs
 }

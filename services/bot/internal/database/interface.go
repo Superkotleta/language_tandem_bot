@@ -6,7 +6,7 @@ import (
 	"language-exchange-bot/internal/models"
 )
 
-// Database интерфейс для работы с базой данных
+// Database интерфейс для работы с базой данных.
 type Database interface {
 	// Пользователи
 	FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error)

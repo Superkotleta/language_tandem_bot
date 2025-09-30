@@ -1,30 +1,41 @@
 # Строгая конфигурация линтера
 # Для production кода с максимальными требованиями
+version: 2
 
 run:
   timeout: 15m
   tests: true
   modules-download-mode: readonly
+  go: "1.25"
 
 linters:
   enable:
-    # Все линтеры из enhanced + дополнительные
+    # === БАЗОВЫЕ ЛИНТЕРЫ ===
     - unused
-    - gofmt
-    - goimports
     - govet
     - ineffassign
-    - gosimple
     - staticcheck
+    
+    # === БЕЗОПАСНОСТЬ ===
     - gosec
     - errcheck
     - bodyclose
     - noctx
     - sqlclosecheck
+    - errchkjson
+    - errname
+    - errorlint
+    - wrapcheck
+    
+    # === ПРОИЗВОДИТЕЛЬНОСТЬ ===
     - prealloc
     - perfsprint
     - fatcontext
     - makezero
+    - copyloopvar
+    - intrange
+    
+    # === СТИЛЬ КОДА ===
     - gocritic
     - revive
     - goconst
@@ -32,67 +43,91 @@ linters:
     - funlen
     - gocognit
     - nestif
+    - cyclop
+    - maintidx
+    
+    # === ТЕСТИРОВАНИЕ ===
     - testifylint
     - paralleltest
     - testpackage
     - thelper
+    - tparallel
+    
+    # === КАЧЕСТВО КОДА ===
     - gochecknoinits
     - gochecknoglobals
     - mnd
     - gomoddirectives
-    - gomodguard
-    - depguard
-    - misspell
-    - whitespace
-    - wsl
-    - tagalign
-    - tagliatelle
-    # Дополнительные строгие линтеры
-    - exhaustive
-    - exhaustruct
-    - forbidigo
+    - unparam
+    - unconvert
+    - nakedret
+    - nlreturn
+    
+    # === СОВРЕМЕННЫЕ СТРОГИЕ ЛИНТЕРЫ ===
+    - sloglint
+    - usestdlibvars
+    - exptostd
+    - containedctx
+    - durationcheck
+    - forcetypeassert
+    - funcorder
     - gochecksumtype
-    - gocognit
+    - godoclint
     - godot
-    - godox
     - goheader
     - goprintffuncname
-    - gosmopolitan
     - grouper
-    - importas
+    - iface
     - inamedparam
     - interfacebloat
-    - intrange
+    - iotamixing
     - ireturn
     - lll
     - loggercheck
-    - maintidx
     - mirror
     - musttag
-    - nakedret
     - nilerr
+    - nilnesserr
     - nilnil
-    - nlreturn
+    - noinlineerr
     - nolintlint
     - nonamedreturns
     - nosprintfhostport
     - predeclared
-    - promlinter
     - protogetter
     - reassign
+    - recvcheck
     - rowserrcheck
-    - sloglint
     - spancheck
-    - stylecheck
-    - tenv
     - testableexamples
-    - unconvert
-    - unparam
-    - usestdlibvars
+    - unqueryvet
+    - usetesting
     - varnamelen
     - wastedassign
-    - wrapcheck
     - zerologlint
+    
+    # === ДОПОЛНИТЕЛЬНЫЕ СТРОГИЕ ===
+    - misspell
+    - whitespace
+    - wsl_v5
+    - tagalign
+    - tagliatelle
+    - asciicheck
+    - bidichk
+    - canonicalheader
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - embeddedstructfieldcheck
+    - err113
+    - exhaustive
+    - exhaustruct
+    - forbidigo
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - godox
+    - importas
 
 linters-settings:
   gocyclo:

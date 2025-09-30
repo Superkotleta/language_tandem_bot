@@ -4,21 +4,21 @@ import (
 	"strings"
 )
 
-// MessageValidator валидирует сообщения и callback'и
+// MessageValidator валидирует сообщения и callback'и.
 type MessageValidator struct {
 	validator *Validator
 }
 
-// NewMessageValidator создает новый валидатор сообщений
+// NewMessageValidator создает новый валидатор сообщений.
 func NewMessageValidator() *MessageValidator {
 	return &MessageValidator{
 		validator: NewValidator(),
 	}
 }
 
-// ValidateMessage валидирует входящее сообщение
-func (mv *MessageValidator) ValidateMessage(chatID int64, userID int64, text string) *ValidationResult {
-	result := NewValidationResult()
+// ValidateMessage валидирует входящее сообщение.
+func (mv *MessageValidator) ValidateMessage(chatID, userID int64, text string) *Result {
+	result := NewResult()
 
 	// Валидация Chat ID
 	if errors := mv.validator.ValidateChatID(chatID); len(errors) > 0 {
@@ -46,9 +46,9 @@ func (mv *MessageValidator) ValidateMessage(chatID int64, userID int64, text str
 	return result
 }
 
-// ValidateCallbackQuery валидирует callback query
-func (mv *MessageValidator) ValidateCallbackQuery(chatID int64, userID int64, data string) *ValidationResult {
-	result := NewValidationResult()
+// ValidateCallbackQuery валидирует callback query.
+func (mv *MessageValidator) ValidateCallbackQuery(chatID, userID int64, data string) *Result {
+	result := NewResult()
 
 	// Валидация Chat ID
 	if errors := mv.validator.ValidateChatID(chatID); len(errors) > 0 {
@@ -74,9 +74,9 @@ func (mv *MessageValidator) ValidateCallbackQuery(chatID int64, userID int64, da
 	return result
 }
 
-// ValidateFeedbackMessage валидирует сообщение отзыва
-func (mv *MessageValidator) ValidateFeedbackMessage(chatID int64, userID int64, text string) *ValidationResult {
-	result := NewValidationResult()
+// ValidateFeedbackMessage валидирует сообщение отзыва.
+func (mv *MessageValidator) ValidateFeedbackMessage(chatID, userID int64, text string) *Result {
+	result := NewResult()
 
 	// Валидация Chat ID
 	if errors := mv.validator.ValidateChatID(chatID); len(errors) > 0 {
@@ -102,9 +102,9 @@ func (mv *MessageValidator) ValidateFeedbackMessage(chatID int64, userID int64, 
 	return result
 }
 
-// ValidateCommand валидирует команду
-func (mv *MessageValidator) ValidateCommand(chatID int64, userID int64, command string) *ValidationResult {
-	result := NewValidationResult()
+// ValidateCommand валидирует команду.
+func (mv *MessageValidator) ValidateCommand(chatID, userID int64, command string) *Result {
+	result := NewResult()
 
 	// Валидация Chat ID
 	if errors := mv.validator.ValidateChatID(chatID); len(errors) > 0 {
@@ -123,6 +123,7 @@ func (mv *MessageValidator) ValidateCommand(chatID int64, userID int64, command 
 	// Валидация команды
 	if strings.TrimSpace(command) == "" {
 		result.AddError("command", "Команда обязательна")
+
 		return result
 	}
 
@@ -144,9 +145,9 @@ func (mv *MessageValidator) ValidateCommand(chatID int64, userID int64, command 
 	return result
 }
 
-// ValidateLanguageSelection валидирует выбор языка
-func (mv *MessageValidator) ValidateLanguageSelection(chatID int64, userID int64, languageCode string) *ValidationResult {
-	result := NewValidationResult()
+// ValidateLanguageSelection валидирует выбор языка.
+func (mv *MessageValidator) ValidateLanguageSelection(chatID, userID int64, languageCode string) *Result {
+	result := NewResult()
 
 	// Валидация Chat ID
 	if errors := mv.validator.ValidateChatID(chatID); len(errors) > 0 {
@@ -172,9 +173,9 @@ func (mv *MessageValidator) ValidateLanguageSelection(chatID int64, userID int64
 	return result
 }
 
-// ValidateInterestSelection валидирует выбор интереса
-func (mv *MessageValidator) ValidateInterestSelection(chatID int64, userID int64, interestID int) *ValidationResult {
-	result := NewValidationResult()
+// ValidateInterestSelection валидирует выбор интереса.
+func (mv *MessageValidator) ValidateInterestSelection(chatID, userID int64, interestID int) *Result {
+	result := NewResult()
 
 	// Валидация Chat ID
 	if errors := mv.validator.ValidateChatID(chatID); len(errors) > 0 {
@@ -200,9 +201,9 @@ func (mv *MessageValidator) ValidateInterestSelection(chatID int64, userID int64
 	return result
 }
 
-// ValidateLanguageLevelSelection валидирует выбор уровня языка
-func (mv *MessageValidator) ValidateLanguageLevelSelection(chatID int64, userID int64, level int) *ValidationResult {
-	result := NewValidationResult()
+// ValidateLanguageLevelSelection валидирует выбор уровня языка.
+func (mv *MessageValidator) ValidateLanguageLevelSelection(chatID, userID int64, level int) *Result {
+	result := NewResult()
 
 	// Валидация Chat ID
 	if errors := mv.validator.ValidateChatID(chatID); len(errors) > 0 {

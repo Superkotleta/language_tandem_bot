@@ -1,4 +1,6 @@
 # Совместимая конфигурация golangci-lint
+version: 2
+
 run:
   timeout: 5m
   tests: false
@@ -6,11 +8,8 @@ run:
 linters:
   enable:
     - unused
-    - gofmt
-    - goimports
     - govet
     - ineffassign
-    - gosimple
     - staticcheck
 
 linters-settings:

@@ -4,8 +4,8 @@ import (
 	"language-exchange-bot/internal/models"
 )
 
-// CacheServiceInterface интерфейс для кэш-сервиса
-type CacheServiceInterface interface {
+// ServiceInterface интерфейс для кэш-сервиса.
+type ServiceInterface interface {
 	// Languages
 	GetLanguages(lang string) ([]*models.Language, bool)
 	SetLanguages(lang string, languages []*models.Language)
@@ -34,7 +34,7 @@ type CacheServiceInterface interface {
 	ClearAll()
 
 	// Stats and control
-	GetCacheStats() CacheStats
+	GetCacheStats() Stats
 	Stop()
 	String() string
 }

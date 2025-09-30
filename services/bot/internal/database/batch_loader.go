@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -11,37 +12,58 @@ import (
 	"github.com/lib/pq"
 )
 
-// BatchLoader оптимизирует загрузку данных для предотвращения N+1 запросов
+// BatchLoader оптимизирует загрузку данных для предотвращения N+1 запросов.
 type BatchLoader struct {
 	db *DB
 }
 
-// NewBatchLoader создает новый экземпляр BatchLoader
+// NewBatchLoader создает новый экземпляр BatchLoader.
 func NewBatchLoader(db *DB) *BatchLoader {
 	return &BatchLoader{db: db}
 }
 
-// UserWithInterests представляет пользователя с его интересами
+// UserWithInterests представляет пользователя с его интересами.
 type UserWithInterests struct {
 	*models.User
+
 	Interests []int
 }
 
-// UserWithAllData представляет пользователя со всеми связанными данными
+// UserWithAllData представляет пользователя со всеми связанными данными.
 type UserWithAllData struct {
 	*models.User
+
 	Interests    []int
 	Translations map[int]string
 	Languages    []*models.Language
 }
 
-// BatchLoadUsersWithInterests загружает пользователей с их интересами одним запросом
+// BatchLoadUsersWithInterests загружает пользователей с их интересами одним запросом.
 func (bl *BatchLoader) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int64]*UserWithInterests, error) {
 	if len(telegramIDs) == 0 {
 		return make(map[int64]*UserWithInterests), nil
 	}
 
-	query := `
+	query := getBatchLoadUsersWithInterestsQuery()
+
+	rows, err := bl.db.conn.QueryContext(context.Background(), query, telegramIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to batch load users with interests: %w", err)
+	}
+
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+		}
+	}()
+
+	return bl.processUsersWithInterestsRows(rows)
+}
+
+// getBatchLoadUsersWithInterestsQuery возвращает SQL запрос для загрузки пользователей с интересами.
+func getBatchLoadUsersWithInterestsQuery() string {
+	return `
 		SELECT 
 			u.id, u.telegram_id, u.username, u.first_name,
 			COALESCE(u.native_language_code, '') as native_language_code,
@@ -55,29 +77,17 @@ func (bl *BatchLoader) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int
 		WHERE u.telegram_id = ANY($1)
 		ORDER BY u.id, ui.interest_id
 	`
+}
 
-	rows, err := bl.db.conn.Query(query, telegramIDs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to batch load users with interests: %w", err)
-	}
-	defer rows.Close()
-
+// processUsersWithInterestsRows обрабатывает строки результата запроса пользователей с интересами.
+func (bl *BatchLoader) processUsersWithInterestsRows(rows *sql.Rows) (map[int64]*UserWithInterests, error) {
 	users := make(map[int64]*UserWithInterests)
 
 	for rows.Next() {
-		var user models.User
-
-		var interestID sql.NullInt64
-
-		err := rows.Scan(
-			&user.ID, &user.TelegramID, &user.Username, &user.FirstName,
-			&user.NativeLanguageCode, &user.TargetLanguageCode, &user.TargetLanguageLevel,
-			&user.InterfaceLanguageCode, &user.CreatedAt, &user.UpdatedAt,
-			&user.State, &user.ProfileCompletionLevel, &user.Status,
-			&interestID,
-		)
+		user, interestID, err := bl.scanUserWithInterestRow(rows)
 		if err != nil {
 			log.Printf("Error scanning user row: %v", err)
+
 			continue
 		}
 
@@ -98,7 +108,25 @@ func (bl *BatchLoader) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int
 	return users, nil
 }
 
-// BatchLoadInterestsWithTranslations загружает интересы с переводами для нескольких языков
+// scanUserWithInterestRow сканирует одну строку результата запроса пользователя с интересом.
+func (bl *BatchLoader) scanUserWithInterestRow(rows *sql.Rows) (models.User, sql.NullInt64, error) {
+	var (
+		user       models.User
+		interestID sql.NullInt64
+	)
+
+	err := rows.Scan(
+		&user.ID, &user.TelegramID, &user.Username, &user.FirstName,
+		&user.NativeLanguageCode, &user.TargetLanguageCode, &user.TargetLanguageLevel,
+		&user.InterfaceLanguageCode, &user.CreatedAt, &user.UpdatedAt,
+		&user.State, &user.ProfileCompletionLevel, &user.Status,
+		&interestID,
+	)
+
+	return user, interestID, err
+}
+
+// BatchLoadInterestsWithTranslations загружает интересы с переводами для нескольких языков.
 func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (map[string]map[int]string, error) {
 	if len(languages) == 0 {
 		return make(map[string]map[int]string), nil
@@ -117,11 +145,18 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 		ORDER BY i.id, it.language_code
 	`
 
-	rows, err := bl.db.conn.Query(query, languages)
+	rows, err := bl.db.conn.QueryContext(context.Background(), query, languages)
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load interests with translations: %w", err)
 	}
-	defer rows.Close()
+
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			// Логируем ошибку закрытия, но не возвращаем её
+			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+		}
+	}()
 
 	interests := make(map[string]map[int]string)
 
@@ -135,6 +170,7 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 		err := rows.Scan(&langCode, &id, &name)
 		if err != nil {
 			log.Printf("Error scanning interest row: %v", err)
+
 			continue
 		}
 
@@ -148,7 +184,7 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 	return interests, nil
 }
 
-// BatchLoadLanguagesWithTranslations загружает языки с переводами для нескольких языков
+// BatchLoadLanguagesWithTranslations загружает языки с переводами для нескольких языков.
 func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (map[string][]*models.Language, error) {
 	if len(languages) == 0 {
 		return make(map[string][]*models.Language), nil
@@ -163,11 +199,18 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (m
 		ORDER BY l.id, lt.language_code
 	`
 
-	rows, err := bl.db.conn.Query(query, languages)
+	rows, err := bl.db.conn.QueryContext(context.Background(), query, languages)
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load languages with translations: %w", err)
 	}
-	defer rows.Close()
+
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			// Логируем ошибку закрытия, но не возвращаем её
+			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+		}
+	}()
 
 	langs := make(map[string][]*models.Language)
 
@@ -179,6 +222,7 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (m
 		err := rows.Scan(&langCode, &lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn)
 		if err != nil {
 			log.Printf("Error scanning language row: %v", err)
+
 			continue
 		}
 
@@ -192,7 +236,7 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (m
 	return langs, nil
 }
 
-// BatchLoadUserInterests загружает интересы для нескольких пользователей одним запросом
+// BatchLoadUserInterests загружает интересы для нескольких пользователей одним запросом.
 func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, error) {
 	if len(userIDs) == 0 {
 		return make(map[int][]int), nil
@@ -205,11 +249,18 @@ func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, err
 		ORDER BY user_id, interest_id
 	`
 
-	rows, err := bl.db.conn.Query(query, pq.Array(userIDs))
+	rows, err := bl.db.conn.QueryContext(context.Background(), query, pq.Array(userIDs))
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load user interests: %w", err)
 	}
-	defer rows.Close()
+
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			// Логируем ошибку закрытия, но не возвращаем её
+			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+		}
+	}()
 
 	interests := make(map[int][]int)
 
@@ -219,6 +270,7 @@ func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, err
 		err := rows.Scan(&userID, &interestID)
 		if err != nil {
 			log.Printf("Error scanning user interest row: %v", err)
+
 			continue
 		}
 
@@ -232,7 +284,7 @@ func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, err
 	return interests, nil
 }
 
-// BatchLoadUsers загружает пользователей по Telegram ID одним запросом
+// BatchLoadUsers загружает пользователей по Telegram ID одним запросом.
 func (bl *BatchLoader) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.User, error) {
 	if len(telegramIDs) == 0 {
 		return make(map[int64]*models.User), nil
@@ -249,11 +301,18 @@ func (bl *BatchLoader) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.Us
 		WHERE telegram_id = ANY($1)
 	`
 
-	rows, err := bl.db.conn.Query(query, telegramIDs)
+	rows, err := bl.db.conn.QueryContext(context.Background(), query, telegramIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load users: %w", err)
 	}
-	defer rows.Close()
+
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			// Логируем ошибку закрытия, но не возвращаем её
+			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+		}
+	}()
 
 	users := make(map[int64]*models.User)
 
@@ -268,6 +327,7 @@ func (bl *BatchLoader) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.Us
 		)
 		if err != nil {
 			log.Printf("Error scanning user row: %v", err)
+
 			continue
 		}
 
@@ -277,9 +337,41 @@ func (bl *BatchLoader) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.Us
 	return users, nil
 }
 
-// GetUserWithAllData загружает пользователя со всеми связанными данными одним запросом
+// GetUserWithAllData загружает пользователя со всеми связанными данными одним запросом.
 func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, error) {
-	query := `
+	query := getUserWithAllDataQuery()
+
+	rows, err := bl.db.conn.QueryContext(context.Background(), query, telegramID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user with all data: %w", err)
+	}
+
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+		}
+	}()
+
+	userData, interests, translations, languages, err := bl.processUserDataRows(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	if userData == nil {
+		return nil, fmt.Errorf("user not found: %d", telegramID)
+	}
+
+	userData.Interests = interests
+	userData.Translations = translations
+	userData.Languages = languages
+
+	return userData, nil
+}
+
+// getUserWithAllDataQuery возвращает SQL запрос для получения пользователя со всеми данными.
+func getUserWithAllDataQuery() string {
+	return `
 		SELECT 
 			u.id, u.telegram_id, u.username, u.first_name,
 			COALESCE(u.native_language_code, '') as native_language_code,
@@ -298,42 +390,21 @@ func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, e
 		WHERE u.telegram_id = $1
 		ORDER BY ui.interest_id
 	`
+}
 
-	rows, err := bl.db.conn.Query(query, telegramID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user with all data: %w", err)
-	}
-	defer rows.Close()
-
+// processUserDataRows обрабатывает строки результата запроса.
+func (bl *BatchLoader) processUserDataRows(rows *sql.Rows) (*UserWithAllData, []int, map[int]string, []*models.Language, error) {
 	var userData *UserWithAllData
 
 	interests := make([]int, 0)
-
 	translations := make(map[int]string)
-
 	languages := make([]*models.Language, 0)
 
 	for rows.Next() {
-		var user models.User
-
-		var interestID sql.NullInt64
-
-		var interestName sql.NullString
-
-		var langID sql.NullInt64
-
-		var langCode, langNameNative, langNameEn sql.NullString
-
-		err := rows.Scan(
-			&user.ID, &user.TelegramID, &user.Username, &user.FirstName,
-			&user.NativeLanguageCode, &user.TargetLanguageCode, &user.TargetLanguageLevel,
-			&user.InterfaceLanguageCode, &user.CreatedAt, &user.UpdatedAt,
-			&user.State, &user.ProfileCompletionLevel, &user.Status,
-			&interestID, &interestName,
-			&langID, &langCode, &langNameNative, &langNameEn,
-		)
+		user, interestID, interestName, langID, langCode, langNameNative, langNameEn, err := bl.scanUserDataRow(rows)
 		if err != nil {
 			log.Printf("Error scanning user data row: %v", err)
+
 			continue
 		}
 
@@ -350,7 +421,6 @@ func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, e
 		// Добавляем интерес, если он есть
 		if interestID.Valid {
 			interests = append(interests, int(interestID.Int64))
-
 			if interestName.Valid {
 				translations[int(interestID.Int64)] = interestName.String
 			}
@@ -368,18 +438,32 @@ func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, e
 		}
 	}
 
-	if userData == nil {
-		return nil, fmt.Errorf("user not found: %d", telegramID)
-	}
-
-	userData.Interests = interests
-	userData.Translations = translations
-	userData.Languages = languages
-
-	return userData, nil
+	return userData, interests, translations, languages, nil
 }
 
-// BatchLoadStats загружает статистику для нескольких типов одним запросом
+// scanUserDataRow сканирует одну строку результата запроса.
+func (bl *BatchLoader) scanUserDataRow(rows *sql.Rows) (models.User, sql.NullInt64, sql.NullString, sql.NullInt64, sql.NullString, sql.NullString, sql.NullString, error) {
+	var (
+		user                                 models.User
+		interestID                           sql.NullInt64
+		interestName                         sql.NullString
+		langID                               sql.NullInt64
+		langCode, langNameNative, langNameEn sql.NullString
+	)
+
+	err := rows.Scan(
+		&user.ID, &user.TelegramID, &user.Username, &user.FirstName,
+		&user.NativeLanguageCode, &user.TargetLanguageCode, &user.TargetLanguageLevel,
+		&user.InterfaceLanguageCode, &user.CreatedAt, &user.UpdatedAt,
+		&user.State, &user.ProfileCompletionLevel, &user.Status,
+		&interestID, &interestName,
+		&langID, &langCode, &langNameNative, &langNameEn,
+	)
+
+	return user, interestID, interestName, langID, langCode, langNameNative, langNameEn, err
+}
+
+// BatchLoadStats загружает статистику для нескольких типов одним запросом.
 func (bl *BatchLoader) BatchLoadStats(statTypes []string) (map[string]map[string]interface{}, error) {
 	if len(statTypes) == 0 {
 		return make(map[string]map[string]interface{}), nil
@@ -404,11 +488,13 @@ func (bl *BatchLoader) BatchLoadStats(statTypes []string) (map[string]map[string
 func (bl *BatchLoader) loadUserStats() map[string]interface{} {
 	var totalUsers, activeUsers int
 
-	if err := bl.db.conn.QueryRow("SELECT COUNT(*) FROM users").Scan(&totalUsers); err != nil {
+	err := bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM users").Scan(&totalUsers)
+	if err != nil {
 		fmt.Printf("Error getting total users count: %v\n", err)
 	}
 
-	if err := bl.db.conn.QueryRow("SELECT COUNT(*) FROM users WHERE status = 'active'").Scan(&activeUsers); err != nil {
+	err = bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM users WHERE status = 'active'").Scan(&activeUsers)
+	if err != nil {
 		fmt.Printf("Error getting active users count: %v\n", err)
 	}
 
@@ -422,17 +508,19 @@ func (bl *BatchLoader) loadUserStats() map[string]interface{} {
 func (bl *BatchLoader) loadInterestStats() map[string]interface{} {
 	var totalInterests, popularInterests int
 
-	if err := bl.db.conn.QueryRow("SELECT COUNT(*) FROM interests").Scan(&totalInterests); err != nil {
+	err := bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM interests").Scan(&totalInterests)
+	if err != nil {
 		fmt.Printf("Error getting total interests count: %v\n", err)
 	}
 
-	if err := bl.db.conn.QueryRow(`
+	err = bl.db.conn.QueryRowContext(context.Background(), `
 		SELECT COUNT(*) FROM user_interests ui 
 		JOIN interests i ON ui.interest_id = i.id 
 		GROUP BY ui.interest_id 
 		ORDER BY COUNT(*) DESC 
 		LIMIT 1
-	`).Scan(&popularInterests); err != nil {
+	`).Scan(&popularInterests)
+	if err != nil {
 		fmt.Printf("Error getting popular interests count: %v\n", err)
 	}
 
@@ -446,11 +534,13 @@ func (bl *BatchLoader) loadInterestStats() map[string]interface{} {
 func (bl *BatchLoader) loadFeedbackStats() map[string]interface{} {
 	var totalFeedbacks, processedFeedbacks int
 
-	if err := bl.db.conn.QueryRow("SELECT COUNT(*) FROM user_feedback").Scan(&totalFeedbacks); err != nil {
+	err := bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM user_feedback").Scan(&totalFeedbacks)
+	if err != nil {
 		fmt.Printf("Error getting total feedbacks count: %v\n", err)
 	}
 
-	if err := bl.db.conn.QueryRow("SELECT COUNT(*) FROM user_feedback WHERE is_processed = true").Scan(&processedFeedbacks); err != nil {
+	err = bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM user_feedback WHERE is_processed = true").Scan(&processedFeedbacks)
+	if err != nil {
 		fmt.Printf("Error getting processed feedbacks count: %v\n", err)
 	}
 

@@ -1,24 +1,25 @@
 package validation
 
 import (
+	"fmt"
 	"language-exchange-bot/internal/models"
 )
 
-// UserValidator валидирует данные пользователя
+// UserValidator валидирует данные пользователя.
 type UserValidator struct {
 	validator *Validator
 }
 
-// NewUserValidator создает новый валидатор пользователей
+// NewUserValidator создает новый валидатор пользователей.
 func NewUserValidator() *UserValidator {
 	return &UserValidator{
 		validator: NewValidator(),
 	}
 }
 
-// ValidateUser валидирует данные пользователя
-func (uv *UserValidator) ValidateUser(user *models.User) *ValidationResult {
-	result := NewValidationResult()
+// ValidateUser валидирует данные пользователя.
+func (uv *UserValidator) ValidateUser(user *models.User) *Result {
+	result := NewResult()
 
 	// Валидация Telegram ID
 	if errors := uv.validator.ValidateTelegramID(int64(user.TelegramID)); len(errors) > 0 {
@@ -60,9 +61,9 @@ func (uv *UserValidator) ValidateUser(user *models.User) *ValidationResult {
 	return result
 }
 
-// ValidateUserRegistration валидирует данные при регистрации пользователя
-func (uv *UserValidator) ValidateUserRegistration(telegramID int, username, firstName, languageCode string) *ValidationResult {
-	result := NewValidationResult()
+// ValidateUserRegistration валидирует данные при регистрации пользователя.
+func (uv *UserValidator) ValidateUserRegistration(telegramID int, username, firstName, languageCode string) *Result {
+	result := NewResult()
 
 	// Валидация Telegram ID
 	if errors := uv.validator.ValidateTelegramID(int64(telegramID)); len(errors) > 0 {
@@ -97,9 +98,9 @@ func (uv *UserValidator) ValidateUserRegistration(telegramID int, username, firs
 	return result
 }
 
-// ValidateUserUpdate валидирует данные при обновлении пользователя
-func (uv *UserValidator) ValidateUserUpdate(user *models.User) *ValidationResult {
-	result := NewValidationResult()
+// ValidateUserUpdate валидирует данные при обновлении пользователя.
+func (uv *UserValidator) ValidateUserUpdate(user *models.User) *Result {
+	result := NewResult()
 
 	// Валидация имени пользователя
 	if errors := uv.validator.ValidateString(user.FirstName, []string{"required", "max:50"}); len(errors) > 0 {
@@ -134,17 +135,19 @@ func (uv *UserValidator) ValidateUserUpdate(user *models.User) *ValidationResult
 	return result
 }
 
-// ValidateUserInterests валидирует интересы пользователя
-func (uv *UserValidator) ValidateUserInterests(interestIDs []int) *ValidationResult {
-	result := NewValidationResult()
+// ValidateUserInterests валидирует интересы пользователя.
+func (uv *UserValidator) ValidateUserInterests(interestIDs []int) *Result {
+	result := NewResult()
 
 	if len(interestIDs) == 0 {
 		result.AddError("interests", "Необходимо выбрать хотя бы один интерес")
+
 		return result
 	}
 
-	if len(interestIDs) > 10 {
-		result.AddError("interests", "Максимум 10 интересов")
+	if len(interestIDs) > maxInterestCount {
+		result.AddError("interests", fmt.Sprintf("Максимум %d интересов", maxInterestCount))
+
 		return result
 	}
 
@@ -160,6 +163,7 @@ func (uv *UserValidator) ValidateUserInterests(interestIDs []int) *ValidationRes
 		for j, otherID := range interestIDs {
 			if i != j && id == otherID {
 				result.AddError("interests", "Дублирующиеся интересы не допускаются")
+
 				break
 			}
 		}
@@ -168,9 +172,9 @@ func (uv *UserValidator) ValidateUserInterests(interestIDs []int) *ValidationRes
 	return result
 }
 
-// ValidateUserLanguages валидирует языки пользователя
-func (uv *UserValidator) ValidateUserLanguages(nativeLanguage, targetLanguage string) *ValidationResult {
-	result := NewValidationResult()
+// ValidateUserLanguages валидирует языки пользователя.
+func (uv *UserValidator) ValidateUserLanguages(nativeLanguage, targetLanguage string) *Result {
+	result := NewResult()
 
 	// Валидация родного языка
 	if errors := uv.validator.ValidateLanguageCode(nativeLanguage); len(errors) > 0 {
@@ -194,9 +198,9 @@ func (uv *UserValidator) ValidateUserLanguages(nativeLanguage, targetLanguage st
 	return result
 }
 
-// ValidateUserLanguageLevel валидирует уровень языка пользователя
-func (uv *UserValidator) ValidateUserLanguageLevel(level int) *ValidationResult {
-	result := NewValidationResult()
+// ValidateUserLanguageLevel валидирует уровень языка пользователя.
+func (uv *UserValidator) ValidateUserLanguageLevel(level int) *Result {
+	result := NewResult()
 
 	if errors := uv.validator.ValidateLanguageLevel(level); len(errors) > 0 {
 		for _, err := range errors {

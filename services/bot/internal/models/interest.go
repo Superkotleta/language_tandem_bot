@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// Interest представляет интерес пользователя
+// Interest представляет интерес пользователя.
 type Interest struct {
 	ID           int       `db:"id"`
 	KeyName      string    `db:"key_name"`

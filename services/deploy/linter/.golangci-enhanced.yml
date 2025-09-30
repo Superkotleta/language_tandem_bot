@@ -1,28 +1,20 @@
 # Улучшенная конфигурация golangci-lint
 # Основана на практиках крупных компаний (Google, Uber, Netflix, etc.)
 
+version: 2
+
 run:
   timeout: 10m
   tests: true
   modules-download-mode: readonly
-  skip-dirs:
-    - vendor
-    - node_modules
-    - .git
-  skip-files:
-    - ".*_test.go$"
-    - ".*_mock.go$"
-  go: "1.22"
+  go: "1.25"
 
 linters:
   enable:
     # === БАЗОВЫЕ ЛИНТЕРЫ ===
     - unused          # неиспользуемый код
-    - gofmt          # форматирование
-    - goimports      # импорты
     - govet          # go vet проверки
     - ineffassign    # неэффективные присваивания
-    - gosimple       # упрощения кода
     - staticcheck    # статический анализ
     
     # === БЕЗОПАСНОСТЬ ===
@@ -31,12 +23,18 @@ linters:
     - bodyclose      # закрытие HTTP соединений
     - noctx          # контекст в HTTP запросах
     - sqlclosecheck  # закрытие SQL соединений
+    - errchkjson     # проверка JSON ошибок
+    - errname        # именование ошибок
+    - errorlint      # проверка обертывания ошибок
+    - wrapcheck      # проверка обертывания ошибок
     
     # === ПРОИЗВОДИТЕЛЬНОСТЬ ===
     - prealloc       # предварительное выделение памяти
     - perfsprint     # оптимизация форматирования
     - fatcontext     # проверка контекстов
     - makezero       # инициализация слайсов
+    - copyloopvar    # копирование переменных цикла
+    - intrange       # оптимизация циклов
     
     # === СТИЛЬ КОДА ===
     - gocritic       # критические замечания
@@ -46,27 +44,90 @@ linters:
     - funlen         # длина функций
     - gocognit       # когнитивная сложность
     - nestif         # вложенные if
+    - cyclop         # цикломатическая сложность (альтернатива)
+    - maintidx        # индекс поддерживаемости
     
     # === ТЕСТИРОВАНИЕ ===
     - testifylint    # проверки testify
     - paralleltest   # параллельные тесты
     - testpackage    # изоляция тестов
     - thelper        # тестовые хелперы
+    - tparallel      # проверка t.Parallel()
     
     # === КАЧЕСТВО КОДА ===
     - gochecknoinits # отсутствие init функций
     - gochecknoglobals # отсутствие глобальных переменных
-    - mnd          # магические числа
+    - mnd            # магические числа
     - gomoddirectives # директивы go.mod
-    - gomodguard     # защита зависимостей
-    - depguard       # контроль импортов
+    - unparam        # неиспользуемые параметры
+    - unconvert      # ненужные преобразования типов
+    - nakedret       # голые возвраты
+    - nlreturn       # новые строки перед return
+    
+    # === СОВРЕМЕННЫЕ ЛИНТЕРЫ ДЛЯ GO 1.25 ===
+    - sloglint       # проверки log/slog
+    - usestdlibvars  # использование стандартных переменных
+    - exptostd       # замена exp функциями std
+    # - containedctx   # проверка context в структурах (слишком строгий)
+    - durationcheck  # проверка умножения duration
+    # - forcetypeassert # принудительные приведения типов (слишком строгий)
+    # - funcorder      # порядок функций (слишком строгий)
+    - gochecksumtype # проверка sum типов
+    - godoclint      # проверка документации
+    - godot          # точки в комментариях
+    - goheader       # заголовки файлов
+    - goprintffuncname # именование printf функций
+    - grouper        # группировка выражений
+    - iface          # проверка интерфейсов
+    - inamedparam    # именованные параметры
+    # - interfacebloat # раздувание интерфейсов (слишком строгий)
+    - iotamixing     # смешивание iota
+    - ireturn        # возврат интерфейсов
+    - lll            # длинные строки
+    - loggercheck    # проверка логгеров
+    - mirror         # зеркальные паттерны
+    # - musttag        # обязательные теги (слишком строгий)
+    - nilerr         # nil ошибки
+    - nilnesserr     # проверка nil ошибок
+    - nilnil         # одновременный nil
+    # - noinlineerr    # встроенная обработка ошибок (слишком строгий)
+    - nolintlint     # проверка nolint
+    - nonamedreturns # именованные возвраты
+    - nosprintfhostport # sprintf для host:port
+    - predeclared    # переопределение предопределенных
+    - protogetter    # getter для proto
+    - reassign       # переприсваивание переменных
+    - recvcheck      # проверка получателей
+    # - rowserrcheck   # проверка Rows.Err (слишком строгий)
+    - spancheck      # проверка spans
+    - testableexamples # тестируемые примеры
+    - unqueryvet     # проверка SQL запросов
+    - usetesting     # использование testing
+    # - varnamelen     # длина имен переменных (слишком строгий)
+    - wastedassign   # бесполезные присваивания
+    - zerologlint    # проверка zerolog
     
     # === ДОПОЛНИТЕЛЬНЫЕ ===
     - misspell       # проверка орфографии
     - whitespace     # пробелы
-    - wsl            # пустые строки
+    - wsl_v5         # пустые строки
     - tagalign       # выравнивание тегов
     - tagliatelle    # проверка тегов
+    - asciicheck     # проверка ASCII символов
+    - bidichk        # проверка Unicode
+    - canonicalheader # каноничные заголовки
+    - decorder       # порядок объявлений
+    - dogsled        # слишком много пустых идентификаторов
+    - dupl           # дублирование кода
+    - dupword        # дублирование слов
+    - embeddedstructfieldcheck # встроенные поля
+    # - err113         # обработка ошибок (слишком строгий)
+    - exhaustive     # исчерпывающие switch
+    # - exhaustruct    # инициализация структур (слишком строгий)
+    - ginkgolinter   # проверки ginkgo
+    - gocheckcompilerdirectives # директивы компилятора
+    - godox          # TODO/FIXME комментарии
+    - importas       # алиасы импортов
 
 linters-settings:
   # Настройки govet
@@ -143,6 +204,18 @@ linters-settings:
         deny:
           - pkg: "github.com/sirupsen/logrus"
             desc: "use log/slog instead"
+        allow:
+          - pkg: "language-exchange-bot/internal/models"
+          - pkg: "language-exchange-bot/internal/cache"
+          - pkg: "language-exchange-bot/internal/config"
+          - pkg: "language-exchange-bot/internal/database"
+          - pkg: "language-exchange-bot/internal/errors"
+          - pkg: "language-exchange-bot/internal/localization"
+          - pkg: "language-exchange-bot/internal/logging"
+          - pkg: "language-exchange-bot/internal/validation"
+          - pkg: "github.com/redis/go-redis/v9"
+          - pkg: "github.com/joho/godotenv"
+          - pkg: "github.com/lib/pq"
   
   # Настройки gomodguard
   gomodguard:
@@ -155,7 +228,17 @@ linters-settings:
       local_replace_directories: []
 
 issues:
-  # Исключения
+  # Исключения директорий и файлов
+  exclude-dirs:
+    - vendor
+    - node_modules
+    - .git
+  
+  exclude-files:
+    - ".*_test.go$"
+    - ".*_mock.go$"
+  
+  # Исключения правил
   exclude-rules:
     # Исключить устаревшие линтеры
     - linters: [golint]
@@ -182,7 +265,7 @@ issues:
   new: false
   
   # Исправления
-  fix: false
+  fix: true
 
 # Настройки вывода
 output:

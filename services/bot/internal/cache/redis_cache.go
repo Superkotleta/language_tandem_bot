@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -11,17 +12,17 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// RedisCacheService реализация кэша на основе Redis
+// RedisCacheService реализация кэша на основе Redis.
 type RedisCacheService struct {
 	client *redis.Client
-	config *CacheConfig
+	config *Config
 	ctx    context.Context
 }
 
-// NewRedisCacheService создает новый Redis кэш-сервис
-func NewRedisCacheService(redisURL, password string, db int, config *CacheConfig) (*RedisCacheService, error) {
+// NewRedisCacheService создает новый Redis кэш-сервис.
+func NewRedisCacheService(redisURL, password string, db int, config *Config) (*RedisCacheService, error) {
 	if config == nil {
-		config = DefaultCacheConfig()
+		config = DefaultConfig()
 	}
 
 	client := redis.NewClient(&redis.Options{
@@ -47,36 +48,39 @@ func NewRedisCacheService(redisURL, password string, db int, config *CacheConfig
 	}, nil
 }
 
-// GetLanguages получает языки из Redis кэша
+// GetLanguages получает языки из Redis кэша.
 func (r *RedisCacheService) GetLanguages(lang string) ([]*models.Language, bool) {
 	key := "languages:" + lang
 
 	val, err := r.client.Get(r.ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, false
 	}
 
 	if err != nil {
 		log.Printf("Redis error getting languages: %v", err)
+
 		return nil, false
 	}
 
 	var languages []*models.Language
 	if err := json.Unmarshal([]byte(val), &languages); err != nil {
 		log.Printf("Redis error unmarshaling languages: %v", err)
+
 		return nil, false
 	}
 
 	return languages, true
 }
 
-// SetLanguages сохраняет языки в Redis кэш
+// SetLanguages сохраняет языки в Redis кэш.
 func (r *RedisCacheService) SetLanguages(lang string, languages []*models.Language) {
 	key := "languages:" + lang
 
 	data, err := json.Marshal(languages)
 	if err != nil {
 		log.Printf("Redis error marshaling languages: %v", err)
+
 		return
 	}
 
@@ -86,36 +90,39 @@ func (r *RedisCacheService) SetLanguages(lang string, languages []*models.Langua
 	}
 }
 
-// GetInterests получает интересы из Redis кэша
+// GetInterests получает интересы из Redis кэша.
 func (r *RedisCacheService) GetInterests(lang string) (map[int]string, bool) {
 	key := "interests:" + lang
 
 	val, err := r.client.Get(r.ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, false
 	}
 
 	if err != nil {
 		log.Printf("Redis error getting interests: %v", err)
+
 		return nil, false
 	}
 
 	var interests map[int]string
 	if err := json.Unmarshal([]byte(val), &interests); err != nil {
 		log.Printf("Redis error unmarshaling interests: %v", err)
+
 		return nil, false
 	}
 
 	return interests, true
 }
 
-// SetInterests сохраняет интересы в Redis кэш
+// SetInterests сохраняет интересы в Redis кэш.
 func (r *RedisCacheService) SetInterests(lang string, interests map[int]string) {
 	key := "interests:" + lang
 
 	data, err := json.Marshal(interests)
 	if err != nil {
 		log.Printf("Redis error marshaling interests: %v", err)
+
 		return
 	}
 
@@ -125,36 +132,39 @@ func (r *RedisCacheService) SetInterests(lang string, interests map[int]string) 
 	}
 }
 
-// GetUser получает пользователя из Redis кэша
+// GetUser получает пользователя из Redis кэша.
 func (r *RedisCacheService) GetUser(userID int64) (*models.User, bool) {
 	key := fmt.Sprintf("user:%d", userID)
 
 	val, err := r.client.Get(r.ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, false
 	}
 
 	if err != nil {
 		log.Printf("Redis error getting user: %v", err)
+
 		return nil, false
 	}
 
 	var user models.User
 	if err := json.Unmarshal([]byte(val), &user); err != nil {
 		log.Printf("Redis error unmarshaling user: %v", err)
+
 		return nil, false
 	}
 
 	return &user, true
 }
 
-// SetUser сохраняет пользователя в Redis кэш
+// SetUser сохраняет пользователя в Redis кэш.
 func (r *RedisCacheService) SetUser(user *models.User) {
 	key := fmt.Sprintf("user:%d", user.ID)
 
 	data, err := json.Marshal(user)
 	if err != nil {
 		log.Printf("Redis error marshaling user: %v", err)
+
 		return
 	}
 
@@ -164,36 +174,39 @@ func (r *RedisCacheService) SetUser(user *models.User) {
 	}
 }
 
-// GetTranslations получает переводы из Redis кэша
+// GetTranslations получает переводы из Redis кэша.
 func (r *RedisCacheService) GetTranslations(lang string) (map[string]string, bool) {
 	key := "translations:" + lang
 
 	val, err := r.client.Get(r.ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, false
 	}
 
 	if err != nil {
 		log.Printf("Redis error getting translations: %v", err)
+
 		return nil, false
 	}
 
 	var translations map[string]string
 	if err := json.Unmarshal([]byte(val), &translations); err != nil {
 		log.Printf("Redis error unmarshaling translations: %v", err)
+
 		return nil, false
 	}
 
 	return translations, true
 }
 
-// SetTranslations сохраняет переводы в Redis кэш
+// SetTranslations сохраняет переводы в Redis кэш.
 func (r *RedisCacheService) SetTranslations(lang string, translations map[string]string) {
 	key := "translations:" + lang
 
 	data, err := json.Marshal(translations)
 	if err != nil {
 		log.Printf("Redis error marshaling translations: %v", err)
+
 		return
 	}
 
@@ -203,36 +216,39 @@ func (r *RedisCacheService) SetTranslations(lang string, translations map[string
 	}
 }
 
-// GetStats получает статистику из Redis кэша
+// GetStats получает статистику из Redis кэша.
 func (r *RedisCacheService) GetStats(statsType string) (map[string]interface{}, bool) {
 	key := "stats:" + statsType
 
 	val, err := r.client.Get(r.ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, false
 	}
 
 	if err != nil {
 		log.Printf("Redis error getting stats: %v", err)
+
 		return nil, false
 	}
 
 	var stats map[string]interface{}
 	if err := json.Unmarshal([]byte(val), &stats); err != nil {
 		log.Printf("Redis error unmarshaling stats: %v", err)
+
 		return nil, false
 	}
 
 	return stats, true
 }
 
-// SetStats сохраняет статистику в Redis кэш
+// SetStats сохраняет статистику в Redis кэш.
 func (r *RedisCacheService) SetStats(statsType string, data map[string]interface{}) {
 	key := "stats:" + statsType
 
 	statsData, err := json.Marshal(data)
 	if err != nil {
 		log.Printf("Redis error marshaling stats: %v", err)
+
 		return
 	}
 
@@ -242,7 +258,7 @@ func (r *RedisCacheService) SetStats(statsType string, data map[string]interface
 	}
 }
 
-// InvalidateUser удаляет пользователя из Redis кэша
+// InvalidateUser удаляет пользователя из Redis кэша.
 func (r *RedisCacheService) InvalidateUser(userID int64) {
 	key := fmt.Sprintf("user:%d", userID)
 
@@ -254,13 +270,14 @@ func (r *RedisCacheService) InvalidateUser(userID int64) {
 	}
 }
 
-// InvalidateLanguages удаляет языки из Redis кэша
+// InvalidateLanguages удаляет языки из Redis кэша.
 func (r *RedisCacheService) InvalidateLanguages() {
 	pattern := "languages:*"
 
 	keys, err := r.client.Keys(r.ctx, pattern).Result()
 	if err != nil {
 		log.Printf("Redis error getting language keys: %v", err)
+
 		return
 	}
 
@@ -274,13 +291,14 @@ func (r *RedisCacheService) InvalidateLanguages() {
 	}
 }
 
-// InvalidateInterests удаляет интересы из Redis кэша
+// InvalidateInterests удаляет интересы из Redis кэша.
 func (r *RedisCacheService) InvalidateInterests() {
 	pattern := "interests:*"
 
 	keys, err := r.client.Keys(r.ctx, pattern).Result()
 	if err != nil {
 		log.Printf("Redis error getting interest keys: %v", err)
+
 		return
 	}
 
@@ -294,13 +312,14 @@ func (r *RedisCacheService) InvalidateInterests() {
 	}
 }
 
-// InvalidateTranslations удаляет переводы из Redis кэша
+// InvalidateTranslations удаляет переводы из Redis кэша.
 func (r *RedisCacheService) InvalidateTranslations() {
 	pattern := "translations:*"
 
 	keys, err := r.client.Keys(r.ctx, pattern).Result()
 	if err != nil {
 		log.Printf("Redis error getting translation keys: %v", err)
+
 		return
 	}
 
@@ -314,7 +333,7 @@ func (r *RedisCacheService) InvalidateTranslations() {
 	}
 }
 
-// ClearAll очищает весь Redis кэш
+// ClearAll очищает весь Redis кэш.
 func (r *RedisCacheService) ClearAll() {
 	err := r.client.FlushDB(r.ctx).Err()
 	if err != nil {
@@ -324,23 +343,24 @@ func (r *RedisCacheService) ClearAll() {
 	}
 }
 
-// GetCacheStats возвращает статистику Redis кэша
-func (r *RedisCacheService) GetCacheStats() CacheStats {
+// GetCacheStats возвращает статистику Redis кэша.
+func (r *RedisCacheService) GetCacheStats() Stats {
 	// Получаем количество ключей
 	keys, err := r.client.DBSize(r.ctx).Result()
 	if err != nil {
 		log.Printf("Redis error getting key count: %v", err)
-		return CacheStats{}
+
+		return Stats{}
 	}
 
-	return CacheStats{
+	return Stats{
 		Hits:   0, // Redis не предоставляет hit/miss статистику по умолчанию
 		Misses: 0,
 		Size:   int(keys),
 	}
 }
 
-// Stop останавливает Redis кэш-сервис
+// Stop останавливает Redis кэш-сервис.
 func (r *RedisCacheService) Stop() {
 	err := r.client.Close()
 	if err != nil {
@@ -350,8 +370,9 @@ func (r *RedisCacheService) Stop() {
 	}
 }
 
-// String возвращает строковое представление статистики Redis кэша
+// String возвращает строковое представление статистики Redis кэша.
 func (r *RedisCacheService) String() string {
 	stats := r.GetCacheStats()
+
 	return fmt.Sprintf("Redis Cache Stats: Size=%d", stats.Size)
 }

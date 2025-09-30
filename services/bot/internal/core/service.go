@@ -1,6 +1,8 @@
+// Package core provides the main business logic for the language exchange bot.
 package core
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"language-exchange-bot/internal/cache"
@@ -15,21 +17,32 @@ import (
 	"time"
 )
 
+// Константы для валидации.
+const (
+	// minFeedbackLength - минимальная длина отзыва.
+	minFeedbackLength = 10
+
+	// maxFeedbackLength - максимальная длина отзыва.
+	maxFeedbackLength = 1000
+)
+
+// BotService provides the main business logic for the language exchange bot.
 type BotService struct {
 	DB                       database.Database
 	Localizer                *localization.Localizer
-	Cache                    cache.CacheServiceInterface
+	Cache                    cache.ServiceInterface
 	InvalidationService      *cache.InvalidationService
 	MetricsService           *cache.MetricsService
 	BatchLoader              *database.BatchLoader
-	ValidationService        *validation.ValidationService
+	Service                  *validation.Service
 	LoggingService           *logging.LoggingService
 	FeedbackNotificationFunc func(data map[string]interface{}) error // функция для отправки уведомлений
 }
 
+// NewBotService creates a new BotService instance.
 func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 	// Создаем кэш с конфигурацией по умолчанию
-	cacheService := cache.NewCacheService(cache.DefaultCacheConfig())
+	cacheService := cache.NewService(cache.DefaultConfig())
 
 	// Создаем сервисы для управления кэшем
 	invalidationService := cache.NewInvalidationService(cacheService)
@@ -38,13 +51,13 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 	// Создаем BatchLoader для оптимизации N+1 запросов
 	batchLoader := database.NewBatchLoader(db)
 
-	// Создаем ValidationService (пока без errorHandler для совместимости)
-	var validationService *validation.ValidationService
+	// Создаем Service (пока без errorHandler для совместимости)
+	var validationService *validation.Service
 
 	var loggingService *logging.LoggingService
 
 	if errorHandler != nil {
-		validationService = validation.NewValidationService(errorHandler.(*errors.ErrorHandler))
+		validationService = validation.NewService(errorHandler.(*errors.ErrorHandler))
 		loggingService = logging.NewLoggingService(errorHandler.(*errors.ErrorHandler))
 	}
 
@@ -55,15 +68,15 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 		InvalidationService: invalidationService,
 		MetricsService:      metricsService,
 		BatchLoader:         batchLoader,
-		ValidationService:   validationService,
+		Service:             validationService,
 		LoggingService:      loggingService,
 	}
 }
 
-// NewBotServiceWithRedis создает BotService с Redis кэшем
+// NewBotServiceWithRedis создает BotService с Redis кэшем.
 func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, redisDB int, errorHandler interface{}) (*BotService, error) {
 	// Создаем Redis кэш
-	redisCache, err := cache.NewRedisCacheService(redisURL, redisPassword, redisDB, cache.DefaultCacheConfig())
+	redisCache, err := cache.NewRedisCacheService(redisURL, redisPassword, redisDB, cache.DefaultConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Redis cache: %w", err)
 	}
@@ -75,13 +88,13 @@ func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, red
 	// Создаем BatchLoader для оптимизации N+1 запросов
 	batchLoader := database.NewBatchLoader(db)
 
-	// Создаем ValidationService и LoggingService
-	var validationService *validation.ValidationService
+	// Создаем Service и LoggingService
+	var validationService *validation.Service
 
 	var loggingService *logging.LoggingService
 
 	if errorHandler != nil {
-		validationService = validation.NewValidationService(errorHandler.(*errors.ErrorHandler))
+		validationService = validation.NewService(errorHandler.(*errors.ErrorHandler))
 		loggingService = logging.NewLoggingService(errorHandler.(*errors.ErrorHandler))
 	}
 
@@ -92,12 +105,12 @@ func NewBotServiceWithRedis(db *database.DB, redisURL, redisPassword string, red
 		InvalidationService: invalidationService,
 		MetricsService:      metricsService,
 		BatchLoader:         batchLoader,
-		ValidationService:   validationService,
+		Service:             validationService,
 		LoggingService:      loggingService,
 	}, nil
 }
 
-// databaseAdapter адаптер для совместимости с интерфейсом Database
+// databaseAdapter адаптер для совместимости с интерфейсом Database.
 type databaseAdapter struct {
 	db *database.DB
 }
@@ -196,7 +209,7 @@ func (a *databaseAdapter) Close() error {
 	return a.db.Close()
 }
 
-// NewBotServiceWithInterface создает BotService с интерфейсом Database (для тестов)
+// NewBotServiceWithInterface создает BotService с интерфейсом Database (для тестов).
 func NewBotServiceWithInterface(db database.Database, localizer *localization.Localizer) *BotService {
 	return &BotService{
 		DB:        db,
@@ -204,11 +217,12 @@ func NewBotServiceWithInterface(db database.Database, localizer *localization.Lo
 	}
 }
 
-// SetFeedbackNotificationFunc устанавливает функцию для отправки уведомлений о новых отзывах
+// SetFeedbackNotificationFunc устанавливает функцию для отправки уведомлений о новых отзывах.
 func (s *BotService) SetFeedbackNotificationFunc(fn func(map[string]interface{}) error) {
 	s.FeedbackNotificationFunc = fn
 }
 
+// DetectLanguage определяет язык интерфейса по коду языка Telegram.
 func (s *BotService) DetectLanguage(telegramLangCode string) string {
 	switch telegramLangCode {
 	case "ru", "ru-RU":
@@ -222,6 +236,7 @@ func (s *BotService) DetectLanguage(telegramLangCode string) string {
 	}
 }
 
+// HandleUserRegistration обрабатывает регистрацию нового пользователя.
 func (s *BotService) HandleUserRegistration(telegramID int64, username, firstName, telegramLangCode string) (*models.User, error) {
 	user, err := s.DB.FindOrCreateUser(telegramID, username, firstName)
 	if err != nil {
@@ -245,12 +260,14 @@ func (s *BotService) HandleUserRegistration(telegramID int64, username, firstNam
 	return user, nil
 }
 
+// GetWelcomeMessage возвращает приветственное сообщение для пользователя.
 func (s *BotService) GetWelcomeMessage(user *models.User) string {
 	return s.Localizer.GetWithParams(user.InterfaceLanguageCode, "welcome_message", map[string]string{
 		"name": user.FirstName,
 	})
 }
 
+// GetLanguagePrompt возвращает подсказку для выбора языка.
 func (s *BotService) GetLanguagePrompt(user *models.User, promptType string) string {
 	key := "choose_native_language"
 
@@ -261,10 +278,12 @@ func (s *BotService) GetLanguagePrompt(user *models.User, promptType string) str
 	return s.Localizer.Get(user.InterfaceLanguageCode, key)
 }
 
+// GetLocalizedLanguageName возвращает локализованное название языка.
 func (s *BotService) GetLocalizedLanguageName(langCode, interfaceLangCode string) string {
 	return s.Localizer.GetLanguageName(langCode, interfaceLangCode)
 }
 
+// GetLocalizedInterests возвращает локализованные интересы для указанного языка.
 func (s *BotService) GetLocalizedInterests(langCode string) (map[int]string, error) {
 	return s.Localizer.GetInterests(langCode)
 }
@@ -276,7 +295,6 @@ func (s *BotService) IsProfileCompleted(user *models.User) (bool, error) {
 	}
 
 	ids, err := s.DB.GetUserSelectedInterests(user.ID)
-
 	if err != nil {
 		return false, err
 	}
@@ -287,40 +305,58 @@ func (s *BotService) IsProfileCompleted(user *models.User) (bool, error) {
 // BuildProfileSummary возвращает локализованное резюме профиля.
 func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 	lang := user.InterfaceLanguageCode
+
+	// Получаем основную информацию
+	basicInfo := s.buildBasicProfileInfo(user, lang)
+	languageInfo := s.buildLanguageProfileInfo(user, lang)
+	interestsInfo := s.buildInterestsProfileInfo(user, lang)
+	additionalInfo := s.buildAdditionalProfileInfo(user, lang)
+
+	// Объединяем все части
+	lines := []string{basicInfo}
+	lines = append(lines, "", languageInfo, interestsInfo)
+	lines = append(lines, "")
+	lines = append(lines, additionalInfo...)
+
+	return strings.Join(lines, "\n"), nil
+}
+
+// buildBasicProfileInfo строит основную информацию профиля.
+func (s *BotService) buildBasicProfileInfo(user *models.User, lang string) string {
+	displayName := s.getDisplayName(user)
+	nameLine := fmt.Sprintf("👤 %s: %s", s.Localizer.Get(lang, "profile_field_name"), displayName)
+
+	usernameLine := ""
+	if user.Username != "" {
+		usernameLine = fmt.Sprintf("🔗 %s: @%s", s.Localizer.Get(lang, "profile_field_username"), user.Username)
+	}
+
+	if usernameLine != "" {
+		return nameLine + "\n" + usernameLine
+	}
+
+	return nameLine
+}
+
+// buildLanguageProfileInfo строит информацию о языках.
+func (s *BotService) buildLanguageProfileInfo(user *models.User, lang string) string {
 	nativeName := s.Localizer.GetLanguageName(user.NativeLanguageCode, lang)
 	targetName := s.Localizer.GetLanguageName(user.TargetLanguageCode, lang)
 
-	// Определяем флаги языков
-	var nativeFlag, targetFlag string
+	nativeFlag := s.getLanguageFlag(user.NativeLanguageCode)
+	targetFlag := s.getLanguageFlag(user.TargetLanguageCode)
 
-	switch user.NativeLanguageCode {
-	case "ru":
-		nativeFlag = "🇷🇺"
-	case "en":
-		nativeFlag = "🇺🇸"
-	case "es":
-		nativeFlag = "🇪🇸"
-	case "zh":
-		nativeFlag = "🇨🇳"
-	default:
-		nativeFlag = "🌍"
-	}
+	native := fmt.Sprintf("%s %s: %s", nativeFlag, s.Localizer.Get(lang, "profile_field_native"), nativeName)
 
-	switch user.TargetLanguageCode {
-	case "ru":
-		targetFlag = "🇷🇺"
-	case "en":
-		targetFlag = "🇺🇸"
-	case "es":
-		targetFlag = "🇪🇸"
-	case "zh":
-		targetFlag = "🇨🇳"
-	default:
-		targetFlag = "🌍"
-	}
+	levelText := s.formatLanguageLevel(user.TargetLanguageLevel)
+	target := fmt.Sprintf("%s %s: %s (%s)", targetFlag, s.Localizer.Get(lang, "profile_field_target"), targetName, levelText)
 
+	return native + "\n" + target
+}
+
+// buildInterestsProfileInfo строит информацию об интересах.
+func (s *BotService) buildInterestsProfileInfo(user *models.User, lang string) string {
 	ids, err := s.DB.GetUserSelectedInterests(user.ID)
-
 	if err != nil {
 		ids = []int{}
 	}
@@ -341,49 +377,30 @@ func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 		interestsLine = fmt.Sprintf("🎯 %s: %d\n• %s", s.Localizer.Get(lang, "profile_field_interests"), len(picked), strings.Join(picked, ", "))
 	}
 
-	// Добавляем информацию о пользователе
-	displayName := s.getDisplayName(user)
+	return interestsLine
+}
 
-	nameLine := fmt.Sprintf("👤 %s: %s", s.Localizer.Get(lang, "profile_field_name"), displayName)
+// buildAdditionalProfileInfo строит дополнительную информацию профиля.
+func (s *BotService) buildAdditionalProfileInfo(user *models.User, lang string) []string {
+	var lines []string
 
-	usernameLine := ""
-
-	if user.Username != "" {
-		usernameLine = fmt.Sprintf("🔗 %s: @%s", s.Localizer.Get(lang, "profile_field_username"), user.Username)
-	}
-
-	native := fmt.Sprintf("%s %s: %s", nativeFlag, s.Localizer.Get(lang, "profile_field_native"), nativeName)
-
-	// Форматируем уровень языка в читаемый вид
-	levelText := s.formatLanguageLevel(user.TargetLanguageLevel, lang)
-	target := fmt.Sprintf("%s %s: %s (%s)", targetFlag, s.Localizer.Get(lang, "profile_field_target"), targetName, levelText)
-
-	// Формируем итоговый текст
-	lines := []string{nameLine}
-
-	if usernameLine != "" {
-		lines = append(lines, usernameLine)
-	}
-
-	lines = append(lines, "", native, target, interestsLine)
-
-	// Добавляем временную доступность (показываем всегда)
+	// Временная доступность
 	availabilityText := s.formatTimeAvailability(user.TimeAvailability, lang)
-	lines = append(lines, "", fmt.Sprintf("⏰ %s: %s", s.Localizer.Get(lang, "profile_field_availability"), availabilityText))
+	lines = append(lines, fmt.Sprintf("⏰ %s: %s", s.Localizer.Get(lang, "profile_field_availability"), availabilityText))
 
-	// Добавляем предпочтения общения (показываем всегда)
+	// Предпочтения общения
 	communicationText := s.formatCommunicationPreferences(user.FriendshipPreferences, lang)
 	lines = append(lines, fmt.Sprintf("💬 %s: %s", s.Localizer.Get(lang, "profile_field_communication"), communicationText))
 
-	// Добавляем статус и время в системе
+	// Статус и время в системе
 	statusText := s.formatUserStatus(user, lang)
 	memberSinceText := s.formatMemberSince(user.CreatedAt, lang)
 	lines = append(lines, "", statusText, memberSinceText)
 
-	return strings.Join(lines, "\n"), nil
+	return lines
 }
 
-// formatTimeAvailability форматирует временную доступность
+// formatTimeAvailability форматирует временную доступность.
 func (s *BotService) formatTimeAvailability(ta *models.TimeAvailability, lang string) string {
 	if ta == nil {
 		return "Не указано"
@@ -427,7 +444,7 @@ func (s *BotService) formatTimeAvailability(ta *models.TimeAvailability, lang st
 	return fmt.Sprintf("%s, %s", dayText, timeText)
 }
 
-// formatCommunicationPreferences форматирует предпочтения общения
+// formatCommunicationPreferences форматирует предпочтения общения.
 func (s *BotService) formatCommunicationPreferences(fp *models.FriendshipPreferences, lang string) string {
 	if fp == nil {
 		return "Не указано"
@@ -468,7 +485,7 @@ func (s *BotService) formatCommunicationPreferences(fp *models.FriendshipPrefere
 	return fmt.Sprintf("%s, %s", styleText, freqText)
 }
 
-// formatUserStatus форматирует статус пользователя
+// formatUserStatus форматирует статус пользователя.
 func (s *BotService) formatUserStatus(user *models.User, lang string) string {
 	var statusText string
 
@@ -495,13 +512,14 @@ func (s *BotService) formatUserStatus(user *models.User, lang string) string {
 	return fmt.Sprintf("%s %s: %s", statusEmoji, s.Localizer.Get(lang, "profile_field_status"), statusText)
 }
 
-// formatMemberSince форматирует дату регистрации
+// formatMemberSince форматирует дату регистрации.
 func (s *BotService) formatMemberSince(createdAt time.Time, lang string) string {
 	dateStr := createdAt.Format("02.01.2006")
+
 	return fmt.Sprintf("📅 %s: %s", s.Localizer.Get(lang, "profile_field_member_since"), dateStr)
 }
 
-// getDisplayName возвращает отображаемое имя пользователя
+// getDisplayName возвращает отображаемое имя пользователя.
 func (s *BotService) getDisplayName(user *models.User) string {
 	if user.Username == "madam_di_5" {
 		return "Лисёнок 🦊"
@@ -510,8 +528,8 @@ func (s *BotService) getDisplayName(user *models.User) string {
 	return user.FirstName
 }
 
-// formatLanguageLevel форматирует уровень языка в читаемый вид
-func (s *BotService) formatLanguageLevel(level string, lang string) string {
+// formatLanguageLevel форматирует уровень языка в читаемый вид.
+func (s *BotService) formatLanguageLevel(level string) string {
 	switch level {
 	case "beginner":
 		return "A1-A2"
@@ -530,7 +548,7 @@ func (s *BotService) formatLanguageLevel(level string, lang string) string {
 
 // Методы работы с обратной связью
 
-// SendFeedbackNotification отправляет уведомление администраторам о новом отзыве
+// SendFeedbackNotification отправляет уведомление администраторам о новом отзыве.
 func (s *BotService) SendFeedbackNotification(feedbackData map[string]interface{}, admins []int64) error {
 	if s.FeedbackNotificationFunc != nil {
 		return s.FeedbackNotificationFunc(feedbackData)
@@ -566,27 +584,27 @@ func (s *BotService) SendFeedbackNotification(feedbackData map[string]interface{
 	}
 
 	// Пока что просто логируем уведомление
-	log.Printf("Отправка уведомления администраторам: %s", adminMsg)
+	log.Printf("Отправка уведомления администраторам: %s, to %v", adminMsg, admins)
 
 	return nil
 }
 
-// ValidateFeedback проверяет корректность отзыва по длине
+// ValidateFeedback проверяет корректность отзыва по длине.
 func (s *BotService) ValidateFeedback(feedbackText string) error {
 	length := len([]rune(feedbackText)) // Учитываем Unicode
 
-	if length < 10 {
-		return fmt.Errorf("feedback too short: %d characters, minimum 10", length)
+	if length < minFeedbackLength {
+		return fmt.Errorf("feedback too short: %d characters, minimum %d", length, minFeedbackLength)
 	}
 
-	if length > 1000 {
-		return fmt.Errorf("feedback too long: %d characters, maximum 1000", length)
+	if length > maxFeedbackLength {
+		return fmt.Errorf("feedback too long: %d characters, maximum %d", length, maxFeedbackLength)
 	}
 
 	return nil
 }
 
-// SaveUserFeedback сохраняет отзыв пользователя и отправляет уведомления
+// SaveUserFeedback сохраняет отзыв пользователя и отправляет уведомления.
 func (s *BotService) SaveUserFeedback(userID int, feedbackText string, contactInfo *string, admins []int64) error {
 	// Валидируем отзыв
 	if err := s.ValidateFeedback(feedbackText); err != nil {
@@ -602,6 +620,7 @@ func (s *BotService) SaveUserFeedback(userID int, feedbackText string, contactIn
 	userData, err := s.GetUserDataForFeedback(userID)
 	if err != nil {
 		log.Printf("Не удалось получить данные пользователя для уведомления: %v", err)
+
 		return nil // Возвращаемся без ошибки
 	}
 
@@ -619,7 +638,8 @@ func (s *BotService) SaveUserFeedback(userID int, feedbackText string, contactIn
 		log.Printf("Ошибка отправки уведомления администраторам: %v", err)
 		// Пытаемся отправить уведомление через function callback если он установлен
 		if s.FeedbackNotificationFunc != nil {
-			if err := s.FeedbackNotificationFunc(fbData); err != nil {
+			err := s.FeedbackNotificationFunc(fbData)
+			if err != nil {
 				log.Printf("Fallback: также не удалось отправить через callback: %v", err)
 			} else {
 				log.Printf("Fallback: уведомление отправлено через callback")
@@ -630,14 +650,14 @@ func (s *BotService) SaveUserFeedback(userID int, feedbackText string, contactIn
 	return nil
 }
 
-// GetUserDataForFeedback получает данные пользователя для формирования уведомления о новом отзыве
+// GetUserDataForFeedback получает данные пользователя для формирования уведомления о новом отзыве.
 func (s *BotService) GetUserDataForFeedback(userID int) (map[string]interface{}, error) {
 	// Получаем пользователя по ID (нужно добавить метод в DB)
 	var telegramID int64
 
 	var username, firstName string
 
-	err := s.DB.GetConnection().QueryRow(`
+	err := s.DB.GetConnection().QueryRowContext(context.Background(), `
 		SELECT telegram_id, username, first_name
 		FROM users WHERE id = $1
 	`, userID).Scan(&telegramID, &username, &firstName)
@@ -657,14 +677,33 @@ func (s *BotService) GetUserDataForFeedback(userID int) (map[string]interface{},
 	return result, nil
 }
 
-// GetAllUnprocessedFeedback получает все необработанные отзывы для администратора
+// GetAllUnprocessedFeedback получает все необработанные отзывы для администратора.
 func (s *BotService) GetAllUnprocessedFeedback() ([]map[string]interface{}, error) {
 	return s.DB.GetUnprocessedFeedback()
 }
 
-// GetAllFeedback получает все отзывы для администратора
+// GetAllFeedback получает все отзывы для администратора.
 func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
-	query := `
+	query := getFeedbackQuery()
+
+	rows, err := s.DB.GetConnection().QueryContext(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			fmt.Printf("Warning: failed to close rows: %v\n", closeErr)
+		}
+	}()
+
+	return s.processFeedbackRows(rows)
+}
+
+// getFeedbackQuery возвращает SQL запрос для получения всех отзывов.
+func getFeedbackQuery() string {
+	return `
         SELECT uf.id, uf.feedback_text, uf.contact_info, uf.created_at,
                uf.is_processed, u.username, u.telegram_id, u.first_name,
                uf.admin_response
@@ -672,59 +711,16 @@ func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
         JOIN users u ON uf.user_id = u.id
         ORDER BY uf.created_at DESC
     `
+}
 
-	rows, err := s.DB.GetConnection().Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
+// processFeedbackRows обрабатывает строки результата запроса отзывов.
+func (s *BotService) processFeedbackRows(rows *sql.Rows) ([]map[string]interface{}, error) {
 	var feedbacks []map[string]interface{}
 
 	for rows.Next() {
-		var (
-			id           int
-			feedbackText string
-			contactInfo  sql.NullString
-			createdAt    sql.NullTime
-			isProcessed  bool
-			username     sql.NullString
-			telegramID   int64
-			firstName    string
-			adminResp    sql.NullString
-		)
-
-		err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &isProcessed,
-			&username, &telegramID, &firstName, &adminResp)
+		feedback, err := s.scanFeedbackRow(rows)
 		if err != nil {
 			continue // Пропускаем ошибочные записи
-		}
-
-		feedback := map[string]interface{}{
-			"id":            id,
-			"feedback_text": feedbackText,
-			"created_at":    createdAt.Time,
-			"telegram_id":   telegramID,
-			"first_name":    firstName,
-			"is_processed":  isProcessed,
-		}
-
-		if username.Valid {
-			feedback["username"] = username.String
-		} else {
-			feedback["username"] = nil
-		}
-
-		if contactInfo.Valid {
-			feedback["contact_info"] = contactInfo.String
-		} else {
-			feedback["contact_info"] = nil
-		}
-
-		if adminResp.Valid {
-			feedback["admin_response"] = adminResp.String
-		} else {
-			feedback["admin_response"] = nil
 		}
 
 		feedbacks = append(feedbacks, feedback)
@@ -733,7 +729,53 @@ func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
 	return feedbacks, nil
 }
 
-// UpdateFeedbackStatus обновляет статус отзыва (обработан/не обработан)
+// scanFeedbackRow сканирует одну строку результата запроса отзывов.
+func (s *BotService) scanFeedbackRow(rows *sql.Rows) (map[string]interface{}, error) {
+	var (
+		id           int
+		feedbackText string
+		contactInfo  sql.NullString
+		createdAt    sql.NullTime
+		isProcessed  bool
+		username     sql.NullString
+		telegramID   int64
+		firstName    string
+		adminResp    sql.NullString
+	)
+
+	err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &isProcessed,
+		&username, &telegramID, &firstName, &adminResp)
+	if err != nil {
+		return nil, err
+	}
+
+	feedback := map[string]interface{}{
+		"id":            id,
+		"feedback_text": feedbackText,
+		"created_at":    createdAt.Time,
+		"telegram_id":   telegramID,
+		"first_name":    firstName,
+		"is_processed":  isProcessed,
+	}
+
+	// Добавляем опциональные поля
+	feedback["username"] = getStringValue(username)
+	feedback["contact_info"] = getStringValue(contactInfo)
+	feedback["admin_response"] = getStringValue(adminResp)
+
+	return feedback, nil
+}
+
+// getStringValue возвращает строковое значение из sql.NullString.
+func getStringValue(nullStr sql.NullString) interface{} {
+	if nullStr.Valid {
+		return nullStr.String
+	}
+
+	return nil
+}
+
+// UpdateFeedbackStatus обновляет статус отзыва (обработан/не обработан).
 func (s *BotService) UpdateFeedbackStatus(feedbackID int, isProcessed bool) error {
 	query := `
 		UPDATE user_feedback
@@ -741,7 +783,7 @@ func (s *BotService) UpdateFeedbackStatus(feedbackID int, isProcessed bool) erro
 		WHERE id = $2
 	`
 
-	result, err := s.DB.GetConnection().Exec(query, isProcessed, feedbackID)
+	result, err := s.DB.GetConnection().ExecContext(context.Background(), query, isProcessed, feedbackID)
 	if err != nil {
 		return fmt.Errorf("ошибка обновления статуса отзыва: %w", err)
 	}
@@ -758,7 +800,7 @@ func (s *BotService) UpdateFeedbackStatus(feedbackID int, isProcessed bool) erro
 	return nil
 }
 
-// ArchiveFeedback архивирует отзыв
+// ArchiveFeedback архивирует отзыв.
 func (s *BotService) ArchiveFeedback(feedbackID int) error {
 	query := `
 		UPDATE user_feedback
@@ -766,7 +808,7 @@ func (s *BotService) ArchiveFeedback(feedbackID int) error {
 		WHERE id = $1
 	`
 
-	result, err := s.DB.GetConnection().Exec(query, feedbackID)
+	result, err := s.DB.GetConnection().ExecContext(context.Background(), query, feedbackID)
 	if err != nil {
 		return fmt.Errorf("ошибка архивирования отзыва: %w", err)
 	}
@@ -783,11 +825,11 @@ func (s *BotService) ArchiveFeedback(feedbackID int) error {
 	return nil
 }
 
-// DeleteFeedback удаляет отзыв из базы данных
+// DeleteFeedback удаляет отзыв из базы данных.
 func (s *BotService) DeleteFeedback(feedbackID int) error {
 	query := `DELETE FROM user_feedback WHERE id = $1`
 
-	result, err := s.DB.GetConnection().Exec(query, feedbackID)
+	result, err := s.DB.GetConnection().ExecContext(context.Background(), query, feedbackID)
 	if err != nil {
 		return fmt.Errorf("ошибка удаления отзыва: %w", err)
 	}
@@ -804,17 +846,16 @@ func (s *BotService) DeleteFeedback(feedbackID int) error {
 	return nil
 }
 
-// MarkFeedbackProcessed помечает отзыв как обработанный с ответом
+// MarkFeedbackProcessed помечает отзыв как обработанный с ответом.
 func (s *BotService) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
 	return s.DB.MarkFeedbackProcessed(feedbackID, adminResponse)
 }
 
-// DeleteAllProcessedFeedbacks удаляет все обработанные отзывы
+// DeleteAllProcessedFeedbacks удаляет все обработанные отзывы.
 func (s *BotService) DeleteAllProcessedFeedbacks() (int, error) {
 	query := `DELETE FROM user_feedback WHERE is_processed = true`
 
-	result, err := s.DB.GetConnection().Exec(query)
-
+	result, err := s.DB.GetConnection().ExecContext(context.Background(), query)
 	if err != nil {
 		return 0, fmt.Errorf("ошибка удаления обработанных отзывов: %w", err)
 	}
@@ -827,7 +868,7 @@ func (s *BotService) DeleteAllProcessedFeedbacks() (int, error) {
 	return int(rowsAffected), nil
 }
 
-// UnarchiveFeedback возвращает отзыв в активные (убирает флаг is_processed)
+// UnarchiveFeedback возвращает отзыв в активные (убирает флаг is_processed).
 func (s *BotService) UnarchiveFeedback(feedbackID int) error {
 	query := `
 		UPDATE user_feedback
@@ -835,8 +876,7 @@ func (s *BotService) UnarchiveFeedback(feedbackID int) error {
 		WHERE id = $1
 	`
 
-	result, err := s.DB.GetConnection().Exec(query, feedbackID)
-
+	result, err := s.DB.GetConnection().ExecContext(context.Background(), query, feedbackID)
 	if err != nil {
 		return fmt.Errorf("ошибка возврата отзыва в активные: %w", err)
 	}
@@ -855,9 +895,10 @@ func (s *BotService) UnarchiveFeedback(feedbackID int) error {
 
 // ===== КЭШИРОВАННЫЕ МЕТОДЫ =====
 
-// GetCachedLanguages получает языки из кэша или загружает из БД
+// GetCachedLanguages получает языки из кэша или загружает из БД.
 func (s *BotService) GetCachedLanguages(lang string) ([]*models.Language, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -871,6 +912,7 @@ func (s *BotService) GetCachedLanguages(lang string) ([]*models.Language, error)
 	languages, err := s.DB.GetLanguages()
 	if err != nil {
 		s.MetricsService.RecordError()
+
 		return nil, err
 	}
 
@@ -880,9 +922,10 @@ func (s *BotService) GetCachedLanguages(lang string) ([]*models.Language, error)
 	return languages, nil
 }
 
-// GetCachedInterests получает интересы из кэша или загружает из БД
+// GetCachedInterests получает интересы из кэша или загружает из БД.
 func (s *BotService) GetCachedInterests(lang string) (map[int]string, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -896,6 +939,7 @@ func (s *BotService) GetCachedInterests(lang string) (map[int]string, error) {
 	interests, err := s.Localizer.GetInterests(lang)
 	if err != nil {
 		s.MetricsService.RecordError()
+
 		return nil, err
 	}
 
@@ -905,9 +949,10 @@ func (s *BotService) GetCachedInterests(lang string) (map[int]string, error) {
 	return interests, nil
 }
 
-// GetCachedUser получает пользователя из кэша или загружает из БД
+// GetCachedUser получает пользователя из кэша или загружает из БД.
 func (s *BotService) GetCachedUser(telegramID int64) (*models.User, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -921,6 +966,7 @@ func (s *BotService) GetCachedUser(telegramID int64) (*models.User, error) {
 	user, err := s.DB.GetUserByTelegramID(telegramID)
 	if err != nil {
 		s.MetricsService.RecordError()
+
 		return nil, err
 	}
 
@@ -930,9 +976,10 @@ func (s *BotService) GetCachedUser(telegramID int64) (*models.User, error) {
 	return user, nil
 }
 
-// GetCachedTranslations получает переводы из кэша или загружает из файлов
+// GetCachedTranslations получает переводы из кэша или загружает из файлов.
 func (s *BotService) GetCachedTranslations(lang string) (map[string]string, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -953,10 +1000,11 @@ func (s *BotService) GetCachedTranslations(lang string) (map[string]string, erro
 	return translations, nil
 }
 
-// UpdateCachedUser обновляет пользователя в БД и кэше
+// UpdateCachedUser обновляет пользователя в БД и кэше.
 func (s *BotService) UpdateCachedUser(user *models.User) error {
 	// Обновляем в БД
-	if err := s.DB.UpdateUser(user); err != nil {
+	err := s.DB.UpdateUser(user)
+	if err != nil {
 		return err
 	}
 
@@ -966,31 +1014,32 @@ func (s *BotService) UpdateCachedUser(user *models.User) error {
 	return nil
 }
 
-// InvalidateUserCache инвалидирует кэш пользователя
+// InvalidateUserCache инвалидирует кэш пользователя.
 func (s *BotService) InvalidateUserCache(userID int64) {
 	s.InvalidationService.InvalidateUserData(userID)
 }
 
-// InvalidateStaticDataCache инвалидирует кэш статических данных
+// InvalidateStaticDataCache инвалидирует кэш статических данных.
 func (s *BotService) InvalidateStaticDataCache() {
 	s.InvalidationService.InvalidateStaticData()
 }
 
-// GetCacheStats возвращает статистику кэша
+// GetCacheStats возвращает статистику кэша.
 func (s *BotService) GetCacheStats() map[string]interface{} {
 	return s.MetricsService.GetMetrics()
 }
 
-// StopCache останавливает кэш-сервис
+// StopCache останавливает кэш-сервис.
 func (s *BotService) StopCache() {
 	s.Cache.Stop()
 }
 
 // ===== BATCH LOADING МЕТОДЫ =====
 
-// GetUserWithAllData получает пользователя со всеми связанными данными одним запросом
+// GetUserWithAllData получает пользователя со всеми связанными данными одним запросом.
 func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAllData, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -1008,6 +1057,7 @@ func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAll
 	userData, err := s.BatchLoader.GetUserWithAllData(telegramID)
 	if err != nil {
 		s.MetricsService.RecordError()
+
 		return nil, err
 	}
 
@@ -1017,9 +1067,10 @@ func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAll
 	return userData, nil
 }
 
-// BatchLoadUsersWithInterests загружает нескольких пользователей с их интересами одним запросом
+// BatchLoadUsersWithInterests загружает нескольких пользователей с их интересами одним запросом.
 func (s *BotService) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int64]*database.UserWithInterests, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -1028,6 +1079,7 @@ func (s *BotService) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int64
 	users, err := s.BatchLoader.BatchLoadUsersWithInterests(telegramIDs)
 	if err != nil {
 		s.MetricsService.RecordError()
+
 		return nil, err
 	}
 
@@ -1039,9 +1091,10 @@ func (s *BotService) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int64
 	return users, nil
 }
 
-// BatchLoadInterestsWithTranslations загружает интересы с переводами для нескольких языков
+// BatchLoadInterestsWithTranslations загружает интересы с переводами для нескольких языков.
 func (s *BotService) BatchLoadInterestsWithTranslations(languages []string) (map[string]map[int]string, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -1050,6 +1103,7 @@ func (s *BotService) BatchLoadInterestsWithTranslations(languages []string) (map
 	interests, err := s.BatchLoader.BatchLoadInterestsWithTranslations(languages)
 	if err != nil {
 		s.MetricsService.RecordError()
+
 		return nil, err
 	}
 
@@ -1061,9 +1115,10 @@ func (s *BotService) BatchLoadInterestsWithTranslations(languages []string) (map
 	return interests, nil
 }
 
-// BatchLoadLanguagesWithTranslations загружает языки с переводами для нескольких языков
+// BatchLoadLanguagesWithTranslations загружает языки с переводами для нескольких языков.
 func (s *BotService) BatchLoadLanguagesWithTranslations(languages []string) (map[string][]*models.Language, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -1072,6 +1127,7 @@ func (s *BotService) BatchLoadLanguagesWithTranslations(languages []string) (map
 	langs, err := s.BatchLoader.BatchLoadLanguagesWithTranslations(languages)
 	if err != nil {
 		s.MetricsService.RecordError()
+
 		return nil, err
 	}
 
@@ -1083,9 +1139,10 @@ func (s *BotService) BatchLoadLanguagesWithTranslations(languages []string) (map
 	return langs, nil
 }
 
-// BatchLoadUserInterests загружает интересы для нескольких пользователей одним запросом
+// BatchLoadUserInterests загружает интересы для нескольких пользователей одним запросом.
 func (s *BotService) BatchLoadUserInterests(userIDs []int) (map[int][]int, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -1094,15 +1151,17 @@ func (s *BotService) BatchLoadUserInterests(userIDs []int) (map[int][]int, error
 	interests, err := s.BatchLoader.BatchLoadUserInterests(userIDs)
 	if err != nil {
 		s.MetricsService.RecordError()
+
 		return nil, err
 	}
 
 	return interests, nil
 }
 
-// BatchLoadUsers загружает пользователей по Telegram ID одним запросом
+// BatchLoadUsers загружает пользователей по Telegram ID одним запросом.
 func (s *BotService) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.User, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -1111,6 +1170,7 @@ func (s *BotService) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.User
 	users, err := s.BatchLoader.BatchLoadUsers(telegramIDs)
 	if err != nil {
 		s.MetricsService.RecordError()
+
 		return nil, err
 	}
 
@@ -1122,9 +1182,10 @@ func (s *BotService) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.User
 	return users, nil
 }
 
-// BatchLoadStats загружает статистику для нескольких типов одним запросом
+// BatchLoadStats загружает статистику для нескольких типов одним запросом.
 func (s *BotService) BatchLoadStats(statTypes []string) (map[string]map[string]interface{}, error) {
 	start := time.Now()
+
 	defer func() {
 		s.MetricsService.RecordRequest(time.Since(start), true)
 	}()
@@ -1133,8 +1194,25 @@ func (s *BotService) BatchLoadStats(statTypes []string) (map[string]map[string]i
 	stats, err := s.BatchLoader.BatchLoadStats(statTypes)
 	if err != nil {
 		s.MetricsService.RecordError()
+
 		return nil, err
 	}
 
 	return stats, nil
+}
+
+// getLanguageFlag возвращает флаг для языка.
+func (s *BotService) getLanguageFlag(languageCode string) string {
+	switch languageCode {
+	case "ru":
+		return "🇷🇺"
+	case "en":
+		return "🇺🇸"
+	case "es":
+		return "🇪🇸"
+	case "zh":
+		return "🇨🇳"
+	default:
+		return "🌍"
+	}
 }

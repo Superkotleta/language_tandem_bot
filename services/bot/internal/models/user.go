@@ -1,8 +1,9 @@
+// Package models defines the data structures used throughout the application.
 package models
 
 import "time"
 
-// Состояния пользователя
+// Состояния пользователя.
 const (
 	StateNew                    = "new"
 	StateWaitingLanguage        = "waiting_language"
@@ -15,7 +16,7 @@ const (
 	StateActive                 = "active"
 )
 
-// Статусы пользователя
+// Статусы пользователя.
 const (
 	StatusNew     = "new"
 	StatusFilling = "filling_profile"
@@ -23,6 +24,7 @@ const (
 	StatusPaused  = "paused"
 )
 
+// User представляет пользователя системы.
 type User struct {
 	ID                     int       `db:"id"`
 	TelegramID             int64     `db:"telegram_id"`
@@ -44,14 +46,14 @@ type User struct {
 	FriendshipPreferences *FriendshipPreferences `db:"-"` // Предпочтения общения
 }
 
-// TimeAvailability - временная доступность пользователя
+// TimeAvailability - временная доступность пользователя.
 type TimeAvailability struct {
 	DayType      string   `db:"day_type"`      // weekdays, weekends, any, specific
 	SpecificDays []string `db:"specific_days"` // массив дней для specific
 	TimeSlot     string   `db:"time_slot"`     // morning, day, evening, late
 }
 
-// FriendshipPreferences - предпочтения по общению
+// FriendshipPreferences - предпочтения по общению.
 type FriendshipPreferences struct {
 	ActivityType       string `db:"activity_type"`           // movies, games, casual_chat, creative, active, educational
 	CommunicationStyle string `db:"communication_style"`     // text, voice_msg, audio_call, video_call, meet_person

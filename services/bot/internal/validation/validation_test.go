@@ -1,22 +1,32 @@
-package validation
+package validation_test
 
 import (
 	"testing"
 
 	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
+	"language-exchange-bot/internal/validation"
 )
 
-// TestValidationService тестирует сервис валидации
-func TestValidationService(t *testing.T) {
-	// Создаем мок errorHandler
+// createValidationService создает сервис валидации для тестов.
+func createValidationService(t *testing.T) *validation.Service {
+	t.Helper()
+
 	adminNotifier := errors.NewAdminNotifier([]int64{123456789}, nil)
 	errorHandler := errors.NewErrorHandler(adminNotifier)
 
-	// Создаем сервис валидации
-	validationService := NewValidationService(errorHandler)
+	return validation.NewService(errorHandler)
+}
+
+// TestValidationServiceUserValidation тестирует валидацию пользователей.
+func TestValidationServiceUserValidation(t *testing.T) {
+	t.Parallel()
+
+	validationService := createValidationService(t)
 
 	t.Run("ValidateUserWithErrorHandling", func(t *testing.T) {
+		t.Parallel()
+
 		// Создаем валидного пользователя
 		user := &models.User{
 			ID:                    1,
@@ -35,6 +45,8 @@ func TestValidationService(t *testing.T) {
 	})
 
 	t.Run("ValidateUserWithErrorHandling_InvalidData", func(t *testing.T) {
+		t.Parallel()
+
 		// Создаем невалидного пользователя
 		user := &models.User{
 			ID:                    1,
@@ -56,220 +68,293 @@ func TestValidationService(t *testing.T) {
 			t.Error("Expected validation error type")
 		}
 	})
-
-	t.Run("ValidateUserRegistrationWithErrorHandling", func(t *testing.T) {
-		// Валидные данные регистрации
-		err := validationService.ValidateUserRegistrationWithErrorHandling(
-			123456789, "john_doe", "John", "en", 123456789, 987654321, "TestUserRegistration")
-		if err != nil {
-			t.Errorf("Expected no error, got: %v", err)
-		}
-	})
-
-	t.Run("ValidateUserRegistrationWithErrorHandling_InvalidData", func(t *testing.T) {
-		// Невалидные данные регистрации
-		err := validationService.ValidateUserRegistrationWithErrorHandling(
-			0, "invalid@username", "", "invalid", 123456789, 987654321, "TestUserRegistration")
-		if err == nil {
-			t.Error("Expected validation error, got nil")
-		}
-
-		// Проверяем, что это ошибка валидации
-		if !errors.IsValidationError(err) {
-			t.Error("Expected validation error type")
-		}
-	})
-
-	t.Run("ValidateUserInterestsWithErrorHandling", func(t *testing.T) {
-		// Валидные интересы
-		interestIDs := []int{1, 2, 3}
-		err := validationService.ValidateUserInterestsWithErrorHandling(interestIDs, 123456789, 987654321, "TestUserInterests")
-		if err != nil {
-			t.Errorf("Expected no error, got: %v", err)
-		}
-	})
-
-	t.Run("ValidateUserInterestsWithErrorHandling_InvalidData", func(t *testing.T) {
-		// Невалидные интересы (пустой список)
-		interestIDs := []int{}
-		err := validationService.ValidateUserInterestsWithErrorHandling(interestIDs, 123456789, 987654321, "TestUserInterests")
-		if err == nil {
-			t.Error("Expected validation error, got nil")
-		}
-
-		// Проверяем, что это ошибка валидации
-		if !errors.IsValidationError(err) {
-			t.Error("Expected validation error type")
-		}
-	})
-
-	t.Run("ValidateUserLanguagesWithErrorHandling", func(t *testing.T) {
-		// Валидные языки
-		err := validationService.ValidateUserLanguagesWithErrorHandling("en", "ru", 123456789, 987654321, "TestUserLanguages")
-		if err != nil {
-			t.Errorf("Expected no error, got: %v", err)
-		}
-	})
-
-	t.Run("ValidateUserLanguagesWithErrorHandling_SameLanguages", func(t *testing.T) {
-		// Одинаковые языки (невалидно)
-		err := validationService.ValidateUserLanguagesWithErrorHandling("en", "en", 123456789, 987654321, "TestUserLanguages")
-		if err == nil {
-			t.Error("Expected validation error, got nil")
-		}
-
-		// Проверяем, что это ошибка валидации
-		if !errors.IsValidationError(err) {
-			t.Error("Expected validation error type")
-		}
-	})
-
-	t.Log("All validation service tests completed successfully")
 }
 
-// TestValidator тестирует базовый валидатор
-func TestValidator(t *testing.T) {
-	validator := NewValidator()
+// TestValidationServiceRegistrationValid тестирует валидную регистрацию.
+func TestValidationServiceRegistrationValid(t *testing.T) {
+	t.Parallel()
 
-	t.Run("ValidateString", func(t *testing.T) {
-		// Тест валидной строки
-		errors := validator.ValidateString("valid_string", []string{"required", "max:50"})
-		if len(errors) > 0 {
-			t.Errorf("Expected no errors, got: %v", errors)
-		}
+	validationService := createValidationService(t)
 
-		// Тест невалидной строки
-		errors = validator.ValidateString("", []string{"required"})
-		if len(errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-	})
+	// Валидные данные регистрации
+	err := validationService.ValidateUserRegistrationWithErrorHandling(
+		123456789, "john_doe", "John", "en", 123456789, 987654321, "TestUserRegistration")
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+}
 
-	t.Run("ValidateInt", func(t *testing.T) {
-		// Тест валидного числа
-		errors := validator.ValidateInt(5, []string{"required", "min:1", "max:100"})
-		if len(errors) > 0 {
-			t.Errorf("Expected no errors, got: %v", errors)
-		}
+// TestValidationServiceRegistrationInvalid тестирует невалидную регистрацию.
+func TestValidationServiceRegistrationInvalid(t *testing.T) {
+	t.Parallel()
 
-		// Тест невалидного числа
-		errors = validator.ValidateInt(0, []string{"required"})
-		if len(errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-	})
+	validationService := createValidationService(t)
 
-	t.Run("ValidateLanguageCode", func(t *testing.T) {
-		// Тест валидного кода языка
-		errors := validator.ValidateLanguageCode("en")
-		if len(errors) > 0 {
-			t.Errorf("Expected no errors, got: %v", errors)
-		}
+	// Невалидные данные регистрации
+	err := validationService.ValidateUserRegistrationWithErrorHandling(
+		0, "invalid@username", "", "invalid", 123456789, 987654321, "TestUserRegistration")
+	if err == nil {
+		t.Error("Expected validation error, got nil")
+	}
 
-		// Тест невалидного кода языка
-		errors = validator.ValidateLanguageCode("invalid")
-		if len(errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-	})
+	// Проверяем, что это ошибка валидации
+	if !errors.IsValidationError(err) {
+		t.Error("Expected validation error type")
+	}
+}
 
-	t.Run("ValidateTelegramID", func(t *testing.T) {
-		// Тест валидного Telegram ID
-		errors := validator.ValidateTelegramID(123456789)
-		if len(errors) > 0 {
-			t.Errorf("Expected no errors, got: %v", errors)
-		}
+// TestValidationServiceInterestsValid тестирует валидные интересы.
+func TestValidationServiceInterestsValid(t *testing.T) {
+	t.Parallel()
 
-		// Тест невалидного Telegram ID
-		errors = validator.ValidateTelegramID(0)
-		if len(errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-	})
+	validationService := createValidationService(t)
 
-	t.Run("ValidateChatID", func(t *testing.T) {
-		// Тест валидного Chat ID
-		errors := validator.ValidateChatID(123456789)
-		if len(errors) > 0 {
-			t.Errorf("Expected no errors, got: %v", errors)
-		}
+	// Валидные интересы
+	interestIDs := []int{1, 2, 3}
 
-		// Тест невалидного Chat ID
-		errors = validator.ValidateChatID(0)
-		if len(errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-	})
+	err := validationService.ValidateUserInterestsWithErrorHandling(interestIDs, 123456789, 987654321, "TestUserInterests")
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+}
 
-	t.Run("ValidateUserState", func(t *testing.T) {
-		// Тест валидного состояния
-		errors := validator.ValidateUserState("idle")
-		if len(errors) > 0 {
-			t.Errorf("Expected no errors, got: %v", errors)
-		}
+// TestValidationServiceInterestsInvalid тестирует невалидные интересы.
+func TestValidationServiceInterestsInvalid(t *testing.T) {
+	t.Parallel()
 
-		// Тест невалидного состояния
-		errors = validator.ValidateUserState("invalid_state")
-		if len(errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-	})
+	validationService := createValidationService(t)
 
-	t.Run("ValidateInterestID", func(t *testing.T) {
-		// Тест валидного ID интереса
-		errors := validator.ValidateInterestID(1)
-		if len(errors) > 0 {
-			t.Errorf("Expected no errors, got: %v", errors)
-		}
+	// Невалидные интересы (пустой список)
+	interestIDs := []int{}
 
-		// Тест невалидного ID интереса
-		errors = validator.ValidateInterestID(0)
-		if len(errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-	})
+	err := validationService.ValidateUserInterestsWithErrorHandling(interestIDs, 123456789, 987654321, "TestUserInterests")
+	if err == nil {
+		t.Error("Expected validation error, got nil")
+	}
 
-	t.Run("ValidateLanguageLevel", func(t *testing.T) {
-		// Тест валидного уровня языка
-		errors := validator.ValidateLanguageLevel(3)
-		if len(errors) > 0 {
-			t.Errorf("Expected no errors, got: %v", errors)
-		}
+	// Проверяем, что это ошибка валидации
+	if !errors.IsValidationError(err) {
+		t.Error("Expected validation error type")
+	}
+}
 
-		// Тест невалидного уровня языка
-		errors = validator.ValidateLanguageLevel(0)
-		if len(errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-	})
+// TestValidationServiceLanguagesValid тестирует валидные языки.
+func TestValidationServiceLanguagesValid(t *testing.T) {
+	t.Parallel()
 
-	t.Run("ValidateFeedbackText", func(t *testing.T) {
-		// Тест валидного текста отзыва
-		errors := validator.ValidateFeedbackText("This is a valid feedback text with enough characters.")
-		if len(errors) > 0 {
-			t.Errorf("Expected no errors, got: %v", errors)
-		}
+	validationService := createValidationService(t)
 
-		// Тест невалидного текста отзыва
-		errors = validator.ValidateFeedbackText("Short")
-		if len(errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-	})
+	// Валидные языки
+	err := validationService.ValidateUserLanguagesWithErrorHandling("en", "ru", 123456789, 987654321, "TestUserLanguages")
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+}
 
-	t.Run("ValidateCallbackData", func(t *testing.T) {
-		// Тест валидных данных callback
-		errors := validator.ValidateCallbackData("valid_callback_data")
-		if len(errors) > 0 {
-			t.Errorf("Expected no errors, got: %v", errors)
-		}
+// TestValidationServiceLanguagesSame тестирует одинаковые языки.
+func TestValidationServiceLanguagesSame(t *testing.T) {
+	t.Parallel()
 
-		// Тест невалидных данных callback
-		errors = validator.ValidateCallbackData("")
-		if len(errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-	})
+	validationService := createValidationService(t)
 
-	t.Log("All validator tests completed successfully")
+	// Одинаковые языки (невалидно)
+	err := validationService.ValidateUserLanguagesWithErrorHandling("en", "en", 123456789, 987654321, "TestUserLanguages")
+	if err == nil {
+		t.Error("Expected validation error, got nil")
+	}
+
+	// Проверяем, что это ошибка валидации
+	if !errors.IsValidationError(err) {
+		t.Error("Expected validation error type")
+	}
+}
+
+// TestValidatorString тестирует валидацию строк.
+func TestValidatorString(t *testing.T) {
+	t.Parallel()
+
+	validator := validation.NewValidator()
+
+	// Тест валидной строки
+	errors := validator.ValidateString("valid_string", []string{"required", "max:50"})
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors, got: %v", errors)
+	}
+
+	// Тест невалидной строки
+	errors = validator.ValidateString("", []string{"required"})
+	if len(errors) == 0 {
+		t.Error("Expected validation errors, got none")
+	}
+}
+
+// TestValidatorInt тестирует валидацию чисел.
+func TestValidatorInt(t *testing.T) {
+	t.Parallel()
+
+	validator := validation.NewValidator()
+
+	// Тест валидного числа
+	errors := validator.ValidateInt(5, []string{"required", "min:1", "max:100"})
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors, got: %v", errors)
+	}
+
+	// Тест невалидного числа
+	errors = validator.ValidateInt(0, []string{"required"})
+	if len(errors) == 0 {
+		t.Error("Expected validation errors, got none")
+	}
+}
+
+// TestValidatorLanguageCode тестирует валидацию кодов языков.
+func TestValidatorLanguageCode(t *testing.T) {
+	t.Parallel()
+
+	validator := validation.NewValidator()
+
+	// Тест валидного кода языка
+	errors := validator.ValidateLanguageCode("en")
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors, got: %v", errors)
+	}
+
+	// Тест невалидного кода языка
+	errors = validator.ValidateLanguageCode("invalid")
+	if len(errors) == 0 {
+		t.Error("Expected validation errors, got none")
+	}
+}
+
+// TestValidatorTelegramID тестирует валидацию Telegram ID.
+func TestValidatorTelegramID(t *testing.T) {
+	t.Parallel()
+
+	validator := validation.NewValidator()
+
+	// Тест валидного Telegram ID
+	errors := validator.ValidateTelegramID(123456789)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors, got: %v", errors)
+	}
+
+	// Тест невалидного Telegram ID
+	errors = validator.ValidateTelegramID(0)
+	if len(errors) == 0 {
+		t.Error("Expected validation errors, got none")
+	}
+}
+
+// TestValidatorChatID тестирует валидацию Chat ID.
+func TestValidatorChatID(t *testing.T) {
+	t.Parallel()
+
+	validator := validation.NewValidator()
+
+	// Тест валидного Chat ID
+	errors := validator.ValidateChatID(123456789)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors, got: %v", errors)
+	}
+
+	// Тест невалидного Chat ID
+	errors = validator.ValidateChatID(0)
+	if len(errors) == 0 {
+		t.Error("Expected validation errors, got none")
+	}
+}
+
+// TestValidatorUserState тестирует валидацию состояний пользователя.
+func TestValidatorUserState(t *testing.T) {
+	t.Parallel()
+
+	validator := validation.NewValidator()
+
+	// Тест валидного состояния
+	errors := validator.ValidateUserState("idle")
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors, got: %v", errors)
+	}
+
+	// Тест невалидного состояния
+	errors = validator.ValidateUserState("invalid_state")
+	if len(errors) == 0 {
+		t.Error("Expected validation errors, got none")
+	}
+}
+
+// TestValidatorInterestID тестирует валидацию ID интересов.
+func TestValidatorInterestID(t *testing.T) {
+	t.Parallel()
+
+	validator := validation.NewValidator()
+
+	// Тест валидного ID интереса
+	errors := validator.ValidateInterestID(1)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors, got: %v", errors)
+	}
+
+	// Тест невалидного ID интереса
+	errors = validator.ValidateInterestID(0)
+	if len(errors) == 0 {
+		t.Error("Expected validation errors, got none")
+	}
+}
+
+// TestValidatorLanguageLevel тестирует валидацию уровней языков.
+func TestValidatorLanguageLevel(t *testing.T) {
+	t.Parallel()
+
+	validator := validation.NewValidator()
+
+	// Тест валидного уровня языка
+	errors := validator.ValidateLanguageLevel(3)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors, got: %v", errors)
+	}
+
+	// Тест невалидного уровня языка
+	errors = validator.ValidateLanguageLevel(0)
+	if len(errors) == 0 {
+		t.Error("Expected validation errors, got none")
+	}
+}
+
+// TestValidatorFeedbackText тестирует валидацию текста обратной связи.
+func TestValidatorFeedbackText(t *testing.T) {
+	t.Parallel()
+
+	validator := validation.NewValidator()
+
+	// Тест валидного текста отзыва
+	errors := validator.ValidateFeedbackText("This is a valid feedback text with enough characters.")
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors, got: %v", errors)
+	}
+
+	// Тест невалидного текста отзыва
+	errors = validator.ValidateFeedbackText("Short")
+	if len(errors) == 0 {
+		t.Error("Expected validation errors, got none")
+	}
+}
+
+// TestValidatorCallbackData тестирует валидацию данных callback.
+func TestValidatorCallbackData(t *testing.T) {
+	t.Parallel()
+
+	validator := validation.NewValidator()
+
+	// Тест валидных данных callback
+	errors := validator.ValidateCallbackData("valid_callback_data")
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors, got: %v", errors)
+	}
+
+	// Тест невалидных данных callback
+	errors = validator.ValidateCallbackData("")
+	if len(errors) == 0 {
+		t.Error("Expected validation errors, got none")
+	}
 }
