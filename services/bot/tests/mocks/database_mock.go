@@ -46,12 +46,12 @@ func (db *DatabaseMock) seedLanguages() {
 // seedInterests добавляет тестовые интересы
 func (db *DatabaseMock) seedInterests() {
 	interests := []*models.Interest{
-		{ID: 1, Name: "movies", Type: "entertainment"},
-		{ID: 2, Name: "music", Type: "entertainment"},
-		{ID: 3, Name: "sports", Type: "activity"},
-		{ID: 4, Name: "travel", Type: "activity"},
-		{ID: 5, Name: "technology", Type: "knowledge"},
-		{ID: 6, Name: "food", Type: "lifestyle"},
+		{ID: 1, KeyName: "movies", Type: "entertainment"},
+		{ID: 2, KeyName: "music", Type: "entertainment"},
+		{ID: 3, KeyName: "sports", Type: "activity"},
+		{ID: 4, KeyName: "travel", Type: "activity"},
+		{ID: 5, KeyName: "technology", Type: "knowledge"},
+		{ID: 6, KeyName: "food", Type: "lifestyle"},
 	}
 
 	for _, interest := range interests {

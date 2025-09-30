@@ -28,6 +28,15 @@ type Config struct {
 	// Admin IDs for notifications
 	AdminChatIDs   []int64  // IDs чатов администраторов для уведомлений
 	AdminUsernames []string // Username'ы администраторов (читаются только из .env)
+	// Matching Configuration
+	PrimaryInterestScore    int // Баллы за совпадение основных интересов
+	AdditionalInterestScore int // Баллы за совпадение дополнительных интересов
+	MinCompatibilityScore   int // Минимальный балл совместимости
+	MaxMatchesPerUser       int // Максимальное количество совпадений на пользователя
+	// Interest Limits
+	MinPrimaryInterests int     // Минимум основных интересов
+	MaxPrimaryInterests int     // Максимум основных интересов
+	PrimaryPercentage   float64 // Процент основных интересов от общего количества
 }
 
 func Load() *Config {
@@ -114,19 +123,37 @@ func Load() *Config {
 		}
 	}
 
+	// Matching configuration
+	primaryInterestScore, _ := strconv.Atoi(getEnv("PRIMARY_INTEREST_SCORE", "3"))
+	additionalInterestScore, _ := strconv.Atoi(getEnv("ADDITIONAL_INTEREST_SCORE", "1"))
+	minCompatibilityScore, _ := strconv.Atoi(getEnv("MIN_COMPATIBILITY_SCORE", "5"))
+	maxMatchesPerUser, _ := strconv.Atoi(getEnv("MAX_MATCHES_PER_USER", "10"))
+
+	// Interest limits
+	minPrimaryInterests, _ := strconv.Atoi(getEnv("MIN_PRIMARY_INTERESTS", "1"))
+	maxPrimaryInterests, _ := strconv.Atoi(getEnv("MAX_PRIMARY_INTERESTS", "5"))
+	primaryPercentage, _ := strconv.ParseFloat(getEnv("PRIMARY_PERCENTAGE", "0.3"), 64)
+
 	return &Config{
-		TelegramToken:  telegramToken,
-		DatabaseURL:    databaseURL,
-		RedisURL:       redisURL,
-		RedisPassword:  redisPassword,
-		RedisDB:        redisDB,
-		Port:           getEnv("PORT", "8080"),
-		Debug:          debug,
-		WebhookURL:     getEnv("WEBHOOK_URL", ""),
-		EnableTelegram: enableTelegram,
-		EnableDiscord:  enableDiscord,
-		AdminChatIDs:   adminChatIDs,
-		AdminUsernames: adminUsernames,
+		TelegramToken:           telegramToken,
+		DatabaseURL:             databaseURL,
+		RedisURL:                redisURL,
+		RedisPassword:           redisPassword,
+		RedisDB:                 redisDB,
+		Port:                    getEnv("PORT", "8080"),
+		Debug:                   debug,
+		WebhookURL:              getEnv("WEBHOOK_URL", ""),
+		EnableTelegram:          enableTelegram,
+		EnableDiscord:           enableDiscord,
+		AdminChatIDs:            adminChatIDs,
+		AdminUsernames:          adminUsernames,
+		PrimaryInterestScore:    primaryInterestScore,
+		AdditionalInterestScore: additionalInterestScore,
+		MinCompatibilityScore:   minCompatibilityScore,
+		MaxMatchesPerUser:       maxMatchesPerUser,
+		MinPrimaryInterests:     minPrimaryInterests,
+		MaxPrimaryInterests:     maxPrimaryInterests,
+		PrimaryPercentage:       primaryPercentage,
 	}
 }
 

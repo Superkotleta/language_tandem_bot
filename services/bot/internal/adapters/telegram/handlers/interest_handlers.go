@@ -25,8 +25,8 @@ type InterestHandlerImpl struct {
 	errorHandler    *errors.ErrorHandler
 }
 
-// NewInterestHandler создает новый обработчик интересов
-func NewInterestHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, errorHandler *errors.ErrorHandler) InterestHandler {
+// NewInterestHandlerLegacy создает новый обработчик интересов (legacy)
+func NewInterestHandlerLegacy(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, errorHandler *errors.ErrorHandler) InterestHandler {
 	return &InterestHandlerImpl{
 		service:         service,
 		bot:             bot,

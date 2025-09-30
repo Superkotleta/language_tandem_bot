@@ -99,7 +99,7 @@ func (db *DB) GetInterests() ([]*models.Interest, error) {
 	var interests []*models.Interest
 	for rows.Next() {
 		interest := &models.Interest{}
-		err := rows.Scan(&interest.ID, &interest.Name, &interest.Type)
+		err := rows.Scan(&interest.ID, &interest.KeyName, &interest.Type)
 		if err != nil {
 			continue
 		}
@@ -109,10 +109,10 @@ func (db *DB) GetInterests() ([]*models.Interest, error) {
 	// Fallback если нет данных в БД (для тестов)
 	if len(interests) == 0 {
 		return []*models.Interest{
-			{ID: 1, Name: "movies", Type: "entertainment"},
-			{ID: 2, Name: "music", Type: "entertainment"},
-			{ID: 3, Name: "sports", Type: "activity"},
-			{ID: 4, Name: "travel", Type: "activity"},
+			{ID: 1, KeyName: "movies", Type: "entertainment"},
+			{ID: 2, KeyName: "music", Type: "entertainment"},
+			{ID: 3, KeyName: "sports", Type: "activity"},
+			{ID: 4, KeyName: "travel", Type: "activity"},
 		}, nil
 	}
 

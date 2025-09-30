@@ -1,0 +1,35 @@
+{
+  "matching": {
+    "primary_interest_score": 3,
+    "additional_interest_score": 1,
+    "min_compatibility_score": 5,
+    "max_matches_per_user": 10
+  },
+  "interest_limits": {
+    "min_primary_interests": 1,
+    "max_primary_interests": 5,
+    "primary_percentage": 0.3
+  },
+  "categories": {
+    "entertainment": {
+      "display_order": 1,
+      "max_primary_per_category": 2
+    },
+    "education": {
+      "display_order": 2,
+      "max_primary_per_category": 2
+    },
+    "active": {
+      "display_order": 3,
+      "max_primary_per_category": 2
+    },
+    "creative": {
+      "display_order": 4,
+      "max_primary_per_category": 2
+    },
+    "social": {
+      "display_order": 5,
+      "max_primary_per_category": 2
+    }
+  }
+}

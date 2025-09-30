@@ -4,6 +4,52 @@
   "choose_target_language": "📚 What language are you learning?",
   "choose_interface_language": "🌐 Choose interface language:",
   "choose_interests": "🎯 Choose your interests (you can select multiple):",
+  "choose_primary_interests": "⭐ Choose up to 3 primary interests from selected:",
+  "interests_selection_complete": "✅ Great! Your interests are saved!",
+  "interests_edit_mode": "✏️ Edit interests",
+  "interests_edit_primary": "⭐ Edit primary interests",
+  "interests_edit_additional": "➕ Edit additional interests",
+  "interests_feedback_suggestion": "💡 If your interest is not in the list, write about it in feedback (/feedback)",
+  "choose_at_least_one_interest": "Please select at least one interest",
+  "choose_at_least_primary_interests": "Please select at least {count} primary interests",
+  "continue_button": "➡️ Continue",
+  "back_button": "⬅️ Back",
+  
+  "category_entertainment": "🎬 Entertainment",
+  "category_education": "📚 Education", 
+  "category_active": "⚽ Active Lifestyle",
+  "category_creative": "🎨 Creative",
+  "category_social": "👥 Social",
+  
+  "interest_movies_tv": "🎬 Movies & TV",
+  "interest_music": "🎵 Music",
+  "interest_games": "🎮 Games",
+  "interest_tv_shows": "📺 TV Shows",
+  "interest_comedy": "😄 Comedy",
+  "interest_anime": "🎌 Anime",
+  
+  "interest_books": "📚 Books",
+  "interest_technology": "💻 Technology",
+  "interest_science": "🔬 Science",
+  "interest_languages": "🌍 Languages",
+  "interest_history": "📜 History",
+  "interest_philosophy": "🤔 Philosophy",
+  
+  "interest_sports": "⚽ Sports",
+  "interest_travel": "🗺️ Travel",
+  "interest_fitness": "💪 Fitness",
+  "interest_outdoor": "🏔️ Outdoor",
+  "interest_dancing": "💃 Dancing",
+  
+  "interest_cooking": "👨‍🍳 Cooking",
+  "interest_art": "🎨 Art",
+  "interest_photography": "📸 Photography",
+  "interest_writing": "✍️ Writing",
+  "interest_design": "🎨 Design",
+  
+  "interest_volunteering": "🤝 Volunteering",
+  "interest_politics": "🏛️ Politics",
+  "interest_psychology": "🧠 Psychology",
   "profile_completed": "✅ Great! Your profile is ready!\n\n🔍 Starting to search for suitable conversation partners...",
   "language_updated": "✅ Interface language updated!",
   "interface_language_updated": "Interface language has been updated!",
@@ -130,5 +176,11 @@
   "feedback_help": "❓ Help",
   
   "feedback_help_title": "❓ Feedback Help",
-  "feedback_help_content": "📝 How to write feedback:\n\n• Describe a problem: \"Slow loading\", \"Profile setup is confusing\"\n• Suggest improvement: \"Add new languages\", \"Improve interface\"\n• Ask a question: \"How does matching work?\", \"When will new features be available?\"\n\n⏰ Response time: We respond within 24 hours\n📏 Limitations: From 10 to 1000 characters\n\n💡 Examples of good feedback:\n• \"Great bot! Would love to add Japanese language support\"\n• \"Interface is intuitive, but navigation could be improved\"\n• \"Quickly found a conversation partner for English practice\"\n• \"Would like more notification settings\""
+  "feedback_help_content": "📝 How to write feedback:\n\n• Describe a problem: \"Slow loading\", \"Profile setup is confusing\"\n• Suggest improvement: \"Add new languages\", \"Improve interface\"\n• Ask a question: \"How does matching work?\", \"When will new features be available?\"\n\n⏰ Response time: We respond within 24 hours\n📏 Limitations: From 10 to 1000 characters\n\n💡 Examples of good feedback:\n• \"Great bot! Would love to add Japanese language support\"\n• \"Interface is intuitive, but navigation could be improved\"\n• \"Quickly found a conversation partner for English practice\"\n• \"Would like more notification settings\"",
+  
+  "edit_interests_from_profile": "🔧 Edit Interests",
+  "choose_interest_category": "Choose a category to edit:",
+  "edit_interests_in_category": "Editing interests in category:",
+  "edit_primary_interests": "⭐ Edit Primary Interests",
+  "profile_edit_interests_new": "🔧 Edit Interests (New System)"
 }

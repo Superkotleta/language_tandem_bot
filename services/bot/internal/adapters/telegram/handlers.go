@@ -13,20 +13,21 @@ import (
 )
 
 type TelegramHandler struct {
-	bot               *tgbotapi.BotAPI
-	service           *core.BotService
-	editInterestsTemp map[int64][]int // Временное хранение выбранных интересов для каждого пользователя
-	adminChatIDs      []int64         // Chat ID администраторов
-	adminUsernames    []string        // Usernames администраторов для проверки доступа
-	keyboardBuilder   *handlers.KeyboardBuilder
-	menuHandler       *handlers.MenuHandler
-	profileHandler    *handlers.ProfileHandlerImpl
-	feedbackHandler   handlers.FeedbackHandler
-	languageHandler   handlers.LanguageHandler
-	interestHandler   handlers.InterestHandler
-	adminHandler      handlers.AdminHandler
-	utilityHandler    handlers.UtilityHandler
-	errorHandler      *errors.ErrorHandler
+	bot                    *tgbotapi.BotAPI
+	service                *core.BotService
+	editInterestsTemp      map[int64][]int // Временное хранение выбранных интересов для каждого пользователя
+	adminChatIDs           []int64         // Chat ID администраторов
+	adminUsernames         []string        // Usernames администраторов для проверки доступа
+	keyboardBuilder        *handlers.KeyboardBuilder
+	menuHandler            *handlers.MenuHandler
+	profileHandler         *handlers.ProfileHandlerImpl
+	feedbackHandler        handlers.FeedbackHandler
+	languageHandler        handlers.LanguageHandler
+	interestHandler        handlers.InterestHandler
+	profileInterestHandler *handlers.ProfileInterestHandler
+	adminHandler           handlers.AdminHandler
+	utilityHandler         handlers.UtilityHandler
+	errorHandler           *errors.ErrorHandler
 }
 
 // NewTelegramHandler создает новый экземпляр TelegramHandler с базовой конфигурацией
@@ -36,25 +37,28 @@ func NewTelegramHandler(bot *tgbotapi.BotAPI, service *core.BotService, adminCha
 	profileHandler := handlers.NewProfileHandler(bot, service, keyboardBuilder, errorHandler)
 	feedbackHandler := handlers.NewFeedbackHandler(bot, service, keyboardBuilder, adminChatIDs, make([]string, 0), errorHandler)
 	languageHandler := handlers.NewLanguageHandler(service, bot, keyboardBuilder, errorHandler)
-	interestHandler := handlers.NewInterestHandler(service, bot, keyboardBuilder, errorHandler)
+	interestHandler := handlers.NewInterestHandlerLegacy(service, bot, keyboardBuilder, errorHandler)
+	interestService := core.NewInterestService(service.DB.GetConnection())
+	profileInterestHandler := handlers.NewProfileInterestHandler(service, interestService, bot, keyboardBuilder, errorHandler)
 	adminHandler := handlers.NewAdminHandler(service, bot, keyboardBuilder, adminChatIDs, make([]string, 0), errorHandler)
 	utilityHandler := handlers.NewUtilityHandler(service, bot, errorHandler)
 
 	return &TelegramHandler{
-		bot:               bot,
-		service:           service,
-		editInterestsTemp: make(map[int64][]int),
-		adminChatIDs:      adminChatIDs,
-		adminUsernames:    make([]string, 0), // Пустой список, нет хардкода
-		keyboardBuilder:   keyboardBuilder,
-		menuHandler:       menuHandler,
-		profileHandler:    profileHandler,
-		feedbackHandler:   feedbackHandler,
-		languageHandler:   languageHandler,
-		interestHandler:   interestHandler,
-		adminHandler:      adminHandler,
-		utilityHandler:    utilityHandler,
-		errorHandler:      errorHandler,
+		bot:                    bot,
+		service:                service,
+		editInterestsTemp:      make(map[int64][]int),
+		adminChatIDs:           adminChatIDs,
+		adminUsernames:         make([]string, 0), // Пустой список, нет хардкода
+		keyboardBuilder:        keyboardBuilder,
+		menuHandler:            menuHandler,
+		profileHandler:         profileHandler,
+		feedbackHandler:        feedbackHandler,
+		languageHandler:        languageHandler,
+		interestHandler:        interestHandler,
+		profileInterestHandler: profileInterestHandler,
+		adminHandler:           adminHandler,
+		utilityHandler:         utilityHandler,
+		errorHandler:           errorHandler,
 	}
 }
 
@@ -65,25 +69,28 @@ func NewTelegramHandlerWithAdmins(bot *tgbotapi.BotAPI, service *core.BotService
 	profileHandler := handlers.NewProfileHandler(bot, service, keyboardBuilder, errorHandler)
 	feedbackHandler := handlers.NewFeedbackHandler(bot, service, keyboardBuilder, adminChatIDs, adminUsernames, errorHandler)
 	languageHandler := handlers.NewLanguageHandler(service, bot, keyboardBuilder, errorHandler)
-	interestHandler := handlers.NewInterestHandler(service, bot, keyboardBuilder, errorHandler)
+	interestHandler := handlers.NewInterestHandlerLegacy(service, bot, keyboardBuilder, errorHandler)
+	interestService := core.NewInterestService(service.DB.GetConnection())
+	profileInterestHandler := handlers.NewProfileInterestHandler(service, interestService, bot, keyboardBuilder, errorHandler)
 	adminHandler := handlers.NewAdminHandler(service, bot, keyboardBuilder, adminChatIDs, adminUsernames, errorHandler)
 	utilityHandler := handlers.NewUtilityHandler(service, bot, errorHandler)
 
 	return &TelegramHandler{
-		bot:               bot,
-		service:           service,
-		editInterestsTemp: make(map[int64][]int),
-		adminChatIDs:      adminChatIDs,
-		adminUsernames:    adminUsernames,
-		keyboardBuilder:   keyboardBuilder,
-		menuHandler:       menuHandler,
-		profileHandler:    profileHandler,
-		feedbackHandler:   feedbackHandler,
-		languageHandler:   languageHandler,
-		interestHandler:   interestHandler,
-		adminHandler:      adminHandler,
-		utilityHandler:    utilityHandler,
-		errorHandler:      errorHandler,
+		bot:                    bot,
+		service:                service,
+		editInterestsTemp:      make(map[int64][]int),
+		adminChatIDs:           adminChatIDs,
+		adminUsernames:         adminUsernames,
+		keyboardBuilder:        keyboardBuilder,
+		menuHandler:            menuHandler,
+		profileHandler:         profileHandler,
+		feedbackHandler:        feedbackHandler,
+		languageHandler:        languageHandler,
+		interestHandler:        interestHandler,
+		profileInterestHandler: profileInterestHandler,
+		adminHandler:           adminHandler,
+		utilityHandler:         utilityHandler,
+		errorHandler:           errorHandler,
 	}
 }
 
@@ -200,6 +207,19 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 	case strings.HasPrefix(data, "edit_interest_"):
 		interestID := strings.TrimPrefix(data, "edit_interest_")
 		return h.profileHandler.HandleEditInterestSelection(callback, user, interestID)
+	case strings.HasPrefix(data, "edit_interest_category_"):
+		categoryKey := strings.TrimPrefix(data, "edit_interest_category_")
+		return h.profileInterestHandler.HandleEditInterestCategoryFromProfile(callback, user, categoryKey)
+	case strings.HasPrefix(data, "edit_interest_select_"):
+		interestID := strings.TrimPrefix(data, "edit_interest_select_")
+		return h.profileInterestHandler.HandleEditInterestSelectionFromProfile(callback, user, interestID)
+	case data == "edit_primary_interests":
+		return h.profileInterestHandler.HandleEditPrimaryInterestsFromProfile(callback, user)
+	case strings.HasPrefix(data, "edit_primary_interest_"):
+		interestID := strings.TrimPrefix(data, "edit_primary_interest_")
+		return h.profileInterestHandler.HandleEditPrimaryInterestSelectionFromProfile(callback, user, interestID)
+	case data == "save_interest_edits":
+		return h.profileInterestHandler.HandleSaveInterestEditsFromProfile(callback, user)
 	case data == "profile_show":
 		return h.profileHandler.HandleProfileShow(callback, user)
 	case data == "profile_reset_ask":
@@ -239,6 +259,8 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		return h.menuHandler.HandleBackToMainMenu(callback, user)
 	case data == "edit_interests":
 		return h.profileHandler.HandleEditInterests(callback, user)
+	case data == "edit_interests_new":
+		return h.profileInterestHandler.HandleEditInterestsFromProfile(callback, user)
 	case data == "edit_languages":
 		return h.profileHandler.HandleEditLanguages(callback, user)
 	case data == "save_edits":
