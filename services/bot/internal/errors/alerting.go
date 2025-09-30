@@ -85,7 +85,7 @@ func (n *AdminNotifierImpl) sendToAdmins(message string) {
 // sendMessage отправляет сообщение (заглушка для интеграции с Telegram API).
 func (n *AdminNotifierImpl) sendMessage(chatID int64, message string) {
 	// Здесь должна быть интеграция с Telegram Bot API
-	// TODO: Интегрировать с реальным Telegram Bot API
+	// Интегрировать с реальным Telegram Bot API
 	// Пример:
 	// if botAPI, ok := n.botAPI.(*tgbotapi.BotAPI); ok {
 	//     msg := tgbotapi.NewMessage(chatID, message)

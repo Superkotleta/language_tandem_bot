@@ -262,66 +262,81 @@ func (s *InterestService) GetMatchingConfig() (*config.MatchingConfig, error) {
 
 // CalculateCompatibilityScore вычисляет балл совместимости между пользователями.
 func (s *InterestService) CalculateCompatibilityScore(user1ID, user2ID int) (int, error) {
-	// Получаем конфигурацию
 	matchingConfig, err := s.GetMatchingConfig()
 	if err != nil {
 		return 0, err
 	}
 
-	// Получаем интересы обоих пользователей
-	user1Interests, err := s.GetUserInterestSelections(user1ID)
+	user1Maps, err := s.buildUserInterestMaps(user1ID)
 	if err != nil {
 		return 0, err
 	}
 
-	user2Interests, err := s.GetUserInterestSelections(user2ID)
+	user2Maps, err := s.buildUserInterestMaps(user2ID)
 	if err != nil {
 		return 0, err
 	}
 
-	// Создаем карты интересов для быстрого поиска
-	user1Map := make(map[int]bool)
-	user1PrimaryMap := make(map[int]bool)
-	user2Map := make(map[int]bool)
-	user2PrimaryMap := make(map[int]bool)
-
-	for _, selection := range user1Interests {
-		user1Map[selection.InterestID] = true
-
-		if selection.IsPrimary {
-			user1PrimaryMap[selection.InterestID] = true
-		}
-	}
-
-	for _, selection := range user2Interests {
-		user2Map[selection.InterestID] = true
-
-		if selection.IsPrimary {
-			user2PrimaryMap[selection.InterestID] = true
-		}
-	}
-
-	score := 0
-
-	// Подсчитываем баллы за совпадения
-	for interestID := range user1Map {
-		if user2Map[interestID] {
-			// Есть совпадение интересов
-			switch {
-			case user1PrimaryMap[interestID] && user2PrimaryMap[interestID]:
-				// Оба пользователя считают этот интерес основным
-				score += matchingConfig.PrimaryInterestScore * primaryInterestMultiplier // Максимальный балл
-			case user1PrimaryMap[interestID] || user2PrimaryMap[interestID]:
-				// Один из пользователей считает основным
-				score += matchingConfig.PrimaryInterestScore + matchingConfig.AdditionalInterestScore
-			default:
-				// Оба считают дополнительным
-				score += matchingConfig.AdditionalInterestScore
-			}
-		}
-	}
+	score := s.calculateCompatibilityScore(user1Maps, user2Maps, matchingConfig)
 
 	return score, nil
+}
+
+// UserInterestMaps содержит карты интересов пользователя.
+type UserInterestMaps struct {
+	AllInterests     map[int]bool
+	PrimaryInterests map[int]bool
+}
+
+// buildUserInterestMaps создает карты интересов пользователя.
+func (s *InterestService) buildUserInterestMaps(userID int) (*UserInterestMaps, error) {
+	interests, err := s.GetUserInterestSelections(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	allMap := make(map[int]bool)
+	primaryMap := make(map[int]bool)
+
+	for _, selection := range interests {
+		allMap[selection.InterestID] = true
+		if selection.IsPrimary {
+			primaryMap[selection.InterestID] = true
+		}
+	}
+
+	return &UserInterestMaps{
+		AllInterests:     allMap,
+		PrimaryInterests: primaryMap,
+	}, nil
+}
+
+// calculateCompatibilityScore вычисляет балл совместимости.
+func (s *InterestService) calculateCompatibilityScore(user1Maps, user2Maps *UserInterestMaps, config *config.MatchingConfig) int {
+	score := 0
+
+	for interestID := range user1Maps.AllInterests {
+		if user2Maps.AllInterests[interestID] {
+			score += s.calculateInterestScore(interestID, user1Maps, user2Maps, config)
+		}
+	}
+
+	return score
+}
+
+// calculateInterestScore вычисляет балл за конкретный интерес.
+func (s *InterestService) calculateInterestScore(interestID int, user1Maps, user2Maps *UserInterestMaps, config *config.MatchingConfig) int {
+	switch {
+	case user1Maps.PrimaryInterests[interestID] && user2Maps.PrimaryInterests[interestID]:
+		// Оба пользователя считают этот интерес основным
+		return config.PrimaryInterestScore * primaryInterestMultiplier
+	case user1Maps.PrimaryInterests[interestID] || user2Maps.PrimaryInterests[interestID]:
+		// Один из пользователей считает основным
+		return config.PrimaryInterestScore + config.AdditionalInterestScore
+	default:
+		// Оба считают дополнительным
+		return config.AdditionalInterestScore
+	}
 }
 
 // GetUserInterestSummary возвращает сводку интересов пользователя.

@@ -350,9 +350,19 @@ func (cs *Service) cleanupExpired() {
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
 
+	cleaned := cs.cleanupLanguages() + cs.cleanupInterests() + cs.cleanupTranslations() + cs.cleanupUsers() + cs.cleanupStats()
+
+	cs.updateSize()
+
+	if cleaned > 0 {
+		log.Printf("Cache: Cleaned %d expired entries", cleaned)
+	}
+}
+
+// cleanupLanguages очищает истекшие языки.
+func (cs *Service) cleanupLanguages() int {
 	cleaned := 0
 
-	// Очищаем языки
 	for key, entry := range cs.languages {
 		if entry.IsExpired() {
 			delete(cs.languages, key)
@@ -361,7 +371,13 @@ func (cs *Service) cleanupExpired() {
 		}
 	}
 
-	// Очищаем интересы
+	return cleaned
+}
+
+// cleanupInterests очищает истекшие интересы.
+func (cs *Service) cleanupInterests() int {
+	cleaned := 0
+
 	for key, entry := range cs.interests {
 		if entry.IsExpired() {
 			delete(cs.interests, key)
@@ -370,7 +386,13 @@ func (cs *Service) cleanupExpired() {
 		}
 	}
 
-	// Очищаем переводы
+	return cleaned
+}
+
+// cleanupTranslations очищает истекшие переводы.
+func (cs *Service) cleanupTranslations() int {
+	cleaned := 0
+
 	for key, entry := range cs.translations {
 		if entry.IsExpired() {
 			delete(cs.translations, key)
@@ -379,7 +401,13 @@ func (cs *Service) cleanupExpired() {
 		}
 	}
 
-	// Очищаем пользователей
+	return cleaned
+}
+
+// cleanupUsers очищает истекших пользователей.
+func (cs *Service) cleanupUsers() int {
+	cleaned := 0
+
 	for key, entry := range cs.users {
 		if entry.IsExpired() {
 			delete(cs.users, key)
@@ -388,7 +416,13 @@ func (cs *Service) cleanupExpired() {
 		}
 	}
 
-	// Очищаем статистику
+	return cleaned
+}
+
+// cleanupStats очищает истекшую статистику.
+func (cs *Service) cleanupStats() int {
+	cleaned := 0
+
 	for key, entry := range cs.stats {
 		if entry.IsExpired() {
 			delete(cs.stats, key)
@@ -397,11 +431,7 @@ func (cs *Service) cleanupExpired() {
 		}
 	}
 
-	cs.updateSize()
-
-	if cleaned > 0 {
-		log.Printf("Cache: Cleaned %d expired entries", cleaned)
-	}
+	return cleaned
 }
 
 // Stop останавливает кэш-сервис.

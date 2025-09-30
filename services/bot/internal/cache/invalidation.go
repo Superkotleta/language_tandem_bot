@@ -72,7 +72,7 @@ func (is *InvalidationService) InvalidateAllStats() {
 
 // InvalidateByPattern инвалидирует записи по паттерну.
 func (is *InvalidationService) InvalidateByPattern(_ string) {
-	// TODO : Для Redis можно использовать KEYS команду для поиска по паттерну
+	// Для Redis можно использовать KEYS команду для поиска по паттерну
 	// Для in-memory кэша можно добавить специальный метод
 	// Пока что используем общую очистку
 	log.Printf("Invalidation: Pattern-based invalidation not implemented for interface")

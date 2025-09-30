@@ -406,42 +406,51 @@ func (s *BotService) formatTimeAvailability(ta *models.TimeAvailability, lang st
 		return "Не указано"
 	}
 
-	var dayText string
-
-	switch ta.DayType {
-	case "weekdays":
-		dayText = s.Localizer.Get(lang, "time_weekdays")
-	case "weekends":
-		dayText = s.Localizer.Get(lang, "time_weekends")
-	case "any":
-		dayText = s.Localizer.Get(lang, "time_any")
-	case "specific":
-		if len(ta.SpecificDays) > 0 {
-			dayText = strings.Join(ta.SpecificDays, ", ")
-		} else {
-			dayText = s.Localizer.Get(lang, "time_any")
-		}
-
-	default:
-		dayText = s.Localizer.Get(lang, "time_any")
-	}
-
-	var timeText string
-
-	switch ta.TimeSlot {
-	case "morning":
-		timeText = s.Localizer.Get(lang, "time_morning")
-	case "day":
-		timeText = s.Localizer.Get(lang, "time_day")
-	case "evening":
-		timeText = s.Localizer.Get(lang, "time_evening")
-	case "late":
-		timeText = s.Localizer.Get(lang, "time_late")
-	default:
-		timeText = s.Localizer.Get(lang, "time_any")
-	}
+	dayText := s.formatDayType(ta, lang)
+	timeText := s.formatTimeSlot(ta.TimeSlot, lang)
 
 	return fmt.Sprintf("%s, %s", dayText, timeText)
+}
+
+// formatDayType форматирует тип дня.
+func (s *BotService) formatDayType(ta *models.TimeAvailability, lang string) string {
+	switch ta.DayType {
+	case "weekdays":
+		return s.Localizer.Get(lang, "time_weekdays")
+	case "weekends":
+		return s.Localizer.Get(lang, "time_weekends")
+	case "any":
+		return s.Localizer.Get(lang, "time_any")
+	case "specific":
+		return s.formatSpecificDays(ta.SpecificDays, lang)
+	default:
+		return s.Localizer.Get(lang, "time_any")
+	}
+}
+
+// formatSpecificDays форматирует конкретные дни.
+func (s *BotService) formatSpecificDays(specificDays []string, lang string) string {
+	if len(specificDays) > 0 {
+		return strings.Join(specificDays, ", ")
+	}
+
+	return s.Localizer.Get(lang, "time_any")
+}
+
+// formatTimeSlot форматирует временной слот.
+func (s *BotService) formatTimeSlot(timeSlot, lang string) string {
+	switch timeSlot {
+	case "morning":
+		return s.Localizer.Get(lang, "time_morning")
+	case "day":
+		return s.Localizer.Get(lang, "time_day")
+	case "evening":
+		return s.Localizer.Get(lang, "time_evening")
+	case "late":
+		return s.Localizer.Get(lang, "time_late")
+	default:
+		return s.Localizer.Get(lang, "time_any")
+	}
 }
 
 // formatCommunicationPreferences форматирует предпочтения общения.
@@ -450,39 +459,44 @@ func (s *BotService) formatCommunicationPreferences(fp *models.FriendshipPrefere
 		return "Не указано"
 	}
 
-	var styleText string
-
-	switch fp.CommunicationStyle {
-	case "text":
-		styleText = s.Localizer.Get(lang, "comm_text")
-	case "voice_msg":
-		styleText = s.Localizer.Get(lang, "comm_voice")
-	case "audio_call":
-		styleText = s.Localizer.Get(lang, "comm_audio")
-	case "video_call":
-		styleText = s.Localizer.Get(lang, "comm_video")
-	case "meet_person":
-		styleText = s.Localizer.Get(lang, "comm_meet")
-	default:
-		styleText = fp.CommunicationStyle
-	}
-
-	var freqText string
-
-	switch fp.CommunicationFreq {
-	case "spontaneous":
-		freqText = s.Localizer.Get(lang, "freq_spontaneous")
-	case "weekly":
-		freqText = s.Localizer.Get(lang, "freq_weekly")
-	case "daily":
-		freqText = s.Localizer.Get(lang, "freq_daily")
-	case "intensive":
-		freqText = s.Localizer.Get(lang, "freq_intensive")
-	default:
-		freqText = fp.CommunicationFreq
-	}
+	styleText := s.formatCommunicationStyle(fp.CommunicationStyle, lang)
+	freqText := s.formatCommunicationFreq(fp.CommunicationFreq, lang)
 
 	return fmt.Sprintf("%s, %s", styleText, freqText)
+}
+
+// formatCommunicationStyle форматирует стиль общения.
+func (s *BotService) formatCommunicationStyle(style, lang string) string {
+	switch style {
+	case "text":
+		return s.Localizer.Get(lang, "comm_text")
+	case "voice_msg":
+		return s.Localizer.Get(lang, "comm_voice")
+	case "audio_call":
+		return s.Localizer.Get(lang, "comm_audio")
+	case "video_call":
+		return s.Localizer.Get(lang, "comm_video")
+	case "meet_person":
+		return s.Localizer.Get(lang, "comm_meet")
+	default:
+		return style
+	}
+}
+
+// formatCommunicationFreq форматирует частоту общения.
+func (s *BotService) formatCommunicationFreq(freq, lang string) string {
+	switch freq {
+	case "spontaneous":
+		return s.Localizer.Get(lang, "freq_spontaneous")
+	case "weekly":
+		return s.Localizer.Get(lang, "freq_weekly")
+	case "daily":
+		return s.Localizer.Get(lang, "freq_daily")
+	case "intensive":
+		return s.Localizer.Get(lang, "freq_intensive")
+	default:
+		return freq
+	}
 }
 
 // formatUserStatus форматирует статус пользователя.
@@ -698,7 +712,7 @@ func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
 		}
 	}()
 
-	return s.processFeedbackRows(rows)
+	return s.processFeedbackRows(rows), nil
 }
 
 // getFeedbackQuery возвращает SQL запрос для получения всех отзывов.
@@ -714,7 +728,7 @@ func getFeedbackQuery() string {
 }
 
 // processFeedbackRows обрабатывает строки результата запроса отзывов.
-func (s *BotService) processFeedbackRows(rows *sql.Rows) ([]map[string]interface{}, error) {
+func (s *BotService) processFeedbackRows(rows *sql.Rows) []map[string]interface{} {
 	var feedbacks []map[string]interface{}
 
 	for rows.Next() {
@@ -726,7 +740,7 @@ func (s *BotService) processFeedbackRows(rows *sql.Rows) ([]map[string]interface
 		feedbacks = append(feedbacks, feedback)
 	}
 
-	return feedbacks, nil
+	return feedbacks
 }
 
 // scanFeedbackRow сканирует одну строку результата запроса отзывов.

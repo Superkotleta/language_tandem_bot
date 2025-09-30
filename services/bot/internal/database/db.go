@@ -511,7 +511,7 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 		}
 	}()
 
-	return db.processFeedbackRows(rows)
+	return db.processFeedbackRows(rows), nil
 }
 
 // getUnprocessedFeedbackQuery возвращает SQL запрос для получения необработанных отзывов.
@@ -527,7 +527,7 @@ func getUnprocessedFeedbackQuery() string {
 }
 
 // processFeedbackRows обрабатывает строки результата запроса отзывов.
-func (db *DB) processFeedbackRows(rows *sql.Rows) ([]map[string]interface{}, error) {
+func (db *DB) processFeedbackRows(rows *sql.Rows) []map[string]interface{} {
 	var feedbacks []map[string]interface{}
 
 	for rows.Next() {
@@ -539,7 +539,7 @@ func (db *DB) processFeedbackRows(rows *sql.Rows) ([]map[string]interface{}, err
 		feedbacks = append(feedbacks, feedback)
 	}
 
-	return feedbacks, nil
+	return feedbacks
 }
 
 // scanFeedbackRow сканирует одну строку результата запроса отзывов.

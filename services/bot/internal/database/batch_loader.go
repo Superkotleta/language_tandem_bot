@@ -58,7 +58,7 @@ func (bl *BatchLoader) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int
 		}
 	}()
 
-	return bl.processUsersWithInterestsRows(rows)
+	return bl.processUsersWithInterestsRows(rows), nil
 }
 
 // getBatchLoadUsersWithInterestsQuery возвращает SQL запрос для загрузки пользователей с интересами.
@@ -80,7 +80,7 @@ func getBatchLoadUsersWithInterestsQuery() string {
 }
 
 // processUsersWithInterestsRows обрабатывает строки результата запроса пользователей с интересами.
-func (bl *BatchLoader) processUsersWithInterestsRows(rows *sql.Rows) (map[int64]*UserWithInterests, error) {
+func (bl *BatchLoader) processUsersWithInterestsRows(rows *sql.Rows) map[int64]*UserWithInterests {
 	users := make(map[int64]*UserWithInterests)
 
 	for rows.Next() {
@@ -105,7 +105,7 @@ func (bl *BatchLoader) processUsersWithInterestsRows(rows *sql.Rows) (map[int64]
 		}
 	}
 
-	return users, nil
+	return users
 }
 
 // scanUserWithInterestRow сканирует одну строку результата запроса пользователя с интересом.
@@ -353,10 +353,7 @@ func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, e
 		}
 	}()
 
-	userData, interests, translations, languages, err := bl.processUserDataRows(rows)
-	if err != nil {
-		return nil, err
-	}
+	userData, interests, translations, languages := bl.processUserDataRows(rows)
 
 	if userData == nil {
 		return nil, fmt.Errorf("user not found: %d", telegramID)
@@ -393,7 +390,7 @@ func getUserWithAllDataQuery() string {
 }
 
 // processUserDataRows обрабатывает строки результата запроса.
-func (bl *BatchLoader) processUserDataRows(rows *sql.Rows) (*UserWithAllData, []int, map[int]string, []*models.Language, error) {
+func (bl *BatchLoader) processUserDataRows(rows *sql.Rows) (*UserWithAllData, []int, map[int]string, []*models.Language) {
 	var userData *UserWithAllData
 
 	interests := make([]int, 0)
@@ -438,7 +435,7 @@ func (bl *BatchLoader) processUserDataRows(rows *sql.Rows) (*UserWithAllData, []
 		}
 	}
 
-	return userData, interests, translations, languages, nil
+	return userData, interests, translations, languages
 }
 
 // scanUserDataRow сканирует одну строку результата запроса.

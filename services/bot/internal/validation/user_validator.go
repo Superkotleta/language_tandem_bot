@@ -21,44 +21,60 @@ func NewUserValidator() *UserValidator {
 func (uv *UserValidator) ValidateUser(user *models.User) *Result {
 	result := NewResult()
 
-	// Валидация Telegram ID
-	if errors := uv.validator.ValidateTelegramID(int64(user.TelegramID)); len(errors) > 0 {
+	uv.validateTelegramID(user.TelegramID, result)
+	uv.validateFirstName(user.FirstName, result)
+	uv.validateUsername(user.Username, result)
+	uv.validateInterfaceLanguage(user.InterfaceLanguageCode, result)
+	uv.validateUserState(user.State, result)
+
+	return result
+}
+
+// validateTelegramID валидирует Telegram ID.
+func (uv *UserValidator) validateTelegramID(telegramID int64, result *Result) {
+	if errors := uv.validator.ValidateTelegramID(telegramID); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("telegram_id", err)
 		}
 	}
+}
 
-	// Валидация имени пользователя
-	if errors := uv.validator.ValidateString(user.FirstName, []string{"required", "max:50"}); len(errors) > 0 {
+// validateFirstName валидирует имя пользователя.
+func (uv *UserValidator) validateFirstName(firstName string, result *Result) {
+	if errors := uv.validator.ValidateString(firstName, []string{"required", "max:50"}); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("first_name", err)
 		}
 	}
+}
 
-	// Валидация username (если есть)
-	if user.Username != "" {
-		if errors := uv.validator.ValidateString(user.Username, []string{"username", "max:50"}); len(errors) > 0 {
+// validateUsername валидирует username.
+func (uv *UserValidator) validateUsername(username string, result *Result) {
+	if username != "" {
+		if errors := uv.validator.ValidateString(username, []string{"username", "max:50"}); len(errors) > 0 {
 			for _, err := range errors {
 				result.AddError("username", err)
 			}
 		}
 	}
+}
 
-	// Валидация кода языка интерфейса
-	if errors := uv.validator.ValidateLanguageCode(user.InterfaceLanguageCode); len(errors) > 0 {
+// validateInterfaceLanguage валидирует язык интерфейса.
+func (uv *UserValidator) validateInterfaceLanguage(languageCode string, result *Result) {
+	if errors := uv.validator.ValidateLanguageCode(languageCode); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("interface_language_code", err)
 		}
 	}
+}
 
-	// Валидация состояния пользователя
-	if errors := uv.validator.ValidateUserState(user.State); len(errors) > 0 {
+// validateUserState валидирует состояние пользователя.
+func (uv *UserValidator) validateUserState(state string, result *Result) {
+	if errors := uv.validator.ValidateUserState(state); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("state", err)
 		}
 	}
-
-	return result
 }
 
 // ValidateUserRegistration валидирует данные при регистрации пользователя.

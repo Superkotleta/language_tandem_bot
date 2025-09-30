@@ -28,7 +28,7 @@ func (mv *MessageValidator) ValidateMessage(chatID, userID int64, text string) *
 	}
 
 	// Валидация User ID
-	if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) > 0 {
+	if errors := mv.validator.ValidateTelegramID(userID); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("user_id", err)
 		}
@@ -58,7 +58,7 @@ func (mv *MessageValidator) ValidateCallbackQuery(chatID, userID int64, data str
 	}
 
 	// Валидация User ID
-	if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) > 0 {
+	if errors := mv.validator.ValidateTelegramID(userID); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("user_id", err)
 		}
@@ -86,7 +86,7 @@ func (mv *MessageValidator) ValidateFeedbackMessage(chatID, userID int64, text s
 	}
 
 	// Валидация User ID
-	if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) > 0 {
+	if errors := mv.validator.ValidateTelegramID(userID); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("user_id", err)
 		}
@@ -114,7 +114,7 @@ func (mv *MessageValidator) ValidateCommand(chatID, userID int64, command string
 	}
 
 	// Валидация User ID
-	if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) > 0 {
+	if errors := mv.validator.ValidateTelegramID(userID); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("user_id", err)
 		}
@@ -157,7 +157,7 @@ func (mv *MessageValidator) ValidateLanguageSelection(chatID, userID int64, lang
 	}
 
 	// Валидация User ID
-	if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) > 0 {
+	if errors := mv.validator.ValidateTelegramID(userID); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("user_id", err)
 		}
@@ -185,7 +185,7 @@ func (mv *MessageValidator) ValidateInterestSelection(chatID, userID int64, inte
 	}
 
 	// Валидация User ID
-	if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) > 0 {
+	if errors := mv.validator.ValidateTelegramID(userID); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("user_id", err)
 		}
@@ -213,7 +213,7 @@ func (mv *MessageValidator) ValidateLanguageLevelSelection(chatID, userID int64,
 	}
 
 	// Валидация User ID
-	if errors := mv.validator.ValidateTelegramID(int64(userID)); len(errors) > 0 {
+	if errors := mv.validator.ValidateTelegramID(userID); len(errors) > 0 {
 		for _, err := range errors {
 			result.AddError("user_id", err)
 		}
