@@ -43,7 +43,15 @@ func generateRequestID() string {
 
 // WithContext создает ошибку с контекстом.
 func WithContext(err error, ctx *RequestContext) *CustomError {
-	customErr := &CustomError{}
+	customErr := &CustomError{
+		Type:        ErrorTypeInternal,
+		Message:     "context error",
+		UserMessage: "internal error",
+		Context:     map[string]interface{}{},
+		RequestID:   "",
+		Timestamp:   time.Now(),
+		Cause:       nil,
+	}
 	if errors.As(err, &customErr) {
 		customErr.RequestID = ctx.RequestID
 		customErr.Context["user_id"] = ctx.UserID
@@ -55,9 +63,10 @@ func WithContext(err error, ctx *RequestContext) *CustomError {
 
 	// Если ошибка не CustomError, оборачиваем её
 	return &CustomError{
-		Type:      ErrorTypeInternal,
-		Message:   err.Error(),
-		RequestID: ctx.RequestID,
+		Type:        ErrorTypeInternal,
+		Message:     err.Error(),
+		UserMessage: "internal error",
+		RequestID:   ctx.RequestID,
 		Context: map[string]interface{}{
 			"user_id":   ctx.UserID,
 			"chat_id":   ctx.ChatID,
@@ -81,6 +90,7 @@ func NewTelegramError(message, userMessage string, ctx *RequestContext) *CustomE
 			"operation": ctx.Operation,
 		},
 		Timestamp: time.Now(),
+		Cause:     nil,
 	}
 }
 
@@ -97,6 +107,7 @@ func NewDatabaseError(message, userMessage string, ctx *RequestContext) *CustomE
 			"operation": ctx.Operation,
 		},
 		Timestamp: time.Now(),
+		Cause:     nil,
 	}
 }
 
@@ -113,6 +124,7 @@ func NewValidationError(message, userMessage string, ctx *RequestContext) *Custo
 			"operation": ctx.Operation,
 		},
 		Timestamp: time.Now(),
+		Cause:     nil,
 	}
 }
 
@@ -129,5 +141,6 @@ func NewCacheError(message, userMessage string, ctx *RequestContext) *CustomErro
 			"operation": ctx.Operation,
 		},
 		Timestamp: time.Now(),
+		Cause:     nil,
 	}
 }

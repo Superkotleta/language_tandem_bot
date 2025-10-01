@@ -2,6 +2,7 @@ package validation_test
 
 import (
 	"testing"
+	"time"
 
 	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
@@ -29,12 +30,30 @@ func TestValidationServiceUserValidation(t *testing.T) {
 
 		// Создаем валидного пользователя
 		user := &models.User{
-			ID:                    1,
-			TelegramID:            123456789,
-			FirstName:             "John",
-			Username:              "john_doe",
-			InterfaceLanguageCode: "en",
-			State:                 "idle",
+			ID:                     1,
+			TelegramID:             123456789,
+			FirstName:              "John",
+			Username:               "john_doe",
+			NativeLanguageCode:     "en",
+			TargetLanguageCode:     "ru",
+			TargetLanguageLevel:    "beginner",
+			InterfaceLanguageCode:  "en",
+			State:                  "idle",
+			Status:                 "active",
+			ProfileCompletionLevel: 50,
+			CreatedAt:              time.Now(),
+			UpdatedAt:              time.Now(),
+			Interests:              []int{1, 2},
+			TimeAvailability: &models.TimeAvailability{
+				DayType:      "any",
+				SpecificDays: []string{},
+				TimeSlot:     "any",
+			},
+			FriendshipPreferences: &models.FriendshipPreferences{
+				ActivityType:       "casual_chat",
+				CommunicationStyle: "text",
+				CommunicationFreq:  "weekly",
+			},
 		}
 
 		// Валидация должна пройти успешно
@@ -49,12 +68,30 @@ func TestValidationServiceUserValidation(t *testing.T) {
 
 		// Создаем невалидного пользователя
 		user := &models.User{
-			ID:                    1,
-			TelegramID:            0,                  // Невалидный Telegram ID
-			FirstName:             "",                 // Пустое имя
-			Username:              "invalid@username", // Невалидный username
-			InterfaceLanguageCode: "invalid",          // Невалидный код языка
-			State:                 "invalid_state",    // Невалидное состояние
+			ID:                     1,
+			TelegramID:             0,                  // Невалидный Telegram ID
+			FirstName:              "",                 // Пустое имя
+			Username:               "invalid@username", // Невалидный username
+			NativeLanguageCode:     "en",
+			TargetLanguageCode:     "ru",
+			TargetLanguageLevel:    "beginner",
+			InterfaceLanguageCode:  "invalid",       // Невалидный код языка
+			State:                  "invalid_state", // Невалидное состояние
+			Status:                 "active",
+			ProfileCompletionLevel: 0,
+			CreatedAt:              time.Now(),
+			UpdatedAt:              time.Now(),
+			Interests:              []int{},
+			TimeAvailability: &models.TimeAvailability{
+				DayType:      "any",
+				SpecificDays: []string{},
+				TimeSlot:     "any",
+			},
+			FriendshipPreferences: &models.FriendshipPreferences{
+				ActivityType:       "casual_chat",
+				CommunicationStyle: "text",
+				CommunicationFreq:  "weekly",
+			},
 		}
 
 		// Валидация должна вернуть ошибку

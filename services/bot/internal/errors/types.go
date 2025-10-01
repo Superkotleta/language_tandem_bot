@@ -73,6 +73,7 @@ func NewCustomError(errorType ErrorType, message, userMessage, requestID string)
 		Context:     make(map[string]interface{}),
 		RequestID:   requestID,
 		Timestamp:   time.Now(),
+		Cause:       nil,
 	}
 }
 
@@ -92,7 +93,15 @@ func (e *CustomError) WithCause(cause error) *CustomError {
 
 // IsTelegramAPIError проверяет, является ли ошибка ошибкой Telegram API.
 func IsTelegramAPIError(err error) bool {
-	customErr := &CustomError{}
+	customErr := &CustomError{
+		Type:        ErrorTypeInternal,
+		Message:     "check error",
+		UserMessage: "internal error",
+		Context:     map[string]interface{}{},
+		RequestID:   "",
+		Timestamp:   time.Now(),
+		Cause:       nil,
+	}
 	if errors.As(err, &customErr) {
 		return customErr.Type == ErrorTypeTelegramAPI
 	}
@@ -102,7 +111,15 @@ func IsTelegramAPIError(err error) bool {
 
 // IsDatabaseError проверяет, является ли ошибка ошибкой базы данных.
 func IsDatabaseError(err error) bool {
-	customErr := &CustomError{}
+	customErr := &CustomError{
+		Type:        ErrorTypeInternal,
+		Message:     "check error",
+		UserMessage: "internal error",
+		Context:     map[string]interface{}{},
+		RequestID:   "",
+		Timestamp:   time.Now(),
+		Cause:       nil,
+	}
 	if errors.As(err, &customErr) {
 		return customErr.Type == ErrorTypeDatabase
 	}
@@ -112,7 +129,15 @@ func IsDatabaseError(err error) bool {
 
 // IsValidationError проверяет, является ли ошибка ошибкой валидации.
 func IsValidationError(err error) bool {
-	customErr := &CustomError{}
+	customErr := &CustomError{
+		Type:        ErrorTypeInternal,
+		Message:     "check error",
+		UserMessage: "internal error",
+		Context:     map[string]interface{}{},
+		RequestID:   "",
+		Timestamp:   time.Now(),
+		Cause:       nil,
+	}
 	if errors.As(err, &customErr) {
 		return customErr.Type == ErrorTypeValidation
 	}
@@ -122,7 +147,15 @@ func IsValidationError(err error) bool {
 
 // IsCacheError проверяет, является ли ошибка ошибкой кэша.
 func IsCacheError(err error) bool {
-	customErr := &CustomError{}
+	customErr := &CustomError{
+		Type:        ErrorTypeInternal,
+		Message:     "check error",
+		UserMessage: "internal error",
+		Context:     map[string]interface{}{},
+		RequestID:   "",
+		Timestamp:   time.Now(),
+		Cause:       nil,
+	}
 	if errors.As(err, &customErr) {
 		return customErr.Type == ErrorTypeCache
 	}
@@ -132,25 +165,52 @@ func IsCacheError(err error) bool {
 
 // Статические ошибки для замены динамических.
 var (
-	// Ошибки валидации.
-	ErrInterestAlreadySelected     = NewCustomError(ErrorTypeValidation, "интерес уже выбран", "Этот интерес уже выбран", "")
-	ErrMaxPrimaryInterestsReached  = NewCustomError(ErrorTypeValidation, "достигнут максимум основных интересов", "Достигнут максимум основных интересов", "")
-	ErrMinPrimaryInterestsRequired = NewCustomError(ErrorTypeValidation, "необходимо выбрать минимум основных интересов", "Необходимо выбрать минимум основных интересов", "")
+	// ErrInterestAlreadySelected - ошибка валидации.
+	ErrInterestAlreadySelected = NewCustomError(
+		ErrorTypeValidation, "интерес уже выбран", "Этот интерес уже выбран", "",
+	)
+	// ErrMaxPrimaryInterestsReached - ошибка валидации.
+	ErrMaxPrimaryInterestsReached = NewCustomError(
+		ErrorTypeValidation, "достигнут максимум основных интересов",
+		"Достигнут максимум основных интересов", "",
+	)
+	// ErrMinPrimaryInterestsRequired - ошибка валидации.
+	ErrMinPrimaryInterestsRequired = NewCustomError(
+		ErrorTypeValidation, "необходимо выбрать минимум основных интересов",
+		"Необходимо выбрать минимум основных интересов", "",
+	)
 
-	// Ошибки файловой системы.
+	// ErrUnsafeFilePath - ошибка файловой системы.
 	ErrUnsafeFilePath = NewCustomError(ErrorTypeInternal, "небезопасный путь к файлу", "Ошибка доступа к файлу", "")
 
-	// Ошибки отзывов.
-	ErrFeedbackTooShort = NewCustomError(ErrorTypeValidation, "отзыв слишком короткий", "Отзыв должен содержать минимум символов", "")
-	ErrFeedbackTooLong  = NewCustomError(ErrorTypeValidation, "отзыв слишком длинный", "Отзыв превышает максимальную длину", "")
+	// ErrFeedbackTooShort - ошибка отзывов.
+	ErrFeedbackTooShort = NewCustomError(
+		ErrorTypeValidation, "отзыв слишком короткий", "Отзыв должен содержать минимум символов", "",
+	)
+	// ErrFeedbackTooLong - ошибка отзывов.
+	ErrFeedbackTooLong = NewCustomError(
+		ErrorTypeValidation, "отзыв слишком длинный", "Отзыв превышает максимальную длину", "",
+	)
+	// ErrFeedbackNotFound - ошибка отзывов.
 	ErrFeedbackNotFound = NewCustomError(ErrorTypeDatabase, "отзыв не найден", "Отзыв не найден в базе данных", "")
 
-	// Ошибки пользователей.
+	// ErrUserNotFound - ошибка пользователей.
 	ErrUserNotFound = NewCustomError(ErrorTypeDatabase, "пользователь не найден", "Пользователь не найден", "")
 
-	// Ошибки тестов.
-	ErrTelegramAPIRateLimit     = NewCustomError(ErrorTypeTelegramAPI, "превышен лимит запросов Telegram API", "Превышен лимит запросов", "")
-	ErrDatabaseConnectionFailed = NewCustomError(ErrorTypeDatabase, "ошибка подключения к базе данных", "Ошибка подключения к базе данных", "")
-	ErrInvalidUserInput         = NewCustomError(ErrorTypeValidation, "некорректные данные пользователя", "Некорректные данные", "")
-	ErrRedisConnectionFailed    = NewCustomError(ErrorTypeCache, "ошибка подключения к Redis", "Ошибка подключения к кэшу", "")
+	// ErrTelegramAPIRateLimit - ошибка тестов.
+	ErrTelegramAPIRateLimit = NewCustomError(
+		ErrorTypeTelegramAPI, "превышен лимит запросов Telegram API", "Превышен лимит запросов", "",
+	)
+	// ErrDatabaseConnectionFailed - ошибка тестов.
+	ErrDatabaseConnectionFailed = NewCustomError(
+		ErrorTypeDatabase, "ошибка подключения к базе данных", "Ошибка подключения к базе данных", "",
+	)
+	// ErrInvalidUserInput - ошибка тестов.
+	ErrInvalidUserInput = NewCustomError(
+		ErrorTypeValidation, "некорректные данные пользователя", "Некорректные данные", "",
+	)
+	// ErrRedisConnectionFailed - ошибка тестов.
+	ErrRedisConnectionFailed = NewCustomError(
+		ErrorTypeCache, "ошибка подключения к Redis", "Ошибка подключения к кэшу", "",
+	)
 )

@@ -31,7 +31,15 @@ func TestErrorHandlingExample(t *testing.T) {
 	}
 
 	// Проверяем, что это CustomError
-	customErr := &errorsPkg.CustomError{}
+	customErr := &errorsPkg.CustomError{
+		Type:        errorsPkg.ErrorTypeTelegramAPI,
+		Message:     "test message",
+		UserMessage: "test user message",
+		Context:     map[string]interface{}{},
+		RequestID:   "test-request-id",
+		Timestamp:   time.Now(),
+		Cause:       nil,
+	}
 	if errors.As(handledErr, &customErr) {
 		validateCustomError(t, customErr)
 	} else {

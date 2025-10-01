@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"language-exchange-bot/internal/models"
+	"time"
 
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
@@ -88,7 +89,14 @@ func (db *DB) GetLanguages() ([]*models.Language, error) {
 	var languages []*models.Language
 
 	for rows.Next() {
-		lang := &models.Language{}
+		lang := &models.Language{
+			ID:                  0,
+			Code:                "",
+			NameNative:          "",
+			NameEn:              "",
+			IsInterfaceLanguage: false,
+			CreatedAt:           time.Now(),
+		}
 
 		err := rows.Scan(&lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn)
 		if err != nil {
@@ -118,7 +126,14 @@ func (db *DB) GetLanguageByCode(code string) (*models.Language, error) {
 		FROM languages
 		WHERE code = $1
 	`
-	lang := &models.Language{}
+	lang := &models.Language{
+		ID:                  0,
+		Code:                "",
+		NameNative:          "",
+		NameEn:              "",
+		IsInterfaceLanguage: false,
+		CreatedAt:           time.Now(),
+	}
 
 	err := db.conn.QueryRowContext(context.Background(), query, code).Scan(
 		&lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn,
@@ -161,7 +176,14 @@ func (db *DB) GetInterests() ([]*models.Interest, error) {
 	var interests []*models.Interest
 
 	for rows.Next() {
-		interest := &models.Interest{}
+		interest := &models.Interest{
+			ID:           0,
+			KeyName:      "",
+			CategoryID:   0,
+			DisplayOrder: 0,
+			Type:         "",
+			CreatedAt:    time.Now(),
+		}
 
 		err := rows.Scan(&interest.ID, &interest.KeyName, &interest.Type)
 		if err != nil {
@@ -186,7 +208,32 @@ func (db *DB) GetInterests() ([]*models.Interest, error) {
 
 // GetUserByTelegramID возвращает пользователя по Telegram ID.
 func (db *DB) GetUserByTelegramID(telegramID int64) (*models.User, error) {
-	user := &models.User{}
+	user := &models.User{
+		ID:                     0,
+		TelegramID:             0,
+		Username:               "",
+		FirstName:              "",
+		NativeLanguageCode:     "",
+		TargetLanguageCode:     "",
+		TargetLanguageLevel:    "",
+		InterfaceLanguageCode:  "",
+		State:                  "",
+		Status:                 "",
+		ProfileCompletionLevel: 0,
+		CreatedAt:              time.Now(),
+		UpdatedAt:              time.Now(),
+		Interests:              []int{},
+		TimeAvailability: &models.TimeAvailability{
+			DayType:      "any",
+			SpecificDays: []string{},
+			TimeSlot:     "any",
+		},
+		FriendshipPreferences: &models.FriendshipPreferences{
+			ActivityType:       "casual_chat",
+			CommunicationStyle: "text",
+			CommunicationFreq:  "weekly",
+		},
+	}
 
 	err := db.conn.QueryRowContext(context.Background(), `
 		SELECT id, telegram_id, username, first_name,
@@ -248,7 +295,32 @@ func (db *DB) SaveUserInterests(userID int64, interestIDs []int) error {
 
 // FindOrCreateUser находит или создает пользователя.
 func (db *DB) FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error) {
-	user := &models.User{}
+	user := &models.User{
+		ID:                     0,
+		TelegramID:             0,
+		Username:               "",
+		FirstName:              "",
+		NativeLanguageCode:     "",
+		TargetLanguageCode:     "",
+		TargetLanguageLevel:    "",
+		InterfaceLanguageCode:  "",
+		State:                  "",
+		Status:                 "",
+		ProfileCompletionLevel: 0,
+		CreatedAt:              time.Now(),
+		UpdatedAt:              time.Now(),
+		Interests:              []int{},
+		TimeAvailability: &models.TimeAvailability{
+			DayType:      "any",
+			SpecificDays: []string{},
+			TimeSlot:     "any",
+		},
+		FriendshipPreferences: &models.FriendshipPreferences{
+			ActivityType:       "casual_chat",
+			CommunicationStyle: "text",
+			CommunicationFreq:  "weekly",
+		},
+	}
 
 	err := db.conn.QueryRowContext(context.Background(), `
         INSERT INTO users (telegram_id, username, first_name, interface_language_code)

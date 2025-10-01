@@ -471,10 +471,12 @@ func (bl *BatchLoader) processUserDataRows(
 		// Добавляем язык, если он есть
 		if langID.Valid && langCode.Valid {
 			lang := &models.Language{
-				ID:         int(langID.Int64),
-				Code:       langCode.String,
-				NameNative: langNameNative.String,
-				NameEn:     langNameEn.String,
+				ID:                  int(langID.Int64),
+				Code:                langCode.String,
+				NameNative:          langNameNative.String,
+				NameEn:              langNameEn.String,
+				IsInterfaceLanguage: false,
+				CreatedAt:           time.Now(),
 			}
 			languages = append(languages, lang)
 		}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math"
 
 	"language-exchange-bot/internal/config"
 	errorsPkg "language-exchange-bot/internal/errors"
@@ -88,36 +87,7 @@ func (s *InterestService) GetInterestsByCategory(categoryID int) ([]models.Inter
 		return nil, fmt.Errorf("failed to query interests by category: %w", err)
 	}
 
-	if err := rows.Err(); err != nil {
-		rows.Close()
-
-		return nil, fmt.Errorf("rows error: %w", err)
-	}
-
-	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
-			// TODO: интегрировать с системой логирования
-		}
-	}()
-
-	var interests []models.Interest
-
-	for rows.Next() {
-		var interest models.Interest
-
-		err := rows.Scan(&interest.ID, &interest.KeyName, &interest.CategoryID,
-			&interest.DisplayOrder, &interest.Type, &interest.CreatedAt)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan interest: %w", err)
-		}
-
-		interests = append(interests, interest)
-	}
-
-	return interests, nil
+	return s.scanInterests(rows)
 }
 
 // GetUserInterestSelections возвращает выборы пользователя.
@@ -134,36 +104,7 @@ func (s *InterestService) GetUserInterestSelections(userID int) ([]models.Intere
 		return nil, fmt.Errorf("failed to query user interests: %w", err)
 	}
 
-	if err := rows.Err(); err != nil {
-		rows.Close()
-
-		return nil, fmt.Errorf("rows error: %w", err)
-	}
-
-	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
-			// TODO: интегрировать с системой логирования
-		}
-	}()
-
-	var selections []models.InterestSelection
-
-	for rows.Next() {
-		var selection models.InterestSelection
-
-		err := rows.Scan(&selection.ID, &selection.UserID, &selection.InterestID,
-			&selection.IsPrimary, &selection.SelectionOrder, &selection.CreatedAt)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan user interest selection: %w", err)
-		}
-
-		selections = append(selections, selection)
-	}
-
-	return selections, nil
+	return s.scanInterestSelections(rows)
 }
 
 // AddUserInterestSelection добавляет выбор пользователя.
@@ -321,64 +262,6 @@ type UserInterestMaps struct {
 	PrimaryInterests map[int]bool
 }
 
-// buildUserInterestMaps создает карты интересов пользователя.
-func (s *InterestService) buildUserInterestMaps(userID int) (*UserInterestMaps, error) {
-	interests, err := s.GetUserInterestSelections(userID)
-	if err != nil {
-		return nil, fmt.Errorf("operation failed: %w", err)
-	}
-
-	allMap := make(map[int]bool)
-	primaryMap := make(map[int]bool)
-
-	for _, selection := range interests {
-		allMap[selection.InterestID] = true
-		if selection.IsPrimary {
-			primaryMap[selection.InterestID] = true
-		}
-	}
-
-	return &UserInterestMaps{
-		AllInterests:     allMap,
-		PrimaryInterests: primaryMap,
-	}, nil
-}
-
-// calculateCompatibilityScore вычисляет балл совместимости.
-func (s *InterestService) calculateCompatibilityScore(
-	user1Maps, user2Maps *UserInterestMaps,
-	config *config.MatchingConfig,
-) int {
-	score := 0
-
-	for interestID := range user1Maps.AllInterests {
-		if user2Maps.AllInterests[interestID] {
-			score += s.calculateInterestScore(interestID, user1Maps, user2Maps, config)
-		}
-	}
-
-	return score
-}
-
-// calculateInterestScore вычисляет балл за конкретный интерес.
-func (s *InterestService) calculateInterestScore(
-	interestID int,
-	user1Maps, user2Maps *UserInterestMaps,
-	config *config.MatchingConfig,
-) int {
-	switch {
-	case user1Maps.PrimaryInterests[interestID] && user2Maps.PrimaryInterests[interestID]:
-		// Оба пользователя считают этот интерес основным
-		return config.PrimaryInterestScore * primaryInterestMultiplier
-	case user1Maps.PrimaryInterests[interestID] || user2Maps.PrimaryInterests[interestID]:
-		// Один из пользователей считает основным
-		return config.PrimaryInterestScore + config.AdditionalInterestScore
-	default:
-		// Оба считают дополнительным
-		return config.AdditionalInterestScore
-	}
-}
-
 // GetUserInterestSummary возвращает сводку интересов пользователя.
 func (s *InterestService) GetUserInterestSummary(userID int) (*models.UserInterestSummary, error) {
 	selections, err := s.GetUserInterestSelections(userID)
@@ -460,17 +343,17 @@ func (s *InterestService) ValidateInterestSelection(userID, totalInterests int) 
 		return fmt.Errorf("operation failed: %w", err)
 	}
 
-	// Вычисляем рекомендуемое количество основных интересов
-	recommendedPrimary := int(math.Ceil(float64(totalInterests) * limits.PrimaryPercentage))
+	// // Вычисляем рекомендуемое количество основных интересов
+	// recommendedPrimary := int(math.Ceil(float64(totalInterests) * limits.PrimaryPercentage))
 
-	// Ограничиваем минимумом и максимумом
-	if recommendedPrimary < limits.MinPrimaryInterests {
-		recommendedPrimary = limits.MinPrimaryInterests
-	}
+	// // Ограничиваем минимумом и максимумом
+	// if recommendedPrimary < limits.MinPrimaryInterests {
+	// 	recommendedPrimary = limits.MinPrimaryInterests
+	// }
 
-	if recommendedPrimary > limits.MaxPrimaryInterests {
-		recommendedPrimary = limits.MaxPrimaryInterests
-	}
+	// if recommendedPrimary > limits.MaxPrimaryInterests {
+	// 	recommendedPrimary = limits.MaxPrimaryInterests
+	// }
 
 	// Логируем рекомендацию для отладки
 	// Логируем рекомендуемое количество основных интересов
@@ -512,4 +395,132 @@ func (s *InterestService) GetInterestCategoryByID(categoryID int) (*models.Inter
 	}
 
 	return &category, nil
+}
+
+// buildUserInterestMaps создает карты интересов пользователя.
+func (s *InterestService) buildUserInterestMaps(userID int) (*UserInterestMaps, error) {
+	interests, err := s.GetUserInterestSelections(userID)
+	if err != nil {
+		return nil, fmt.Errorf("operation failed: %w", err)
+	}
+
+	allMap := make(map[int]bool)
+	primaryMap := make(map[int]bool)
+
+	for _, selection := range interests {
+		allMap[selection.InterestID] = true
+		if selection.IsPrimary {
+			primaryMap[selection.InterestID] = true
+		}
+	}
+
+	return &UserInterestMaps{
+		AllInterests:     allMap,
+		PrimaryInterests: primaryMap,
+	}, nil
+}
+
+// calculateCompatibilityScore вычисляет балл совместимости.
+func (s *InterestService) calculateCompatibilityScore(
+	user1Maps, user2Maps *UserInterestMaps,
+	config *config.MatchingConfig,
+) int {
+	score := 0
+
+	for interestID := range user1Maps.AllInterests {
+		if user2Maps.AllInterests[interestID] {
+			score += s.calculateInterestScore(interestID, user1Maps, user2Maps, config)
+		}
+	}
+
+	return score
+}
+
+// calculateInterestScore вычисляет балл за конкретный интерес.
+func (s *InterestService) calculateInterestScore(
+	interestID int,
+	user1Maps, user2Maps *UserInterestMaps,
+	config *config.MatchingConfig,
+) int {
+	switch {
+	case user1Maps.PrimaryInterests[interestID] && user2Maps.PrimaryInterests[interestID]:
+		// Оба пользователя считают этот интерес основным
+		return config.PrimaryInterestScore * primaryInterestMultiplier
+	case user1Maps.PrimaryInterests[interestID] || user2Maps.PrimaryInterests[interestID]:
+		// Один из пользователей считает основным
+		return config.PrimaryInterestScore + config.AdditionalInterestScore
+	default:
+		// Оба считают дополнительным
+		return config.AdditionalInterestScore
+	}
+}
+
+// scanInterests сканирует строки интересов.
+func (s *InterestService) scanInterests(rows *sql.Rows) ([]models.Interest, error) {
+	if err := rows.Err(); err != nil {
+		rows.Close()
+
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			// Логируем ошибку закрытия, но не возвращаем её
+			// Логируем предупреждение о неудачном закрытии rows
+			// Интегрировать с системой логирования
+		}
+	}()
+
+	var interests []models.Interest
+
+	for rows.Next() {
+		var interest models.Interest
+
+		err := rows.Scan(&interest.ID, &interest.KeyName, &interest.CategoryID,
+			&interest.DisplayOrder, &interest.Type, &interest.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan interest: %w", err)
+		}
+
+		interests = append(interests, interest)
+	}
+
+	return interests, nil
+}
+
+// scanInterestSelections сканирует строки выборов интересов.
+func (s *InterestService) scanInterestSelections(rows *sql.Rows) ([]models.InterestSelection, error) {
+	if err := rows.Err(); err != nil {
+		if closeErr := rows.Close(); closeErr != nil {
+			// Логируем ошибку закрытия, но не возвращаем её
+		}
+
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			// Логируем ошибку закрытия, но не возвращаем её
+			// Логируем предупреждение о неудачном закрытии rows
+			// Интегрировать с системой логирования
+		}
+	}()
+
+	var selections []models.InterestSelection
+
+	for rows.Next() {
+		var selection models.InterestSelection
+
+		err := rows.Scan(&selection.ID, &selection.UserID, &selection.InterestID,
+			&selection.IsPrimary, &selection.SelectionOrder, &selection.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user interest selection: %w", err)
+		}
+
+		selections = append(selections, selection)
+	}
+
+	return selections, nil
 }

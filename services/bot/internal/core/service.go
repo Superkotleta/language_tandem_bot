@@ -62,14 +62,15 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 	}
 
 	return &BotService{
-		DB:                  &databaseAdapter{db: db}, // Оборачиваем в адаптер
-		Localizer:           localization.NewLocalizer(db.GetConnection()),
-		Cache:               cacheService,
-		InvalidationService: invalidationService,
-		MetricsService:      metricsService,
-		BatchLoader:         batchLoader,
-		Service:             validationService,
-		LoggingService:      loggingService,
+		DB:                       &databaseAdapter{db: db}, // Оборачиваем в адаптер
+		Localizer:                localization.NewLocalizer(db.GetConnection()),
+		Cache:                    cacheService,
+		InvalidationService:      invalidationService,
+		MetricsService:           metricsService,
+		BatchLoader:              batchLoader,
+		Service:                  validationService,
+		LoggingService:           loggingService,
+		FeedbackNotificationFunc: nil,
 	}
 }
 
@@ -104,14 +105,15 @@ func NewBotServiceWithRedis(
 	}
 
 	return &BotService{
-		DB:                  &databaseAdapter{db: db}, // Оборачиваем в адаптер
-		Localizer:           localization.NewLocalizer(db.GetConnection()),
-		Cache:               redisCache,
-		InvalidationService: invalidationService,
-		MetricsService:      metricsService,
-		BatchLoader:         batchLoader,
-		Service:             validationService,
-		LoggingService:      loggingService,
+		DB:                       &databaseAdapter{db: db}, // Оборачиваем в адаптер
+		Localizer:                localization.NewLocalizer(db.GetConnection()),
+		Cache:                    redisCache,
+		InvalidationService:      invalidationService,
+		MetricsService:           metricsService,
+		BatchLoader:              batchLoader,
+		Service:                  validationService,
+		LoggingService:           loggingService,
+		FeedbackNotificationFunc: nil,
 	}, nil
 }
 
@@ -327,8 +329,15 @@ func (a *databaseAdapter) Close() error {
 // NewBotServiceWithInterface создает BotService с интерфейсом Database (для тестов).
 func NewBotServiceWithInterface(db database.Database, localizer *localization.Localizer) *BotService {
 	return &BotService{
-		DB:        db,
-		Localizer: localizer,
+		DB:                       db,
+		Localizer:                localizer,
+		Cache:                    nil,
+		InvalidationService:      nil,
+		MetricsService:           nil,
+		BatchLoader:              nil,
+		Service:                  nil,
+		LoggingService:           nil,
+		FeedbackNotificationFunc: nil,
 	}
 }
 

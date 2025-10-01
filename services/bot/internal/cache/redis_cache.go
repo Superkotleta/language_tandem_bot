@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"language-exchange-bot/internal/models"
 
@@ -26,9 +27,42 @@ func NewRedisCacheService(redisURL, password string, db int, config *Config) (*R
 	}
 
 	client := redis.NewClient(&redis.Options{
-		Addr:     redisURL,
-		Password: password,
-		DB:       db,
+		Addr:                         redisURL,
+		Password:                     password,
+		DB:                           db,
+		Network:                      "tcp",
+		ClientName:                   "",
+		Dialer:                       nil,
+		OnConnect:                    nil,
+		Protocol:                     3,
+		Username:                     "",
+		CredentialsProvider:          nil,
+		CredentialsProviderContext:   nil,
+		StreamingCredentialsProvider: nil,
+		MaxRetries:                   3,
+		MinRetryBackoff:              8 * time.Millisecond,
+		MaxRetryBackoff:              512 * time.Millisecond,
+		DialTimeout:                  5 * time.Second,
+		ReadTimeout:                  3 * time.Second,
+		WriteTimeout:                 3 * time.Second,
+		ContextTimeoutEnabled:        false,
+		ReadBufferSize:               0,
+		WriteBufferSize:              0,
+		PoolFIFO:                     false,
+		PoolSize:                     10,
+		PoolTimeout:                  0,
+		MinIdleConns:                 0,
+		MaxIdleConns:                 0,
+		MaxActiveConns:               0,
+		ConnMaxIdleTime:              0,
+		ConnMaxLifetime:              0,
+		TLSConfig:                    nil,
+		Limiter:                      nil,
+		DisableIndentity:             false,
+		DisableIdentity:              false,
+		IdentitySuffix:               "",
+		UnstableResp3:                false,
+		FailingTimeoutSeconds:        0,
 	})
 
 	ctx := context.Background()
@@ -350,7 +384,11 @@ func (r *RedisCacheService) GetCacheStats() Stats {
 	if err != nil {
 		log.Printf("Redis error getting key count: %v", err)
 
-		return Stats{}
+		return Stats{
+			Hits:   0,
+			Misses: 0,
+			Size:   0,
+		}
 	}
 
 	return Stats{

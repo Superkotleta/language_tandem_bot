@@ -104,14 +104,14 @@ func (l *Localizer) loadLocaleFile(cleanPath, lang string) error {
 	if err != nil {
 		// Логируем ошибку чтения файла
 		// TODO: интегрировать с системой логирования
-		return nil
+		return fmt.Errorf("failed to read file: %w", err)
 	}
 
 	var dict map[string]string
 	if err := json.Unmarshal(data, &dict); err != nil {
 		// Логируем ошибку парсинга файла
 		// TODO: интегрировать с системой логирования
-		return nil
+		return fmt.Errorf("failed to unmarshal file: %w", err)
 	}
 
 	l.translations[lang] = dict
@@ -210,7 +210,7 @@ func (l *Localizer) loadInterestsFromDB(lang string) (map[int]string, error) {
 		}
 	}()
 
-	l.scanInterestsRows(rows, interests, lang)
+	l.scanInterestsRows(rows, interests)
 
 	return interests, nil
 }
@@ -230,7 +230,7 @@ func (l *Localizer) getInterestsQuery() string {
 }
 
 // scanInterestsRows сканирует строки результата запроса интересов.
-func (l *Localizer) scanInterestsRows(rows *sql.Rows, interests map[int]string, lang string) {
+func (l *Localizer) scanInterestsRows(rows *sql.Rows, interests map[int]string) {
 	for rows.Next() {
 		var id int
 

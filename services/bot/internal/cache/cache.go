@@ -54,6 +54,12 @@ func NewService(config *Config) *Service {
 		stats:        make(map[string]*Entry),
 		config:       config,
 		stopCleanup:  make(chan struct{}),
+		mutex:        sync.RWMutex{},
+		cacheStats: Stats{
+			Hits:   0,
+			Misses: 0,
+			Size:   0,
+		},
 	}
 
 	// Запускаем фоновую очистку истекших записей
@@ -325,6 +331,26 @@ func (cs *Service) GetCacheStats() Stats {
 	}
 }
 
+// Stop останавливает кэш-сервис.
+func (cs *Service) Stop() {
+	close(cs.stopCleanup)
+	log.Printf("Cache: Service stopped")
+}
+
+// String возвращает строковое представление статистики кэша.
+func (cs *Service) String() string {
+	stats := cs.GetCacheStats()
+
+	hitRate := float64(0)
+
+	if stats.Hits+stats.Misses > 0 {
+		hitRate = float64(stats.Hits) / float64(stats.Hits+stats.Misses) * percentageMultiplier
+	}
+
+	return fmt.Sprintf("Cache Stats: Hits=%d, Misses=%d, HitRate=%.2f%%, Size=%d",
+		stats.Hits, stats.Misses, hitRate, stats.Size)
+}
+
 // updateSize обновляет размер кэша.
 func (cs *Service) updateSize() {
 	cs.cacheStats.Size = len(cs.languages) + len(cs.interests) + len(cs.translations) + len(cs.users) + len(cs.stats)
@@ -433,24 +459,4 @@ func (cs *Service) cleanupStats() int {
 	}
 
 	return cleaned
-}
-
-// Stop останавливает кэш-сервис.
-func (cs *Service) Stop() {
-	close(cs.stopCleanup)
-	log.Printf("Cache: Service stopped")
-}
-
-// String возвращает строковое представление статистики кэша.
-func (cs *Service) String() string {
-	stats := cs.GetCacheStats()
-
-	hitRate := float64(0)
-
-	if stats.Hits+stats.Misses > 0 {
-		hitRate = float64(stats.Hits) / float64(stats.Hits+stats.Misses) * percentageMultiplier
-	}
-
-	return fmt.Sprintf("Cache Stats: Hits=%d, Misses=%d, HitRate=%.2f%%, Size=%d",
-		stats.Hits, stats.Misses, hitRate, stats.Size)
 }

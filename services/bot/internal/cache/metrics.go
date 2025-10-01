@@ -33,7 +33,14 @@ type MetricsService struct {
 // NewMetricsService создает новый сервис метрик.
 func NewMetricsService(cache ServiceInterface) *MetricsService {
 	return &MetricsService{
-		cache: cache,
+		cache:           cache,
+		avgResponseTime: 0,
+		totalRequests:   0,
+		errorCount:      0,
+		memoryUsage:     0,
+		maxMemoryUsage:  0,
+		cacheEfficiency: 0,
+		cleanupCount:    0,
 	}
 }
 
@@ -154,6 +161,19 @@ func (ms *MetricsService) GetMetricsSummary() string {
 		ms.errorCount, errorRate, stats.Size, ms.avgResponseTime)
 }
 
+// ResetMetrics сбрасывает все метрики.
+func (ms *MetricsService) ResetMetrics() {
+	ms.avgResponseTime = 0
+	ms.totalRequests = 0
+	ms.errorCount = 0
+	ms.memoryUsage = 0
+	ms.maxMemoryUsage = 0
+	ms.cacheEfficiency = 0
+	ms.cleanupCount = 0
+
+	log.Printf("Metrics: All metrics reset")
+}
+
 // updateCacheEfficiency обновляет эффективность кэша.
 func (ms *MetricsService) updateCacheEfficiency() {
 	stats := ms.cache.GetCacheStats()
@@ -210,17 +230,4 @@ func (ms *MetricsService) getCleanupFrequency() string {
 	}
 
 	return fmt.Sprintf("%d cleanups", ms.cleanupCount)
-}
-
-// ResetMetrics сбрасывает все метрики.
-func (ms *MetricsService) ResetMetrics() {
-	ms.avgResponseTime = 0
-	ms.totalRequests = 0
-	ms.errorCount = 0
-	ms.memoryUsage = 0
-	ms.maxMemoryUsage = 0
-	ms.cacheEfficiency = 0
-	ms.cleanupCount = 0
-
-	log.Printf("Metrics: All metrics reset")
 }
