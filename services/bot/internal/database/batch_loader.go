@@ -51,8 +51,10 @@ func (bl *BatchLoader) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load users with interests: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -155,8 +157,10 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load interests with translations: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -214,8 +218,10 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (m
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load languages with translations: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -269,8 +275,10 @@ func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load user interests: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -326,8 +334,10 @@ func (bl *BatchLoader) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.Us
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load users: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -371,8 +381,10 @@ func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user with all data: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 

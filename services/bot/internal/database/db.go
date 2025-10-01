@@ -69,8 +69,10 @@ func (db *DB) GetLanguages() ([]*models.Language, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get languages: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -140,8 +142,10 @@ func (db *DB) GetInterests() ([]*models.Interest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get interests: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -265,10 +269,10 @@ func (db *DB) FindOrCreateUser(telegramID int64, username, firstName string) (*m
 		&user.InterfaceLanguageCode, &user.CreatedAt, &user.UpdatedAt,
 		&user.State, &user.ProfileCompletionLevel, &user.Status,
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
+
 	return user, nil
 }
 
@@ -277,10 +281,10 @@ func (db *DB) UpdateUserState(userID int, state string) error {
 	_, err := db.conn.ExecContext(context.Background(), `
         UPDATE users SET state = $1, updated_at = NOW() WHERE id = $2
     `, state, userID)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
@@ -289,10 +293,10 @@ func (db *DB) UpdateUserStatus(userID int, status string) error {
 	_, err := db.conn.ExecContext(context.Background(), `
         UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2
     `, status, userID)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
@@ -301,10 +305,10 @@ func (db *DB) UpdateUserInterfaceLanguage(userID int, langCode string) error {
 	_, err := db.conn.ExecContext(context.Background(), `
         UPDATE users SET interface_language_code = $1, updated_at = NOW() WHERE id = $2
     `, langCode, userID)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
@@ -314,10 +318,10 @@ func (db *DB) UpdateUserNativeLanguage(userID int, langCode string) error {
 		"UPDATE users SET native_language_code = $1, updated_at = NOW() WHERE id = $2",
 		langCode, userID,
 	)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
@@ -327,10 +331,10 @@ func (db *DB) UpdateUserTargetLanguage(userID int, langCode string) error {
 		"UPDATE users SET target_language_code = $1, updated_at = NOW() WHERE id = $2",
 		langCode, userID,
 	)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
@@ -340,10 +344,10 @@ func (db *DB) UpdateUserTargetLanguageLevel(userID int, level string) error {
 		"UPDATE users SET target_language_level = $1, updated_at = NOW() WHERE id = $2",
 		level, userID,
 	)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
@@ -364,10 +368,10 @@ func (db *DB) SaveUserInterest(userID, interestID int, isPrimary bool) error {
         VALUES ($1, $2, $3, NOW()) 
         ON CONFLICT (user_id, interest_id) DO NOTHING
     `, userID, interestID, isPrimary)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
@@ -380,8 +384,10 @@ func (db *DB) GetUserSelectedInterests(userID int) ([]int, error) {
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -425,10 +431,10 @@ func (db *DB) ClearUserInterests(userID int) error {
 	_, err := db.conn.ExecContext(context.Background(), `
         DELETE FROM user_interest_selections WHERE user_id = $1
     `, userID)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
@@ -498,8 +504,10 @@ func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, err
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -562,8 +570,10 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 

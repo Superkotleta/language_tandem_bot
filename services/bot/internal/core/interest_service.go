@@ -42,8 +42,10 @@ func (s *InterestService) GetInterestCategories() ([]models.InterestCategory, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to query interests: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -85,8 +87,10 @@ func (s *InterestService) GetInterestsByCategory(categoryID int) ([]models.Inter
 	if err != nil {
 		return nil, fmt.Errorf("failed to query interests by category: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -129,8 +133,10 @@ func (s *InterestService) GetUserInterestSelections(userID int) ([]models.Intere
 	if err != nil {
 		return nil, fmt.Errorf("failed to query user interests: %w", err)
 	}
+
 	if err := rows.Err(); err != nil {
 		rows.Close()
+
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
@@ -213,22 +219,24 @@ func (s *InterestService) AddUserInterestSelection(userID, interestID int, isPri
 		INSERT INTO user_interest_selections (user_id, interest_id, is_primary, selection_order)
 		VALUES ($1, $2, $3, $4)
 	`
-	_, err = s.db.ExecContext(context.Background(), insertQuery, userID, interestID, isPrimary, nextOrder)
 
+	_, err = s.db.ExecContext(context.Background(), insertQuery, userID, interestID, isPrimary, nextOrder)
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
 // RemoveUserInterestSelection удаляет выбор пользователя.
 func (s *InterestService) RemoveUserInterestSelection(userID, interestID int) error {
 	query := `DELETE FROM user_interest_selections WHERE user_id = $1 AND interest_id = $2`
-	_, err := s.db.ExecContext(context.Background(), query, userID, interestID)
 
+	_, err := s.db.ExecContext(context.Background(), query, userID, interestID)
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
@@ -256,11 +264,12 @@ func (s *InterestService) SetPrimaryInterest(userID, interestID int, isPrimary b
 	}
 
 	query := `UPDATE user_interest_selections SET is_primary = $3 WHERE user_id = $1 AND interest_id = $2`
-	_, err := s.db.ExecContext(context.Background(), query, userID, interestID, isPrimary)
 
+	_, err := s.db.ExecContext(context.Background(), query, userID, interestID, isPrimary)
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
+
 	return nil
 }
 
@@ -487,6 +496,7 @@ func (s *InterestService) ValidateInterestSelection(userID, totalInterests int) 
 // GetInterestCategoryByID возвращает категорию интереса по ID.
 func (s *InterestService) GetInterestCategoryByID(categoryID int) (*models.InterestCategory, error) {
 	var category models.InterestCategory
+
 	err := s.db.QueryRowContext(context.Background(), `
 		SELECT id, key_name, display_order, created_at 
 		FROM interest_categories 
@@ -497,7 +507,6 @@ func (s *InterestService) GetInterestCategoryByID(categoryID int) (*models.Inter
 		&category.DisplayOrder,
 		&category.CreatedAt,
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get interest category by ID %d: %w", categoryID, err)
 	}

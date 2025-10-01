@@ -55,7 +55,6 @@ func (l *Localizer) localesDirectoryExists(localesPath string) bool {
 	if _, err := os.Stat(localesPath); os.IsNotExist(err) {
 		// Логируем отсутствие директории локализации
 		// TODO: интегрировать с системой логирования
-
 		return false
 	}
 
@@ -88,7 +87,6 @@ func (l *Localizer) processLocaleFile(path string, d os.DirEntry, err error) err
 	if !l.isPathSafe(cleanPath) {
 		// Логируем небезопасный путь к файлу
 		// TODO: интегрировать с системой логирования
-
 		return nil
 	}
 
@@ -106,7 +104,6 @@ func (l *Localizer) loadLocaleFile(cleanPath, lang string) error {
 	if err != nil {
 		// Логируем ошибку чтения файла
 		// TODO: интегрировать с системой логирования
-
 		return nil
 	}
 
@@ -114,7 +111,6 @@ func (l *Localizer) loadLocaleFile(cleanPath, lang string) error {
 	if err := json.Unmarshal(data, &dict); err != nil {
 		// Логируем ошибку парсинга файла
 		// TODO: интегрировать с системой логирования
-
 		return nil
 	}
 

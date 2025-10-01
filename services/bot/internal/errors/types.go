@@ -130,25 +130,25 @@ func IsCacheError(err error) bool {
 	return false
 }
 
-// Статические ошибки для замены динамических
+// Статические ошибки для замены динамических.
 var (
-	// Ошибки валидации
+	// Ошибки валидации.
 	ErrInterestAlreadySelected     = NewCustomError(ErrorTypeValidation, "интерес уже выбран", "Этот интерес уже выбран", "")
 	ErrMaxPrimaryInterestsReached  = NewCustomError(ErrorTypeValidation, "достигнут максимум основных интересов", "Достигнут максимум основных интересов", "")
 	ErrMinPrimaryInterestsRequired = NewCustomError(ErrorTypeValidation, "необходимо выбрать минимум основных интересов", "Необходимо выбрать минимум основных интересов", "")
 
-	// Ошибки файловой системы
+	// Ошибки файловой системы.
 	ErrUnsafeFilePath = NewCustomError(ErrorTypeInternal, "небезопасный путь к файлу", "Ошибка доступа к файлу", "")
 
-	// Ошибки отзывов
+	// Ошибки отзывов.
 	ErrFeedbackTooShort = NewCustomError(ErrorTypeValidation, "отзыв слишком короткий", "Отзыв должен содержать минимум символов", "")
 	ErrFeedbackTooLong  = NewCustomError(ErrorTypeValidation, "отзыв слишком длинный", "Отзыв превышает максимальную длину", "")
 	ErrFeedbackNotFound = NewCustomError(ErrorTypeDatabase, "отзыв не найден", "Отзыв не найден в базе данных", "")
 
-	// Ошибки пользователей
+	// Ошибки пользователей.
 	ErrUserNotFound = NewCustomError(ErrorTypeDatabase, "пользователь не найден", "Пользователь не найден", "")
 
-	// Ошибки тестов
+	// Ошибки тестов.
 	ErrTelegramAPIRateLimit     = NewCustomError(ErrorTypeTelegramAPI, "превышен лимит запросов Telegram API", "Превышен лимит запросов", "")
 	ErrDatabaseConnectionFailed = NewCustomError(ErrorTypeDatabase, "ошибка подключения к базе данных", "Ошибка подключения к базе данных", "")
 	ErrInvalidUserInput         = NewCustomError(ErrorTypeValidation, "некорректные данные пользователя", "Некорректные данные", "")
