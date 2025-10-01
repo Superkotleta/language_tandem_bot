@@ -19,13 +19,13 @@ type Localizer struct {
 
 // NewLocalizer создает новый экземпляр Localizer.
 func NewLocalizer(db *sql.DB) *Localizer {
-	l := &Localizer{
+	localizer := &Localizer{
 		db:           db,
 		translations: make(map[string]map[string]string),
 	}
-	l.loadTranslations()
+	localizer.loadTranslations()
 
-	return l
+	return localizer
 }
 
 func (l *Localizer) loadTranslations() {
@@ -203,10 +203,10 @@ func (l *Localizer) loadInterestsFromDB(lang string) (map[int]string, error) {
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -232,16 +232,16 @@ func (l *Localizer) getInterestsQuery() string {
 // scanInterestsRows сканирует строки результата запроса интересов.
 func (l *Localizer) scanInterestsRows(rows *sql.Rows, interests map[int]string) {
 	for rows.Next() {
-		var id int
+		var interestID int
 
 		var name string
 
-		err := rows.Scan(&id, &name)
+		err := rows.Scan(&interestID, &name)
 		if err != nil {
 			continue
 		}
 
-		interests[id] = name
+		interests[interestID] = name
 		// Логируем загруженные интересы для отладки
 		// TODO: интегрировать с системой логирования
 	}

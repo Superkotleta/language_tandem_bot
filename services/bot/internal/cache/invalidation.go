@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"log"
 	"time"
 )
@@ -19,33 +20,33 @@ func NewInvalidationService(cache ServiceInterface) *InvalidationService {
 
 // InvalidateUserData инвалидирует все данные пользователя.
 func (is *InvalidationService) InvalidateUserData(userID int64) {
-	is.cache.InvalidateUser(userID)
+	is.cache.InvalidateUser(context.Background(), userID)
 	log.Printf("Invalidation: Cleared all data for user %d", userID)
 }
 
 // InvalidateUserProfile инвалидирует профиль пользователя.
 func (is *InvalidationService) InvalidateUserProfile(userID int64) {
-	is.cache.InvalidateUser(userID)
+	is.cache.InvalidateUser(context.Background(), userID)
 	log.Printf("Invalidation: Cleared profile for user %d", userID)
 }
 
 // InvalidateUserInterests инвалидирует интересы пользователя.
 func (is *InvalidationService) InvalidateUserInterests(userID int64) {
-	is.cache.InvalidateUser(userID)
+	is.cache.InvalidateUser(context.Background(), userID)
 	log.Printf("Invalidation: Cleared interests for user %d", userID)
 }
 
 // InvalidateUserLanguages инвалидирует языки пользователя.
 func (is *InvalidationService) InvalidateUserLanguages(userID int64) {
-	is.cache.InvalidateUser(userID)
+	is.cache.InvalidateUser(context.Background(), userID)
 	log.Printf("Invalidation: Cleared languages for user %d", userID)
 }
 
 // InvalidateStaticData инвалидирует статические данные (языки, интересы, переводы).
 func (is *InvalidationService) InvalidateStaticData() {
-	is.cache.InvalidateLanguages()
-	is.cache.InvalidateInterests()
-	is.cache.InvalidateTranslations()
+	is.cache.InvalidateLanguages(context.Background())
+	is.cache.InvalidateInterests(context.Background())
+	is.cache.InvalidateTranslations(context.Background())
 	log.Printf("Invalidation: Cleared all static data")
 }
 
@@ -87,7 +88,7 @@ func (is *InvalidationService) InvalidateExpired() {
 
 // GetInvalidationStats возвращает статистику инвалидации.
 func (is *InvalidationService) GetInvalidationStats() map[string]interface{} {
-	stats := is.cache.GetCacheStats()
+	stats := is.cache.GetCacheStats(context.Background())
 
 	return map[string]interface{}{
 		"cache_hits":   stats.Hits,

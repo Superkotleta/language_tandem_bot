@@ -168,8 +168,8 @@ func (uv *UserValidator) ValidateUserInterests(interestIDs []int) *Result {
 	}
 
 	// Валидация каждого ID интереса
-	for i, id := range interestIDs {
-		if errors := uv.validator.ValidateInterestID(id); len(errors) > 0 {
+	for index, interestID := range interestIDs {
+		if errors := uv.validator.ValidateInterestID(interestID); len(errors) > 0 {
 			for _, err := range errors {
 				result.AddError("interests", err)
 			}
@@ -177,7 +177,7 @@ func (uv *UserValidator) ValidateUserInterests(interestIDs []int) *Result {
 
 		// Проверка на дубликаты
 		for j, otherID := range interestIDs {
-			if i != j && id == otherID {
+			if index != j && interestID == otherID {
 				result.AddError("interests", "Дублирующиеся интересы не допускаются")
 
 				break

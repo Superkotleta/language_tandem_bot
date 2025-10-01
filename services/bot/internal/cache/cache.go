@@ -2,6 +2,7 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -46,7 +47,7 @@ func NewService(config *Config) *Service {
 		config = DefaultConfig()
 	}
 
-	cs := &Service{
+	cacheService := &Service{
 		languages:    make(map[string]*Entry),
 		interests:    make(map[string]*Entry),
 		translations: make(map[string]*Entry),
@@ -63,283 +64,283 @@ func NewService(config *Config) *Service {
 	}
 
 	// Запускаем фоновую очистку истекших записей
-	go cs.startCleanup()
+	go cacheService.startCleanup()
 
-	return cs
+	return cacheService
 }
 
 // GetLanguages получает языки из кэша или возвращает nil если нет в кэше.
-func (cs *Service) GetLanguages(lang string) ([]*models.Language, bool) {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+func (cacheService *Service) GetLanguages(_ context.Context, lang string) ([]*models.Language, bool) {
+	cacheService.mutex.RLock()
+	defer cacheService.mutex.RUnlock()
 
-	entry, exists := cs.languages[lang]
+	entry, exists := cacheService.languages[lang]
 	if !exists || entry.IsExpired() {
-		cs.cacheStats.Misses++
+		cacheService.cacheStats.Misses++
 
 		return nil, false
 	}
 
-	cs.cacheStats.Hits++
+	cacheService.cacheStats.Hits++
 
 	if data, ok := entry.Data.(*CachedLanguages); ok {
 		return data.Languages, true
 	}
 
-	cs.cacheStats.Misses++
+	cacheService.cacheStats.Misses++
 
 	return nil, false
 }
 
 // SetLanguages сохраняет языки в кэш.
-func (cs *Service) SetLanguages(lang string, languages []*models.Language) {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) SetLanguages(_ context.Context, lang string, languages []*models.Language) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	cs.languages[lang] = &Entry{
+	cacheService.languages[lang] = &Entry{
 		Data: &CachedLanguages{
 			Languages: languages,
 			Lang:      lang,
 		},
-		ExpiresAt: time.Now().Add(cs.config.LanguagesTTL),
+		ExpiresAt: time.Now().Add(cacheService.config.LanguagesTTL),
 	}
 
-	cs.updateSize()
+	cacheService.updateSize()
 }
 
 // GetInterests получает интересы из кэша или возвращает nil если нет в кэше.
-func (cs *Service) GetInterests(lang string) (map[int]string, bool) {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+func (cacheService *Service) GetInterests(_ context.Context, lang string) (map[int]string, bool) {
+	cacheService.mutex.RLock()
+	defer cacheService.mutex.RUnlock()
 
-	entry, exists := cs.interests[lang]
+	entry, exists := cacheService.interests[lang]
 	if !exists || entry.IsExpired() {
-		cs.cacheStats.Misses++
+		cacheService.cacheStats.Misses++
 
 		return nil, false
 	}
 
-	cs.cacheStats.Hits++
+	cacheService.cacheStats.Hits++
 
 	if data, ok := entry.Data.(*CachedInterests); ok {
 		return data.Interests, true
 	}
 
-	cs.cacheStats.Misses++
+	cacheService.cacheStats.Misses++
 
 	return nil, false
 }
 
 // SetInterests сохраняет интересы в кэш.
-func (cs *Service) SetInterests(lang string, interests map[int]string) {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) SetInterests(_ context.Context, lang string, interests map[int]string) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	cs.interests[lang] = &Entry{
+	cacheService.interests[lang] = &Entry{
 		Data: &CachedInterests{
 			Interests: interests,
 			Lang:      lang,
 		},
-		ExpiresAt: time.Now().Add(cs.config.InterestsTTL),
+		ExpiresAt: time.Now().Add(cacheService.config.InterestsTTL),
 	}
 
-	cs.updateSize()
+	cacheService.updateSize()
 }
 
 // GetUser получает пользователя из кэша или возвращает nil если нет в кэше.
-func (cs *Service) GetUser(userID int64) (*models.User, bool) {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+func (cacheService *Service) GetUser(_ context.Context, userID int64) (*models.User, bool) {
+	cacheService.mutex.RLock()
+	defer cacheService.mutex.RUnlock()
 
-	entry, exists := cs.users[userID]
+	entry, exists := cacheService.users[userID]
 	if !exists || entry.IsExpired() {
-		cs.cacheStats.Misses++
+		cacheService.cacheStats.Misses++
 
 		return nil, false
 	}
 
-	cs.cacheStats.Hits++
+	cacheService.cacheStats.Hits++
 
 	if data, ok := entry.Data.(*CachedUser); ok {
 		return data.User, true
 	}
 
-	cs.cacheStats.Misses++
+	cacheService.cacheStats.Misses++
 
 	return nil, false
 }
 
 // SetUser сохраняет пользователя в кэш.
-func (cs *Service) SetUser(user *models.User) {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) SetUser(_ context.Context, user *models.User) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	cs.users[int64(user.ID)] = &Entry{
+	cacheService.users[int64(user.ID)] = &Entry{
 		Data: &CachedUser{
 			User: user,
 			Lang: user.InterfaceLanguageCode,
 		},
-		ExpiresAt: time.Now().Add(cs.config.UsersTTL),
+		ExpiresAt: time.Now().Add(cacheService.config.UsersTTL),
 	}
 
-	cs.updateSize()
+	cacheService.updateSize()
 }
 
 // GetTranslations получает переводы из кэша или возвращает nil если нет в кэше.
-func (cs *Service) GetTranslations(lang string) (map[string]string, bool) {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+func (cacheService *Service) GetTranslations(_ context.Context, lang string) (map[string]string, bool) {
+	cacheService.mutex.RLock()
+	defer cacheService.mutex.RUnlock()
 
-	entry, exists := cs.translations[lang]
+	entry, exists := cacheService.translations[lang]
 	if !exists || entry.IsExpired() {
-		cs.cacheStats.Misses++
+		cacheService.cacheStats.Misses++
 
 		return nil, false
 	}
 
-	cs.cacheStats.Hits++
+	cacheService.cacheStats.Hits++
 
 	if data, ok := entry.Data.(map[string]string); ok {
 		return data, true
 	}
 
-	cs.cacheStats.Misses++
+	cacheService.cacheStats.Misses++
 
 	return nil, false
 }
 
 // SetTranslations сохраняет переводы в кэш.
-func (cs *Service) SetTranslations(lang string, translations map[string]string) {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) SetTranslations(_ context.Context, lang string, translations map[string]string) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	cs.translations[lang] = &Entry{
+	cacheService.translations[lang] = &Entry{
 		Data:      translations,
-		ExpiresAt: time.Now().Add(cs.config.TranslationsTTL),
+		ExpiresAt: time.Now().Add(cacheService.config.TranslationsTTL),
 	}
 
-	cs.updateSize()
+	cacheService.updateSize()
 }
 
 // GetStats получает статистику из кэша или возвращает nil если нет в кэше.
-func (cs *Service) GetStats(statsType string) (map[string]interface{}, bool) {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+func (cacheService *Service) GetStats(_ context.Context, statsType string) (map[string]interface{}, bool) {
+	cacheService.mutex.RLock()
+	defer cacheService.mutex.RUnlock()
 
-	entry, exists := cs.stats[statsType]
+	entry, exists := cacheService.stats[statsType]
 	if !exists || entry.IsExpired() {
-		cs.cacheStats.Misses++
+		cacheService.cacheStats.Misses++
 
 		return nil, false
 	}
 
-	cs.cacheStats.Hits++
+	cacheService.cacheStats.Hits++
 
 	if data, ok := entry.Data.(*CachedStats); ok {
 		return data.Data, true
 	}
 
-	cs.cacheStats.Misses++
+	cacheService.cacheStats.Misses++
 
 	return nil, false
 }
 
 // SetStats сохраняет статистику в кэш.
-func (cs *Service) SetStats(statsType string, data map[string]interface{}) {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) SetStats(_ context.Context, statsType string, data map[string]interface{}) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	cs.stats[statsType] = &Entry{
+	cacheService.stats[statsType] = &Entry{
 		Data: &CachedStats{
 			Data: data,
 			Type: statsType,
 		},
-		ExpiresAt: time.Now().Add(cs.config.StatsTTL),
+		ExpiresAt: time.Now().Add(cacheService.config.StatsTTL),
 	}
 
-	cs.updateSize()
+	cacheService.updateSize()
 }
 
 // InvalidateUser удаляет пользователя из кэша.
-func (cs *Service) InvalidateUser(userID int64) {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) InvalidateUser(_ context.Context, userID int64) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	delete(cs.users, userID)
-	cs.updateSize()
+	delete(cacheService.users, userID)
+	cacheService.updateSize()
 
 	log.Printf("Cache: Invalidated user %d", userID)
 }
 
 // InvalidateLanguages удаляет языки из кэша.
-func (cs *Service) InvalidateLanguages() {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) InvalidateLanguages(_ context.Context) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	cs.languages = make(map[string]*Entry)
-	cs.updateSize()
+	cacheService.languages = make(map[string]*Entry)
+	cacheService.updateSize()
 
 	log.Printf("Cache: Invalidated all languages")
 }
 
 // InvalidateInterests удаляет интересы из кэша.
-func (cs *Service) InvalidateInterests() {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) InvalidateInterests(_ context.Context) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	cs.interests = make(map[string]*Entry)
-	cs.updateSize()
+	cacheService.interests = make(map[string]*Entry)
+	cacheService.updateSize()
 
 	log.Printf("Cache: Invalidated all interests")
 }
 
 // InvalidateTranslations удаляет переводы из кэша.
-func (cs *Service) InvalidateTranslations() {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) InvalidateTranslations(_ context.Context) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	cs.translations = make(map[string]*Entry)
-	cs.updateSize()
+	cacheService.translations = make(map[string]*Entry)
+	cacheService.updateSize()
 
 	log.Printf("Cache: Invalidated all translations")
 }
 
 // ClearAll очищает весь кэш.
-func (cs *Service) ClearAll() {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) ClearAll(_ context.Context) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	cs.languages = make(map[string]*Entry)
-	cs.interests = make(map[string]*Entry)
-	cs.translations = make(map[string]*Entry)
-	cs.users = make(map[int64]*Entry)
-	cs.stats = make(map[string]*Entry)
-	cs.updateSize()
+	cacheService.languages = make(map[string]*Entry)
+	cacheService.interests = make(map[string]*Entry)
+	cacheService.translations = make(map[string]*Entry)
+	cacheService.users = make(map[int64]*Entry)
+	cacheService.stats = make(map[string]*Entry)
+	cacheService.updateSize()
 
 	log.Printf("Cache: Cleared all data")
 }
 
-// GetCacheStats returns cache statistics.
-func (cs *Service) GetCacheStats() Stats {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+// GetCacheStats returns cache statisticacheService.
+func (cacheService *Service) GetCacheStats(_ context.Context) Stats {
+	cacheService.mutex.RLock()
+	defer cacheService.mutex.RUnlock()
 
 	return Stats{
-		Hits:   cs.cacheStats.Hits,
-		Misses: cs.cacheStats.Misses,
-		Size:   cs.cacheStats.Size,
+		Hits:   cacheService.cacheStats.Hits,
+		Misses: cacheService.cacheStats.Misses,
+		Size:   cacheService.cacheStats.Size,
 	}
 }
 
 // Stop останавливает кэш-сервис.
-func (cs *Service) Stop() {
-	close(cs.stopCleanup)
+func (cacheService *Service) Stop() {
+	close(cacheService.stopCleanup)
 	log.Printf("Cache: Service stopped")
 }
 
 // String возвращает строковое представление статистики кэша.
-func (cs *Service) String() string {
-	stats := cs.GetCacheStats()
+func (cacheService *Service) String() string {
+	stats := cacheService.GetCacheStats(context.Background())
 
 	hitRate := float64(0)
 
@@ -352,34 +353,35 @@ func (cs *Service) String() string {
 }
 
 // updateSize обновляет размер кэша.
-func (cs *Service) updateSize() {
-	cs.cacheStats.Size = len(cs.languages) + len(cs.interests) + len(cs.translations) + len(cs.users) + len(cs.stats)
+func (cacheService *Service) updateSize() {
+	cacheService.cacheStats.Size = len(cacheService.languages) + len(cacheService.interests) +
+		len(cacheService.translations) + len(cacheService.users) + len(cacheService.stats)
 }
 
 // startCleanup запускает фоновую очистку истекших записей.
-func (cs *Service) startCleanup() {
+func (cacheService *Service) startCleanup() {
 	ticker := time.NewTicker(cleanupIntervalMinutes * time.Minute) // Проверяем каждые 5 минут
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			cs.cleanupExpired()
-		case <-cs.stopCleanup:
+			cacheService.cleanupExpired()
+		case <-cacheService.stopCleanup:
 			return
 		}
 	}
 }
 
 // cleanupExpired удаляет истекшие записи.
-func (cs *Service) cleanupExpired() {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+func (cacheService *Service) cleanupExpired() {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
 
-	cleaned := cs.cleanupLanguages() + cs.cleanupInterests() + cs.cleanupTranslations() +
-		cs.cleanupUsers() + cs.cleanupStats()
+	cleaned := cacheService.cleanupLanguages() + cacheService.cleanupInterests() + cacheService.cleanupTranslations() +
+		cacheService.cleanupUsers() + cacheService.cleanupStats()
 
-	cs.updateSize()
+	cacheService.updateSize()
 
 	if cleaned > 0 {
 		log.Printf("Cache: Cleaned %d expired entries", cleaned)
@@ -387,12 +389,12 @@ func (cs *Service) cleanupExpired() {
 }
 
 // cleanupLanguages очищает истекшие языки.
-func (cs *Service) cleanupLanguages() int {
+func (cacheService *Service) cleanupLanguages() int {
 	cleaned := 0
 
-	for key, entry := range cs.languages {
+	for key, entry := range cacheService.languages {
 		if entry.IsExpired() {
-			delete(cs.languages, key)
+			delete(cacheService.languages, key)
 
 			cleaned++
 		}
@@ -402,12 +404,12 @@ func (cs *Service) cleanupLanguages() int {
 }
 
 // cleanupInterests очищает истекшие интересы.
-func (cs *Service) cleanupInterests() int {
+func (cacheService *Service) cleanupInterests() int {
 	cleaned := 0
 
-	for key, entry := range cs.interests {
+	for key, entry := range cacheService.interests {
 		if entry.IsExpired() {
-			delete(cs.interests, key)
+			delete(cacheService.interests, key)
 
 			cleaned++
 		}
@@ -417,12 +419,12 @@ func (cs *Service) cleanupInterests() int {
 }
 
 // cleanupTranslations очищает истекшие переводы.
-func (cs *Service) cleanupTranslations() int {
+func (cacheService *Service) cleanupTranslations() int {
 	cleaned := 0
 
-	for key, entry := range cs.translations {
+	for key, entry := range cacheService.translations {
 		if entry.IsExpired() {
-			delete(cs.translations, key)
+			delete(cacheService.translations, key)
 
 			cleaned++
 		}
@@ -432,12 +434,12 @@ func (cs *Service) cleanupTranslations() int {
 }
 
 // cleanupUsers очищает истекших пользователей.
-func (cs *Service) cleanupUsers() int {
+func (cacheService *Service) cleanupUsers() int {
 	cleaned := 0
 
-	for key, entry := range cs.users {
+	for key, entry := range cacheService.users {
 		if entry.IsExpired() {
-			delete(cs.users, key)
+			delete(cacheService.users, key)
 
 			cleaned++
 		}
@@ -447,12 +449,12 @@ func (cs *Service) cleanupUsers() int {
 }
 
 // cleanupStats очищает истекшую статистику.
-func (cs *Service) cleanupStats() int {
+func (cacheService *Service) cleanupStats() int {
 	cleaned := 0
 
-	for key, entry := range cs.stats {
+	for key, entry := range cacheService.stats {
 		if entry.IsExpired() {
-			delete(cs.stats, key)
+			delete(cacheService.stats, key)
 
 			cleaned++
 		}

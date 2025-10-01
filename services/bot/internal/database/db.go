@@ -72,17 +72,18 @@ func (db *DB) GetLanguages() ([]*models.Language, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -159,17 +160,18 @@ func (db *DB) GetInterests() ([]*models.Interest, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -458,17 +460,18 @@ func (db *DB) GetUserSelectedInterests(userID int) ([]int, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -512,23 +515,23 @@ func (db *DB) ClearUserInterests(userID int) error {
 
 // ResetUserProfile очищает языки и интересы, переводит пользователя в начало онбординга.
 func (db *DB) ResetUserProfile(userID int) error {
-	tx, err := db.conn.BeginTx(context.Background(), nil)
+	transaction, err := db.conn.BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	defer func() {
-		_ = tx.Rollback()
+		_ = transaction.Rollback()
 	}()
 
 	// Удаляем интересы
 	query := `DELETE FROM user_interests WHERE user_id = $1`
-	if _, err := tx.ExecContext(context.Background(), query, userID); err != nil {
+	if _, err := transaction.ExecContext(context.Background(), query, userID); err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Сбрасываем языки и состояние (интерфейсный язык не трогаем)
-	if _, err := tx.ExecContext(context.Background(), `
+	if _, err := transaction.ExecContext(context.Background(), `
 		UPDATE users
 		SET native_language_code = NULL,
 		    target_language_code = NULL,
@@ -542,7 +545,7 @@ func (db *DB) ResetUserProfile(userID int) error {
 		return fmt.Errorf("operation failed: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err := transaction.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
@@ -578,60 +581,74 @@ func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, err
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
+	return db.processUserFeedbackRows(rows), nil
+}
+
+// processUserFeedbackRows обрабатывает строки результата запроса отзывов пользователя.
+func (db *DB) processUserFeedbackRows(rows *sql.Rows) []map[string]interface{} {
 	var feedbacks []map[string]interface{}
 
 	for rows.Next() {
-		var (
-			id            int
-			feedbackText  string
-			contactInfo   sql.NullString
-			createdAt     sql.NullTime
-			isProcessed   bool
-			adminResponse sql.NullString
-		)
-
-		err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &isProcessed, &adminResponse)
-		if err != nil {
-			continue // Пропускаем ошибочные записи
+		feedback := db.scanUserFeedbackRow(rows)
+		if feedback != nil {
+			feedbacks = append(feedbacks, feedback)
 		}
-
-		feedback := map[string]interface{}{
-			"id":            id,
-			"feedback_text": feedbackText,
-			"created_at":    createdAt.Time,
-			"is_processed":  isProcessed,
-		}
-
-		if contactInfo.Valid {
-			feedback["contact_info"] = contactInfo.String
-		} else {
-			feedback["contact_info"] = nil
-		}
-
-		if adminResponse.Valid {
-			feedback["admin_response"] = adminResponse.String
-		} else {
-			feedback["admin_response"] = nil
-		}
-
-		feedbacks = append(feedbacks, feedback)
 	}
 
-	return feedbacks, nil
+	return feedbacks
+}
+
+// scanUserFeedbackRow сканирует одну строку результата запроса отзывов пользователя.
+func (db *DB) scanUserFeedbackRow(rows *sql.Rows) map[string]interface{} {
+	var (
+		feedbackID    int
+		feedbackText  string
+		contactInfo   sql.NullString
+		createdAt     sql.NullTime
+		isProcessed   bool
+		adminResponse sql.NullString
+	)
+
+	err := rows.Scan(&feedbackID, &feedbackText, &contactInfo, &createdAt, &isProcessed, &adminResponse)
+	if err != nil {
+		return nil // Пропускаем ошибочные записи
+	}
+
+	feedback := map[string]interface{}{
+		"id":            feedbackID,
+		"feedback_text": feedbackText,
+		"created_at":    createdAt.Time,
+		"is_processed":  isProcessed,
+	}
+
+	if contactInfo.Valid {
+		feedback["contact_info"] = contactInfo.String
+	} else {
+		feedback["contact_info"] = nil
+	}
+
+	if adminResponse.Valid {
+		feedback["admin_response"] = adminResponse.String
+	} else {
+		feedback["admin_response"] = nil
+	}
+
+	return feedback
 }
 
 // GetUnprocessedFeedback получает все необработанные отзывы для администрирования.
@@ -644,16 +661,18 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -691,7 +710,7 @@ func (db *DB) processFeedbackRows(rows *sql.Rows) []map[string]interface{} {
 // scanFeedbackRow сканирует одну строку результата запроса отзывов.
 func (db *DB) scanFeedbackRow(rows *sql.Rows) (map[string]interface{}, error) {
 	var (
-		id           int
+		feedbackID   int
 		feedbackText string
 		contactInfo  sql.NullString
 		createdAt    sql.NullTime
@@ -700,13 +719,13 @@ func (db *DB) scanFeedbackRow(rows *sql.Rows) (map[string]interface{}, error) {
 		firstName    string
 	)
 
-	err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &username, &telegramID, &firstName)
+	err := rows.Scan(&feedbackID, &feedbackText, &contactInfo, &createdAt, &username, &telegramID, &firstName)
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	feedback := map[string]interface{}{
-		"id":            id,
+		"id":            feedbackID,
 		"feedback_text": feedbackText,
 		"created_at":    createdAt.Time,
 		"telegram_id":   telegramID,

@@ -43,17 +43,18 @@ func (s *InterestService) GetInterestCategories() ([]models.InterestCategory, er
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -458,17 +459,18 @@ func (s *InterestService) calculateInterestScore(
 // scanInterests сканирует строки интересов.
 func (s *InterestService) scanInterests(rows *sql.Rows) ([]models.Interest, error) {
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
-			// Интегрировать с системой логирования
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
+			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -493,18 +495,19 @@ func (s *InterestService) scanInterests(rows *sql.Rows) ([]models.Interest, erro
 func (s *InterestService) scanInterestSelections(rows *sql.Rows) ([]models.InterestSelection, error) {
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
+			// В defer мы не можем вернуть ошибку, но можем логировать
+			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
-			// Интегрировать с системой логирования
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
+			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 

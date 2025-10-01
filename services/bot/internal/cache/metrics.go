@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -70,7 +71,7 @@ func (ms *MetricsService) RecordCleanup() {
 
 // GetMetrics возвращает все метрики.
 func (ms *MetricsService) GetMetrics() map[string]interface{} {
-	stats := ms.cache.GetCacheStats()
+	stats := ms.cache.GetCacheStats(context.Background())
 
 	return map[string]interface{}{
 		"performance": map[string]interface{}{
@@ -110,7 +111,7 @@ func (ms *MetricsService) GetPerformanceMetrics() map[string]interface{} {
 
 // GetCacheMetrics возвращает метрики кэша.
 func (ms *MetricsService) GetCacheMetrics() map[string]interface{} {
-	stats := ms.cache.GetCacheStats()
+	stats := ms.cache.GetCacheStats(context.Background())
 
 	return map[string]interface{}{
 		"hits":       stats.Hits,
@@ -152,7 +153,7 @@ func (ms *MetricsService) LogMetrics() {
 
 // GetMetricsSummary возвращает краткую сводку метрик.
 func (ms *MetricsService) GetMetricsSummary() string {
-	stats := ms.cache.GetCacheStats()
+	stats := ms.cache.GetCacheStats(context.Background())
 	hitRate := ms.getHitRate(stats)
 	errorRate := ms.getErrorRate()
 
@@ -176,7 +177,7 @@ func (ms *MetricsService) ResetMetrics() {
 
 // updateCacheEfficiency обновляет эффективность кэша.
 func (ms *MetricsService) updateCacheEfficiency() {
-	stats := ms.cache.GetCacheStats()
+	stats := ms.cache.GetCacheStats(context.Background())
 
 	total := stats.Hits + stats.Misses
 

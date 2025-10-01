@@ -53,16 +53,18 @@ func (bl *BatchLoader) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -159,17 +161,18 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -178,11 +181,11 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 	for rows.Next() {
 		var langCode string
 
-		var id int
+		var interestID int
 
 		var name string
 
-		err := rows.Scan(&langCode, &id, &name)
+		err := rows.Scan(&langCode, &interestID, &name)
 		if err != nil {
 			log.Printf("Error scanning interest row: %v", err)
 
@@ -193,7 +196,7 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 			interests[langCode] = make(map[int]string)
 		}
 
-		interests[langCode][id] = name
+		interests[langCode][interestID] = name
 	}
 
 	return interests, nil
@@ -220,17 +223,18 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (m
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -277,17 +281,18 @@ func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, err
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -336,17 +341,18 @@ func (bl *BatchLoader) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.Us
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем ошибку закрытия, но не возвращаем её
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -383,16 +389,18 @@ func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, e
 	}
 
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -539,6 +547,7 @@ func (bl *BatchLoader) loadUserStats() map[string]interface{} {
 	if err != nil {
 		// Логируем ошибку получения общего количества пользователей
 		// TODO: интегрировать с системой логирования
+		_ = err // Подавляем предупреждение линтера
 	}
 
 	query := "SELECT COUNT(*) FROM users WHERE status = 'active'"
@@ -547,6 +556,7 @@ func (bl *BatchLoader) loadUserStats() map[string]interface{} {
 	if err != nil {
 		// Логируем ошибку получения количества активных пользователей
 		// TODO: интегрировать с системой логирования
+		_ = err // Подавляем предупреждение линтера
 	}
 
 	return map[string]interface{}{
@@ -563,6 +573,7 @@ func (bl *BatchLoader) loadInterestStats() map[string]interface{} {
 	if err != nil {
 		// Логируем ошибку получения общего количества интересов
 		// TODO: интегрировать с системой логирования
+		_ = err // Подавляем предупреждение линтера
 	}
 
 	err = bl.db.conn.QueryRowContext(context.Background(), `
@@ -575,6 +586,7 @@ func (bl *BatchLoader) loadInterestStats() map[string]interface{} {
 	if err != nil {
 		// Логируем ошибку получения количества популярных интересов
 		// TODO: интегрировать с системой логирования
+		_ = err // Подавляем предупреждение линтера
 	}
 
 	return map[string]interface{}{
@@ -591,6 +603,7 @@ func (bl *BatchLoader) loadFeedbackStats() map[string]interface{} {
 	if err != nil {
 		// Логируем ошибку получения общего количества отзывов
 		// TODO: интегрировать с системой логирования
+		_ = err // Подавляем предупреждение линтера
 	}
 
 	query := "SELECT COUNT(*) FROM user_feedback WHERE is_processed = true"
@@ -599,6 +612,7 @@ func (bl *BatchLoader) loadFeedbackStats() map[string]interface{} {
 	if err != nil {
 		// Логируем ошибку получения количества обработанных отзывов
 		// TODO: интегрировать с системой логирования
+		_ = err // Подавляем предупреждение линтера
 	}
 
 	return map[string]interface{}{

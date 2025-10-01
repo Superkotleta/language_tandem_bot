@@ -1,6 +1,7 @@
 package cache_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -22,10 +23,10 @@ func TestCacheServiceLanguages(t *testing.T) {
 	}
 
 	// Сохраняем в кэш
-	cacheService.SetLanguages("en", languages)
+	cacheService.SetLanguages(context.Background(), "en", languages)
 
 	// Получаем из кэша
-	cached, found := cacheService.GetLanguages("en")
+	cached, found := cacheService.GetLanguages(context.Background(), "en")
 	if !found {
 		t.Error("Expected to find languages in cache")
 	}
@@ -54,10 +55,10 @@ func TestCacheServiceInterests(t *testing.T) {
 	}
 
 	// Сохраняем в кэш
-	cacheService.SetInterests("en", interests)
+	cacheService.SetInterests(context.Background(), "en", interests)
 
 	// Получаем из кэша
-	cached, found := cacheService.GetInterests("en")
+	cached, found := cacheService.GetInterests(context.Background(), "en")
 	if !found {
 		t.Error("Expected to find interests in cache")
 	}
@@ -108,10 +109,10 @@ func TestCacheServiceUsers(t *testing.T) {
 	}
 
 	// Сохраняем в кэш
-	cacheService.SetUser(user)
+	cacheService.SetUser(context.Background(), user)
 
 	// Получаем из кэша
-	cached, found := cacheService.GetUser(1)
+	cached, found := cacheService.GetUser(context.Background(), 1)
 	if !found {
 		t.Error("Expected to find user in cache")
 	}
@@ -133,17 +134,17 @@ func TestCacheServiceTTLExpiration(t *testing.T) {
 	time.Sleep(150 * time.Millisecond)
 
 	// Проверяем, что данные истекли
-	_, found := cacheService.GetLanguages("en")
+	_, found := cacheService.GetLanguages(context.Background(), "en")
 	if found {
 		t.Error("Expected languages to be expired")
 	}
 
-	_, found = cacheService.GetInterests("en")
+	_, found = cacheService.GetInterests(context.Background(), "en")
 	if found {
 		t.Error("Expected interests to be expired")
 	}
 
-	_, found = cacheService.GetUser(1)
+	_, found = cacheService.GetUser(context.Background(), 1)
 	if found {
 		t.Error("Expected user to be expired")
 	}
@@ -158,11 +159,11 @@ func TestCacheServiceStats(t *testing.T) {
 	defer cacheService.Stop()
 
 	// Выполняем операции с кэшем для генерации статистики
-	_, _ = cacheService.GetLanguages("en")
-	_, _ = cacheService.GetInterests("en")
-	_, _ = cacheService.GetTranslations("en")
+	_, _ = cacheService.GetLanguages(context.Background(), "en")
+	_, _ = cacheService.GetInterests(context.Background(), "en")
+	_, _ = cacheService.GetTranslations(context.Background(), "en")
 
-	stats := cacheService.GetCacheStats()
+	stats := cacheService.GetCacheStats(context.Background())
 	if stats.Hits == 0 && stats.Misses == 0 {
 		t.Error("Expected some cache activity")
 	}
@@ -188,11 +189,11 @@ func TestInvalidationService(t *testing.T) {
 	invalidation := cache.NewInvalidationService(cacheService)
 
 	// Добавляем тестовые данные
-	cacheService.SetLanguages("en", []*models.Language{{ID: 1, Code: "en"}})
-	cacheService.SetInterests("en", map[int]string{1: "test"})
+	cacheService.SetLanguages(context.Background(), "en", []*models.Language{{ID: 1, Code: "en"}})
+	cacheService.SetInterests(context.Background(), "en", map[int]string{1: "test"})
 
 	// Проверяем, что данные есть
-	_, found := cacheService.GetLanguages("en")
+	_, found := cacheService.GetLanguages(context.Background(), "en")
 	if !found {
 		t.Error("Expected languages to be in cache")
 	}
@@ -201,7 +202,7 @@ func TestInvalidationService(t *testing.T) {
 	invalidation.InvalidateStaticData()
 
 	// Проверяем, что данные удалены
-	_, found = cacheService.GetLanguages("en")
+	_, found = cacheService.GetLanguages(context.Background(), "en")
 	if found {
 		t.Error("Expected languages to be invalidated")
 	}

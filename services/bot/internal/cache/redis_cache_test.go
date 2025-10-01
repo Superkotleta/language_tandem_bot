@@ -1,6 +1,7 @@
 package cache_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -20,10 +21,10 @@ func TestRedisCacheServiceLanguages(t *testing.T) {
 	}
 
 	// Сохраняем в Redis
-	redisCache.SetLanguages("en", languages)
+	redisCache.SetLanguages(context.Background(), "en", languages)
 
 	// Получаем из Redis
-	cached, found := redisCache.GetLanguages("en")
+	cached, found := redisCache.GetLanguages(context.Background(), "en")
 	if !found {
 		t.Error("Expected to find languages in Redis cache")
 	}
@@ -50,10 +51,10 @@ func TestRedisCacheServiceInterests(t *testing.T) {
 	}
 
 	// Сохраняем в Redis
-	redisCache.SetInterests("en", interests)
+	redisCache.SetInterests(context.Background(), "en", interests)
 
 	// Получаем из Redis
-	cached, found := redisCache.GetInterests("en")
+	cached, found := redisCache.GetInterests(context.Background(), "en")
 	if !found {
 		t.Error("Expected to find interests in Redis cache")
 	}
@@ -102,10 +103,10 @@ func TestRedisCacheServiceUsers(t *testing.T) {
 	}
 
 	// Сохраняем в Redis
-	redisCache.SetUser(user)
+	redisCache.SetUser(context.Background(), user)
 
 	// Получаем из Redis
-	cached, found := redisCache.GetUser(1)
+	cached, found := redisCache.GetUser(context.Background(), 1)
 	if !found {
 		t.Error("Expected to find user in Redis cache")
 	}
@@ -122,21 +123,21 @@ func TestRedisCacheServiceInvalidation(t *testing.T) {
 	defer redisCache.Stop()
 
 	// Добавляем тестовые данные
-	redisCache.SetLanguages("en", []*models.Language{{ID: 1, Code: "en"}})
-	redisCache.SetInterests("en", map[int]string{1: "test"})
+	redisCache.SetLanguages(context.Background(), "en", []*models.Language{{ID: 1, Code: "en"}})
+	redisCache.SetInterests(context.Background(), "en", map[int]string{1: "test"})
 
 	// Проверяем, что данные есть
-	_, found := redisCache.GetLanguages("en")
+	_, found := redisCache.GetLanguages(context.Background(), "en")
 	if !found {
 		t.Error("Expected languages to be in cache")
 	}
 
 	// Инвалидируем статические данные
-	redisCache.InvalidateLanguages()
-	redisCache.InvalidateInterests()
+	redisCache.InvalidateLanguages(context.Background())
+	redisCache.InvalidateInterests(context.Background())
 
 	// Проверяем, что данные удалены
-	_, found = redisCache.GetLanguages("en")
+	_, found = redisCache.GetLanguages(context.Background(), "en")
 	if found {
 		t.Error("Expected languages to be invalidated")
 	}
@@ -148,7 +149,7 @@ func TestRedisCacheServiceStats(t *testing.T) {
 	redisCache := createRedisCacheService(t)
 	defer redisCache.Stop()
 
-	stats := redisCache.GetCacheStats()
+	stats := redisCache.GetCacheStats(context.Background())
 	if stats.Size < 0 {
 		t.Error("Expected valid cache size")
 	}

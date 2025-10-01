@@ -212,15 +212,15 @@ func (v *Validator) ValidateLanguageCode(code string) []string {
 }
 
 // ValidateTelegramID валидирует Telegram ID.
-func (v *Validator) ValidateTelegramID(id int64) []string {
+func (v *Validator) ValidateTelegramID(telegramID int64) []string {
 	var errors []string
 
-	if id <= 0 {
+	if telegramID <= 0 {
 		errors = append(errors, "Telegram ID должен быть положительным")
 	}
 
 	// Telegram ID обычно больше minTelegramID
-	if id < minTelegramID {
+	if telegramID < minTelegramID {
 		errors = append(errors, "Некорректный Telegram ID")
 	}
 
@@ -228,17 +228,17 @@ func (v *Validator) ValidateTelegramID(id int64) []string {
 }
 
 // ValidateChatID валидирует Chat ID.
-func (v *Validator) ValidateChatID(id int64) []string {
+func (v *Validator) ValidateChatID(chatID int64) []string {
 	var errors []string
 
-	if id == 0 {
+	if chatID == 0 {
 		errors = append(errors, "Chat ID обязателен")
 
 		return errors
 	}
 
 	// Chat ID может быть отрицательным для групп
-	if id > 0 && id < 100000000 {
+	if chatID > 0 && chatID < 100000000 {
 		errors = append(errors, "Некорректный Chat ID")
 	}
 

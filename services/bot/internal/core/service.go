@@ -57,8 +57,10 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 	var loggingService *logging.LoggingService
 
 	if errorHandler != nil {
-		validationService = validation.NewService(errorHandler.(*errorsPkg.ErrorHandler))
-		loggingService = logging.NewLoggingService(errorHandler.(*errorsPkg.ErrorHandler))
+		if handler, ok := errorHandler.(*errorsPkg.ErrorHandler); ok {
+			validationService = validation.NewService(handler)
+			loggingService = logging.NewLoggingService(handler)
+		}
 	}
 
 	return &BotService{
@@ -100,8 +102,10 @@ func NewBotServiceWithRedis(
 	var loggingService *logging.LoggingService
 
 	if errorHandler != nil {
-		validationService = validation.NewService(errorHandler.(*errorsPkg.ErrorHandler))
-		loggingService = logging.NewLoggingService(errorHandler.(*errorsPkg.ErrorHandler))
+		if handler, ok := errorHandler.(*errorsPkg.ErrorHandler); ok {
+			validationService = validation.NewService(handler)
+			loggingService = logging.NewLoggingService(handler)
+		}
 	}
 
 	return &BotService{
@@ -852,10 +856,10 @@ func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
 	}
 
 	defer func() {
-		closeErr := rows.Close()
-		if closeErr != nil {
-			// Логируем предупреждение о неудачном закрытии rows
+		if closeErr := rows.Close(); closeErr != nil {
+			// В defer мы не можем вернуть ошибку, но можем логировать
 			// TODO: интегрировать с системой логирования
+			_ = closeErr // Подавляем предупреждение линтера
 		}
 	}()
 
@@ -893,7 +897,7 @@ func (s *BotService) processFeedbackRows(rows *sql.Rows) []map[string]interface{
 // scanFeedbackRow сканирует одну строку результата запроса отзывов.
 func (s *BotService) scanFeedbackRow(rows *sql.Rows) (map[string]interface{}, error) {
 	var (
-		id           int
+		feedbackID   int
 		feedbackText string
 		contactInfo  sql.NullString
 		createdAt    sql.NullTime
@@ -904,14 +908,14 @@ func (s *BotService) scanFeedbackRow(rows *sql.Rows) (map[string]interface{}, er
 		adminResp    sql.NullString
 	)
 
-	err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &isProcessed,
+	err := rows.Scan(&feedbackID, &feedbackText, &contactInfo, &createdAt, &isProcessed,
 		&username, &telegramID, &firstName, &adminResp)
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	feedback := map[string]interface{}{
-		"id":            id,
+		"id":            feedbackID,
 		"feedback_text": feedbackText,
 		"created_at":    createdAt.Time,
 		"telegram_id":   telegramID,
@@ -1070,7 +1074,7 @@ func (s *BotService) GetCachedLanguages(lang string) ([]*models.Language, error)
 	}()
 
 	// Пытаемся получить из кэша
-	if languages, found := s.Cache.GetLanguages(lang); found {
+	if languages, found := s.Cache.GetLanguages(context.Background(), lang); found {
 		return languages, nil
 	}
 
@@ -1083,7 +1087,7 @@ func (s *BotService) GetCachedLanguages(lang string) ([]*models.Language, error)
 	}
 
 	// Сохраняем в кэш
-	s.Cache.SetLanguages(lang, languages)
+	s.Cache.SetLanguages(context.Background(), lang, languages)
 
 	return languages, nil
 }
@@ -1097,7 +1101,7 @@ func (s *BotService) GetCachedInterests(lang string) (map[int]string, error) {
 	}()
 
 	// Пытаемся получить из кэша
-	if interests, found := s.Cache.GetInterests(lang); found {
+	if interests, found := s.Cache.GetInterests(context.Background(), lang); found {
 		return interests, nil
 	}
 
@@ -1110,7 +1114,7 @@ func (s *BotService) GetCachedInterests(lang string) (map[int]string, error) {
 	}
 
 	// Сохраняем в кэш
-	s.Cache.SetInterests(lang, interests)
+	s.Cache.SetInterests(context.Background(), lang, interests)
 
 	return interests, nil
 }
@@ -1124,7 +1128,7 @@ func (s *BotService) GetCachedUser(telegramID int64) (*models.User, error) {
 	}()
 
 	// Пытаемся получить из кэша
-	if user, found := s.Cache.GetUser(telegramID); found {
+	if user, found := s.Cache.GetUser(context.Background(), telegramID); found {
 		return user, nil
 	}
 
@@ -1137,7 +1141,7 @@ func (s *BotService) GetCachedUser(telegramID int64) (*models.User, error) {
 	}
 
 	// Сохраняем в кэш
-	s.Cache.SetUser(user)
+	s.Cache.SetUser(context.Background(), user)
 
 	return user, nil
 }
@@ -1151,7 +1155,7 @@ func (s *BotService) GetCachedTranslations(lang string) (map[string]string, erro
 	}()
 
 	// Пытаемся получить из кэша
-	if translations, found := s.Cache.GetTranslations(lang); found {
+	if translations, found := s.Cache.GetTranslations(context.Background(), lang); found {
 		return translations, nil
 	}
 
@@ -1161,7 +1165,7 @@ func (s *BotService) GetCachedTranslations(lang string) (map[string]string, erro
 	translations := make(map[string]string)
 
 	// Сохраняем в кэш
-	s.Cache.SetTranslations(lang, translations)
+	s.Cache.SetTranslations(context.Background(), lang, translations)
 
 	return translations, nil
 }
@@ -1175,7 +1179,7 @@ func (s *BotService) UpdateCachedUser(user *models.User) error {
 	}
 
 	// Обновляем в кэше
-	s.Cache.SetUser(user)
+	s.Cache.SetUser(context.Background(), user)
 
 	return nil
 }
@@ -1211,7 +1215,7 @@ func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAll
 	}()
 
 	// Пытаемся получить из кэша
-	if userData, found := s.Cache.GetUser(telegramID); found {
+	if userData, found := s.Cache.GetUser(context.Background(), telegramID); found {
 		// Если пользователь есть в кэше, но нет полных данных, загружаем их
 		if userData != nil {
 			// Загружаем полные данные
@@ -1233,7 +1237,7 @@ func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAll
 	}
 
 	// Сохраняем в кэш
-	s.Cache.SetUser(userData.User)
+	s.Cache.SetUser(context.Background(), userData.User)
 
 	return userData, nil
 }
@@ -1256,7 +1260,7 @@ func (s *BotService) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int64
 
 	// Сохраняем пользователей в кэш
 	for _, userData := range users {
-		s.Cache.SetUser(userData.User)
+		s.Cache.SetUser(context.Background(), userData.User)
 	}
 
 	return users, nil
@@ -1280,7 +1284,7 @@ func (s *BotService) BatchLoadInterestsWithTranslations(languages []string) (map
 
 	// Сохраняем в кэш
 	for lang, langInterests := range interests {
-		s.Cache.SetInterests(lang, langInterests)
+		s.Cache.SetInterests(context.Background(), lang, langInterests)
 	}
 
 	return interests, nil
@@ -1304,7 +1308,7 @@ func (s *BotService) BatchLoadLanguagesWithTranslations(languages []string) (map
 
 	// Сохраняем в кэш
 	for lang, langList := range langs {
-		s.Cache.SetLanguages(lang, langList)
+		s.Cache.SetLanguages(context.Background(), lang, langList)
 	}
 
 	return langs, nil
@@ -1347,7 +1351,7 @@ func (s *BotService) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.User
 
 	// Сохраняем в кэш
 	for _, user := range users {
-		s.Cache.SetUser(user)
+		s.Cache.SetUser(context.Background(), user)
 	}
 
 	return users, nil
