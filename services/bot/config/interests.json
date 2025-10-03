@@ -7,8 +7,8 @@
   },
   "interest_limits": {
     "min_primary_interests": 1,
-    "max_primary_interests": 5,
-    "primary_percentage": 0.3
+    "max_primary_interests": 10,
+    "primary_percentage": 0.1
   },
   "categories": {
     "entertainment": {

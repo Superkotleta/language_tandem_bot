@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -346,6 +348,56 @@ func (h *ImprovedInterestHandler) HandleInterestsContinue(callback *tgbotapi.Cal
 		return err
 	}
 
+	// Получаем конфигурацию лимитов
+	limits, err := h.interestService.GetInterestLimitsConfig()
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestLimitsConfig")
+	}
+
+	// Получаем общее количество интересов в системе
+	allInterests, err := h.interestService.GetAllInterests()
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetAllInterests")
+	}
+
+	// Вычисляем рекомендуемое количество основных интересов
+	totalInterestsInSystem := len(allInterests)
+	recommendedPrimary := int(math.Ceil(float64(totalInterestsInSystem) * limits.PrimaryPercentage))
+
+	// Ограничиваем минимумом и максимумом
+	if recommendedPrimary < limits.MinPrimaryInterests {
+		recommendedPrimary = limits.MinPrimaryInterests
+	}
+
+	if recommendedPrimary > limits.MaxPrimaryInterests {
+		recommendedPrimary = limits.MaxPrimaryInterests
+	}
+
+	// Если выбранных интересов меньше или равно максимальному количеству основных,
+	// то сразу делаем их все основными
+	if len(selectedInterests) <= recommendedPrimary {
+		// Делаем все выбранные интересы основными во временном хранилище
+		for _, interestID := range selectedInterests {
+			// Сначала проверяем, не является ли уже основным
+			selections := h.tempStorage.GetSelections(user.ID)
+			for _, selection := range selections {
+				if selection.InterestID == interestID && !selection.IsPrimary {
+					// Переключаем на основной
+					h.tempStorage.TogglePrimary(user.ID, interestID)
+				}
+			}
+		}
+
+		// Сохраняем в базу данных
+		err = h.tempStorage.SaveToDatabase(user.ID, h.interestService)
+		if err != nil {
+			return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "SaveToDatabase")
+		}
+
+		// Завершаем настройку профиля
+		return h.completeProfileSetup(callback, user)
+	}
+
 	// Переходим к выбору основных интересов
 	return h.showPrimaryInterestsSelection(callback, user)
 }
@@ -399,8 +451,54 @@ func (h *ImprovedInterestHandler) showPrimaryInterestsSelection(callback *tgbota
 	// Создаем клавиатуру для выбора основных интересов
 	keyboard := h.keyboardBuilder.CreatePrimaryInterestsKeyboard(tempSelections, user.InterfaceLanguageCode)
 
-	// Создаем текст сообщения
-	messageText := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests")
+	// Получаем рекомендуемое количество основных интересов
+	limits, err := h.interestService.GetInterestLimitsConfig()
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestLimitsConfig")
+	}
+
+	// Получаем общее количество интересов в системе
+	allInterests, err := h.interestService.GetAllInterests()
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetAllInterests")
+	}
+
+	// Вычисляем рекомендуемое количество основных интересов от общего количества интересов в системе
+	totalInterestsInSystem := len(allInterests)
+	recommendedPrimary := int(math.Ceil(float64(totalInterestsInSystem) * limits.PrimaryPercentage))
+
+	// Ограничиваем минимумом и максимумом
+	if recommendedPrimary < limits.MinPrimaryInterests {
+		recommendedPrimary = limits.MinPrimaryInterests
+	}
+
+	if recommendedPrimary > limits.MaxPrimaryInterests {
+		recommendedPrimary = limits.MaxPrimaryInterests
+	}
+
+	// Подсчитываем уже выбранные основные интересы
+	selectedPrimaryCount := 0
+	for _, selection := range tempSelections {
+		if selection.IsPrimary {
+			selectedPrimaryCount++
+		}
+	}
+
+	// Создаем текст сообщения с динамическим количеством
+	var messageText string
+	if selectedPrimaryCount == 0 {
+		messageText = fmt.Sprintf("⭐ Выбери до %d основных интересов из выбранных:", recommendedPrimary)
+	} else {
+		remaining := recommendedPrimary - selectedPrimaryCount
+		if remaining > 0 {
+			messageText = fmt.Sprintf("⭐ Выбери ещё %d из %d основных интересов из выбранных:", remaining, recommendedPrimary)
+		} else {
+			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "max_primary_interests_reached")
+			if messageText == "max_primary_interests_reached" {
+				messageText = "✅ Максимальное количество основных интересов выбрано!"
+			}
+		}
+	}
 
 	// Обновляем сообщение
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
@@ -410,7 +508,7 @@ func (h *ImprovedInterestHandler) showPrimaryInterestsSelection(callback *tgbota
 		keyboard,
 	)
 
-	_, err := h.bot.Request(editMsg)
+	_, err = h.bot.Request(editMsg)
 
 	return err
 }
@@ -484,8 +582,54 @@ func (h *ImprovedInterestHandler) updatePrimaryInterestsKeyboard(callback *tgbot
 	// Создаем клавиатуру
 	keyboard := h.keyboardBuilder.CreatePrimaryInterestsKeyboard(tempSelections, user.InterfaceLanguageCode)
 
-	// Обновляем сообщение
-	messageText := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests")
+	// Получаем рекомендуемое количество основных интересов
+	limits, err := h.interestService.GetInterestLimitsConfig()
+	if err != nil {
+		return err
+	}
+
+	// Получаем общее количество интересов в системе
+	allInterests, err := h.interestService.GetAllInterests()
+	if err != nil {
+		return err
+	}
+
+	// Вычисляем рекомендуемое количество основных интересов от общего количества интересов в системе
+	totalInterestsInSystem := len(allInterests)
+	recommendedPrimary := int(math.Ceil(float64(totalInterestsInSystem) * limits.PrimaryPercentage))
+
+	// Ограничиваем минимумом и максимумом
+	if recommendedPrimary < limits.MinPrimaryInterests {
+		recommendedPrimary = limits.MinPrimaryInterests
+	}
+
+	if recommendedPrimary > limits.MaxPrimaryInterests {
+		recommendedPrimary = limits.MaxPrimaryInterests
+	}
+
+	// Подсчитываем уже выбранные основные интересы
+	selectedPrimaryCount := 0
+	for _, selection := range tempSelections {
+		if selection.IsPrimary {
+			selectedPrimaryCount++
+		}
+	}
+
+	// Создаем текст сообщения с динамическим количеством
+	var messageText string
+	if selectedPrimaryCount == 0 {
+		messageText = fmt.Sprintf("⭐ Выбери до %d основных интересов из выбранных:", recommendedPrimary)
+	} else {
+		remaining := recommendedPrimary - selectedPrimaryCount
+		if remaining > 0 {
+			messageText = fmt.Sprintf("⭐ Выбери ещё %d из %d основных интересов из выбранных:", remaining, recommendedPrimary)
+		} else {
+			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "max_primary_interests_reached")
+			if messageText == "max_primary_interests_reached" {
+				messageText = "✅ Максимальное количество основных интересов выбрано!"
+			}
+		}
+	}
 
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 		callback.Message.Chat.ID,
@@ -494,7 +638,7 @@ func (h *ImprovedInterestHandler) updatePrimaryInterestsKeyboard(callback *tgbot
 		keyboard,
 	)
 
-	_, err := h.bot.Request(editMsg)
+	_, err = h.bot.Request(editMsg)
 
 	return err
 }

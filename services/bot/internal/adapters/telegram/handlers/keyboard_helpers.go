@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -413,7 +412,7 @@ func (kb *KeyboardBuilder) CreateInterestCategoriesKeyboard(interfaceLang string
 		// Первая кнопка в ряду
 		categoryName := kb.service.Localizer.Get(interfaceLang, "category_"+categories[i].key)
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
-			categories[i].icon+" "+categoryName,
+			categoryName,
 			"interest_category_"+categories[i].key,
 		)
 		row = append(row, button1)
@@ -422,7 +421,7 @@ func (kb *KeyboardBuilder) CreateInterestCategoriesKeyboard(interfaceLang string
 		if i+1 < len(categories) {
 			categoryName2 := kb.service.Localizer.Get(interfaceLang, "category_"+categories[i+1].key)
 			button2 := tgbotapi.NewInlineKeyboardButtonData(
-				categories[i+1].icon+" "+categoryName2,
+				categoryName2,
 				"interest_category_"+categories[i+1].key,
 			)
 			row = append(row, button2)
@@ -513,6 +512,13 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 
+	// Получаем локализованные названия интересов
+	localizedInterests, err := kb.service.GetCachedInterests(interfaceLang)
+	if err != nil {
+		// Fallback - создаем пустую карту
+		localizedInterests = make(map[int]string)
+	}
+
 	// Приводим к правильному типу
 	var tempSelections []TemporaryInterestSelection
 	if tempSelectionsInterface, ok := selections.([]TemporaryInterestSelection); ok {
@@ -539,10 +545,26 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 
 		// Первая кнопка в ряду
 		selection1 := tempSelections[i]
-		// Получаем название интереса из базы данных
-		interestName1, err := kb.getInterestName(selection1.InterestID, interfaceLang)
-		if err != nil {
-			interestName1 = fmt.Sprintf("Интерес %d", selection1.InterestID)
+		// Получаем локализованное название интереса
+		interestName1, exists := localizedInterests[selection1.InterestID]
+		if !exists {
+			// Fallback: пытаемся получить через getInterestName
+			var err error
+			interestName1, err = kb.getInterestName(selection1.InterestID, interfaceLang)
+			if err != nil {
+				interestName1 = fmt.Sprintf("Интерес %d", selection1.InterestID)
+			}
+		} else {
+			// Проверяем, что это не просто key_name (английское название)
+			// Если название совпадает с key_name, пытаемся найти перевод
+			interest, err := kb.service.DB.GetInterestByID(selection1.InterestID)
+			if err == nil {
+				// Всегда пытаемся найти перевод в JSON файлах
+				translatedName := kb.service.Localizer.Get(interfaceLang, "interest_"+interest.KeyName)
+				if translatedName != "interest_"+interest.KeyName {
+					interestName1 = translatedName
+				}
+			}
 		}
 
 		prefix1 := SymbolUnchecked
@@ -560,9 +582,26 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 		if i+1 < len(tempSelections) {
 			selection2 := tempSelections[i+1]
 
-			interestName2, err := kb.getInterestName(selection2.InterestID, interfaceLang)
-			if err != nil {
-				interestName2 = fmt.Sprintf("Интерес %d", selection2.InterestID)
+			// Получаем локализованное название интереса
+			interestName2, exists := localizedInterests[selection2.InterestID]
+			if !exists {
+				// Fallback: пытаемся получить через getInterestName
+				var err error
+				interestName2, err = kb.getInterestName(selection2.InterestID, interfaceLang)
+				if err != nil {
+					interestName2 = fmt.Sprintf("Интерес %d", selection2.InterestID)
+				}
+			} else {
+				// Проверяем, что это не просто key_name (английское название)
+				// Если название совпадает с key_name, пытаемся найти перевод
+				interest, err := kb.service.DB.GetInterestByID(selection2.InterestID)
+				if err == nil {
+					// Всегда пытаемся найти перевод в JSON файлах
+					translatedName := kb.service.Localizer.Get(interfaceLang, "interest_"+interest.KeyName)
+					if translatedName != "interest_"+interest.KeyName {
+						interestName2 = translatedName
+					}
+				}
 			}
 
 			prefix2 := SymbolUnchecked
@@ -593,15 +632,6 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 	}
 	buttonRows = append(buttonRows, controlRow)
 
-	// Добавляем кнопку обратной связи
-	feedbackRow := []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData(
-			"💬 Предложить новый интерес",
-			"main_feedback",
-		),
-	}
-	buttonRows = append(buttonRows, feedbackRow)
-
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
@@ -618,5 +648,18 @@ func (kb *KeyboardBuilder) getInterestName(interestID int, interfaceLang string)
 		return name, nil
 	}
 
-	return "", errors.New("interest not found")
+	// Fallback: пытаемся получить из базы данных напрямую
+	interest, err := kb.service.DB.GetInterestByID(interestID)
+	if err != nil {
+		return fmt.Sprintf("Интерес %d", interestID), nil
+	}
+
+	// Пытаемся получить локализованное название через ключ
+	interestName := kb.service.Localizer.Get(interfaceLang, "interest_"+interest.KeyName)
+	if interestName != "interest_"+interest.KeyName {
+		return interestName, nil
+	}
+
+	// Последний fallback - используем key_name из базы данных
+	return interest.KeyName, nil
 }

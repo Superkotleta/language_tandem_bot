@@ -50,7 +50,7 @@ func (kb *KeyboardBuilder) CreateInterestCategoriesKeyboard(interfaceLang string
 		// Первая кнопка в ряду
 		categoryName := kb.service.Localizer.Get(interfaceLang, "category_"+categories[i].key)
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
-			categories[i].icon+" "+categoryName,
+			categoryName,
 			"interest_category_"+categories[i].key,
 		)
 		row = append(row, button1)
@@ -59,7 +59,7 @@ func (kb *KeyboardBuilder) CreateInterestCategoriesKeyboard(interfaceLang string
 		if i+1 < len(categories) {
 			categoryName2 := kb.service.Localizer.Get(interfaceLang, "category_"+categories[i+1].key)
 			button2 := tgbotapi.NewInlineKeyboardButtonData(
-				categories[i+1].icon+" "+categoryName2,
+				categoryName2,
 				"interest_category_"+categories[i+1].key,
 			)
 			row = append(row, button2)

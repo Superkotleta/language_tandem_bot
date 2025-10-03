@@ -312,6 +312,24 @@ func (a *databaseAdapter) ClearUserInterests(userID int) error {
 	return nil
 }
 
+func (a *databaseAdapter) GetUserInterestSelections(userID int) ([]models.InterestSelection, error) {
+	selections, err := a.db.GetUserInterestSelections(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user interest selections: %w", err)
+	}
+
+	return selections, nil
+}
+
+func (a *databaseAdapter) GetInterestByID(interestID int) (*models.Interest, error) {
+	interest, err := a.db.GetInterestByID(interestID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get interest by ID: %w", err)
+	}
+
+	return interest, nil
+}
+
 func (a *databaseAdapter) SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error {
 	err := a.db.SaveUserFeedback(userID, feedbackText, contactInfo)
 	if err != nil {
@@ -519,28 +537,84 @@ func (s *BotService) buildLanguageProfileInfo(user *models.User, lang string) st
 
 // buildInterestsProfileInfo строит информацию об интересах.
 func (s *BotService) buildInterestsProfileInfo(user *models.User, lang string) string {
-	ids, err := s.DB.GetUserSelectedInterests(user.ID)
+	// Получаем выборы пользователя из новой системы
+	selections, err := s.DB.GetUserInterestSelections(user.ID)
 	if err != nil {
-		ids = []int{}
+		// Fallback на старую систему
+		ids, err := s.DB.GetUserSelectedInterests(user.ID)
+		if err != nil {
+			ids = []int{}
+		}
+
+		// Получаем все интересы для локализации
+		allInterests, _ := s.Localizer.GetInterests(lang)
+
+		var picked []string
+
+		for _, id := range ids {
+			if name, ok := allInterests[id]; ok {
+				picked = append(picked, name)
+			} else {
+				// Fallback: добавляем ID если нет локализации
+				picked = append(picked, fmt.Sprintf("Интерес %d", id))
+			}
+		}
+
+		interestsLine := fmt.Sprintf("🎯 %s: %d", s.Localizer.Get(lang, "profile_field_interests"), len(picked))
+
+		if len(picked) > 0 {
+			interestsLine = fmt.Sprintf("🎯 %s: %d\n• %s",
+				s.Localizer.Get(lang, "profile_field_interests"),
+				len(picked),
+				strings.Join(picked, ", "),
+			)
+		}
+
+		return interestsLine
 	}
 
-	allInterests, _ := s.Localizer.GetInterests(lang)
+	// Используем новую систему
+	var allInterests []string
+	var primaryCount, additionalCount int
 
-	var picked []string
+	// Обрабатываем выборы пользователя
+	for _, selection := range selections {
+		// Получаем информацию об интересе
+		interest, err := s.DB.GetInterestByID(selection.InterestID)
+		if err != nil {
+			continue
+		}
 
-	for _, id := range ids {
-		if name, ok := allInterests[id]; ok {
-			picked = append(picked, name)
+		// Получаем локализованное название
+		interestName := s.Localizer.Get(lang, "interest_"+interest.KeyName)
+		if interestName == "interest_"+interest.KeyName {
+			// Fallback: пытаемся получить из кэша интересов
+			allInterestsMap, _ := s.Localizer.GetInterests(lang)
+			if cachedName, exists := allInterestsMap[interest.ID]; exists {
+				interestName = cachedName
+			} else {
+				// Последний fallback на key_name
+				interestName = interest.KeyName
+			}
+		}
+
+		if selection.IsPrimary {
+			allInterests = append(allInterests, "⭐ "+interestName)
+			primaryCount++
+		} else {
+			allInterests = append(allInterests, interestName)
+			additionalCount++
 		}
 	}
 
-	interestsLine := fmt.Sprintf("🎯 %s: %d", s.Localizer.Get(lang, "profile_field_interests"), len(picked))
+	totalInterests := len(selections)
+	interestsLine := fmt.Sprintf("🎯 %s: %d", s.Localizer.Get(lang, "profile_field_interests"), totalInterests)
 
-	if len(picked) > 0 {
+	if len(allInterests) > 0 {
 		interestsLine = fmt.Sprintf("🎯 %s: %d\n• %s",
 			s.Localizer.Get(lang, "profile_field_interests"),
-			len(picked),
-			strings.Join(picked, ", "),
+			totalInterests,
+			strings.Join(allInterests, ", "),
 		)
 	}
 

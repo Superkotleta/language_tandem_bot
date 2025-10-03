@@ -167,6 +167,9 @@ func (mh *MenuHandler) HandleMainEditProfile(callback *tgbotapi.CallbackQuery, u
 
 // HandleMainFeedback обрабатывает переход к отзывам.
 func (mh *MenuHandler) HandleMainFeedback(callback *tgbotapi.CallbackQuery, user *models.User, feedbackHandler FeedbackHandler) error {
+	// Переводим пользователя в состояние ожидания отзыва
+	_ = mh.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedback)
+
 	// Получаем текст обратной связи
 	text := mh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_text")
 

@@ -556,3 +556,41 @@ func (s *InterestService) scanInterestSelections(rows *sql.Rows) ([]models.Inter
 
 	return selections, nil
 }
+
+// GetAllInterests получает все интересы из системы.
+func (s *InterestService) GetAllInterests() ([]models.Interest, error) {
+	query := `
+		SELECT id, key_name, category_id, display_order, type, created_at
+		FROM interests 
+		ORDER BY id
+	`
+
+	rows, err := s.db.QueryContext(context.Background(), query)
+	if err != nil {
+		return nil, fmt.Errorf("operation failed: %w", err)
+	}
+	defer rows.Close()
+
+	var interests []models.Interest
+	for rows.Next() {
+		var interest models.Interest
+		err := rows.Scan(
+			&interest.ID,
+			&interest.KeyName,
+			&interest.CategoryID,
+			&interest.DisplayOrder,
+			&interest.Type,
+			&interest.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("operation failed: %w", err)
+		}
+		interests = append(interests, interest)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("operation failed: %w", err)
+	}
+
+	return interests, nil
+}

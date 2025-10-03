@@ -747,7 +747,36 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 		)
 	}
 
-	return fh.sendMessage(message.Chat.ID, successText)
+	// Создаем клавиатуру с кнопкой "Главное меню"
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(
+				fh.service.Localizer.Get(user.InterfaceLanguageCode, "main_menu_title"),
+				"back_to_main_menu",
+			),
+		),
+	)
+
+	// Отправляем сообщение с клавиатурой
+	msg := tgbotapi.NewMessage(message.Chat.ID, successText)
+	msg.ReplyMarkup = keyboard
+	_, err = fh.bot.Send(msg)
+	if err != nil {
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to send success message",
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
+			int64(user.ID),
+			message.Chat.ID,
+			"SendMessage",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
+		return err
+	}
+
+	return nil
 }
 
 // HandleFeedbackContactMessage обрабатывает сообщение с контактными данными.

@@ -541,6 +541,69 @@ func (db *DB) ClearUserInterests(userID int) error {
 	return nil
 }
 
+// GetUserInterestSelections получает выборы интересов пользователя.
+func (db *DB) GetUserInterestSelections(userID int) ([]models.InterestSelection, error) {
+	query := `
+		SELECT id, user_id, interest_id, is_primary, selection_order, created_at
+		FROM user_interest_selections 
+		WHERE user_id = $1 
+		ORDER BY is_primary DESC, selection_order ASC
+	`
+
+	rows, err := db.conn.QueryContext(context.Background(), query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("operation failed: %w", err)
+	}
+	defer rows.Close()
+
+	var selections []models.InterestSelection
+	for rows.Next() {
+		var selection models.InterestSelection
+		err := rows.Scan(
+			&selection.ID,
+			&selection.UserID,
+			&selection.InterestID,
+			&selection.IsPrimary,
+			&selection.SelectionOrder,
+			&selection.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("operation failed: %w", err)
+		}
+		selections = append(selections, selection)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("operation failed: %w", err)
+	}
+
+	return selections, nil
+}
+
+// GetInterestByID получает интерес по ID.
+func (db *DB) GetInterestByID(interestID int) (*models.Interest, error) {
+	query := `
+		SELECT id, key_name, category_id, display_order, type, created_at
+		FROM interests 
+		WHERE id = $1
+	`
+
+	var interest models.Interest
+	err := db.conn.QueryRowContext(context.Background(), query, interestID).Scan(
+		&interest.ID,
+		&interest.KeyName,
+		&interest.CategoryID,
+		&interest.DisplayOrder,
+		&interest.Type,
+		&interest.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("operation failed: %w", err)
+	}
+
+	return &interest, nil
+}
+
 // ResetUserProfile очищает языки и интересы, переводит пользователя в начало онбординга.
 func (db *DB) ResetUserProfile(userID int) error {
 	transaction, err := db.conn.BeginTx(context.Background(), nil)
@@ -590,8 +653,11 @@ func (db *DB) SaveUserFeedback(userID int, feedbackText string, contactInfo *str
     `
 
 	_, err := db.conn.ExecContext(context.Background(), query, userID, feedbackText, contactInfo)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
 
-	return fmt.Errorf("operation failed: %w", err)
+	return nil
 }
 
 // GetUserFeedbackByUserID получает отзывы пользователя.

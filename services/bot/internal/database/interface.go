@@ -32,6 +32,10 @@ type Database interface {
 	RemoveUserInterest(userID, interestID int) error
 	ClearUserInterests(userID int) error
 
+	// Новая система интересов
+	GetUserInterestSelections(userID int) ([]models.InterestSelection, error)
+	GetInterestByID(interestID int) (*models.Interest, error)
+
 	// Обратная связь
 	SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error
 	GetUnprocessedFeedback() ([]map[string]interface{}, error)
