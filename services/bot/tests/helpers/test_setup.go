@@ -11,7 +11,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// SetupTestBot создает тестовый бот с моками
+// SetupTestBot создает тестовый бот с моками.
 func SetupTestBot(mockDB database.Database) (*mocks.TelegramHandlerWrapper, *core.BotService) {
 	// Создаем простой локализатор для тестов - используем реальный с nil DB
 	localizer := localization.NewLocalizer(nil)
@@ -30,7 +30,7 @@ func SetupTestBot(mockDB database.Database) (*mocks.TelegramHandlerWrapper, *cor
 	return wrapper, service
 }
 
-// CreateTestMessage создает тестовое сообщение Telegram
+// CreateTestMessage создает тестовое сообщение Telegram.
 func CreateTestMessage(text string, userID int64, username string) *tgbotapi.Message {
 	return &tgbotapi.Message{
 		MessageID: int(time.Now().Unix()),
@@ -50,7 +50,7 @@ func CreateTestMessage(text string, userID int64, username string) *tgbotapi.Mes
 	}
 }
 
-// CreateTestCommand создает тестовую команду
+// CreateTestCommand создает тестовую команду.
 func CreateTestCommand(command string, userID int64, username string) *tgbotapi.Message {
 	msg := CreateTestMessage("/"+command, userID, username)
 	// Дополнительно устанавливаем поля для команды
@@ -62,10 +62,11 @@ func CreateTestCommand(command string, userID int64, username string) *tgbotapi.
 		},
 	}
 	msg.Entities = entities
+
 	return msg
 }
 
-// CreateTestCallback создает тестовый callback query
+// CreateTestCallback создает тестовый callback query.
 func CreateTestCallback(data string, userID int64) *tgbotapi.CallbackQuery {
 	return &tgbotapi.CallbackQuery{
 		ID: "test_callback_" + data,
@@ -87,7 +88,7 @@ func CreateTestCallback(data string, userID int64) *tgbotapi.CallbackQuery {
 	}
 }
 
-// CreateUpdateWithMessage создает Update с сообщением
+// CreateUpdateWithMessage создает Update с сообщением.
 func CreateUpdateWithMessage(message *tgbotapi.Message) tgbotapi.Update {
 	return tgbotapi.Update{
 		UpdateID: int(time.Now().Unix()),
@@ -95,7 +96,7 @@ func CreateUpdateWithMessage(message *tgbotapi.Message) tgbotapi.Update {
 	}
 }
 
-// CreateUpdateWithCallback создает Update с callback query
+// CreateUpdateWithCallback создает Update с callback query.
 func CreateUpdateWithCallback(callback *tgbotapi.CallbackQuery) tgbotapi.Update {
 	return tgbotapi.Update{
 		UpdateID:      int(time.Now().Unix()),
@@ -103,7 +104,9 @@ func CreateUpdateWithCallback(callback *tgbotapi.CallbackQuery) tgbotapi.Update 
 	}
 }
 
-// CreateTestUser создает тестового пользователя
+// CreateTestUser создает тестового пользователя.
+//
+//nolint:mnd
 func CreateTestUser() *models.User {
 	return &models.User{
 		ID:                     1,
@@ -121,7 +124,9 @@ func CreateTestUser() *models.User {
 	}
 }
 
-// CreateTestAdminUser создает тестового администратора
+// CreateTestAdminUser создает тестового администратора.
+//
+//nolint:mnd
 func CreateTestAdminUser() *models.User {
 	return &models.User{
 		ID:                     2,
@@ -139,13 +144,13 @@ func CreateTestAdminUser() *models.User {
 	}
 }
 
-// CreateTestLocalizer создает простой локализатор для тестов
-func CreateTestLocalizer() LocalizerInterface {
+// CreateTestLocalizer создает простой локализатор для тестов.
+func CreateTestLocalizer() *mocks.LocalizerMock {
 	// Возвращаем мок локализатора вместо реального
 	return mocks.NewLocalizerMock()
 }
 
-// LocalizerInterface интерфейс для локализатора (чтобы можно было использовать мок)
+// LocalizerInterface интерфейс для локализатора (чтобы можно было использовать мок).
 type LocalizerInterface interface {
 	Get(langCode, key string) string
 	GetWithParams(langCode, key string, params map[string]string) string

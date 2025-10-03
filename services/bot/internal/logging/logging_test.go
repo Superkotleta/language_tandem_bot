@@ -1,4 +1,4 @@
-package logging
+package logging //nolint:testpackage
 
 import (
 	"language-exchange-bot/internal/errors"
@@ -6,11 +6,21 @@ import (
 	"time"
 )
 
-// TestLogger тестирует базовый логгер
+const (
+	testDebugString = "DEBUG"
+	testInfoString  = "INFO"
+	testWarnString  = "WARN"
+	testErrorString = "ERROR"
+)
+
+// TestLogger тестирует базовый логгер.
 func TestLogger(t *testing.T) {
+	t.Parallel()
+
 	logger := NewLogger(DEBUG, "test")
 
 	t.Run("LogLevels", func(t *testing.T) {
+		t.Parallel()
 		// Тест всех уровней логирования
 		logger.Debug("Debug message")
 		logger.Info("Info message")
@@ -19,6 +29,7 @@ func TestLogger(t *testing.T) {
 	})
 
 	t.Run("LogWithContext", func(t *testing.T) {
+		t.Parallel()
 		// Тест логирования с контекстом
 		logger.DebugWithContext("Debug with context", "req_123", 12345, 67890, "TestOperation")
 		logger.InfoWithContext("Info with context", "req_123", 12345, 67890, "TestOperation")
@@ -58,7 +69,7 @@ func TestLogger(t *testing.T) {
 	t.Log("Logger tests completed successfully")
 }
 
-// TestComponentLoggers тестирует специализированные логгеры
+// TestComponentLoggers тестирует специализированные логгеры.
 func TestComponentLoggers(t *testing.T) {
 	t.Run("TelegramLogger", func(t *testing.T) {
 		telegramLogger := NewTelegramLogger()
@@ -82,7 +93,7 @@ func TestComponentLoggers(t *testing.T) {
 		databaseLogger := NewDatabaseLogger()
 
 		databaseLogger.LogConnectionEstablished("req_123")
-		databaseLogger.LogQueryExecuted("SELECT * FROM users", time.Millisecond*100, "req_123")
+		databaseLogger.LogQueryExecuted("SELECT id, username, email FROM users", time.Millisecond*100, "req_123")
 		databaseLogger.LogTransactionStarted("req_123")
 		databaseLogger.LogTransactionCommitted("req_123")
 
@@ -136,7 +147,7 @@ func TestComponentLoggers(t *testing.T) {
 	t.Log("Component logger tests completed successfully")
 }
 
-// TestLoggingService тестирует сервис логирования
+// TestLoggingService тестирует сервис логирования.
 func TestLoggingService(t *testing.T) {
 	// Создаем мок errorHandler
 	adminNotifier := errors.NewAdminNotifier([]int64{123456789}, nil)
@@ -188,12 +199,15 @@ func TestLoggingService(t *testing.T) {
 	})
 
 	t.Run("SetLogLevel", func(t *testing.T) {
+		t.Parallel()
 		loggingService.SetLogLevel(ERROR)
+
 		if loggingService.GetLogLevel() != ERROR {
 			t.Error("Expected ERROR level")
 		}
 
 		loggingService.SetLogLevel(DEBUG)
+
 		if loggingService.GetLogLevel() != DEBUG {
 			t.Error("Expected DEBUG level")
 		}
@@ -202,37 +216,49 @@ func TestLoggingService(t *testing.T) {
 	t.Log("Logging service tests completed successfully")
 }
 
-// TestLogLevelParsing тестирует парсинг уровней логирования
+// TestLogLevelParsing тестирует парсинг уровней логирования.
 func TestLogLevelParsing(t *testing.T) {
+	t.Parallel()
 	t.Run("ParseLogLevel", func(t *testing.T) {
-		if ParseLogLevel("DEBUG") != DEBUG {
+		t.Parallel()
+
+		if ParseLogLevel(testDebugString) != DEBUG {
 			t.Error("Expected DEBUG level")
 		}
-		if ParseLogLevel("INFO") != INFO {
+
+		if ParseLogLevel(testInfoString) != INFO {
 			t.Error("Expected INFO level")
 		}
-		if ParseLogLevel("WARN") != WARN {
+
+		if ParseLogLevel(testWarnString) != WARN {
 			t.Error("Expected WARN level")
 		}
-		if ParseLogLevel("ERROR") != ERROR {
+
+		if ParseLogLevel(testErrorString) != ERROR {
 			t.Error("Expected ERROR level")
 		}
+
 		if ParseLogLevel("INVALID") != INFO {
 			t.Error("Expected INFO level for invalid input")
 		}
 	})
 
 	t.Run("LogLevelString", func(t *testing.T) {
-		if DEBUG.String() != "DEBUG" {
+		t.Parallel()
+
+		if DEBUG.String() != testDebugString {
 			t.Error("Expected DEBUG string")
 		}
-		if INFO.String() != "INFO" {
+
+		if INFO.String() != testInfoString {
 			t.Error("Expected INFO string")
 		}
-		if WARN.String() != "WARN" {
+
+		if WARN.String() != testWarnString {
 			t.Error("Expected WARN string")
 		}
-		if ERROR.String() != "ERROR" {
+
+		if ERROR.String() != testErrorString {
 			t.Error("Expected ERROR string")
 		}
 	})

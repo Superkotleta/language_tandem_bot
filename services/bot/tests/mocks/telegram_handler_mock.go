@@ -8,7 +8,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// TelegramHandlerWrapper обертка для тестирования обработчика Telegram
+// TelegramHandlerWrapper обертка для тестирования обработчика Telegram.
 type TelegramHandlerWrapper struct {
 	Service        *core.BotService
 	SentMessages   []tgbotapi.MessageConfig
@@ -17,18 +17,20 @@ type TelegramHandlerWrapper struct {
 	LastError      error
 }
 
-// HandleUpdate обрабатывает update и записывает отправленные сообщения
+// HandleUpdate обрабатывает update и записывает отправленные сообщения.
 func (w *TelegramHandlerWrapper) HandleUpdate(update tgbotapi.Update) error {
 	if update.Message != nil {
 		return w.handleMessage(update.Message)
 	}
+
 	if update.CallbackQuery != nil {
 		return w.handleCallbackQuery(update.CallbackQuery)
 	}
+
 	return nil
 }
 
-// handleMessage имитирует обработку сообщения
+// handleMessage имитирует обработку сообщения.
 func (w *TelegramHandlerWrapper) handleMessage(message *tgbotapi.Message) error {
 	user, err := w.Service.HandleUserRegistration(
 		message.From.ID,
@@ -38,16 +40,18 @@ func (w *TelegramHandlerWrapper) handleMessage(message *tgbotapi.Message) error 
 	)
 	if err != nil {
 		w.LastError = err
+
 		return err
 	}
 
 	if message.IsCommand() {
 		return w.handleCommand(message, user)
 	}
+
 	return w.handleState(message, user)
 }
 
-// handleCommand имитирует обработку команд
+// handleCommand имитирует обработку команд.
 func (w *TelegramHandlerWrapper) handleCommand(message *tgbotapi.Message, user *models.User) error {
 	switch message.Command() {
 	case "start":
@@ -62,11 +66,12 @@ func (w *TelegramHandlerWrapper) handleCommand(message *tgbotapi.Message, user *
 		// Неизвестная команда
 		msg := tgbotapi.NewMessage(message.Chat.ID, "Unknown command")
 		w.SentMessages = append(w.SentMessages, msg)
+
 		return nil
 	}
 }
 
-// handleStartCommand имитирует обработку команды /start
+// handleStartCommand имитирует обработку команды /start.
 func (w *TelegramHandlerWrapper) handleStartCommand(message *tgbotapi.Message, user *models.User) error {
 	welcomeText := w.Service.GetWelcomeMessage(user)
 
@@ -85,10 +90,11 @@ func (w *TelegramHandlerWrapper) handleStartCommand(message *tgbotapi.Message, u
 	msg.ReplyMarkup = keyboard
 
 	w.SentMessages = append(w.SentMessages, msg)
+
 	return nil
 }
 
-// handleStatusCommand имитирует обработку команды /status
+// handleStatusCommand имитирует обработку команды /status.
 func (w *TelegramHandlerWrapper) handleStatusCommand(message *tgbotapi.Message, user *models.User) error {
 	// Создаем простое сообщение со статусом пользователя
 	statusText := fmt.Sprintf("User ID: %d\nStatus: %s\nProfile completion: %d%%",
@@ -96,10 +102,11 @@ func (w *TelegramHandlerWrapper) handleStatusCommand(message *tgbotapi.Message, 
 
 	msg := tgbotapi.NewMessage(message.Chat.ID, statusText)
 	w.SentMessages = append(w.SentMessages, msg)
+
 	return nil
 }
 
-// handleProfileCommand имитирует обработку команды /profile
+// handleProfileCommand имитирует обработку команды /profile.
 func (w *TelegramHandlerWrapper) handleProfileCommand(message *tgbotapi.Message, user *models.User) error {
 	profileText, err := w.Service.BuildProfileSummary(user)
 	if err != nil {
@@ -108,16 +115,19 @@ func (w *TelegramHandlerWrapper) handleProfileCommand(message *tgbotapi.Message,
 
 	msg := tgbotapi.NewMessage(message.Chat.ID, profileText)
 	w.SentMessages = append(w.SentMessages, msg)
+
 	return nil
 }
 
-// handleFeedbackCommand имитирует обработку команды /feedback
+// handleFeedbackCommand имитирует обработку команды /feedback.
 func (w *TelegramHandlerWrapper) handleFeedbackCommand(message *tgbotapi.Message, user *models.User) error {
 	// Проверяем, является ли пользователь администратором
 	isAdmin := false
+
 	for _, adminID := range []int64{123456789, 987654321} {
 		if user.TelegramID == adminID {
 			isAdmin = true
+
 			break
 		}
 	}
@@ -130,18 +140,20 @@ func (w *TelegramHandlerWrapper) handleFeedbackCommand(message *tgbotapi.Message
 	}
 
 	w.SentMessages = append(w.SentMessages, msg)
+
 	return nil
 }
 
-// handleState имитирует обработку состояний пользователя
-func (w *TelegramHandlerWrapper) handleState(message *tgbotapi.Message, user *models.User) error {
+// handleState имитирует обработку состояний пользователя.
+func (w *TelegramHandlerWrapper) handleState(message *tgbotapi.Message, _ *models.User) error {
 	// Простая имитация обработки состояний
 	msg := tgbotapi.NewMessage(message.Chat.ID, "Processing your message...")
 	w.SentMessages = append(w.SentMessages, msg)
+
 	return nil
 }
 
-// handleCallbackQuery имитирует обработку callback запросов
+// handleCallbackQuery имитирует обработку callback запросов.
 func (w *TelegramHandlerWrapper) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 	user, err := w.Service.HandleUserRegistration(
 		callback.From.ID,
@@ -151,6 +163,7 @@ func (w *TelegramHandlerWrapper) handleCallbackQuery(callback *tgbotapi.Callback
 	)
 	if err != nil {
 		w.LastError = err
+
 		return err
 	}
 
@@ -161,6 +174,7 @@ func (w *TelegramHandlerWrapper) handleCallbackQuery(callback *tgbotapi.Callback
 		if err != nil {
 			profileText = "Error loading profile"
 		}
+
 		edit := tgbotapi.NewEditMessageText(callback.Message.Chat.ID, callback.Message.MessageID, profileText)
 		w.EditedMessages = append(w.EditedMessages, edit)
 
@@ -182,20 +196,21 @@ func (w *TelegramHandlerWrapper) handleCallbackQuery(callback *tgbotapi.Callback
 	return nil
 }
 
-// GetSentMessagesCount возвращает количество отправленных сообщений
+// GetSentMessagesCount возвращает количество отправленных сообщений.
 func (w *TelegramHandlerWrapper) GetSentMessagesCount() int {
 	return len(w.SentMessages)
 }
 
-// GetLastSentMessage возвращает последнее отправленное сообщение
+// GetLastSentMessage возвращает последнее отправленное сообщение.
 func (w *TelegramHandlerWrapper) GetLastSentMessage() *tgbotapi.MessageConfig {
 	if len(w.SentMessages) == 0 {
 		return nil
 	}
+
 	return &w.SentMessages[len(w.SentMessages)-1]
 }
 
-// Reset очищает все записанные сообщения
+// Reset очищает все записанные сообщения.
 func (w *TelegramHandlerWrapper) Reset() {
 	w.SentMessages = make([]tgbotapi.MessageConfig, 0)
 	w.SentCallbacks = make([]tgbotapi.CallbackConfig, 0)

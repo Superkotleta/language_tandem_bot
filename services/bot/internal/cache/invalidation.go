@@ -94,7 +94,7 @@ func (is *InvalidationService) GetInvalidationStats() map[string]interface{} {
 		"cache_hits":   stats.Hits,
 		"cache_misses": stats.Misses,
 		"cache_size":   stats.Size,
-		"hit_rate":     float64(stats.Hits) / float64(stats.Hits+stats.Misses) * percentageMultiplier,
+		"hit_rate":     float64(stats.Hits) / float64(stats.Hits+stats.Misses) * PercentageMultiplier,
 		"last_cleanup": time.Now().Format(time.RFC3339),
 	}
 }

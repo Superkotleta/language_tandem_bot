@@ -13,16 +13,29 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// AdminHandler интерфейс для обработки административных функций
+// Константы для типов отзывов.
+const (
+	FeedbackTypeArchive = "archive"
+	FeedbackTypeAll     = "all"
+	FeedbackTypeActive  = "active"
+)
+
+// AdminHandler интерфейс для обработки административных функций.
 type AdminHandler interface {
 	ShowFeedbackStatisticsEdit(callback *tgbotapi.CallbackQuery, user *models.User) error
 	HandleBrowseActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error
 	HandleBrowseArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error
-	ShowFeedbackItemWithNavigationEdit(callback *tgbotapi.CallbackQuery, fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) error
+	ShowFeedbackItemWithNavigationEdit(
+		callback *tgbotapi.CallbackQuery,
+		fb map[string]interface{},
+		currentIndex int,
+		totalCount int,
+		feedbackType string,
+	) error
 	IsAdmin(chatID int64, username string) bool
 }
 
-// AdminHandlerImpl реализация административного обработчика
+// AdminHandlerImpl реализация административного обработчика.
 type AdminHandlerImpl struct {
 	service         *core.BotService
 	bot             *tgbotapi.BotAPI
@@ -32,8 +45,15 @@ type AdminHandlerImpl struct {
 	errorHandler    *errors.ErrorHandler
 }
 
-// NewAdminHandler создает новый административный обработчик
-func NewAdminHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, adminChatIDs []int64, adminUsernames []string, errorHandler *errors.ErrorHandler) AdminHandler {
+// NewAdminHandler создает новый административный обработчик.
+func NewAdminHandler(
+	service *core.BotService,
+	bot *tgbotapi.BotAPI,
+	keyboardBuilder *KeyboardBuilder,
+	adminChatIDs []int64,
+	adminUsernames []string,
+	errorHandler *errors.ErrorHandler,
+) *AdminHandlerImpl {
 	return &AdminHandlerImpl{
 		service:         service,
 		bot:             bot,
@@ -44,7 +64,7 @@ func NewAdminHandler(service *core.BotService, bot *tgbotapi.BotAPI, keyboardBui
 	}
 }
 
-// IsAdmin проверяет права администратора
+// IsAdmin проверяет права администратора.
 func (h *AdminHandlerImpl) IsAdmin(chatID int64, username string) bool {
 	// Проверяем по Chat ID
 	for _, adminID := range h.adminChatIDs {
@@ -66,12 +86,13 @@ func (h *AdminHandlerImpl) IsAdmin(chatID int64, username string) bool {
 	return false
 }
 
-// ShowFeedbackStatisticsEdit показывает статистику отзывов с редактированием текущего сообщения
+// ShowFeedbackStatisticsEdit показывает статистику отзывов с редактированием текущего сообщения.
 func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Проверяем права администратора
 	if !h.IsAdmin(callback.Message.Chat.ID, user.Username) {
 		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Данная команда доступна только администраторам бота.")
 		_, err := h.bot.Send(msg)
+
 		return err
 	}
 
@@ -79,8 +100,9 @@ func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.Callbac
 	feedbacks, err := h.service.GetAllFeedback()
 	if err != nil {
 		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
-		_, err := h.bot.Send(msg)
-		return err
+		_, sendErr := h.bot.Send(msg)
+
+		return sendErr
 	}
 
 	if len(feedbacks) == 0 {
@@ -89,18 +111,21 @@ func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.Callbac
 			callback.Message.MessageID,
 			"📝 Отзывов пока нет",
 		)
-		_, err := h.bot.Request(editMsg)
-		return err
+		_, editErr := h.bot.Request(editMsg)
+
+		return editErr
 	}
 
 	// Подсчитываем статистику
 	totalCount := len(feedbacks)
 	processedCount := 0
+
 	for _, fb := range feedbacks {
 		if fb["is_processed"].(bool) {
 			processedCount++
 		}
 	}
+
 	pendingCount := totalCount - processedCount
 
 	// Формируем текст статистики
@@ -120,35 +145,43 @@ func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.Callbac
 		keyboard,
 	)
 	_, err = h.bot.Request(editMsg)
+
 	return err
 }
 
-// HandleBrowseActiveFeedbacks показывает активные отзывы в интерактивном режиме с редактированием
+// HandleBrowseActiveFeedbacks показывает активные отзывы в интерактивном режиме с редактированием.
 func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	index, err := strconv.Atoi(indexStr)
 	if err != nil {
 		log.Printf("Ошибка парсинга индекса: %v", err)
+
 		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Ошибка индекса")
-		_, err := h.bot.Send(msg)
-		return err
+		_, sendErr := h.bot.Send(msg)
+
+		return sendErr
 	}
 
 	// Получаем активные отзывы
 	feedbacks, err := h.service.GetAllFeedback()
 	if err != nil {
 		log.Printf("Ошибка получения отзывов: %v", err)
+
 		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 		_, err := h.bot.Send(msg)
+
 		return err
 	}
 
 	// Фильтруем только необработанные отзывы
 	var activeFeedbacks []map[string]interface{}
+
 	type feedbackKey struct {
 		userID       int64
 		feedbackText string
 	}
+
 	seen := make(map[feedbackKey][]map[string]interface{})
+
 	for _, fb := range feedbacks {
 		if !fb["is_processed"].(bool) {
 			key := feedbackKey{
@@ -162,6 +195,7 @@ func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.Callba
 	for _, group := range seen {
 		for _, fb := range group {
 			activeFeedbacks = append(activeFeedbacks, fb)
+
 			break
 		}
 	}
@@ -169,6 +203,7 @@ func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.Callba
 	if len(activeFeedbacks) == 0 {
 		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "🎉 Все отзывы обработаны!")
 		_, err := h.bot.Send(msg)
+
 		return err
 	}
 
@@ -178,35 +213,48 @@ func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.Callba
 	}
 
 	// Показываем текущий отзыв с редактированием текущего сообщения
-	return h.ShowFeedbackItemWithNavigationEdit(callback, activeFeedbacks[index], index, len(activeFeedbacks), "active")
+	return h.ShowFeedbackItemWithNavigationEdit(
+		callback,
+		activeFeedbacks[index],
+		index,
+		len(activeFeedbacks),
+		FeedbackTypeActive,
+	)
 }
 
-// HandleBrowseArchiveFeedbacks показывает обработанные отзывы в интерактивном режиме
+// HandleBrowseArchiveFeedbacks показывает обработанные отзывы в интерактивном режиме.
 func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	index, err := strconv.Atoi(indexStr)
 	if err != nil {
 		log.Printf("Ошибка парсинга индекса: %v", err)
+
 		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Ошибка индекса")
-		_, err := h.bot.Send(msg)
-		return err
+		_, sendErr := h.bot.Send(msg)
+
+		return sendErr
 	}
 
 	// Получаем обработанные отзывы
 	feedbacks, err := h.service.GetAllFeedback()
 	if err != nil {
 		log.Printf("Ошибка получения отзывов: %v", err)
+
 		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 		_, err := h.bot.Send(msg)
+
 		return err
 	}
 
 	// Фильтруем только обработанные отзывы
 	var archivedFeedbacks []map[string]interface{}
+
 	type feedbackKey struct {
 		userID       int64
 		feedbackText string
 	}
+
 	seen := make(map[feedbackKey][]map[string]interface{})
+
 	for _, fb := range feedbacks {
 		if fb["is_processed"].(bool) {
 			key := feedbackKey{
@@ -220,6 +268,7 @@ func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.Callb
 	for _, group := range seen {
 		for _, fb := range group {
 			archivedFeedbacks = append(archivedFeedbacks, fb)
+
 			break
 		}
 	}
@@ -227,6 +276,7 @@ func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.Callb
 	if len(archivedFeedbacks) == 0 {
 		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "📝 Обработанных отзывов пока нет")
 		_, err := h.bot.Send(msg)
+
 		return err
 	}
 
@@ -236,11 +286,23 @@ func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.Callb
 	}
 
 	// Показываем текущий отзыв с редактированием текущего сообщения
-	return h.ShowFeedbackItemWithNavigationEdit(callback, archivedFeedbacks[index], index, len(archivedFeedbacks), "archive")
+	return h.ShowFeedbackItemWithNavigationEdit(
+		callback,
+		archivedFeedbacks[index],
+		index,
+		len(archivedFeedbacks),
+		FeedbackTypeArchive,
+	)
 }
 
-// ShowFeedbackItemWithNavigationEdit показывает отзыв с навигацией (редактирует текущее сообщение)
-func (h *AdminHandlerImpl) ShowFeedbackItemWithNavigationEdit(callback *tgbotapi.CallbackQuery, fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) error {
+// ShowFeedbackItemWithNavigationEdit показывает отзыв с навигацией (редактирует текущее сообщение).
+func (h *AdminHandlerImpl) ShowFeedbackItemWithNavigationEdit(
+	callback *tgbotapi.CallbackQuery,
+	fb map[string]interface{},
+	currentIndex int,
+	totalCount int,
+	feedbackType string,
+) error {
 	// Формируем текст отзыва
 	feedbackText := h.formatFeedbackText(fb, currentIndex, totalCount, feedbackType)
 
@@ -254,21 +316,26 @@ func (h *AdminHandlerImpl) ShowFeedbackItemWithNavigationEdit(callback *tgbotapi
 		keyboard,
 	)
 	_, err := h.bot.Request(editMsg)
+
 	return err
 }
 
-// formatFeedbackText форматирует текст отзыва для отображения
+// formatFeedbackText форматирует текст отзыва для отображения.
 func (h *AdminHandlerImpl) formatFeedbackText(fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) string {
 	userID := fb["telegram_id"].(int64)
+
 	username := ""
 	if fb["username"] != nil {
 		username = fb["username"].(string)
 	}
+
 	firstName := ""
 	if fb["first_name"] != nil {
 		firstName = fb["first_name"].(string)
 	}
+
 	feedbackText := fb["feedback_text"].(string)
+
 	contactInfo := ""
 	if fb["contact_info"] != nil && fb["contact_info"].(string) != "" {
 		contactInfo = fb["contact_info"].(string)
@@ -281,9 +348,11 @@ func (h *AdminHandlerImpl) formatFeedbackText(fb map[string]interface{}, current
 	}
 
 	typeText := "📝 Активные отзывы"
-	if feedbackType == "archive" {
+
+	switch feedbackType {
+	case FeedbackTypeArchive:
 		typeText = "📁 Архив отзывов"
-	} else if feedbackType == "all" {
+	case FeedbackTypeAll:
 		typeText = "📊 Все отзывы"
 	}
 
@@ -292,8 +361,9 @@ func (h *AdminHandlerImpl) formatFeedbackText(fb map[string]interface{}, current
 	if username != "" {
 		userInfo += fmt.Sprintf(" (@%s)", username)
 	}
+
 	if firstName != "" {
-		userInfo += fmt.Sprintf(" - %s", firstName)
+		userInfo += " - " + firstName
 	}
 
 	// Формируем полный текст
@@ -305,32 +375,45 @@ func (h *AdminHandlerImpl) formatFeedbackText(fb map[string]interface{}, current
 		userInfo, feedbackText, status)
 
 	if contactInfo != "" {
-		text += fmt.Sprintf("\n📞 Контакт: %s", contactInfo)
+		text += "\n📞 Контакт: " + contactInfo
 	}
 
 	return text
 }
 
-// createFeedbackNavigationKeyboard создает клавиатуру навигации для отзывов
-func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(fb map[string]interface{}, currentIndex int, totalCount int, feedbackType string) tgbotapi.InlineKeyboardMarkup {
+// createFeedbackNavigationKeyboard создает клавиатуру навигации для отзывов.
+func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(
+	fb map[string]interface{},
+	currentIndex int,
+	totalCount int,
+	feedbackType string,
+) tgbotapi.InlineKeyboardMarkup {
 	var keyboard [][]tgbotapi.InlineKeyboardButton
 
 	// Кнопки навигации
 	if totalCount > 1 {
 		var navRow []tgbotapi.InlineKeyboardButton
 		if currentIndex > 0 {
-			navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("⬅️ Пред", fmt.Sprintf("browse_%s_%d", feedbackType, currentIndex-1)))
+			navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(
+				"⬅️ Пред",
+				fmt.Sprintf("browse_%s_%d", feedbackType, currentIndex-1),
+			))
 		}
+
 		if currentIndex < totalCount-1 {
-			navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("След ➡️", fmt.Sprintf("browse_%s_%d", feedbackType, currentIndex+1)))
+			navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(
+				"След ➡️",
+				fmt.Sprintf("browse_%s_%d", feedbackType, currentIndex+1),
+			))
 		}
+
 		if len(navRow) > 0 {
 			keyboard = append(keyboard, navRow)
 		}
 	}
 
 	// Кнопки действий для необработанных отзывов
-	if feedbackType == "active" && !fb["is_processed"].(bool) {
+	if feedbackType == FeedbackTypeActive && !fb["is_processed"].(bool) {
 		actionRow := []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("✅ Обработать", fmt.Sprintf("fb_process_%v", fb["id"])),
 		}
@@ -338,7 +421,7 @@ func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(fb map[string]interf
 	}
 
 	// Кнопки действий для обработанных отзывов
-	if feedbackType == "archive" && fb["is_processed"].(bool) {
+	if feedbackType == FeedbackTypeArchive && fb["is_processed"].(bool) {
 		actionRow := []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("❌ Снять обработку", fmt.Sprintf("fb_unprocess_%v", fb["id"])),
 		}

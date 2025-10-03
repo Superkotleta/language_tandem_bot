@@ -4,12 +4,12 @@ import (
 	"strings"
 )
 
-// LocalizerMock простой мок локализатора для тестов
+// LocalizerMock простой мок локализатора для тестов.
 type LocalizerMock struct {
 	translations map[string]map[string]string
 }
 
-// NewLocalizerMock создает новый мок локализатора
+// NewLocalizerMock создает новый мок локализатора.
 func NewLocalizerMock() *LocalizerMock {
 	return &LocalizerMock{
 		translations: map[string]map[string]string{
@@ -37,7 +37,7 @@ func NewLocalizerMock() *LocalizerMock {
 	}
 }
 
-// Get возвращает перевод для ключа и языка
+// Get возвращает перевод для ключа и языка.
 func (l *LocalizerMock) Get(langCode, key string) string {
 	if lang, exists := l.translations[langCode]; exists {
 		if value, exists := lang[key]; exists {
@@ -56,7 +56,7 @@ func (l *LocalizerMock) Get(langCode, key string) string {
 	return key
 }
 
-// GetWithParams возвращает перевод с заменой параметров
+// GetWithParams возвращает перевод с заменой параметров.
 func (l *LocalizerMock) GetWithParams(langCode, key string, params map[string]string) string {
 	text := l.Get(langCode, key)
 
@@ -69,7 +69,7 @@ func (l *LocalizerMock) GetWithParams(langCode, key string, params map[string]st
 	return text
 }
 
-// GetLanguageName возвращает название языка
+// GetLanguageName возвращает название языка.
 func (l *LocalizerMock) GetLanguageName(langCode, interfaceLangCode string) string {
 	names := map[string]map[string]string{
 		"en": {"en": "English", "ru": "Russian", "es": "Spanish", "zh": "Chinese"},
@@ -88,7 +88,7 @@ func (l *LocalizerMock) GetLanguageName(langCode, interfaceLangCode string) stri
 	return langCode
 }
 
-// GetInterests возвращает список интересов (заглушка для тестов)
+// GetInterests возвращает список интересов (заглушка для тестов).
 func (l *LocalizerMock) GetInterests(langCode string) (map[int]string, error) {
 	interests := map[int]string{
 		1: "Movies",

@@ -1,9 +1,11 @@
+// Package config provides configuration management for the profile service.
 package config
 
 import (
 	"os"
 )
 
+// Config holds the configuration for the profile service.
 type Config struct {
 	DatabaseURL   string
 	DBSchema      string
@@ -19,6 +21,7 @@ func getEnv(key, def string) string {
 	return def
 }
 
+// LoadProfile loads configuration from environment variables for the profile service.
 func LoadProfile() *Config {
 	return &Config{
 		DatabaseURL:   getEnv("DATABASE_URL", "postgres://profile_rw:profile_pwd@postgres:5432/languagebot?sslmode=disable"),

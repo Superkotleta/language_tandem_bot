@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/models"
@@ -10,36 +12,60 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// TemporaryInterestSelection представляет временный выбор интереса пользователем
+// Константы для символов.
+const (
+	SymbolUnchecked = "☐ "
+)
+
+// Константы для callback команд.
+const (
+	CallbackBackToMainMenu     = "back_to_main_menu"
+	CallbackBackToPreviousStep = "back_to_previous_step"
+)
+
+// Константы для ID языков (fallback значения).
+const (
+	LanguageIDEnglish = 1
+	LanguageIDRussian = 2
+	LanguageIDSpanish = 3
+	LanguageIDChinese = 4
+)
+
+// TemporaryInterestSelection представляет временный выбор интереса пользователем.
 type TemporaryInterestSelection struct {
 	InterestID     int
 	IsPrimary      bool
 	SelectionOrder int
 }
 
-// KeyboardBuilder создает различные типы клавиатур для Telegram
+// KeyboardBuilder создает различные типы клавиатур для Telegram.
 type KeyboardBuilder struct {
 	service *core.BotService
 }
 
-// NewKeyboardBuilder создает новый экземпляр KeyboardBuilder
+// NewKeyboardBuilder создает новый экземпляр KeyboardBuilder.
 func NewKeyboardBuilder(service *core.BotService) *KeyboardBuilder {
 	return &KeyboardBuilder{
 		service: service,
 	}
 }
 
-// CreateLanguageKeyboard создает клавиатуру выбора языка
-func (kb *KeyboardBuilder) CreateLanguageKeyboard(interfaceLang, keyboardType string, excludeLang string, showBackButton bool) tgbotapi.InlineKeyboardMarkup {
+// CreateLanguageKeyboard создает клавиатуру выбора языка.
+func (kb *KeyboardBuilder) CreateLanguageKeyboard(
+	interfaceLang,
+	keyboardType string,
+	excludeLang string,
+	showBackButton bool,
+) tgbotapi.InlineKeyboardMarkup {
 	// Получаем языки из кэша или БД
 	languages, err := kb.service.GetCachedLanguages(interfaceLang)
 	if err != nil {
 		// Fallback на хардкод если кэш не работает
 		languages = []*models.Language{
-			{ID: 1, Code: "en", NameNative: "English", NameEn: "English"},
-			{ID: 2, Code: "ru", NameNative: "Русский", NameEn: "Russian"},
-			{ID: 3, Code: "es", NameNative: "Español", NameEn: "Spanish"},
-			{ID: 4, Code: "zh", NameNative: "中文", NameEn: "Chinese"},
+			{ID: LanguageIDEnglish, Code: "en", NameNative: "English", NameEn: "English"},
+			{ID: LanguageIDRussian, Code: "ru", NameNative: "Русский", NameEn: "Russian"},
+			{ID: LanguageIDSpanish, Code: "es", NameNative: "Español", NameEn: "Spanish"},
+			{ID: LanguageIDChinese, Code: "zh", NameNative: "中文", NameEn: "Chinese"},
 		}
 	}
 
@@ -66,7 +92,7 @@ func (kb *KeyboardBuilder) CreateLanguageKeyboard(interfaceLang, keyboardType st
 	}
 
 	// Преобразуем map в массив кнопок
-	var buttons [][]tgbotapi.InlineKeyboardButton
+	buttons := make([][]tgbotapi.InlineKeyboardButton, 0, len(uniqueButtons))
 	for _, button := range uniqueButtons {
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{button})
 	}
@@ -75,9 +101,9 @@ func (kb *KeyboardBuilder) CreateLanguageKeyboard(interfaceLang, keyboardType st
 	if showBackButton {
 		var backCallback string
 		if keyboardType == "interface" || keyboardType == "native" {
-			backCallback = "back_to_main_menu"
+			backCallback = CallbackBackToMainMenu
 		} else {
-			backCallback = "back_to_previous_step"
+			backCallback = CallbackBackToPreviousStep
 		}
 
 		backButton := tgbotapi.NewInlineKeyboardButtonData(
@@ -90,8 +116,12 @@ func (kb *KeyboardBuilder) CreateLanguageKeyboard(interfaceLang, keyboardType st
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-// CreateInterestsKeyboard создает клавиатуру для выбора интересов
-func (kb *KeyboardBuilder) CreateInterestsKeyboard(interests map[int]string, selectedInterests []int, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+// CreateInterestsKeyboard создает клавиатуру для выбора интересов.
+func (kb *KeyboardBuilder) CreateInterestsKeyboard(
+	interests map[int]string,
+	selectedInterests []int,
+	interfaceLang string,
+) tgbotapi.InlineKeyboardMarkup {
 	// Создаем карту для быстрого поиска выбранных интересов
 	selectedMap := make(map[int]bool)
 	for _, id := range selectedInterests {
@@ -103,15 +133,18 @@ func (kb *KeyboardBuilder) CreateInterestsKeyboard(interests map[int]string, sel
 		id   int
 		name string
 	}
-	var sortedInterests []interestPair
+
+	sortedInterests := make([]interestPair, 0, len(interests))
 	for id, name := range interests {
 		sortedInterests = append(sortedInterests, interestPair{id, name})
 	}
+
 	sort.Slice(sortedInterests, func(i, j int) bool {
 		return sortedInterests[i].id < sortedInterests[j].id
 	})
 
-	var buttons [][]tgbotapi.InlineKeyboardButton
+	buttons := make([][]tgbotapi.InlineKeyboardButton, 0, len(sortedInterests))
+
 	for _, interest := range sortedInterests {
 		label := interest.name
 		if selectedMap[interest.id] {
@@ -135,7 +168,7 @@ func (kb *KeyboardBuilder) CreateInterestsKeyboard(interests map[int]string, sel
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-// CreateMainMenuKeyboard создает главное меню
+// CreateMainMenuKeyboard создает главное меню.
 func (kb *KeyboardBuilder) CreateMainMenuKeyboard(interfaceLang string, hasProfile bool) tgbotapi.InlineKeyboardMarkup {
 	changeLang := tgbotapi.NewInlineKeyboardButtonData(
 		kb.service.Localizer.Get(interfaceLang, "main_menu_change_lang"),
@@ -177,7 +210,7 @@ func (kb *KeyboardBuilder) CreateMainMenuKeyboard(interfaceLang string, hasProfi
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-// CreateProfileMenuKeyboard создает меню профиля
+// CreateProfileMenuKeyboard создает меню профиля.
 func (kb *KeyboardBuilder) CreateProfileMenuKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	// Кнопки для управления профилем
 	editInterests := tgbotapi.NewInlineKeyboardButtonData(
@@ -209,10 +242,11 @@ func (kb *KeyboardBuilder) CreateProfileMenuKeyboard(interfaceLang string) tgbot
 		{reconfig},
 		{backToMain},
 	}
+
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-// CreateResetConfirmKeyboard создает клавиатуру подтверждения сброса
+// CreateResetConfirmKeyboard создает клавиатуру подтверждения сброса.
 func (kb *KeyboardBuilder) CreateResetConfirmKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	yes := tgbotapi.NewInlineKeyboardButtonData(
 		kb.service.Localizer.Get(interfaceLang, "profile_reset_yes"),
@@ -222,14 +256,16 @@ func (kb *KeyboardBuilder) CreateResetConfirmKeyboard(interfaceLang string) tgbo
 		kb.service.Localizer.Get(interfaceLang, "profile_reset_no"),
 		"profile_reset_no",
 	)
+
 	return tgbotapi.NewInlineKeyboardMarkup([][]tgbotapi.InlineKeyboardButton{{yes}, {no}}...)
 }
 
-// CreateLanguageLevelKeyboardWithPrefix создает клавиатуру уровня языка с кастомным префиксом
+// CreateLanguageLevelKeyboardWithPrefix создает клавиатуру уровня языка с кастомным префиксом.
 func (kb *KeyboardBuilder) CreateLanguageLevelKeyboardWithPrefix(interfaceLang, targetLanguage, prefix string, showBackButton bool) tgbotapi.InlineKeyboardMarkup {
 	levels := []string{"beginner", "elementary", "intermediate", "upper_intermediate"}
 
-	var buttons [][]tgbotapi.InlineKeyboardButton
+	buttons := make([][]tgbotapi.InlineKeyboardButton, 0, len(levels))
+
 	for _, level := range levels {
 		text := kb.service.Localizer.Get(interfaceLang, "choose_level_"+level)
 		callback := prefix + level
@@ -240,7 +276,7 @@ func (kb *KeyboardBuilder) CreateLanguageLevelKeyboardWithPrefix(interfaceLang, 
 	if showBackButton {
 		backButton := tgbotapi.NewInlineKeyboardButtonData(
 			kb.service.Localizer.Get(interfaceLang, "back_button"),
-			"back_to_previous_step",
+			CallbackBackToPreviousStep,
 		)
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{backButton})
 	}
@@ -248,7 +284,7 @@ func (kb *KeyboardBuilder) CreateLanguageLevelKeyboardWithPrefix(interfaceLang, 
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-// CreateProfileCompletedKeyboard создает клавиатуру для завершенного профиля
+// CreateProfileCompletedKeyboard создает клавиатуру для завершенного профиля.
 func (kb *KeyboardBuilder) CreateProfileCompletedKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	viewProfileButton := tgbotapi.NewInlineKeyboardButtonData(
 		kb.service.Localizer.Get(interfaceLang, "profile_completed_view"),
@@ -262,10 +298,11 @@ func (kb *KeyboardBuilder) CreateProfileCompletedKeyboard(interfaceLang string) 
 	buttons := [][]tgbotapi.InlineKeyboardButton{
 		{viewProfileButton, mainMenuButton},
 	}
+
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-// CreateEditLanguagesKeyboard создает клавиатуру для редактирования языков
+// CreateEditLanguagesKeyboard создает клавиатуру для редактирования языков.
 func (kb *KeyboardBuilder) CreateEditLanguagesKeyboard(interfaceLang, nativeLang, targetLang, level string) tgbotapi.InlineKeyboardMarkup {
 	var buttons [][]tgbotapi.InlineKeyboardButton
 
@@ -308,10 +345,11 @@ func (kb *KeyboardBuilder) CreateEditLanguagesKeyboard(interfaceLang, nativeLang
 	)
 
 	buttons = append(buttons, []tgbotapi.InlineKeyboardButton{saveButton, cancelButton})
+
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-// CreateSaveEditsKeyboard создает клавиатуру для сохранения/отмены изменений
+// CreateSaveEditsKeyboard создает клавиатуру для сохранения/отмены изменений.
 func (kb *KeyboardBuilder) CreateSaveEditsKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	saveButton := tgbotapi.NewInlineKeyboardButtonData(
 		kb.service.Localizer.Get(interfaceLang, "save_button"),
@@ -325,7 +363,7 @@ func (kb *KeyboardBuilder) CreateSaveEditsKeyboard(interfaceLang string) tgbotap
 	return tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{saveButton, cancelButton})
 }
 
-// CreateFeedbackAdminKeyboard создает клавиатуру для управления отзывами (временная заглушка)
+// CreateFeedbackAdminKeyboard создает клавиатуру для управления отзывами (временная заглушка).
 func (kb *KeyboardBuilder) CreateFeedbackAdminKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	// Временная реализация, которая будет обновлена при переносе статистики
 	buttons := [][]tgbotapi.InlineKeyboardButton{
@@ -333,10 +371,11 @@ func (kb *KeyboardBuilder) CreateFeedbackAdminKeyboard(interfaceLang string) tgb
 		{tgbotapi.NewInlineKeyboardButtonData("📚 Архив", "show_archive_feedbacks")},
 		{tgbotapi.NewInlineKeyboardButtonData("📋 Все", "show_all_feedbacks")},
 	}
+
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-// getLanguageFlag возвращает флаг для языка
+// getLanguageFlag возвращает флаг для языка.
 func getLanguageFlag(langCode string) string {
 	switch langCode {
 	case "ru":
@@ -352,7 +391,7 @@ func getLanguageFlag(langCode string) string {
 	}
 }
 
-// CreateInterestCategoriesKeyboard создает клавиатуру для выбора категорий интересов
+// CreateInterestCategoriesKeyboard создает клавиатуру для выбора категорий интересов.
 func (kb *KeyboardBuilder) CreateInterestCategoriesKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	categories := []struct {
 		key  string
@@ -408,7 +447,7 @@ func (kb *KeyboardBuilder) CreateInterestCategoriesKeyboard(interfaceLang string
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// CreateCategoryInterestsKeyboard создает клавиатуру для выбора интересов в категории
+// CreateCategoryInterestsKeyboard создает клавиатуру для выбора интересов в категории.
 func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.Interest, selectedMap map[int]bool, categoryKey, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 
@@ -424,13 +463,15 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 		// Первая кнопка в ряду
 		interest1 := interests[i]
 		interestName1 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest1.KeyName)
-		prefix1 := "☐ "
+
+		prefix1 := SymbolUnchecked
 		if selectedMap[interest1.ID] {
 			prefix1 = "✅ "
 		}
+
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
 			prefix1+interestName1,
-			"interest_select_"+fmt.Sprintf("%d", interest1.ID),
+			"interest_select_"+strconv.Itoa(interest1.ID),
 		)
 		row = append(row, button1)
 
@@ -438,13 +479,15 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 		if i+1 < len(interests) {
 			interest2 := interests[i+1]
 			interestName2 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest2.KeyName)
-			prefix2 := "☐ "
+
+			prefix2 := SymbolUnchecked
 			if selectedMap[interest2.ID] {
 				prefix2 = "✅ "
 			}
+
 			button2 := tgbotapi.NewInlineKeyboardButtonData(
 				prefix2+interestName2,
-				"interest_select_"+fmt.Sprintf("%d", interest2.ID),
+				"interest_select_"+strconv.Itoa(interest2.ID),
 			)
 			row = append(row, button2)
 		}
@@ -464,7 +507,9 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// CreatePrimaryInterestsKeyboard создает клавиатуру для выбора основных интересов
+// CreatePrimaryInterestsKeyboard создает клавиатуру для выбора основных интересов.
+//
+//nolint:funlen
 func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 
@@ -499,30 +544,35 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 		if err != nil {
 			interestName1 = fmt.Sprintf("Интерес %d", selection1.InterestID)
 		}
-		prefix1 := "☐ "
+
+		prefix1 := SymbolUnchecked
 		if selection1.IsPrimary {
 			prefix1 = "⭐ "
 		}
+
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
 			prefix1+interestName1,
-			"primary_interest_"+fmt.Sprintf("%d", selection1.InterestID),
+			"primary_interest_"+strconv.Itoa(selection1.InterestID),
 		)
 		row = append(row, button1)
 
 		// Вторая кнопка в ряду (если есть)
 		if i+1 < len(tempSelections) {
 			selection2 := tempSelections[i+1]
+
 			interestName2, err := kb.getInterestName(selection2.InterestID, interfaceLang)
 			if err != nil {
 				interestName2 = fmt.Sprintf("Интерес %d", selection2.InterestID)
 			}
-			prefix2 := "☐ "
+
+			prefix2 := SymbolUnchecked
 			if selection2.IsPrimary {
 				prefix2 = "⭐ "
 			}
+
 			button2 := tgbotapi.NewInlineKeyboardButtonData(
 				prefix2+interestName2,
-				"primary_interest_"+fmt.Sprintf("%d", selection2.InterestID),
+				"primary_interest_"+strconv.Itoa(selection2.InterestID),
 			)
 			row = append(row, button2)
 		}
@@ -555,7 +605,7 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// getInterestName получает название интереса из базы данных
+// getInterestName получает название интереса из базы данных.
 func (kb *KeyboardBuilder) getInterestName(interestID int, interfaceLang string) (string, error) {
 	// Получаем все интересы из кэша
 	interests, err := kb.service.GetCachedInterests(interfaceLang)
@@ -568,5 +618,5 @@ func (kb *KeyboardBuilder) getInterestName(interestID int, interfaceLang string)
 		return name, nil
 	}
 
-	return "", fmt.Errorf("interest not found")
+	return "", errors.New("interest not found")
 }

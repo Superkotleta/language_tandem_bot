@@ -9,12 +9,17 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/logging"
 )
 
 // Localizer предоставляет функциональность локализации.
 type Localizer struct {
 	db           *sql.DB
 	translations map[string]map[string]string
+	logger       *logging.ComponentLogger
+	errorHandler *errors.ErrorHandler
 }
 
 // NewLocalizer создает новый экземпляр Localizer.
@@ -22,6 +27,8 @@ func NewLocalizer(db *sql.DB) *Localizer {
 	localizer := &Localizer{
 		db:           db,
 		translations: make(map[string]map[string]string),
+		logger:       logging.NewComponentLogger("localization"),
+		errorHandler: errors.NewErrorHandler(nil),
 	}
 	localizer.loadTranslations()
 
@@ -53,8 +60,15 @@ func (l *Localizer) getLocalesPath() string {
 // localesDirectoryExists проверяет существование директории с переводами.
 func (l *Localizer) localesDirectoryExists(localesPath string) bool {
 	if _, err := os.Stat(localesPath); os.IsNotExist(err) {
-		// Логируем отсутствие директории локализации
-		// TODO: интегрировать с системой логирования
+		l.logger.WarnWithContext(
+			"Locales directory not found, using fallback translations",
+			"", 0, 0, "LoadTranslations",
+			map[string]interface{}{
+				"locales_path": localesPath,
+				"error":        err.Error(),
+			},
+		)
+
 		return false
 	}
 
@@ -65,8 +79,14 @@ func (l *Localizer) localesDirectoryExists(localesPath string) bool {
 func (l *Localizer) walkLocalesDirectory(localesPath string) {
 	err := filepath.WalkDir(localesPath, l.processLocaleFile)
 	if err != nil {
-		// Логируем ошибку обхода директории локализации
-		// TODO: интегрировать с системой логирования
+		l.logger.ErrorWithContext(
+			"Failed to walk locales directory, using fallback translations",
+			"", 0, 0, "LoadTranslations",
+			map[string]interface{}{
+				"locales_path": localesPath,
+				"error":        err.Error(),
+			},
+		)
 		l.loadFallbackTranslations()
 	}
 }
@@ -85,8 +105,15 @@ func (l *Localizer) processLocaleFile(path string, d os.DirEntry, err error) err
 	cleanPath := filepath.Clean(path)
 
 	if !l.isPathSafe(cleanPath) {
-		// Логируем небезопасный путь к файлу
-		// TODO: интегрировать с системой логирования
+		l.logger.WarnWithContext(
+			"Unsafe file path detected, skipping file",
+			"", 0, 0, "ProcessLocaleFile",
+			map[string]interface{}{
+				"file_path": cleanPath,
+				"language":  lang,
+			},
+		)
+
 		return nil
 	}
 
@@ -102,21 +129,44 @@ func (l *Localizer) isPathSafe(cleanPath string) bool {
 func (l *Localizer) loadLocaleFile(cleanPath, lang string) error {
 	data, err := os.ReadFile(cleanPath) // #nosec G304 - путь проверен на безопасность
 	if err != nil {
-		// Логируем ошибку чтения файла
-		// TODO: интегрировать с системой логирования
+		l.logger.ErrorWithContext(
+			"Failed to read locale file",
+			"", 0, 0, "LoadLocaleFile",
+			map[string]interface{}{
+				"file_path": cleanPath,
+				"language":  lang,
+				"error":     err.Error(),
+			},
+		)
+
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
 	var dict map[string]string
 	if err := json.Unmarshal(data, &dict); err != nil {
-		// Логируем ошибку парсинга файла
-		// TODO: интегрировать с системой логирования
+		l.logger.ErrorWithContext(
+			"Failed to parse locale file JSON",
+			"", 0, 0, "LoadLocaleFile",
+			map[string]interface{}{
+				"file_path": cleanPath,
+				"language":  lang,
+				"error":     err.Error(),
+			},
+		)
+
 		return fmt.Errorf("failed to unmarshal file: %w", err)
 	}
 
 	l.translations[lang] = dict
-	// Логируем загрузку ключей для языка
-	// TODO: интегрировать с системой логирования
+	l.logger.InfoWithContext(
+		"Locale file loaded successfully",
+		"", 0, 0, "LoadLocaleFile",
+		map[string]interface{}{
+			"language":   lang,
+			"keys_count": len(dict),
+			"file_path":  cleanPath,
+		},
+	)
 
 	return nil
 }
@@ -204,9 +254,13 @@ func (l *Localizer) loadInterestsFromDB(lang string) (map[int]string, error) {
 
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			l.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "LoadInterestsFromDB",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 	}()
 
@@ -242,12 +296,15 @@ func (l *Localizer) scanInterestsRows(rows *sql.Rows, interests map[int]string) 
 		}
 
 		interests[interestID] = name
-		// Логируем загруженные интересы для отладки
-		// TODO: интегрировать с системой логирования
 	}
 
-	// Логируем количество загруженных интересов для отладки
-	// TODO: интегрировать с системой логирования
+	l.logger.DebugWithContext(
+		"Interests loaded from database",
+		"", 0, 0, "ScanInterestsRows",
+		map[string]interface{}{
+			"interests_count": len(interests),
+		},
+	)
 }
 
 // loadFallbackTranslations загружает базовые переводы для тестов.

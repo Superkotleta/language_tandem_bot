@@ -1,3 +1,4 @@
+// Package main provides the entry point for the profile service.
 package main
 
 import (
@@ -48,6 +49,7 @@ func main() {
 }
 
 func ctxWithTimeout(d time.Duration) context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), d)
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	defer cancel()
 	return ctx
 }

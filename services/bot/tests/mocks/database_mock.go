@@ -1,3 +1,4 @@
+// Package mocks provides mock implementations for testing.
 package mocks
 
 import (
@@ -6,7 +7,7 @@ import (
 	"time"
 )
 
-// DatabaseMock имитирует базу данных для тестов
+// DatabaseMock имитирует базу данных для тестов.
 type DatabaseMock struct {
 	users     map[int64]*models.User
 	languages map[string]*models.Language
@@ -14,7 +15,7 @@ type DatabaseMock struct {
 	lastError error
 }
 
-// NewDatabaseMock создает новый мок базы данных
+// NewDatabaseMock создает новый мок базы данных.
 func NewDatabaseMock() *DatabaseMock {
 	db := &DatabaseMock{
 		users:     make(map[int64]*models.User),
@@ -29,7 +30,9 @@ func NewDatabaseMock() *DatabaseMock {
 	return db
 }
 
-// seedLanguages добавляет тестовые языки
+// seedLanguages добавляет тестовые языки.
+//
+//nolint:mnd
 func (db *DatabaseMock) seedLanguages() {
 	languages := []*models.Language{
 		{ID: 1, Code: "en", NameNative: "English", NameEn: "English", IsInterfaceLanguage: true},
@@ -43,7 +46,9 @@ func (db *DatabaseMock) seedLanguages() {
 	}
 }
 
-// seedInterests добавляет тестовые интересы
+// seedInterests добавляет тестовые интересы.
+//
+//nolint:mnd
 func (db *DatabaseMock) seedInterests() {
 	interests := []*models.Interest{
 		{ID: 1, KeyName: "movies", Type: "entertainment"},
@@ -59,7 +64,7 @@ func (db *DatabaseMock) seedInterests() {
 	}
 }
 
-// GetUserByTelegramID находит пользователя по Telegram ID
+// GetUserByTelegramID находит пользователя по Telegram ID.
 func (db *DatabaseMock) GetUserByTelegramID(telegramID int64) (*models.User, error) {
 	if db.lastError != nil {
 		return nil, db.lastError
@@ -73,7 +78,7 @@ func (db *DatabaseMock) GetUserByTelegramID(telegramID int64) (*models.User, err
 	return user, nil
 }
 
-// CreateUser создает нового пользователя
+// CreateUser создает нового пользователя.
 func (db *DatabaseMock) CreateUser(telegramID int64, username, firstName, languageCode string) (*models.User, error) {
 	if db.lastError != nil {
 		return nil, db.lastError
@@ -95,10 +100,11 @@ func (db *DatabaseMock) CreateUser(telegramID int64, username, firstName, langua
 	}
 
 	db.users[telegramID] = user
+
 	return user, nil
 }
 
-// FindOrCreateUser находит или создает пользователя (основной метод для BotService)
+// FindOrCreateUser находит или создает пользователя (основной метод для BotService).
 func (db *DatabaseMock) FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error) {
 	if db.lastError != nil {
 		return nil, db.lastError
@@ -110,6 +116,7 @@ func (db *DatabaseMock) FindOrCreateUser(telegramID int64, username, firstName s
 		user.Username = username
 		user.FirstName = firstName
 		user.UpdatedAt = time.Now()
+
 		return user, nil
 	}
 
@@ -117,7 +124,7 @@ func (db *DatabaseMock) FindOrCreateUser(telegramID int64, username, firstName s
 	return db.CreateUser(telegramID, username, firstName, "en")
 }
 
-// UpdateUser обновляет пользователя
+// UpdateUser обновляет пользователя.
 func (db *DatabaseMock) UpdateUser(user *models.User) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -125,10 +132,11 @@ func (db *DatabaseMock) UpdateUser(user *models.User) error {
 
 	user.UpdatedAt = time.Now()
 	db.users[user.TelegramID] = user
+
 	return nil
 }
 
-// GetLanguages возвращает все языки
+// GetLanguages возвращает все языки.
 func (db *DatabaseMock) GetLanguages() ([]*models.Language, error) {
 	if db.lastError != nil {
 		return nil, db.lastError
@@ -142,7 +150,7 @@ func (db *DatabaseMock) GetLanguages() ([]*models.Language, error) {
 	return languages, nil
 }
 
-// GetLanguageByCode возвращает язык по коду
+// GetLanguageByCode возвращает язык по коду.
 func (db *DatabaseMock) GetLanguageByCode(code string) (*models.Language, error) {
 	if db.lastError != nil {
 		return nil, db.lastError
@@ -156,7 +164,7 @@ func (db *DatabaseMock) GetLanguageByCode(code string) (*models.Language, error)
 	return lang, nil
 }
 
-// GetInterests возвращает все интересы
+// GetInterests возвращает все интересы.
 func (db *DatabaseMock) GetInterests() ([]*models.Interest, error) {
 	if db.lastError != nil {
 		return nil, db.lastError
@@ -170,7 +178,7 @@ func (db *DatabaseMock) GetInterests() ([]*models.Interest, error) {
 	return interests, nil
 }
 
-// SaveUserInterests сохраняет интересы пользователя
+// SaveUserInterests сохраняет интересы пользователя.
 func (db *DatabaseMock) SaveUserInterests(userID int64, interestIDs []int) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -187,7 +195,7 @@ func (db *DatabaseMock) SaveUserInterests(userID int64, interestIDs []int) error
 	return nil
 }
 
-// GetUserInterests возвращает интересы пользователя
+// GetUserInterests возвращает интересы пользователя.
 func (db *DatabaseMock) GetUserInterests(userID int64) ([]int, error) {
 	if db.lastError != nil {
 		return nil, db.lastError
@@ -201,12 +209,12 @@ func (db *DatabaseMock) GetUserInterests(userID int64) ([]int, error) {
 	return user.Interests, nil
 }
 
-// GetUserSelectedInterests возвращает выбранные интересы пользователя (alias для GetUserInterests)
+// GetUserSelectedInterests возвращает выбранные интересы пользователя (alias для GetUserInterests).
 func (db *DatabaseMock) GetUserSelectedInterests(userID int) ([]int, error) {
 	return db.GetUserInterests(int64(userID))
 }
 
-// UpdateUserInterfaceLanguage обновляет язык интерфейса пользователя
+// UpdateUserInterfaceLanguage обновляет язык интерфейса пользователя.
 func (db *DatabaseMock) UpdateUserInterfaceLanguage(userID int, language string) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -216,6 +224,7 @@ func (db *DatabaseMock) UpdateUserInterfaceLanguage(userID int, language string)
 		if user.ID == userID {
 			user.InterfaceLanguageCode = language
 			user.UpdatedAt = time.Now()
+
 			break
 		}
 	}
@@ -223,7 +232,7 @@ func (db *DatabaseMock) UpdateUserInterfaceLanguage(userID int, language string)
 	return nil
 }
 
-// UpdateUserState обновляет состояние пользователя
+// UpdateUserState обновляет состояние пользователя.
 func (db *DatabaseMock) UpdateUserState(userID int, state string) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -233,6 +242,7 @@ func (db *DatabaseMock) UpdateUserState(userID int, state string) error {
 		if user.ID == userID {
 			user.State = state
 			user.UpdatedAt = time.Now()
+
 			break
 		}
 	}
@@ -240,7 +250,7 @@ func (db *DatabaseMock) UpdateUserState(userID int, state string) error {
 	return nil
 }
 
-// UpdateUserStatus обновляет статус пользователя
+// UpdateUserStatus обновляет статус пользователя.
 func (db *DatabaseMock) UpdateUserStatus(userID int, status string) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -250,6 +260,7 @@ func (db *DatabaseMock) UpdateUserStatus(userID int, status string) error {
 		if user.ID == userID {
 			user.Status = status
 			user.UpdatedAt = time.Now()
+
 			break
 		}
 	}
@@ -257,8 +268,8 @@ func (db *DatabaseMock) UpdateUserStatus(userID int, status string) error {
 	return nil
 }
 
-// SaveUserFeedback сохраняет отзыв пользователя (заглушка)
-func (db *DatabaseMock) SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error {
+// SaveUserFeedback сохраняет отзыв пользователя (заглушка).
+func (db *DatabaseMock) SaveUserFeedback(_ int, _ string, _ *string) error {
 	if db.lastError != nil {
 		return db.lastError
 	}
@@ -267,7 +278,7 @@ func (db *DatabaseMock) SaveUserFeedback(userID int, feedbackText string, contac
 	return nil
 }
 
-// GetUnprocessedFeedback возвращает необработанные отзывы (заглушка)
+// GetUnprocessedFeedback возвращает необработанные отзывы (заглушка).
 func (db *DatabaseMock) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 	if db.lastError != nil {
 		return nil, db.lastError
@@ -277,8 +288,8 @@ func (db *DatabaseMock) GetUnprocessedFeedback() ([]map[string]interface{}, erro
 	return []map[string]interface{}{}, nil
 }
 
-// MarkFeedbackProcessed помечает отзыв как обработанный (заглушка)
-func (db *DatabaseMock) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
+// MarkFeedbackProcessed помечает отзыв как обработанный (заглушка).
+func (db *DatabaseMock) MarkFeedbackProcessed(_ int, _ string) error {
 	if db.lastError != nil {
 		return db.lastError
 	}
@@ -287,7 +298,7 @@ func (db *DatabaseMock) MarkFeedbackProcessed(feedbackID int, adminResponse stri
 	return nil
 }
 
-// UpdateUserNativeLanguage обновляет родной язык пользователя
+// UpdateUserNativeLanguage обновляет родной язык пользователя.
 func (db *DatabaseMock) UpdateUserNativeLanguage(userID int, langCode string) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -297,6 +308,7 @@ func (db *DatabaseMock) UpdateUserNativeLanguage(userID int, langCode string) er
 		if user.ID == userID {
 			user.NativeLanguageCode = langCode
 			user.UpdatedAt = time.Now()
+
 			break
 		}
 	}
@@ -304,7 +316,7 @@ func (db *DatabaseMock) UpdateUserNativeLanguage(userID int, langCode string) er
 	return nil
 }
 
-// UpdateUserTargetLanguage обновляет изучаемый язык пользователя
+// UpdateUserTargetLanguage обновляет изучаемый язык пользователя.
 func (db *DatabaseMock) UpdateUserTargetLanguage(userID int, langCode string) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -314,6 +326,7 @@ func (db *DatabaseMock) UpdateUserTargetLanguage(userID int, langCode string) er
 		if user.ID == userID {
 			user.TargetLanguageCode = langCode
 			user.UpdatedAt = time.Now()
+
 			break
 		}
 	}
@@ -321,7 +334,7 @@ func (db *DatabaseMock) UpdateUserTargetLanguage(userID int, langCode string) er
 	return nil
 }
 
-// UpdateUserTargetLanguageLevel обновляет уровень изучаемого языка
+// UpdateUserTargetLanguageLevel обновляет уровень изучаемого языка.
 func (db *DatabaseMock) UpdateUserTargetLanguageLevel(userID int, level string) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -331,6 +344,7 @@ func (db *DatabaseMock) UpdateUserTargetLanguageLevel(userID int, level string) 
 		if user.ID == userID {
 			user.TargetLanguageLevel = level
 			user.UpdatedAt = time.Now()
+
 			break
 		}
 	}
@@ -338,7 +352,7 @@ func (db *DatabaseMock) UpdateUserTargetLanguageLevel(userID int, level string) 
 	return nil
 }
 
-// ResetUserProfile сбрасывает профиль пользователя
+// ResetUserProfile сбрасывает профиль пользователя.
 func (db *DatabaseMock) ResetUserProfile(userID int) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -354,6 +368,7 @@ func (db *DatabaseMock) ResetUserProfile(userID int) error {
 			user.ProfileCompletionLevel = 0
 			user.Interests = []int{}
 			user.UpdatedAt = time.Now()
+
 			break
 		}
 	}
@@ -361,17 +376,19 @@ func (db *DatabaseMock) ResetUserProfile(userID int) error {
 	return nil
 }
 
-// SaveUserInterest сохраняет один интерес пользователя
-func (db *DatabaseMock) SaveUserInterest(userID, interestID int, isPrimary bool) error {
+// SaveUserInterest сохраняет один интерес пользователя.
+func (db *DatabaseMock) SaveUserInterest(userID, interestID int, _ bool) error {
 	if db.lastError != nil {
 		return db.lastError
 	}
 
 	// Находим пользователя по ID
 	var targetUser *models.User
+
 	for _, user := range db.users {
 		if user.ID == userID {
 			targetUser = user
+
 			break
 		}
 	}
@@ -394,7 +411,7 @@ func (db *DatabaseMock) SaveUserInterest(userID, interestID int, isPrimary bool)
 	return nil
 }
 
-// RemoveUserInterest удаляет интерес пользователя
+// RemoveUserInterest удаляет интерес пользователя.
 func (db *DatabaseMock) RemoveUserInterest(userID, interestID int) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -402,9 +419,11 @@ func (db *DatabaseMock) RemoveUserInterest(userID, interestID int) error {
 
 	// Находим пользователя по ID
 	var targetUser *models.User
+
 	for _, user := range db.users {
 		if user.ID == userID {
 			targetUser = user
+
 			break
 		}
 	}
@@ -418,6 +437,7 @@ func (db *DatabaseMock) RemoveUserInterest(userID, interestID int) error {
 		if existingID == interestID {
 			targetUser.Interests = append(targetUser.Interests[:i], targetUser.Interests[i+1:]...)
 			targetUser.UpdatedAt = time.Now()
+
 			break
 		}
 	}
@@ -425,7 +445,7 @@ func (db *DatabaseMock) RemoveUserInterest(userID, interestID int) error {
 	return nil
 }
 
-// ClearUserInterests очищает все интересы пользователя
+// ClearUserInterests очищает все интересы пользователя.
 func (db *DatabaseMock) ClearUserInterests(userID int) error {
 	if db.lastError != nil {
 		return db.lastError
@@ -436,6 +456,7 @@ func (db *DatabaseMock) ClearUserInterests(userID int) error {
 		if user.ID == userID {
 			user.Interests = []int{}
 			user.UpdatedAt = time.Now()
+
 			break
 		}
 	}
@@ -443,35 +464,35 @@ func (db *DatabaseMock) ClearUserInterests(userID int) error {
 	return nil
 }
 
-// GetConnection возвращает соединение с БД (для мока возвращаем заглушку)
+// GetConnection возвращает соединение с БД (для мока возвращаем заглушку).
 func (db *DatabaseMock) GetConnection() *sql.DB {
 	// Возвращаем nil - локализатор должен справляться с этим
 	return nil
 }
 
-// Close закрывает соединение с БД (для мока ничего не делает)
+// Close закрывает соединение с БД (для мока ничего не делает).
 func (db *DatabaseMock) Close() error {
 	return nil
 }
 
 // Вспомогательные методы для тестов
 
-// SetError устанавливает ошибку, которую будут возвращать методы
+// SetError устанавливает ошибку, которую будут возвращать методы.
 func (db *DatabaseMock) SetError(err error) {
 	db.lastError = err
 }
 
-// ClearError очищает установленную ошибку
+// ClearError очищает установленную ошибку.
 func (db *DatabaseMock) ClearError() {
 	db.lastError = nil
 }
 
-// GetUser возвращает пользователя по Telegram ID (для тестов)
+// GetUser возвращает пользователя по Telegram ID (для тестов).
 func (db *DatabaseMock) GetUser(telegramID int64) *models.User {
 	return db.users[telegramID]
 }
 
-// Reset очищает все данные в моке
+// Reset очищает все данные в моке.
 func (db *DatabaseMock) Reset() {
 	db.users = make(map[int64]*models.User)
 	db.lastError = nil

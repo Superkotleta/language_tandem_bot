@@ -13,10 +13,10 @@ import (
 
 // Константы для вычислений.
 const (
-	// percentageMultiplier - множитель для преобразования в проценты.
-	percentageMultiplier = 100
-	// cleanupIntervalMinutes - интервал очистки кэша в минутах.
-	cleanupIntervalMinutes = 5
+	// PercentageMultiplier - множитель для преобразования в проценты.
+	PercentageMultiplier = 100.0
+	// CacheCleanupInterval - интервал очистки кэша.
+	CacheCleanupInterval = 5 * time.Minute
 )
 
 // Service основной сервис кэширования.
@@ -75,7 +75,7 @@ func (cacheService *Service) GetLanguages(_ context.Context, lang string) ([]*mo
 	defer cacheService.mutex.RUnlock()
 
 	entry, exists := cacheService.languages[lang]
-	if !exists || entry.IsExpired() {
+	if !exists || entry == nil || entry.IsExpired() {
 		cacheService.cacheStats.Misses++
 
 		return nil, false
@@ -83,7 +83,7 @@ func (cacheService *Service) GetLanguages(_ context.Context, lang string) ([]*mo
 
 	cacheService.cacheStats.Hits++
 
-	if data, ok := entry.Data.(*CachedLanguages); ok {
+	if data, ok := entry.Data.(*CachedLanguages); ok && data != nil {
 		return data.Languages, true
 	}
 
@@ -114,7 +114,7 @@ func (cacheService *Service) GetInterests(_ context.Context, lang string) (map[i
 	defer cacheService.mutex.RUnlock()
 
 	entry, exists := cacheService.interests[lang]
-	if !exists || entry.IsExpired() {
+	if !exists || entry == nil || entry.IsExpired() {
 		cacheService.cacheStats.Misses++
 
 		return nil, false
@@ -122,7 +122,7 @@ func (cacheService *Service) GetInterests(_ context.Context, lang string) (map[i
 
 	cacheService.cacheStats.Hits++
 
-	if data, ok := entry.Data.(*CachedInterests); ok {
+	if data, ok := entry.Data.(*CachedInterests); ok && data != nil {
 		return data.Interests, true
 	}
 
@@ -153,7 +153,7 @@ func (cacheService *Service) GetUser(_ context.Context, userID int64) (*models.U
 	defer cacheService.mutex.RUnlock()
 
 	entry, exists := cacheService.users[userID]
-	if !exists || entry.IsExpired() {
+	if !exists || entry == nil || entry.IsExpired() {
 		cacheService.cacheStats.Misses++
 
 		return nil, false
@@ -161,7 +161,7 @@ func (cacheService *Service) GetUser(_ context.Context, userID int64) (*models.U
 
 	cacheService.cacheStats.Hits++
 
-	if data, ok := entry.Data.(*CachedUser); ok {
+	if data, ok := entry.Data.(*CachedUser); ok && data != nil {
 		return data.User, true
 	}
 
@@ -345,7 +345,7 @@ func (cacheService *Service) String() string {
 	hitRate := float64(0)
 
 	if stats.Hits+stats.Misses > 0 {
-		hitRate = float64(stats.Hits) / float64(stats.Hits+stats.Misses) * percentageMultiplier
+		hitRate = float64(stats.Hits) / float64(stats.Hits+stats.Misses) * PercentageMultiplier
 	}
 
 	return fmt.Sprintf("Cache Stats: Hits=%d, Misses=%d, HitRate=%.2f%%, Size=%d",
@@ -360,7 +360,7 @@ func (cacheService *Service) updateSize() {
 
 // startCleanup запускает фоновую очистку истекших записей.
 func (cacheService *Service) startCleanup() {
-	ticker := time.NewTicker(cleanupIntervalMinutes * time.Minute) // Проверяем каждые 5 минут
+	ticker := time.NewTicker(CacheCleanupInterval)
 	defer ticker.Stop()
 
 	for {

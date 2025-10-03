@@ -1,35 +1,36 @@
 package logging
 
 import (
-	"language-exchange-bot/internal/errors"
+	"errors"
+	customErrors "language-exchange-bot/internal/errors"
 	"time"
 )
 
-// ComponentLogger предоставляет специализированное логирование для компонентов
+// ComponentLogger предоставляет специализированное логирование для компонентов.
 type ComponentLogger struct {
 	*Logger
 }
 
-// NewComponentLogger создает логгер для компонента
+// NewComponentLogger создает логгер для компонента.
 func NewComponentLogger(component string) *ComponentLogger {
 	return &ComponentLogger{
 		Logger: NewLoggerFromEnv(component),
 	}
 }
 
-// TelegramLogger предоставляет логирование для Telegram бота
+// TelegramLogger предоставляет логирование для Telegram бота.
 type TelegramLogger struct {
 	*ComponentLogger
 }
 
-// NewTelegramLogger создает логгер для Telegram бота
+// NewTelegramLogger создает логгер для Telegram бота.
 func NewTelegramLogger() *TelegramLogger {
 	return &TelegramLogger{
 		ComponentLogger: NewComponentLogger("telegram"),
 	}
 }
 
-// LogMessageReceived логирует получение сообщения
+// LogMessageReceived логирует получение сообщения.
 func (tl *TelegramLogger) LogMessageReceived(chatID, userID int64, text, requestID string) {
 	tl.InfoWithContext(
 		"Message received",
@@ -44,7 +45,7 @@ func (tl *TelegramLogger) LogMessageReceived(chatID, userID int64, text, request
 	)
 }
 
-// LogMessageSent логирует отправку сообщения
+// LogMessageSent логирует отправку сообщения.
 func (tl *TelegramLogger) LogMessageSent(chatID, userID int64, text, requestID string) {
 	tl.InfoWithContext(
 		"Message sent",
@@ -58,7 +59,7 @@ func (tl *TelegramLogger) LogMessageSent(chatID, userID int64, text, requestID s
 	)
 }
 
-// LogCallbackReceived логирует получение callback query
+// LogCallbackReceived логирует получение callback query.
 func (tl *TelegramLogger) LogCallbackReceived(chatID, userID int64, data, requestID string) {
 	tl.InfoWithContext(
 		"Callback received",
@@ -72,7 +73,7 @@ func (tl *TelegramLogger) LogCallbackReceived(chatID, userID int64, data, reques
 	)
 }
 
-// LogCommandExecuted логирует выполнение команды
+// LogCommandExecuted логирует выполнение команды.
 func (tl *TelegramLogger) LogCommandExecuted(chatID, userID int64, command, requestID string) {
 	tl.InfoWithContext(
 		"Command executed",
@@ -86,9 +87,10 @@ func (tl *TelegramLogger) LogCommandExecuted(chatID, userID int64, command, requ
 	)
 }
 
-// LogError логирует ошибку с контекстом
+// LogError логирует ошибку с контекстом.
 func (tl *TelegramLogger) LogError(err error, chatID, userID int64, operation, requestID string) {
-	if customErr, ok := err.(*errors.CustomError); ok {
+	customErr := &customErrors.CustomError{}
+	if errors.As(err, &customErr) {
 		tl.ErrorWithContext(
 			"Error occurred",
 			requestID,
@@ -115,19 +117,19 @@ func (tl *TelegramLogger) LogError(err error, chatID, userID int64, operation, r
 	}
 }
 
-// DatabaseLogger предоставляет логирование для базы данных
+// DatabaseLogger предоставляет логирование для базы данных.
 type DatabaseLogger struct {
 	*ComponentLogger
 }
 
-// NewDatabaseLogger создает логгер для базы данных
+// NewDatabaseLogger создает логгер для базы данных.
 func NewDatabaseLogger() *DatabaseLogger {
 	return &DatabaseLogger{
 		ComponentLogger: NewComponentLogger("database"),
 	}
 }
 
-// LogQueryExecuted логирует выполнение запроса
+// LogQueryExecuted логирует выполнение запроса.
 func (dl *DatabaseLogger) LogQueryExecuted(query string, duration time.Duration, requestID string) {
 	dl.DebugWithContext(
 		"Query executed",
@@ -142,7 +144,7 @@ func (dl *DatabaseLogger) LogQueryExecuted(query string, duration time.Duration,
 	)
 }
 
-// LogConnectionEstablished логирует установление соединения
+// LogConnectionEstablished логирует установление соединения.
 func (dl *DatabaseLogger) LogConnectionEstablished(requestID string) {
 	dl.InfoWithContext(
 		"Database connection established",
@@ -153,7 +155,7 @@ func (dl *DatabaseLogger) LogConnectionEstablished(requestID string) {
 	)
 }
 
-// LogConnectionFailed логирует ошибку соединения
+// LogConnectionFailed логирует ошибку соединения.
 func (dl *DatabaseLogger) LogConnectionFailed(err error, requestID string) {
 	dl.ErrorWithContext(
 		"Database connection failed",
@@ -167,7 +169,7 @@ func (dl *DatabaseLogger) LogConnectionFailed(err error, requestID string) {
 	)
 }
 
-// LogTransactionStarted логирует начало транзакции
+// LogTransactionStarted логирует начало транзакции.
 func (dl *DatabaseLogger) LogTransactionStarted(requestID string) {
 	dl.DebugWithContext(
 		"Transaction started",
@@ -178,7 +180,7 @@ func (dl *DatabaseLogger) LogTransactionStarted(requestID string) {
 	)
 }
 
-// LogTransactionCommitted логирует коммит транзакции
+// LogTransactionCommitted логирует коммит транзакции.
 func (dl *DatabaseLogger) LogTransactionCommitted(requestID string) {
 	dl.DebugWithContext(
 		"Transaction committed",
@@ -189,7 +191,7 @@ func (dl *DatabaseLogger) LogTransactionCommitted(requestID string) {
 	)
 }
 
-// LogTransactionRolledBack логирует откат транзакции
+// LogTransactionRolledBack логирует откат транзакции.
 func (dl *DatabaseLogger) LogTransactionRolledBack(err error, requestID string) {
 	dl.WarnWithContext(
 		"Transaction rolled back",
@@ -203,19 +205,19 @@ func (dl *DatabaseLogger) LogTransactionRolledBack(err error, requestID string) 
 	)
 }
 
-// CacheLogger предоставляет логирование для кэша
+// CacheLogger предоставляет логирование для кэша.
 type CacheLogger struct {
 	*ComponentLogger
 }
 
-// NewCacheLogger создает логгер для кэша
+// NewCacheLogger создает логгер для кэша.
 func NewCacheLogger() *CacheLogger {
 	return &CacheLogger{
 		ComponentLogger: NewComponentLogger("cache"),
 	}
 }
 
-// LogCacheHit логирует попадание в кэш
+// LogCacheHit логирует попадание в кэш.
 func (cl *CacheLogger) LogCacheHit(key string, requestID string) {
 	cl.DebugWithContext(
 		"Cache hit",
@@ -229,7 +231,7 @@ func (cl *CacheLogger) LogCacheHit(key string, requestID string) {
 	)
 }
 
-// LogCacheMiss логирует промах кэша
+// LogCacheMiss логирует промах кэша.
 func (cl *CacheLogger) LogCacheMiss(key string, requestID string) {
 	cl.DebugWithContext(
 		"Cache miss",
@@ -243,7 +245,7 @@ func (cl *CacheLogger) LogCacheMiss(key string, requestID string) {
 	)
 }
 
-// LogCacheSet логирует установку значения в кэш
+// LogCacheSet логирует установку значения в кэш.
 func (cl *CacheLogger) LogCacheSet(key string, ttl time.Duration, requestID string) {
 	cl.DebugWithContext(
 		"Cache set",
@@ -258,7 +260,7 @@ func (cl *CacheLogger) LogCacheSet(key string, ttl time.Duration, requestID stri
 	)
 }
 
-// LogCacheInvalidated логирует инвалидацию кэша
+// LogCacheInvalidated логирует инвалидацию кэша.
 func (cl *CacheLogger) LogCacheInvalidated(pattern string, requestID string) {
 	cl.InfoWithContext(
 		"Cache invalidated",
@@ -272,7 +274,7 @@ func (cl *CacheLogger) LogCacheInvalidated(pattern string, requestID string) {
 	)
 }
 
-// LogCacheError логирует ошибку кэша
+// LogCacheError логирует ошибку кэша.
 func (cl *CacheLogger) LogCacheError(err error, operation, requestID string) {
 	cl.ErrorWithContext(
 		"Cache error",
@@ -286,19 +288,19 @@ func (cl *CacheLogger) LogCacheError(err error, operation, requestID string) {
 	)
 }
 
-// ValidationLogger предоставляет логирование для валидации
+// ValidationLogger предоставляет логирование для валидации.
 type ValidationLogger struct {
 	*ComponentLogger
 }
 
-// NewValidationLogger создает логгер для валидации
+// NewValidationLogger создает логгер для валидации.
 func NewValidationLogger() *ValidationLogger {
 	return &ValidationLogger{
 		ComponentLogger: NewComponentLogger("validation"),
 	}
 }
 
-// LogValidationPassed логирует успешную валидацию
+// LogValidationPassed логирует успешную валидацию.
 func (vl *ValidationLogger) LogValidationPassed(operation string, requestID string) {
 	vl.DebugWithContext(
 		"Validation passed",
@@ -309,7 +311,7 @@ func (vl *ValidationLogger) LogValidationPassed(operation string, requestID stri
 	)
 }
 
-// LogValidationFailed логирует неудачную валидацию
+// LogValidationFailed логирует неудачную валидацию.
 func (vl *ValidationLogger) LogValidationFailed(operation string, errors map[string][]string, requestID string) {
 	vl.WarnWithContext(
 		"Validation failed",
@@ -323,7 +325,7 @@ func (vl *ValidationLogger) LogValidationFailed(operation string, errors map[str
 	)
 }
 
-// LogValidationError логирует ошибку валидации
+// LogValidationError логирует ошибку валидации.
 func (vl *ValidationLogger) LogValidationError(err error, operation, requestID string) {
 	vl.ErrorWithContext(
 		"Validation error",

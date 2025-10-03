@@ -1,20 +1,22 @@
 package logging
 
 import (
-	"language-exchange-bot/internal/errors"
+	"errors"
+	customErrors "language-exchange-bot/internal/errors"
 )
 
-// LoggingService предоставляет централизованное логирование
+// LoggingService provides centralized logging for all components.
+// The name includes "Logging" prefix for clarity, even though it may cause stuttering with the package name.
 type LoggingService struct {
 	telegramLogger   *TelegramLogger
 	databaseLogger   *DatabaseLogger
 	cacheLogger      *CacheLogger
 	validationLogger *ValidationLogger
-	errorHandler     *errors.ErrorHandler
+	errorHandler     *customErrors.ErrorHandler
 }
 
-// NewLoggingService создает новый сервис логирования
-func NewLoggingService(errorHandler *errors.ErrorHandler) *LoggingService {
+// NewLoggingService создает новый сервис логирования.
+func NewLoggingService(errorHandler *customErrors.ErrorHandler) *LoggingService {
 	return &LoggingService{
 		telegramLogger:   NewTelegramLogger(),
 		databaseLogger:   NewDatabaseLogger(),
@@ -24,34 +26,35 @@ func NewLoggingService(errorHandler *errors.ErrorHandler) *LoggingService {
 	}
 }
 
-// Telegram возвращает логгер для Telegram
+// Telegram возвращает логгер для Telegram.
 func (ls *LoggingService) Telegram() *TelegramLogger {
 	return ls.telegramLogger
 }
 
-// Database возвращает логгер для базы данных
+// Database возвращает логгер для базы данных.
 func (ls *LoggingService) Database() *DatabaseLogger {
 	return ls.databaseLogger
 }
 
-// Cache возвращает логгер для кэша
+// Cache возвращает логгер для кэша.
 func (ls *LoggingService) Cache() *CacheLogger {
 	return ls.cacheLogger
 }
 
-// Validation возвращает логгер для валидации
+// Validation возвращает логгер для валидации.
 func (ls *LoggingService) Validation() *ValidationLogger {
 	return ls.validationLogger
 }
 
-// LogErrorWithContext логирует ошибку с полным контекстом
+// LogErrorWithContext логирует ошибку с полным контекстом.
 func (ls *LoggingService) LogErrorWithContext(err error, requestID string, userID, chatID int64, operation, component string) {
-	if customErr, ok := err.(*errors.CustomError); ok {
+	customErr := &customErrors.CustomError{}
+	if errors.As(err, &customErr) {
 		// Логируем в зависимости от типа ошибки
 		switch customErr.Type {
-		case errors.ErrorTypeTelegramAPI:
+		case customErrors.ErrorTypeTelegramAPI:
 			ls.telegramLogger.LogError(err, chatID, userID, operation, requestID)
-		case errors.ErrorTypeDatabase:
+		case customErrors.ErrorTypeDatabase:
 			ls.databaseLogger.ErrorWithContext(
 				"Database error",
 				requestID,
@@ -64,10 +67,27 @@ func (ls *LoggingService) LogErrorWithContext(err error, requestID string, userI
 					"user_msg":   customErr.UserMessage,
 				},
 			)
-		case errors.ErrorTypeCache:
+		case customErrors.ErrorTypeCache:
 			ls.cacheLogger.LogCacheError(err, operation, requestID)
-		case errors.ErrorTypeValidation:
+		case customErrors.ErrorTypeValidation:
 			ls.validationLogger.LogValidationError(err, operation, requestID)
+		case customErrors.ErrorTypeNetwork:
+			// Сетевые ошибки логируем как database ошибки
+			ls.databaseLogger.ErrorWithContext(
+				"Network error",
+				requestID,
+				userID,
+				chatID,
+				operation,
+				map[string]interface{}{
+					"error_type": customErr.Type.String(),
+					"error_msg":  customErr.Message,
+					"user_msg":   customErr.UserMessage,
+				},
+			)
+		case customErrors.ErrorTypeInternal:
+			// Внутренние ошибки логируем в общий логгер
+			ls.telegramLogger.LogError(err, chatID, userID, operation, requestID)
 		default:
 			// Логируем в общий логгер
 			ls.telegramLogger.LogError(err, chatID, userID, operation, requestID)
@@ -98,7 +118,7 @@ func (ls *LoggingService) LogErrorWithContext(err error, requestID string, userI
 	}
 }
 
-// LogRequestStart логирует начало запроса
+// LogRequestStart логирует начало запроса.
 func (ls *LoggingService) LogRequestStart(requestID string, userID, chatID int64, operation string) {
 	ls.telegramLogger.InfoWithContext(
 		"Request started",
@@ -109,7 +129,7 @@ func (ls *LoggingService) LogRequestStart(requestID string, userID, chatID int64
 	)
 }
 
-// LogRequestEnd логирует завершение запроса
+// LogRequestEnd логирует завершение запроса.
 func (ls *LoggingService) LogRequestEnd(requestID string, userID, chatID int64, operation string, success bool) {
 	level := "completed"
 	if !success {
@@ -128,8 +148,13 @@ func (ls *LoggingService) LogRequestEnd(requestID string, userID, chatID int64, 
 	)
 }
 
-// LogPerformance логирует метрики производительности
-func (ls *LoggingService) LogPerformance(operation string, duration string, requestID string, fields map[string]interface{}) {
+// LogPerformance логирует метрики производительности.
+func (ls *LoggingService) LogPerformance(
+	operation string,
+	duration string,
+	requestID string,
+	fields map[string]interface{},
+) {
 	ls.telegramLogger.InfoWithContext(
 		"Performance metric",
 		requestID,
@@ -143,7 +168,7 @@ func (ls *LoggingService) LogPerformance(operation string, duration string, requ
 	)
 }
 
-// LogSecurityEvent логирует события безопасности
+// LogSecurityEvent логирует события безопасности.
 func (ls *LoggingService) LogSecurityEvent(event string, userID, chatID int64, requestID string, fields map[string]interface{}) {
 	ls.telegramLogger.WarnWithContext(
 		"Security event: "+event,
@@ -155,7 +180,7 @@ func (ls *LoggingService) LogSecurityEvent(event string, userID, chatID int64, r
 	)
 }
 
-// LogAdminAction логирует действия администратора
+// LogAdminAction логирует действия администратора.
 func (ls *LoggingService) LogAdminAction(action string, adminID, targetUserID int64, requestID string, fields map[string]interface{}) {
 	ls.telegramLogger.InfoWithContext(
 		"Admin action: "+action,
@@ -170,7 +195,7 @@ func (ls *LoggingService) LogAdminAction(action string, adminID, targetUserID in
 	)
 }
 
-// SetLogLevel устанавливает уровень логирования для всех компонентов
+// SetLogLevel устанавливает уровень логирования для всех компонентов.
 func (ls *LoggingService) SetLogLevel(level LogLevel) {
 	ls.telegramLogger.SetLevel(level)
 	ls.databaseLogger.SetLevel(level)
@@ -178,7 +203,7 @@ func (ls *LoggingService) SetLogLevel(level LogLevel) {
 	ls.validationLogger.SetLevel(level)
 }
 
-// GetLogLevel возвращает текущий уровень логирования
+// GetLogLevel возвращает текущий уровень логирования.
 func (ls *LoggingService) GetLogLevel() LogLevel {
 	return ls.telegramLogger.GetLevel()
 }

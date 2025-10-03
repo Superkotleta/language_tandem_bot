@@ -101,7 +101,8 @@ func (n *AdminNotifierImpl) formatContext(context map[string]interface{}) string
 	result := ""
 
 	for key, value := range context {
-		if key != "user_id" && key != "chat_id" && key != "operation" {
+		if key != "user_id" && key != "chat_id" &&
+			key != "operation" {
 			result += fmt.Sprintf("- %s: %v\n", key, value)
 		}
 	}

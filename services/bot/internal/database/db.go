@@ -5,6 +5,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/logging"
 	"language-exchange-bot/internal/models"
 	"time"
 
@@ -26,7 +28,9 @@ const (
 
 // DB представляет подключение к базе данных.
 type DB struct {
-	conn *sql.DB
+	conn         *sql.DB
+	logger       *logging.DatabaseLogger
+	errorHandler *errors.ErrorHandler
 }
 
 // NewDB создает новое подключение к базе данных.
@@ -40,7 +44,15 @@ func NewDB(databaseURL string) (*DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	return &DB{conn: conn}, nil
+	db := &DB{
+		conn:         conn,
+		logger:       logging.NewDatabaseLogger(),
+		errorHandler: errors.NewErrorHandler(nil),
+	}
+
+	db.logger.LogConnectionEstablished("")
+
+	return db, nil
 }
 
 // Close закрывает подключение к базе данных.
@@ -59,6 +71,8 @@ func (db *DB) GetConnection() *sql.DB {
 }
 
 // GetLanguages возвращает список всех языков.
+//
+//nolint:funlen
 func (db *DB) GetLanguages() ([]*models.Language, error) {
 	query := `
 		SELECT id, code, name_native, name_en
@@ -73,7 +87,7 @@ func (db *DB) GetLanguages() ([]*models.Language, error) {
 
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %w)", closeErr, err)
 		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
@@ -81,9 +95,13 @@ func (db *DB) GetLanguages() ([]*models.Language, error) {
 
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			db.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "DatabaseOperation",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 	}()
 
@@ -147,6 +165,8 @@ func (db *DB) GetLanguageByCode(code string) (*models.Language, error) {
 }
 
 // GetInterests возвращает список всех интересов.
+//
+//nolint:funlen
 func (db *DB) GetInterests() ([]*models.Interest, error) {
 	query := `
 		SELECT id, key_name, type
@@ -161,7 +181,7 @@ func (db *DB) GetInterests() ([]*models.Interest, error) {
 
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %w)", closeErr, err)
 		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
@@ -169,9 +189,13 @@ func (db *DB) GetInterests() ([]*models.Interest, error) {
 
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			db.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "DatabaseOperation",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 	}()
 
@@ -461,7 +485,7 @@ func (db *DB) GetUserSelectedInterests(userID int) ([]int, error) {
 
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %w)", closeErr, err)
 		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
@@ -469,9 +493,13 @@ func (db *DB) GetUserSelectedInterests(userID int) ([]int, error) {
 
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			db.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "DatabaseOperation",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 	}()
 
@@ -582,7 +610,7 @@ func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, err
 
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %w)", closeErr, err)
 		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
@@ -590,9 +618,13 @@ func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, err
 
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			db.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "DatabaseOperation",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 	}()
 
@@ -662,7 +694,7 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %w)", closeErr, err)
 		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
@@ -670,9 +702,13 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			db.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "DatabaseOperation",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 	}()
 

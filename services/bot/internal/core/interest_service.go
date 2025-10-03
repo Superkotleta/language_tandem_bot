@@ -7,6 +7,7 @@ import (
 
 	"language-exchange-bot/internal/config"
 	errorsPkg "language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/logging"
 	"language-exchange-bot/internal/models"
 )
 
@@ -21,12 +22,18 @@ const (
 
 // InterestService handles user interest management and matching.
 type InterestService struct {
-	db *sql.DB
+	db           *sql.DB
+	logger       *logging.DatabaseLogger
+	errorHandler *errorsPkg.ErrorHandler
 }
 
 // NewInterestService creates a new InterestService instance.
 func NewInterestService(db *sql.DB) *InterestService {
-	return &InterestService{db: db}
+	return &InterestService{
+		db:           db,
+		logger:       logging.NewDatabaseLogger(),
+		errorHandler: errorsPkg.NewErrorHandler(nil),
+	}
 }
 
 // GetInterestCategories возвращает все категории интересов.
@@ -44,7 +51,7 @@ func (s *InterestService) GetInterestCategories() ([]models.InterestCategory, er
 
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %w)", closeErr, err)
 		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
@@ -52,9 +59,13 @@ func (s *InterestService) GetInterestCategories() ([]models.InterestCategory, er
 
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			s.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "GetInterestCategories",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 	}()
 
@@ -357,8 +368,14 @@ func (s *InterestService) ValidateInterestSelection(userID, totalInterests int) 
 	// }
 
 	// Логируем рекомендацию для отладки
-	// Логируем рекомендуемое количество основных интересов
-	// TODO: интегрировать с системой логирования
+	s.logger.DebugWithContext(
+		"Interest validation performed",
+		"", 0, 0, "ValidateInterestSelection",
+		map[string]interface{}{
+			"user_id":         userID,
+			"total_interests": totalInterests,
+		},
+	)
 
 	// Получаем текущее количество основных интересов
 	var currentPrimary int
@@ -460,7 +477,7 @@ func (s *InterestService) calculateInterestScore(
 func (s *InterestService) scanInterests(rows *sql.Rows) ([]models.Interest, error) {
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %w)", closeErr, err)
 		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
@@ -468,9 +485,13 @@ func (s *InterestService) scanInterests(rows *sql.Rows) ([]models.Interest, erro
 
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			s.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "GetInterestCategories",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 	}()
 
@@ -495,9 +516,13 @@ func (s *InterestService) scanInterests(rows *sql.Rows) ([]models.Interest, erro
 func (s *InterestService) scanInterestSelections(rows *sql.Rows) ([]models.InterestSelection, error) {
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			s.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "GetInterestCategories",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 
 		return nil, fmt.Errorf("rows error: %w", err)
@@ -505,9 +530,13 @@ func (s *InterestService) scanInterestSelections(rows *sql.Rows) ([]models.Inter
 
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			s.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "GetInterestCategories",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 	}()
 

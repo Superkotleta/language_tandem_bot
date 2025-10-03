@@ -6,8 +6,23 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func (h *TelegramHandler) createLanguageKeyboard(interfaceLang, keyboardType string, excludeLang string, showBackButton bool) tgbotapi.InlineKeyboardMarkup {
+// Константы для callback команд.
+const (
+	CallbackBackToMainMenu     = "back_to_main_menu"
+	CallbackBackToPreviousStep = "back_to_previous_step"
+)
+
+// TODO: функция может быть использована в будущем для создания клавиатур языков
+//
+//nolint:unused
+func (h *TelegramHandler) createLanguageKeyboard(
+	interfaceLang,
+	keyboardType string,
+	excludeLang string,
+	showBackButton bool,
+) tgbotapi.InlineKeyboardMarkup {
 	type langOption struct{ code, flag string }
+
 	languages := []langOption{
 		{"en", "🇺🇸"}, {"ru", "🇷🇺"}, {"es", "🇪🇸"}, {"zh", "🇨🇳"},
 	}
@@ -33,7 +48,7 @@ func (h *TelegramHandler) createLanguageKeyboard(interfaceLang, keyboardType str
 	}
 
 	// Преобразуем map в массив кнопок
-	var buttons [][]tgbotapi.InlineKeyboardButton
+	buttons := make([][]tgbotapi.InlineKeyboardButton, 0, len(uniqueButtons))
 	for _, button := range uniqueButtons {
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{button})
 	}
@@ -42,9 +57,9 @@ func (h *TelegramHandler) createLanguageKeyboard(interfaceLang, keyboardType str
 	if showBackButton {
 		var backCallback string
 		if keyboardType == "interface" || keyboardType == "native" {
-			backCallback = "back_to_main_menu"
+			backCallback = CallbackBackToMainMenu
 		} else {
-			backCallback = "back_to_previous_step"
+			backCallback = CallbackBackToPreviousStep
 		}
 
 		backButton := tgbotapi.NewInlineKeyboardButtonData(
@@ -57,6 +72,9 @@ func (h *TelegramHandler) createLanguageKeyboard(interfaceLang, keyboardType str
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
+// TODO: функция может быть использована в будущем для создания клавиатур завершенного профиля
+//
+//nolint:unused
 func (h *TelegramHandler) createProfileCompletedKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	mainMenu := tgbotapi.NewInlineKeyboardButtonData(
 		h.service.Localizer.Get(interfaceLang, "main_menu_title"),
@@ -69,10 +87,14 @@ func (h *TelegramHandler) createProfileCompletedKeyboard(interfaceLang string) t
 	buttons := [][]tgbotapi.InlineKeyboardButton{
 		{mainMenu, viewProfile},
 	}
+
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
 // Создание клавиатуры подтверждения выбора языков
+// TODO: функция может быть использована в будущем для создания клавиатур подтверждения языков
+//
+//nolint:unused
 func (h *TelegramHandler) createLanguageConfirmationKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	continueButton := tgbotapi.NewInlineKeyboardButtonData(
 		h.service.Localizer.Get(interfaceLang, "languages_continue_filling"),
@@ -93,11 +115,17 @@ func (h *TelegramHandler) createLanguageConfirmationKeyboard(interfaceLang strin
 }
 
 // Создание клавиатуры выбора уровня владения языком
+// TODO: функция может быть использована в будущем для создания клавиатур уровней языков
+//
+//nolint:unused
 func (h *TelegramHandler) createLanguageLevelKeyboard(interfaceLang, languageCode string) tgbotapi.InlineKeyboardMarkup {
 	return h.createLanguageLevelKeyboardWithPrefix(interfaceLang, languageCode, "level_", true)
 }
 
 // createLanguageLevelKeyboardWithPrefix создает клавиатуру выбора уровня с произвольным префиксом колбэков
+// TODO: функция может быть использована в будущем для создания клавиатур уровней языков с префиксами
+//
+//nolint:unused
 func (h *TelegramHandler) createLanguageLevelKeyboardWithPrefix(interfaceLang, languageCode, callbackPrefix string, showBackButton bool) tgbotapi.InlineKeyboardMarkup {
 	levels := []struct {
 		code, key string
@@ -109,7 +137,8 @@ func (h *TelegramHandler) createLanguageLevelKeyboardWithPrefix(interfaceLang, l
 		{"advanced", "choose_level_advanced"},
 	}
 
-	var buttons [][]tgbotapi.InlineKeyboardButton
+	buttons := make([][]tgbotapi.InlineKeyboardButton, 0, len(levels))
+
 	for _, level := range levels {
 		label := h.service.Localizer.Get(interfaceLang, level.key)
 		button := tgbotapi.NewInlineKeyboardButtonData(label, fmt.Sprintf("%s%s", callbackPrefix, level.code))
@@ -120,7 +149,7 @@ func (h *TelegramHandler) createLanguageLevelKeyboardWithPrefix(interfaceLang, l
 	if showBackButton {
 		backButton := tgbotapi.NewInlineKeyboardButtonData(
 			h.service.Localizer.Get(interfaceLang, "back_button"),
-			"back_to_previous_step",
+			CallbackBackToPreviousStep,
 		)
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{backButton})
 	}

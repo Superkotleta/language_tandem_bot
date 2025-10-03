@@ -13,20 +13,30 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// TemporaryInterestStorage временное хранилище выборов пользователей
+// Константы для работы с профилем.
+const (
+	ImprovedInterestProfileCompletionLevelComplete = 100 // Профиль полностью завершен
+)
+
+// Константы для сообщений.
+const (
+	MessageChooseAtLeastOneInterest = "choose_at_least_one_interest"
+)
+
+// TemporaryInterestStorage временное хранилище выборов пользователей.
 type TemporaryInterestStorage struct {
 	mu      sync.RWMutex
 	storage map[int][]TemporaryInterestSelection // userID -> selections
 }
 
-// NewTemporaryInterestStorage создает новое временное хранилище
+// NewTemporaryInterestStorage создает новое временное хранилище.
 func NewTemporaryInterestStorage() *TemporaryInterestStorage {
 	return &TemporaryInterestStorage{
 		storage: make(map[int][]TemporaryInterestSelection),
 	}
 }
 
-// AddInterest добавляет интерес во временное хранилище
+// AddInterest добавляет интерес во временное хранилище.
 func (s *TemporaryInterestStorage) AddInterest(userID, interestID int, isPrimary bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -36,6 +46,7 @@ func (s *TemporaryInterestStorage) AddInterest(userID, interestID int, isPrimary
 		if selection.InterestID == interestID {
 			// Обновляем существующий выбор
 			s.storage[userID][i].IsPrimary = isPrimary
+
 			return
 		}
 	}
@@ -50,7 +61,7 @@ func (s *TemporaryInterestStorage) AddInterest(userID, interestID int, isPrimary
 	s.storage[userID] = append(s.storage[userID], selection)
 }
 
-// RemoveInterest удаляет интерес из временного хранилища
+// RemoveInterest удаляет интерес из временного хранилища.
 func (s *TemporaryInterestStorage) RemoveInterest(userID, interestID int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -60,12 +71,13 @@ func (s *TemporaryInterestStorage) RemoveInterest(userID, interestID int) {
 		if selection.InterestID == interestID {
 			// Удаляем из слайса
 			s.storage[userID] = append(selections[:i], selections[i+1:]...)
+
 			return
 		}
 	}
 }
 
-// ToggleInterest переключает выбор интереса
+// ToggleInterest переключает выбор интереса.
 func (s *TemporaryInterestStorage) ToggleInterest(userID, interestID int) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -75,6 +87,7 @@ func (s *TemporaryInterestStorage) ToggleInterest(userID, interestID int) bool {
 		if selection.InterestID == interestID {
 			// Удаляем из временного хранилища
 			s.storage[userID] = append(selections[:i], selections[i+1:]...)
+
 			return false // был выбран, теперь не выбран
 		}
 	}
@@ -87,10 +100,11 @@ func (s *TemporaryInterestStorage) ToggleInterest(userID, interestID int) bool {
 		SelectionOrder: nextOrder,
 	}
 	s.storage[userID] = append(s.storage[userID], selection)
+
 	return true // теперь выбран
 }
 
-// TogglePrimary переключает статус основного интереса
+// TogglePrimary переключает статус основного интереса.
 func (s *TemporaryInterestStorage) TogglePrimary(userID, interestID int) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -100,53 +114,60 @@ func (s *TemporaryInterestStorage) TogglePrimary(userID, interestID int) bool {
 		if selection.InterestID == interestID {
 			// Переключаем статус
 			s.storage[userID][i].IsPrimary = !selection.IsPrimary
+
 			return s.storage[userID][i].IsPrimary
 		}
 	}
+
 	return false
 }
 
-// GetSelections возвращает выборы пользователя
+// GetSelections возвращает выборы пользователя.
 func (s *TemporaryInterestStorage) GetSelections(userID int) []TemporaryInterestSelection {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	return s.storage[userID]
 }
 
-// GetSelectedInterests возвращает ID выбранных интересов
+// GetSelectedInterests возвращает ID выбранных интересов.
 func (s *TemporaryInterestStorage) GetSelectedInterests(userID int) []int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var selected []int
+	selected := make([]int, 0, len(s.storage[userID]))
 	for _, selection := range s.storage[userID] {
 		selected = append(selected, selection.InterestID)
 	}
+
 	return selected
 }
 
-// GetPrimaryInterests возвращает ID основных интересов
+// GetPrimaryInterests возвращает ID основных интересов.
 func (s *TemporaryInterestStorage) GetPrimaryInterests(userID int) []int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	var primary []int
+
 	for _, selection := range s.storage[userID] {
 		if selection.IsPrimary {
 			primary = append(primary, selection.InterestID)
 		}
 	}
+
 	return primary
 }
 
-// ClearSelections очищает выборы пользователя
+// ClearSelections очищает выборы пользователя.
 func (s *TemporaryInterestStorage) ClearSelections(userID int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	delete(s.storage, userID)
 }
 
-// SaveToDatabase сохраняет выборы в базу данных
+// SaveToDatabase сохраняет выборы в базу данных.
 func (s *TemporaryInterestStorage) SaveToDatabase(userID int, interestService *core.InterestService) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -169,10 +190,11 @@ func (s *TemporaryInterestStorage) SaveToDatabase(userID int, interestService *c
 
 	// Очищаем временное хранилище после успешного сохранения
 	delete(s.storage, userID)
+
 	return nil
 }
 
-// ImprovedInterestHandler улучшенный обработчик с временным хранением
+// ImprovedInterestHandler улучшенный обработчик с временным хранением.
 type ImprovedInterestHandler struct {
 	service         *core.BotService
 	interestService *core.InterestService
@@ -182,8 +204,14 @@ type ImprovedInterestHandler struct {
 	tempStorage     *TemporaryInterestStorage
 }
 
-// NewImprovedInterestHandler создает улучшенный обработчик
-func NewImprovedInterestHandler(service *core.BotService, interestService *core.InterestService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, errorHandler *errors.ErrorHandler) *ImprovedInterestHandler {
+// NewImprovedInterestHandler создает улучшенный обработчик.
+func NewImprovedInterestHandler(
+	service *core.BotService,
+	interestService *core.InterestService,
+	bot *tgbotapi.BotAPI,
+	keyboardBuilder *KeyboardBuilder,
+	errorHandler *errors.ErrorHandler,
+) *ImprovedInterestHandler {
 	return &ImprovedInterestHandler{
 		service:         service,
 		interestService: interestService,
@@ -194,7 +222,7 @@ func NewImprovedInterestHandler(service *core.BotService, interestService *core.
 	}
 }
 
-// HandleInterestCategorySelection обрабатывает выбор категории
+// HandleInterestCategorySelection обрабатывает выбор категории.
 func (h *ImprovedInterestHandler) HandleInterestCategorySelection(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error {
 	// Получаем категории
 	categories, err := h.interestService.GetInterestCategories()
@@ -204,9 +232,11 @@ func (h *ImprovedInterestHandler) HandleInterestCategorySelection(callback *tgbo
 
 	// Находим выбранную категорию
 	var selectedCategory *models.InterestCategory
+
 	for _, category := range categories {
 		if category.KeyName == categoryKey {
 			selectedCategory = &category
+
 			break
 		}
 	}
@@ -223,13 +253,19 @@ func (h *ImprovedInterestHandler) HandleInterestCategorySelection(callback *tgbo
 
 	// Получаем временные выборы пользователя
 	tempSelections := h.tempStorage.GetSelections(user.ID)
+
 	selectedMap := make(map[int]bool)
 	for _, selection := range tempSelections {
 		selectedMap[selection.InterestID] = true
 	}
 
 	// Создаем клавиатуру
-	keyboard := h.keyboardBuilder.CreateCategoryInterestsKeyboard(interests, selectedMap, selectedCategory.KeyName, user.InterfaceLanguageCode)
+	keyboard := h.keyboardBuilder.CreateCategoryInterestsKeyboard(
+		interests,
+		selectedMap,
+		selectedCategory.KeyName,
+		user.InterfaceLanguageCode,
+	)
 
 	// Создаем текст сообщения
 	categoryName := h.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
@@ -244,10 +280,11 @@ func (h *ImprovedInterestHandler) HandleInterestCategorySelection(callback *tgbo
 	)
 
 	_, err = h.bot.Request(editMsg)
+
 	return err
 }
 
-// HandleInterestSelection обрабатывает выбор интереса (только во временном хранилище)
+// HandleInterestSelection обрабатывает выбор интереса (только во временном хранилище).
 func (h *ImprovedInterestHandler) HandleInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
@@ -261,10 +298,14 @@ func (h *ImprovedInterestHandler) HandleInterestSelection(callback *tgbotapi.Cal
 
 	// Обновляем клавиатуру (получаем categoryKey из callback data)
 	// В реальной реализации нужно извлекать categoryKey из контекста
-	return h.updateCategoryInterestsKeyboard(callback, user, "entertainment") // упрощенно
+	return h.updateCategoryInterestsKeyboard(
+		callback,
+		user,
+		"entertainment",
+	) // упрощенно
 }
 
-// HandlePrimaryInterestSelection обрабатывает выбор основного интереса
+// HandlePrimaryInterestSelection обрабатывает выбор основного интереса.
 func (h *ImprovedInterestHandler) HandlePrimaryInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
@@ -280,15 +321,15 @@ func (h *ImprovedInterestHandler) HandlePrimaryInterestSelection(callback *tgbot
 	return h.updatePrimaryInterestsKeyboard(callback, user)
 }
 
-// HandleInterestsContinue обрабатывает продолжение после выбора интересов
+// HandleInterestsContinue обрабатывает продолжение после выбора интересов.
 func (h *ImprovedInterestHandler) HandleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем временные выборы
 	selectedInterests := h.tempStorage.GetSelectedInterests(user.ID)
 
 	// Проверяем, выбраны ли интересы
 	if len(selectedInterests) == 0 {
-		warningMsg := "❗ " + h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_at_least_one_interest")
-		if warningMsg == "choose_at_least_one_interest" {
+		warningMsg := "❗ " + h.service.Localizer.Get(user.InterfaceLanguageCode, MessageChooseAtLeastOneInterest)
+		if warningMsg == MessageChooseAtLeastOneInterest {
 			warningMsg = "❗ Пожалуйста, выберите хотя бы один интерес"
 		}
 
@@ -301,6 +342,7 @@ func (h *ImprovedInterestHandler) HandleInterestsContinue(callback *tgbotapi.Cal
 			keyboard,
 		)
 		_, err := h.bot.Request(editMsg)
+
 		return err
 	}
 
@@ -308,7 +350,7 @@ func (h *ImprovedInterestHandler) HandleInterestsContinue(callback *tgbotapi.Cal
 	return h.showPrimaryInterestsSelection(callback, user)
 }
 
-// HandlePrimaryInterestsContinue обрабатывает завершение выбора основных интересов
+// HandlePrimaryInterestsContinue обрабатывает завершение выбора основных интересов.
 func (h *ImprovedInterestHandler) HandlePrimaryInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем временные выборы
 	tempSelections := h.tempStorage.GetSelections(user.ID)
@@ -335,6 +377,7 @@ func (h *ImprovedInterestHandler) HandlePrimaryInterestsContinue(callback *tgbot
 			h.keyboardBuilder.CreatePrimaryInterestsKeyboard(tempSelections, user.InterfaceLanguageCode),
 		)
 		_, err = h.bot.Request(editMsg)
+
 		return err
 	}
 
@@ -348,7 +391,7 @@ func (h *ImprovedInterestHandler) HandlePrimaryInterestsContinue(callback *tgbot
 	return h.completeProfileSetup(callback, user)
 }
 
-// showPrimaryInterestsSelection показывает интерфейс выбора основных интересов
+// showPrimaryInterestsSelection показывает интерфейс выбора основных интересов.
 func (h *ImprovedInterestHandler) showPrimaryInterestsSelection(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем временные выборы
 	tempSelections := h.tempStorage.GetSelections(user.ID)
@@ -368,10 +411,11 @@ func (h *ImprovedInterestHandler) showPrimaryInterestsSelection(callback *tgbota
 	)
 
 	_, err := h.bot.Request(editMsg)
+
 	return err
 }
 
-// updateCategoryInterestsKeyboard обновляет клавиатуру интересов в категории
+// updateCategoryInterestsKeyboard обновляет клавиатуру интересов в категории.
 func (h *ImprovedInterestHandler) updateCategoryInterestsKeyboard(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error {
 	// Получаем категории
 	categories, err := h.interestService.GetInterestCategories()
@@ -381,9 +425,11 @@ func (h *ImprovedInterestHandler) updateCategoryInterestsKeyboard(callback *tgbo
 
 	// Находим категорию
 	var selectedCategory *models.InterestCategory
+
 	for _, category := range categories {
 		if category.KeyName == categoryKey {
 			selectedCategory = &category
+
 			break
 		}
 	}
@@ -400,13 +446,19 @@ func (h *ImprovedInterestHandler) updateCategoryInterestsKeyboard(callback *tgbo
 
 	// Получаем временные выборы
 	tempSelections := h.tempStorage.GetSelections(user.ID)
+
 	selectedMap := make(map[int]bool)
 	for _, selection := range tempSelections {
 		selectedMap[selection.InterestID] = true
 	}
 
 	// Создаем клавиатуру
-	keyboard := h.keyboardBuilder.CreateCategoryInterestsKeyboard(interests, selectedMap, categoryKey, user.InterfaceLanguageCode)
+	keyboard := h.keyboardBuilder.CreateCategoryInterestsKeyboard(
+		interests,
+		selectedMap,
+		categoryKey,
+		user.InterfaceLanguageCode,
+	)
 
 	// Обновляем сообщение
 	categoryName := h.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
@@ -420,10 +472,11 @@ func (h *ImprovedInterestHandler) updateCategoryInterestsKeyboard(callback *tgbo
 	)
 
 	_, err = h.bot.Request(editMsg)
+
 	return err
 }
 
-// updatePrimaryInterestsKeyboard обновляет клавиатуру выбора основных интересов
+// updatePrimaryInterestsKeyboard обновляет клавиатуру выбора основных интересов.
 func (h *ImprovedInterestHandler) updatePrimaryInterestsKeyboard(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем временные выборы
 	tempSelections := h.tempStorage.GetSelections(user.ID)
@@ -442,12 +495,15 @@ func (h *ImprovedInterestHandler) updatePrimaryInterestsKeyboard(callback *tgbot
 	)
 
 	_, err := h.bot.Request(editMsg)
+
 	return err
 }
 
-// completeProfileSetup завершает настройку профиля
+// completeProfileSetup завершает настройку профиля интересов пользователя.
+//
+//nolint:cyclop,funlen // функция содержит последовательную логику завершения профиля, длина оправдана
 func (h *ImprovedInterestHandler) completeProfileSetup(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	// Получаем сводку интересов пользователя из БД (после сохранения)
+	// Improved interest handler implementation - Получаем сводку интересов пользователя из БД (после сохранения)
 	summary, err := h.interestService.GetUserInterestSummary(user.ID)
 	if err != nil {
 		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSummary")
@@ -458,25 +514,31 @@ func (h *ImprovedInterestHandler) completeProfileSetup(callback *tgbotapi.Callba
 
 	if len(summary.PrimaryInterests) > 0 {
 		primaryText.WriteString("⭐ Основные: ")
+
 		for i, interest := range summary.PrimaryInterests {
 			if i > 0 {
 				primaryText.WriteString(", ")
 			}
+
 			interestName := h.service.Localizer.Get(user.InterfaceLanguageCode, "interest_"+interest.KeyName)
 			primaryText.WriteString(interestName)
 		}
+
 		primaryText.WriteString("\n")
 	}
 
 	if len(summary.AdditionalInterests) > 0 {
 		additionalText.WriteString("➕ Дополнительные: ")
+
 		for i, interest := range summary.AdditionalInterests {
 			if i > 0 {
 				additionalText.WriteString(", ")
 			}
+
 			interestName := h.service.Localizer.Get(user.InterfaceLanguageCode, "interest_"+interest.KeyName)
 			additionalText.WriteString(interestName)
 		}
+
 		additionalText.WriteString("\n")
 	}
 
@@ -514,7 +576,7 @@ func (h *ImprovedInterestHandler) completeProfileSetup(callback *tgbotapi.Callba
 	}
 
 	// Обновляем уровень завершения профиля
-	err = h.updateProfileCompletionLevel(user.ID, 100)
+	err = h.updateProfileCompletionLevel(user.ID, ImprovedInterestProfileCompletionLevelComplete)
 	if err != nil {
 		log.Printf("Error updating profile completion level: %v", err)
 	}
@@ -522,12 +584,13 @@ func (h *ImprovedInterestHandler) completeProfileSetup(callback *tgbotapi.Callba
 	return nil
 }
 
-// updateProfileCompletionLevel обновляет уровень завершения профиля
+// updateProfileCompletionLevel обновляет уровень завершения профиля.
 func (h *ImprovedInterestHandler) updateProfileCompletionLevel(userID int, completionLevel int) error {
 	_, err := h.service.DB.GetConnection().Exec(`
 		UPDATE users
 		SET profile_completion_level = $1, updated_at = NOW()
 		WHERE id = $2
 	`, completionLevel, userID)
+
 	return err
 }

@@ -1,3 +1,4 @@
+// Package server provides HTTP server implementation for the profile service.
 package server
 
 import (
@@ -9,12 +10,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Server represents the HTTP server for the profile service.
 type Server struct {
 	port string
 	db   *pgxpool.Pool
 	srv  *http.Server
 }
 
+// New creates a new HTTP server instance for the profile service.
 func New(port string, db *pgxpool.Pool) *Server {
 	mux := http.NewServeMux()
 
@@ -30,10 +33,12 @@ func New(port string, db *pgxpool.Pool) *Server {
 	return s
 }
 
+// Start begins serving HTTP requests for the profile service.
 func (s *Server) Start() error {
 	return s.srv.ListenAndServe()
 }
 
+// Shutdown gracefully shuts down the HTTP server.
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.srv.Shutdown(ctx)
 }

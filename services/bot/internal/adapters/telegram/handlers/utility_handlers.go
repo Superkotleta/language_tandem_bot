@@ -7,20 +7,24 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// UtilityHandler интерфейс для вспомогательных функций
+// UtilityHandler интерфейс для вспомогательных функций.
 type UtilityHandler interface {
 	SendMessage(chatID int64, text string) error
 }
 
-// UtilityHandlerImpl реализация вспомогательного обработчика
+// UtilityHandlerImpl реализация вспомогательного обработчика.
 type UtilityHandlerImpl struct {
 	service      *core.BotService
 	bot          *tgbotapi.BotAPI
 	errorHandler *errors.ErrorHandler
 }
 
-// NewUtilityHandler создает новый вспомогательный обработчик
-func NewUtilityHandler(service *core.BotService, bot *tgbotapi.BotAPI, errorHandler *errors.ErrorHandler) UtilityHandler {
+// NewUtilityHandler создает новый вспомогательный обработчик.
+func NewUtilityHandler(
+	service *core.BotService,
+	bot *tgbotapi.BotAPI,
+	errorHandler *errors.ErrorHandler,
+) *UtilityHandlerImpl {
 	return &UtilityHandlerImpl{
 		service:      service,
 		bot:          bot,
@@ -28,9 +32,10 @@ func NewUtilityHandler(service *core.BotService, bot *tgbotapi.BotAPI, errorHand
 	}
 }
 
-// SendMessage отправляет сообщение пользователю
+// SendMessage отправляет сообщение пользователю.
 func (h *UtilityHandlerImpl) SendMessage(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)
+
 	_, err := h.bot.Send(msg)
 	if err != nil {
 		// Используем новую систему обработки ошибок
@@ -41,5 +46,6 @@ func (h *UtilityHandlerImpl) SendMessage(chatID int64, text string) error {
 			"SendMessage",
 		)
 	}
+
 	return nil
 }

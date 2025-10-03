@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"language-exchange-bot/internal/cache"
+	"language-exchange-bot/internal/circuit_breaker"
 	"language-exchange-bot/internal/database"
 	errorsPkg "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/localization"
@@ -37,6 +38,11 @@ type BotService struct {
 	Service                  *validation.Service
 	LoggingService           *logging.LoggingService
 	FeedbackNotificationFunc func(data map[string]interface{}) error // функция для отправки уведомлений
+
+	// Circuit Breakers для защиты от сбоев внешних сервисов
+	TelegramCircuitBreaker *circuit_breaker.CircuitBreaker
+	DatabaseCircuitBreaker *circuit_breaker.CircuitBreaker
+	RedisCircuitBreaker    *circuit_breaker.CircuitBreaker
 }
 
 // NewBotService creates a new BotService instance.
@@ -50,6 +56,11 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 
 	// Создаем BatchLoader для оптимизации N+1 запросов
 	batchLoader := database.NewBatchLoader(db)
+
+	// Создаем Circuit Breakers
+	telegramCB := circuit_breaker.NewCircuitBreaker(circuit_breaker.TelegramConfig())
+	databaseCB := circuit_breaker.NewCircuitBreaker(circuit_breaker.DatabaseConfig())
+	redisCB := circuit_breaker.NewCircuitBreaker(circuit_breaker.RedisConfig())
 
 	// Создаем Service (пока без errorHandler для совместимости)
 	var validationService *validation.Service
@@ -73,6 +84,9 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 		Service:                  validationService,
 		LoggingService:           loggingService,
 		FeedbackNotificationFunc: nil,
+		TelegramCircuitBreaker:   telegramCB,
+		DatabaseCircuitBreaker:   databaseCB,
+		RedisCircuitBreaker:      redisCB,
 	}
 }
 
@@ -96,6 +110,11 @@ func NewBotServiceWithRedis(
 	// Создаем BatchLoader для оптимизации N+1 запросов
 	batchLoader := database.NewBatchLoader(db)
 
+	// Создаем Circuit Breakers
+	telegramCB := circuit_breaker.NewCircuitBreaker(circuit_breaker.TelegramConfig())
+	databaseCB := circuit_breaker.NewCircuitBreaker(circuit_breaker.DatabaseConfig())
+	redisCB := circuit_breaker.NewCircuitBreaker(circuit_breaker.RedisConfig())
+
 	// Создаем Service и LoggingService
 	var validationService *validation.Service
 
@@ -118,6 +137,9 @@ func NewBotServiceWithRedis(
 		Service:                  validationService,
 		LoggingService:           loggingService,
 		FeedbackNotificationFunc: nil,
+		TelegramCircuitBreaker:   telegramCB,
+		DatabaseCircuitBreaker:   databaseCB,
+		RedisCircuitBreaker:      redisCB,
 	}, nil
 }
 
@@ -857,9 +879,13 @@ func (s *BotService) GetAllFeedback() ([]map[string]interface{}, error) {
 
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
+			s.LoggingService.Database().ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "GetAllFeedback",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
 		}
 	}()
 
@@ -1215,11 +1241,11 @@ func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAll
 	}()
 
 	// Пытаемся получить из кэша
-	if userData, found := s.Cache.GetUser(context.Background(), telegramID); found {
+	if cachedUser, found := s.Cache.GetUser(context.Background(), telegramID); found {
 		// Если пользователь есть в кэше, но нет полных данных, загружаем их
-		if userData != nil {
+		if cachedUser != nil {
 			// Загружаем полные данные
-			userData, err := s.BatchLoader.GetUserWithAllData(telegramID)
+			userData, err := s.BatchLoader.GetUserWithAllData(context.Background(), telegramID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get user with all data: %w", err)
 			}
@@ -1229,7 +1255,7 @@ func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAll
 	}
 
 	// Загружаем из БД одним запросом
-	userData, err := s.BatchLoader.GetUserWithAllData(telegramID)
+	userData, err := s.BatchLoader.GetUserWithAllData(context.Background(), telegramID)
 	if err != nil {
 		s.MetricsService.RecordError()
 
@@ -1251,7 +1277,7 @@ func (s *BotService) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int64
 	}()
 
 	// Загружаем из БД одним запросом
-	users, err := s.BatchLoader.BatchLoadUsersWithInterests(telegramIDs)
+	users, err := s.BatchLoader.BatchLoadUsersWithInterests(context.Background(), telegramIDs)
 	if err != nil {
 		s.MetricsService.RecordError()
 
@@ -1275,7 +1301,7 @@ func (s *BotService) BatchLoadInterestsWithTranslations(languages []string) (map
 	}()
 
 	// Загружаем из БД одним запросом
-	interests, err := s.BatchLoader.BatchLoadInterestsWithTranslations(languages)
+	interests, err := s.BatchLoader.BatchLoadInterestsWithTranslations(context.Background(), languages)
 	if err != nil {
 		s.MetricsService.RecordError()
 
@@ -1299,7 +1325,7 @@ func (s *BotService) BatchLoadLanguagesWithTranslations(languages []string) (map
 	}()
 
 	// Загружаем из БД одним запросом
-	langs, err := s.BatchLoader.BatchLoadLanguagesWithTranslations(languages)
+	langs, err := s.BatchLoader.BatchLoadLanguagesWithTranslations(context.Background(), languages)
 	if err != nil {
 		s.MetricsService.RecordError()
 
@@ -1323,7 +1349,7 @@ func (s *BotService) BatchLoadUserInterests(userIDs []int) (map[int][]int, error
 	}()
 
 	// Загружаем из БД одним запросом
-	interests, err := s.BatchLoader.BatchLoadUserInterests(userIDs)
+	interests, err := s.BatchLoader.BatchLoadUserInterests(context.Background(), userIDs)
 	if err != nil {
 		s.MetricsService.RecordError()
 
@@ -1342,7 +1368,7 @@ func (s *BotService) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.User
 	}()
 
 	// Загружаем из БД одним запросом
-	users, err := s.BatchLoader.BatchLoadUsers(telegramIDs)
+	users, err := s.BatchLoader.BatchLoadUsers(context.Background(), telegramIDs)
 	if err != nil {
 		s.MetricsService.RecordError()
 
@@ -1390,4 +1416,101 @@ func (s *BotService) getLanguageFlag(languageCode string) string {
 	default:
 		return "🌍"
 	}
+}
+
+// ===== CIRCUIT BREAKER МЕТОДЫ =====
+
+// ExecuteWithTelegramCircuitBreaker выполняет операцию с защитой Telegram Circuit Breaker.
+func (s *BotService) ExecuteWithTelegramCircuitBreaker(operation func() (interface{}, error)) (interface{}, error) {
+	if s.TelegramCircuitBreaker == nil {
+		return operation()
+	}
+
+	return s.TelegramCircuitBreaker.Execute(operation)
+}
+
+// ExecuteWithDatabaseCircuitBreaker выполняет операцию с защитой Database Circuit Breaker.
+func (s *BotService) ExecuteWithDatabaseCircuitBreaker(operation func() (interface{}, error)) (interface{}, error) {
+	if s.DatabaseCircuitBreaker == nil {
+		return operation()
+	}
+
+	return s.DatabaseCircuitBreaker.Execute(operation)
+}
+
+// ExecuteWithRedisCircuitBreaker выполняет операцию с защитой Redis Circuit Breaker.
+func (s *BotService) ExecuteWithRedisCircuitBreaker(operation func() (interface{}, error)) (interface{}, error) {
+	if s.RedisCircuitBreaker == nil {
+		return operation()
+	}
+
+	return s.RedisCircuitBreaker.Execute(operation)
+}
+
+// ExecuteWithTelegramCircuitBreakerContext выполняет операцию с контекстом и защитой Telegram Circuit Breaker.
+func (s *BotService) ExecuteWithTelegramCircuitBreakerContext(
+	ctx context.Context,
+	operation func() (interface{}, error),
+) (interface{}, error) {
+	if s.TelegramCircuitBreaker == nil {
+		return operation()
+	}
+
+	return s.TelegramCircuitBreaker.ExecuteWithContext(ctx, operation)
+}
+
+// ExecuteWithDatabaseCircuitBreakerContext выполняет операцию с контекстом и защитой Database Circuit Breaker.
+func (s *BotService) ExecuteWithDatabaseCircuitBreakerContext(ctx context.Context, operation func() (interface{}, error)) (interface{}, error) {
+	if s.DatabaseCircuitBreaker == nil {
+		return operation()
+	}
+
+	return s.DatabaseCircuitBreaker.ExecuteWithContext(ctx, operation)
+}
+
+// ExecuteWithRedisCircuitBreakerContext выполняет операцию с контекстом и защитой Redis Circuit Breaker.
+func (s *BotService) ExecuteWithRedisCircuitBreakerContext(ctx context.Context, operation func() (interface{}, error)) (interface{}, error) {
+	if s.RedisCircuitBreaker == nil {
+		return operation()
+	}
+
+	return s.RedisCircuitBreaker.ExecuteWithContext(ctx, operation)
+}
+
+// GetCircuitBreakerStates возвращает состояния всех Circuit Breakers.
+func (s *BotService) GetCircuitBreakerStates() map[string]string {
+	states := make(map[string]string)
+
+	if s.TelegramCircuitBreaker != nil {
+		states["telegram"] = s.TelegramCircuitBreaker.State().String()
+	}
+
+	if s.DatabaseCircuitBreaker != nil {
+		states["database"] = s.DatabaseCircuitBreaker.State().String()
+	}
+
+	if s.RedisCircuitBreaker != nil {
+		states["redis"] = s.RedisCircuitBreaker.State().String()
+	}
+
+	return states
+}
+
+// GetCircuitBreakerCounts возвращает счетчики всех Circuit Breakers.
+func (s *BotService) GetCircuitBreakerCounts() map[string]interface{} {
+	counts := make(map[string]interface{})
+
+	if s.TelegramCircuitBreaker != nil {
+		counts["telegram"] = s.TelegramCircuitBreaker.Counts()
+	}
+
+	if s.DatabaseCircuitBreaker != nil {
+		counts["database"] = s.DatabaseCircuitBreaker.Counts()
+	}
+
+	if s.RedisCircuitBreaker != nil {
+		counts["redis"] = s.RedisCircuitBreaker.Counts()
+	}
+
+	return counts
 }

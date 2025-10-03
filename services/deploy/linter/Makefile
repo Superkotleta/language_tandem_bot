@@ -48,27 +48,27 @@ lint:
 # Улучшенный линтер для всех сервисов
 lint-enhanced:
 	@echo "$(GREEN)Запуск улучшенного линтера на bot сервисе...$(NC)"
-	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(ENHANCED_CONFIG) ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(ENHANCED_CONFIG) ./...
 
 # Строгий линтер для всех сервисов
 lint-strict:
 	@echo "$(GREEN)Запуск строгого линтера на bot сервисе...$(NC)"
-	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(STRICT_CONFIG) ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(STRICT_CONFIG) ./...
 
 # Быстрый линтер для всех сервисов
 lint-fast:
 	@echo "$(GREEN)Запуск быстрого линтера на bot сервисе...$(NC)"
-	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(FAST_CONFIG) ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(FAST_CONFIG) ./...
 
 # Мягкий линтер для всех сервисов
 lint-gentle:
 	@echo "$(GREEN)Запуск мягкого линтера на bot сервисе...$(NC)"
-	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(GENTLE_CONFIG) ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(GENTLE_CONFIG) ./...
 
 # Линтер для bot сервиса
 lint-bot:
 	@echo "$(GREEN)Запуск линтера на bot сервисе...$(NC)"
-	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(LINT_CONFIG) ./internal/errors/ ./internal/localization/ ./internal/adapters/ ./internal/cache/ ./internal/config/ ./internal/core/ ./internal/database/ ./internal/models/ ./internal/validation/
+	@cd ../../bot && $(GOLANGCI_LINT) run --config=../deploy/linter/$(LINT_CONFIG) ./...
 
 # Линтер для matcher сервиса
 lint-matcher:

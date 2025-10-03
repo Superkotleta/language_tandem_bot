@@ -43,7 +43,6 @@ linters:
     - gochecknoglobals
     - mnd
     - gomoddirectives
-    - unparam
     - unconvert
     - nakedret
     - nlreturn
@@ -99,7 +98,6 @@ linters:
     - exhaustive
     - ginkgolinter
     - gocheckcompilerdirectives
-    - godox
     - importas
 
 linters-settings:

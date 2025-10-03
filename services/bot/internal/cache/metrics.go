@@ -182,7 +182,7 @@ func (ms *MetricsService) updateCacheEfficiency() {
 	total := stats.Hits + stats.Misses
 
 	if total > 0 {
-		ms.cacheEfficiency = float64(stats.Hits) / float64(total) * percentageMultiplier
+		ms.cacheEfficiency = float64(stats.Hits) / float64(total) * PercentageMultiplier
 	}
 }
 
@@ -193,7 +193,7 @@ func (ms *MetricsService) getHitRate(stats Stats) float64 {
 		return 0
 	}
 
-	return float64(stats.Hits) / float64(total) * percentageMultiplier
+	return float64(stats.Hits) / float64(total) * PercentageMultiplier
 }
 
 // getErrorRate возвращает процент ошибок.
@@ -202,7 +202,7 @@ func (ms *MetricsService) getErrorRate() float64 {
 		return 0
 	}
 
-	return float64(ms.errorCount) / float64(ms.totalRequests) * percentageMultiplier
+	return float64(ms.errorCount) / float64(ms.totalRequests) * PercentageMultiplier
 }
 
 // getRequestsPerSecond возвращает количество запросов в секунду.
@@ -221,7 +221,7 @@ func (ms *MetricsService) getMemoryUsagePercent() float64 {
 		return 0
 	}
 
-	return float64(ms.memoryUsage) / float64(ms.maxMemoryUsage) * percentageMultiplier
+	return float64(ms.memoryUsage) / float64(ms.maxMemoryUsage) * PercentageMultiplier
 }
 
 // getCleanupFrequency возвращает частоту очистки.

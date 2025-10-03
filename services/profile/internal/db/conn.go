@@ -1,3 +1,4 @@
+// Package db provides database connection and migration functionality for the profile service.
 package db
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Connect establishes a database connection pool for the profile service.
 func Connect(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) {
 	pcfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {

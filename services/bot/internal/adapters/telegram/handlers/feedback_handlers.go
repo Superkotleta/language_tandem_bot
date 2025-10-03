@@ -13,7 +13,24 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// FeedbackHandler интерфейс для обработчиков отзывов
+// Константы для работы с отзывами.
+const (
+	ButtonsPerRow        = 2    // Количество кнопок в ряду
+	MinFeedbackLength    = 10   // Минимальная длина отзыва
+	MaxFeedbackLength    = 50   // Максимальная длина отзыва для проверки
+	MaxContactInfoLength = 200  // Максимальная длина контактной информации
+	MaxKeyboardButtons   = 10   // Максимальное количество кнопок в клавиатуре
+	MaxFeedbackItems     = 1000 // Максимальное количество отзывов для отображения
+
+	// FeedbackTypeActiveLocal активные отзывы.
+	FeedbackTypeActiveLocal = "active"
+	// FeedbackTypeArchiveLocal архивные отзывы.
+	FeedbackTypeArchiveLocal = "archive"
+	// FeedbackTypeAllLocal все отзывы.
+	FeedbackTypeAllLocal = "all"
+)
+
+// FeedbackHandler интерфейс для обработчиков отзывов.
 type FeedbackHandler interface {
 	HandleFeedbackCommand(message *tgbotapi.Message, user *models.User) error
 	HandleFeedbacksCommand(message *tgbotapi.Message, user *models.User) error
@@ -48,7 +65,7 @@ type FeedbackHandler interface {
 	HandleFeedbackBack(callback *tgbotapi.CallbackQuery, user *models.User, feedbackType string) error
 }
 
-// FeedbackHandlerImpl реализация обработчиков отзывов
+// FeedbackHandlerImpl реализация обработчиков отзывов.
 type FeedbackHandlerImpl struct {
 	bot             *tgbotapi.BotAPI
 	service         *core.BotService
@@ -58,8 +75,15 @@ type FeedbackHandlerImpl struct {
 	errorHandler    *errors.ErrorHandler
 }
 
-// NewFeedbackHandler создает новый экземпляр FeedbackHandler
-func NewFeedbackHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboardBuilder *KeyboardBuilder, adminChatIDs []int64, adminUsernames []string, errorHandler *errors.ErrorHandler) FeedbackHandler {
+// NewFeedbackHandler создает новый экземпляр FeedbackHandler.
+func NewFeedbackHandler(
+	bot *tgbotapi.BotAPI,
+	service *core.BotService,
+	keyboardBuilder *KeyboardBuilder,
+	adminChatIDs []int64,
+	adminUsernames []string,
+	errorHandler *errors.ErrorHandler,
+) *FeedbackHandlerImpl {
 	return &FeedbackHandlerImpl{
 		bot:             bot,
 		service:         service,
@@ -70,14 +94,15 @@ func NewFeedbackHandler(bot *tgbotapi.BotAPI, service *core.BotService, keyboard
 	}
 }
 
-// HandleFeedbackCommand обрабатывает команду /feedback
+// HandleFeedbackCommand обрабатывает команду /feedback.
 func (fh *FeedbackHandlerImpl) HandleFeedbackCommand(message *tgbotapi.Message, user *models.User) error {
 	text := fh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_text")
 	_ = fh.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedback)
+
 	return fh.sendMessage(message.Chat.ID, text)
 }
 
-// HandleFeedbacksCommand обрабатывает команду /feedbacks (только для администраторов)
+// HandleFeedbacksCommand обрабатывает команду /feedbacks (только для администраторов).
 func (fh *FeedbackHandlerImpl) HandleFeedbacksCommand(message *tgbotapi.Message, user *models.User) error {
 	// Проверяем права администратора по Chat ID и username
 	isAdminByID := false
@@ -87,6 +112,7 @@ func (fh *FeedbackHandlerImpl) HandleFeedbacksCommand(message *tgbotapi.Message,
 	for _, adminID := range fh.adminChatIDs {
 		if message.Chat.ID == adminID {
 			isAdminByID = true
+
 			break
 		}
 	}
@@ -96,6 +122,7 @@ func (fh *FeedbackHandlerImpl) HandleFeedbacksCommand(message *tgbotapi.Message,
 		for _, adminUsername := range fh.adminUsernames {
 			if message.From.UserName == adminUsername {
 				isAdminByUsername = true
+
 				break
 			}
 		}
@@ -110,21 +137,31 @@ func (fh *FeedbackHandlerImpl) HandleFeedbacksCommand(message *tgbotapi.Message,
 	return fh.showFeedbackStatistics(message.Chat.ID, user)
 }
 
-// HandleMainFeedback обрабатывает нажатие кнопки "Отзыв" в главном меню
+// HandleMainFeedback обрабатывает нажатие кнопки "Отзыв" в главном меню.
 func (fh *FeedbackHandlerImpl) HandleMainFeedback(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Создаем message объект для handleFeedbackCommand
 	message := &tgbotapi.Message{
 		Chat: callback.Message.Chat,
 	}
+
 	return fh.HandleFeedbackCommand(message, user)
 }
 
 // editMessageTextAndMarkup редактирует сообщение с клавиатурой
-func (fh *FeedbackHandlerImpl) editMessageTextAndMarkup(chatID int64, messageID int, text string, keyboard *tgbotapi.InlineKeyboardMarkup) error {
+// TODO: функция может быть использована в будущем для редактирования сообщений с клавиатурой
+//
+//nolint:unused
+func (fh *FeedbackHandlerImpl) editMessageTextAndMarkup(
+	chatID int64,
+	messageID int,
+	text string,
+	keyboard *tgbotapi.InlineKeyboardMarkup,
+) error {
 	edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
 	if keyboard != nil {
 		edit.ReplyMarkup = keyboard
 	}
+
 	_, err := fh.bot.Send(edit)
 	if err != nil {
 		return fh.errorHandler.HandleTelegramError(
@@ -134,10 +171,14 @@ func (fh *FeedbackHandlerImpl) editMessageTextAndMarkup(chatID int64, messageID 
 			"EditFeedbackMessage",
 		)
 	}
+
 	return nil
 }
 
 // createFeedbackKeyboard создает клавиатуру для обратной связи
+// TODO: функция может быть использована в будущем для создания клавиатур обратной связи
+//
+//nolint:unused
 func (fh *FeedbackHandlerImpl) createFeedbackKeyboard(lang string) tgbotapi.InlineKeyboardMarkup {
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{
@@ -147,12 +188,14 @@ func (fh *FeedbackHandlerImpl) createFeedbackKeyboard(lang string) tgbotapi.Inli
 			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад", "back_to_main_menu"),
 		},
 	}
+
 	return tgbotapi.NewInlineKeyboardMarkup(keyboard...)
 }
 
-// sendMessage отправляет сообщение
+// sendMessage отправляет сообщение.
 func (fh *FeedbackHandlerImpl) sendMessage(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)
+
 	_, err := fh.bot.Send(msg)
 	if err != nil {
 		// Используем новую систему обработки ошибок
@@ -163,10 +206,11 @@ func (fh *FeedbackHandlerImpl) sendMessage(chatID int64, text string) error {
 			"SendMessage",
 		)
 	}
+
 	return nil
 }
 
-// editFeedbackStatistics редактирует сообщение со статистикой отзывов
+// editFeedbackStatistics редактирует сообщение со статистикой отзывов.
 func (fh *FeedbackHandlerImpl) editFeedbackStatistics(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
@@ -208,10 +252,11 @@ func (fh *FeedbackHandlerImpl) editFeedbackStatistics(chatID int64, messageID in
 	editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 	editMsg.ReplyMarkup = &keyboard
 	_, err = fh.bot.Send(editMsg)
+
 	return err
 }
 
-// showFeedbackStatistics показывает статистику отзывов
+// showFeedbackStatistics показывает статистику отзывов.
 func (fh *FeedbackHandlerImpl) showFeedbackStatistics(chatID int64, user *models.User) error {
 	// Получаем все отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
@@ -219,7 +264,7 @@ func (fh *FeedbackHandlerImpl) showFeedbackStatistics(chatID int64, user *models
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			chatID,
 			"GetAllFeedback",
@@ -227,6 +272,7 @@ func (fh *FeedbackHandlerImpl) showFeedbackStatistics(chatID int64, user *models
 				"error": err.Error(),
 			},
 		)
+
 		return fh.sendMessage(chatID, "❌ Ошибка загрузки отзывов")
 	}
 
@@ -255,21 +301,33 @@ func (fh *FeedbackHandlerImpl) showFeedbackStatistics(chatID int64, user *models
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ReplyMarkup = keyboard
 	_, err = fh.bot.Send(msg)
+
 	return err
 }
 
 // sendFeedbackList отправляет список отзывов
+// TODO: функция может быть использована в будущем для отправки списков отзывов
+//
+//nolint:unused
 func (fh *FeedbackHandlerImpl) sendFeedbackList(chatID int64, feedbackList []map[string]interface{}) error {
 	for _, feedback := range feedbackList {
 		if err := fh.sendFeedbackItem(chatID, feedback); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
 // sendFeedbackListWithPagination отправляет список отзывов с навигацией в одном сообщении
-func (fh *FeedbackHandlerImpl) sendFeedbackListWithPagination(chatID int64, feedbackList []map[string]interface{}, feedbackType string) error {
+// TODO: функция может быть использована в будущем для отправки списков отзывов с пагинацией
+//
+//nolint:unused
+func (fh *FeedbackHandlerImpl) sendFeedbackListWithPagination(
+	chatID int64,
+	feedbackList []map[string]interface{},
+	feedbackType string,
+) error {
 	if len(feedbackList) == 0 {
 		return fh.sendMessage(chatID, "📝 Отзывов нет")
 	}
@@ -279,7 +337,15 @@ func (fh *FeedbackHandlerImpl) sendFeedbackListWithPagination(chatID int64, feed
 }
 
 // sendFeedbackWithNavigation отправляет один отзыв с кнопками навигации
-func (fh *FeedbackHandlerImpl) sendFeedbackWithNavigation(chatID int64, feedbackList []map[string]interface{}, currentIndex int, feedbackType string) error {
+// TODO: функция может быть использована в будущем для отправки отзывов с навигацией
+//
+//nolint:unused
+func (fh *FeedbackHandlerImpl) sendFeedbackWithNavigation(
+	chatID int64,
+	feedbackList []map[string]interface{},
+	currentIndex int,
+	feedbackType string,
+) error {
 	if currentIndex < 0 || currentIndex >= len(feedbackList) {
 		return fh.sendMessage(chatID, "❌ Неверный индекс отзыва")
 	}
@@ -296,11 +362,18 @@ func (fh *FeedbackHandlerImpl) sendFeedbackWithNavigation(chatID int64, feedback
 	msg.ReplyMarkup = keyboard
 	msg.ParseMode = tgbotapi.ModeHTML
 	_, err := fh.bot.Send(msg)
+
 	return err
 }
 
-// editFeedbackWithNavigation обновляет существующее сообщение с отзывом
-func (fh *FeedbackHandlerImpl) editFeedbackWithNavigation(chatID int64, messageID int, feedbackList []map[string]interface{}, currentIndex int, feedbackType string) error {
+// editFeedbackWithNavigation обновляет существующее сообщение с отзывом.
+func (fh *FeedbackHandlerImpl) editFeedbackWithNavigation(
+	chatID int64,
+	messageID int,
+	feedbackList []map[string]interface{},
+	currentIndex int,
+	feedbackType string,
+) error {
 	if currentIndex < 0 || currentIndex >= len(feedbackList) {
 		return fh.sendMessage(chatID, "❌ Неверный индекс отзыва")
 	}
@@ -317,10 +390,11 @@ func (fh *FeedbackHandlerImpl) editFeedbackWithNavigation(chatID int64, messageI
 	editMsg.ReplyMarkup = &keyboard
 	editMsg.ParseMode = tgbotapi.ModeHTML
 	_, err := fh.bot.Send(editMsg)
+
 	return err
 }
 
-// formatFeedbackText форматирует текст отзыва
+// formatFeedbackText форматирует текст отзыва.
 func (fh *FeedbackHandlerImpl) formatFeedbackText(feedback map[string]interface{}, currentNum, totalCount int) string {
 	feedbackID := feedback["id"].(int)
 	firstName := feedback["first_name"].(string)
@@ -338,17 +412,19 @@ func (fh *FeedbackHandlerImpl) formatFeedbackText(feedback map[string]interface{
 	}
 
 	text += fmt.Sprintf("📅 <b>Дата:</b> %s\n\n", createdAt.Format("02.01.2006 15:04"))
-	text += fmt.Sprintf("💬 <b>Отзыв:</b>\n%s", feedbackText)
+	text += "💬 <b>Отзыв:</b>\n" + feedbackText
 
 	// Добавляем контактную информацию если есть
 	if contactInfo, ok := feedback["contact_info"].(*string); ok && contactInfo != nil {
-		text += fmt.Sprintf("\n\n📞 <b>Контакты:</b> %s", *contactInfo)
+		text += "\n\n📞 <b>Контакты:</b> " + *contactInfo
 	}
 
 	return text
 }
 
-// createNavigationKeyboard создает клавиатуру навигации
+// createNavigationKeyboard создает клавиатуру навигации.
+//
+//nolint:funlen
 func (fh *FeedbackHandlerImpl) createNavigationKeyboard(currentIndex, totalCount int, feedbackType string) tgbotapi.InlineKeyboardMarkup {
 	var buttons []tgbotapi.InlineKeyboardButton
 
@@ -369,7 +445,7 @@ func (fh *FeedbackHandlerImpl) createNavigationKeyboard(currentIndex, totalCount
 	}
 
 	// Кнопка "В обработанные" (только для активных отзывов)
-	if feedbackType == "active" {
+	if feedbackType == FeedbackTypeActiveLocal {
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
 			"📦 В обработанные",
 			fmt.Sprintf("archive_feedback_%d", currentIndex),
@@ -377,7 +453,7 @@ func (fh *FeedbackHandlerImpl) createNavigationKeyboard(currentIndex, totalCount
 	}
 
 	// Кнопки для архивных отзывов
-	if feedbackType == "archive" {
+	if feedbackType == FeedbackTypeArchiveLocal {
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
 			"🔄 Вернуть в активные",
 			fmt.Sprintf("unarchive_feedback_%d", currentIndex),
@@ -406,11 +482,12 @@ func (fh *FeedbackHandlerImpl) createNavigationKeyboard(currentIndex, totalCount
 
 	// Разбиваем кнопки на строки
 	var rows [][]tgbotapi.InlineKeyboardButton
+
 	if len(buttons) > 0 {
 		// Первая строка: навигация
-		if len(buttons) >= 2 {
+		if len(buttons) >= ButtonsPerRow {
 			rows = append(rows, []tgbotapi.InlineKeyboardButton{buttons[0], buttons[1]})
-			buttons = buttons[2:]
+			buttons = buttons[ButtonsPerRow:]
 		} else if len(buttons) == 1 {
 			rows = append(rows, []tgbotapi.InlineKeyboardButton{buttons[0]})
 			buttons = buttons[1:]
@@ -426,6 +503,9 @@ func (fh *FeedbackHandlerImpl) createNavigationKeyboard(currentIndex, totalCount
 }
 
 // sendFeedbackItem отправляет один отзыв
+// TODO: функция может быть использована в будущем для отправки отдельных отзывов
+//
+//nolint:unused,funlen
 func (fh *FeedbackHandlerImpl) sendFeedbackItem(chatID int64, fb map[string]interface{}) error {
 	feedbackID := fb["id"].(int)
 	firstName := fb["first_name"].(string)
@@ -445,18 +525,21 @@ func (fh *FeedbackHandlerImpl) sendFeedbackItem(chatID int64, fb map[string]inte
 	// Иконка статуса отзыва
 	statusIcon := "🏷️"
 	statusText := "Ожидает обработки"
+
 	if fb["is_processed"].(bool) {
 		statusIcon = "✅"
 		statusText = "Обработан"
 	}
 
 	// Иконка длины отзыва
-	charIcon := "📝"
-	if charCount < 50 {
+	var charIcon string
+
+	switch {
+	case charCount < MaxFeedbackLength:
 		charIcon = "💬"
-	} else if charCount < 200 {
+	case charCount < MaxContactInfoLength:
 		charIcon = "📝"
-	} else {
+	default:
 		charIcon = "📖"
 	}
 
@@ -507,20 +590,22 @@ func (fh *FeedbackHandlerImpl) sendFeedbackItem(chatID int64, fb map[string]inte
 	msg.ParseMode = tgbotapi.ModeHTML
 	msg.ReplyMarkup = keyboard
 	_, err := fh.bot.Send(msg)
+
 	return err
 }
 
 // ========== Заглушки для интерфейса (будут реализованы позже) ==========
 
-// HandleFeedbackMessage обрабатывает сообщение с отзывом
+// HandleFeedbackMessage обрабатывает сообщение с отзывом.
 func (fh *FeedbackHandlerImpl) HandleFeedbackMessage(message *tgbotapi.Message, user *models.User) error {
 	feedbackText := message.Text
 
 	// Проверяем валидность отзыва
-	if len([]rune(feedbackText)) < 10 {
+	if len([]rune(feedbackText)) < MinFeedbackLength {
 		return fh.handleFeedbackTooShort(message, user)
 	}
-	if len([]rune(feedbackText)) > 1000 {
+
+	if len([]rune(feedbackText)) > MaxFeedbackItems {
 		return fh.handleFeedbackTooLong(message, user)
 	}
 
@@ -532,7 +617,7 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackMessage(message *tgbotapi.Message, 
 	// Логируем принятие отзыва
 	fh.service.LoggingService.Telegram().InfoWithContext(
 		"Feedback received",
-		"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+		"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 		int64(user.ID),
 		message.Chat.ID,
 		"HandleFeedbackMessage",
@@ -547,7 +632,7 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackMessage(message *tgbotapi.Message, 
 	return fh.handleFeedbackComplete(message, user, feedbackText, nil)
 }
 
-// handleFeedbackTooShort обрабатывает слишком короткий отзыв
+// handleFeedbackTooShort обрабатывает слишком короткий отзыв.
 func (fh *FeedbackHandlerImpl) handleFeedbackTooShort(message *tgbotapi.Message, user *models.User) error {
 	feedbackText := message.Text
 	count := len([]rune(feedbackText))
@@ -562,7 +647,7 @@ func (fh *FeedbackHandlerImpl) handleFeedbackTooShort(message *tgbotapi.Message,
 	return fh.sendMessage(message.Chat.ID, errorText)
 }
 
-// handleFeedbackTooLong обрабатывает слишком длинный отзыв
+// handleFeedbackTooLong обрабатывает слишком длинный отзыв.
 func (fh *FeedbackHandlerImpl) handleFeedbackTooLong(message *tgbotapi.Message, user *models.User) error {
 	feedbackText := message.Text
 	count := len([]rune(feedbackText))
@@ -577,7 +662,7 @@ func (fh *FeedbackHandlerImpl) handleFeedbackTooLong(message *tgbotapi.Message, 
 	return fh.sendMessage(message.Chat.ID, errorText)
 }
 
-// handleFeedbackContactRequest запрашивает контактные данные при отсутствии username
+// handleFeedbackContactRequest запрашивает контактные данные при отсутствии username.
 func (fh *FeedbackHandlerImpl) handleFeedbackContactRequest(message *tgbotapi.Message, user *models.User, feedbackText string) error {
 	// Сохраняем отзыв во временном хранилище (в будущем можно добавить в redis/кэш)
 	// Пока просто переходим к следующему состоянию
@@ -590,10 +675,14 @@ func (fh *FeedbackHandlerImpl) handleFeedbackContactRequest(message *tgbotapi.Me
 
 	// Запрашиваем контактные данные
 	contactText := fh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_request")
-	return fh.sendMessage(message.Chat.ID, contactText)
+
+	return fh.sendMessage(
+		message.Chat.ID,
+		contactText,
+	)
 }
 
-// handleFeedbackComplete завершает процесс обратной связи
+// handleFeedbackComplete завершает процесс обратной связи.
 func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message, user *models.User, feedbackText string, contactInfo *string) error {
 	// Используем ID администраторов из обработчика
 	adminIDs := fh.adminChatIDs
@@ -604,7 +693,7 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to save feedback",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			message.Chat.ID,
 			"SaveUserFeedback",
@@ -617,6 +706,7 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 		if errorText == "feedback_error_generic" { // fallback в случае отсутствия перевода
 			errorText = "❌ Произошла ошибка при сохранении отзыва. Попробуйте позже."
 		}
+
 		return fh.sendMessage(message.Chat.ID, errorText)
 	}
 
@@ -632,7 +722,7 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to update user state",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			message.Chat.ID,
 			"UpdateUserState",
@@ -647,7 +737,7 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to update user status",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			message.Chat.ID,
 			"UpdateUserStatus",
@@ -660,7 +750,7 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 	return fh.sendMessage(message.Chat.ID, successText)
 }
 
-// HandleFeedbackContactMessage обрабатывает сообщение с контактными данными
+// HandleFeedbackContactMessage обрабатывает сообщение с контактными данными.
 func (fh *FeedbackHandlerImpl) HandleFeedbackContactMessage(message *tgbotapi.Message, user *models.User) error {
 	contactInfo := strings.TrimSpace(message.Text)
 
@@ -672,7 +762,9 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackContactMessage(message *tgbotapi.Me
 
 	// Подтверждаем получение контактов
 	confirmedText := fh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_provided")
-	fh.sendMessage(message.Chat.ID, confirmedText)
+	if err := fh.sendMessage(message.Chat.ID, confirmedText); err != nil {
+		return err
+	}
 
 	// Теперь нужно получить сохраненный отзыв пользователя
 	// Пока что используем временное решение - просим написать отзыв заново
@@ -683,101 +775,143 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackContactMessage(message *tgbotapi.Me
 	return fh.handleFeedbackComplete(message, user, feedbackText, &contactInfo)
 }
 
-// HandleFeedbackProcess обрабатывает отметку отзыва как обработанного
+// changeFeedbackStatus изменяет статус отзыва и отправляет подтверждение.
+func (fh *FeedbackHandlerImpl) changeFeedbackStatus(callback *tgbotapi.CallbackQuery, user *models.User, feedbackID int, processed bool, confirmMsg string) error {
+	// Обновляем статус отзыва
+	err := fh.service.UpdateFeedbackStatus(feedbackID, processed)
+	if err != nil {
+		// Используем структурированное логирование
+		fh.service.LoggingService.Database().ErrorWithContext(
+			"Failed to update feedback status",
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"UpdateFeedbackStatus",
+			map[string]interface{}{
+				"feedback_id": feedbackID,
+				"error":       err.Error(),
+			},
+		)
+
+		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка обновления статуса")
+	}
+
+	// Отправляем обновление администратору
+	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, confirmMsg)
+
+	msg.ParseMode = tgbotapi.ModeHTML
+	if _, err := fh.bot.Send(msg); err != nil {
+		// Используем структурированное логирование
+		fh.service.LoggingService.Telegram().ErrorWithContext(
+			"Failed to send status change confirmation",
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"SendStatusChangeConfirmation",
+			map[string]interface{}{
+				"feedback_id": feedbackID,
+				"error":       err.Error(),
+			},
+		)
+	}
+
+	return nil
+}
+
+// processArchiveFeedbackAction обрабатывает действия над архивными отзывами.
+//
+//nolint:cyclop // функция содержит последовательную логику обработки, сложность оправдана
+func (fh *FeedbackHandlerImpl) processArchiveFeedbackAction(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string, actionFunc func(int) error, successMessage string) error {
+	// Получаем все обработанные отзывы
+	allFeedbacks, err := fh.service.GetAllFeedback()
+	if err != nil {
+		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов: "+err.Error())
+	}
+
+	// Фильтруем только обработанные отзывы
+	var archiveFeedbacks []map[string]interface{}
+
+	for _, feedback := range allFeedbacks {
+		if isProcessed, ok := feedback["is_processed"].(bool); ok && isProcessed {
+			archiveFeedbacks = append(archiveFeedbacks, feedback)
+		}
+	}
+
+	// Парсим индекс
+	index, err := strconv.Atoi(indexStr)
+	if err != nil || index < 0 || index >= len(archiveFeedbacks) {
+		return fh.sendMessage(callback.Message.Chat.ID, "❌ Неверный индекс отзыва")
+	}
+
+	// Получаем ID отзыва
+	feedbackID := archiveFeedbacks[index]["id"].(int)
+
+	// Выполняем действие
+	err = actionFunc(feedbackID)
+	if err != nil {
+		return fh.sendMessage(callback.Message.Chat.ID, "❌ "+err.Error())
+	}
+
+	// Обновляем список (удаляем обработанный отзыв)
+	archiveFeedbacks = append(archiveFeedbacks[:index], archiveFeedbacks[index+1:]...)
+
+	// Показываем следующий отзыв или сообщение об отсутствии отзывов
+	if len(archiveFeedbacks) == 0 {
+		// Редактируем сообщение
+		text := successMessage
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("📊 К статистике", "back_to_feedback_stats"),
+			),
+		)
+
+		editMsg := tgbotapi.NewEditMessageText(callback.Message.Chat.ID, callback.Message.MessageID, text)
+		editMsg.ReplyMarkup = &keyboard
+		_, err := fh.bot.Send(editMsg)
+
+		return err
+	}
+
+	// Показываем следующий отзыв (или предыдущий, если это был последний)
+	nextIndex := index
+	if nextIndex >= len(archiveFeedbacks) {
+		nextIndex = len(archiveFeedbacks) - 1
+	}
+
+	return fh.editFeedbackWithNavigation(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		archiveFeedbacks,
+		nextIndex,
+		"archive",
+	)
+}
+
+// HandleFeedbackProcess обрабатывает отметку отзыва как обработанного.
 func (fh *FeedbackHandlerImpl) HandleFeedbackProcess(callback *tgbotapi.CallbackQuery, user *models.User, feedbackIDStr string) error {
 	feedbackID, err := strconv.Atoi(feedbackIDStr)
 	if err != nil {
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка идентификатора отзыва")
 	}
 
-	// Обновляем статус отзыва как обработанный
-	err = fh.service.UpdateFeedbackStatus(feedbackID, true)
-	if err != nil {
-		// Используем структурированное логирование
-		fh.service.LoggingService.Database().ErrorWithContext(
-			"Failed to update feedback status",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
-			int64(user.ID),
-			callback.Message.Chat.ID,
-			"UpdateFeedbackStatus",
-			map[string]interface{}{
-				"feedback_id": feedbackID,
-				"error":       err.Error(),
-			},
-		)
-		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка обновления статуса")
-	}
-
-	// Отправляем обновление администратору
 	confirmMsg := fmt.Sprintf("✅ Отзыв #%d отмечен как <b>обработанный</b>", feedbackID)
-	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, confirmMsg)
-	msg.ParseMode = tgbotapi.ModeHTML
-	if _, err := fh.bot.Send(msg); err != nil {
-		// Используем структурированное логирование
-		fh.service.LoggingService.Telegram().ErrorWithContext(
-			"Failed to send processing confirmation",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
-			int64(user.ID),
-			callback.Message.Chat.ID,
-			"SendProcessingConfirmation",
-			map[string]interface{}{
-				"feedback_id": feedbackID,
-				"error":       err.Error(),
-			},
-		)
-	}
 
-	return nil
+	return fh.changeFeedbackStatus(callback, user, feedbackID, true, confirmMsg)
 }
 
-// HandleFeedbackUnprocess возвращает отзыв в необработанные
+// HandleFeedbackUnprocess возвращает отзыв в необработанные.
 func (fh *FeedbackHandlerImpl) HandleFeedbackUnprocess(callback *tgbotapi.CallbackQuery, user *models.User, feedbackIDStr string) error {
 	feedbackID, err := strconv.Atoi(feedbackIDStr)
 	if err != nil {
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка идентификатора отзыва")
 	}
 
-	// Возвращаем отзыв в необработанный статус
-	err = fh.service.UpdateFeedbackStatus(feedbackID, false)
-	if err != nil {
-		// Используем структурированное логирование
-		fh.service.LoggingService.Database().ErrorWithContext(
-			"Failed to return feedback to processing",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
-			int64(user.ID),
-			callback.Message.Chat.ID,
-			"UpdateFeedbackStatus",
-			map[string]interface{}{
-				"feedback_id": feedbackID,
-				"error":       err.Error(),
-			},
-		)
-		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка возврата статуса")
-	}
-
-	// Отправляем обновление администратору
 	confirmMsg := fmt.Sprintf("🔄 Отзыв #%d возвращен в <b>обработку</b>", feedbackID)
-	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, confirmMsg)
-	msg.ParseMode = tgbotapi.ModeHTML
-	if _, err := fh.bot.Send(msg); err != nil {
-		// Используем структурированное логирование
-		fh.service.LoggingService.Telegram().ErrorWithContext(
-			"Failed to send return confirmation",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
-			int64(user.ID),
-			callback.Message.Chat.ID,
-			"SendReturnConfirmation",
-			map[string]interface{}{
-				"feedback_id": feedbackID,
-				"error":       err.Error(),
-			},
-		)
-	}
 
-	return nil
+	return fh.changeFeedbackStatus(callback, user, feedbackID, false, confirmMsg)
 }
 
-// HandleFeedbackDelete удаляет отзыв
+// HandleFeedbackDelete удаляет отзыв.
 func (fh *FeedbackHandlerImpl) HandleFeedbackDelete(callback *tgbotapi.CallbackQuery, user *models.User, feedbackIDStr string) error {
 	feedbackID, err := strconv.Atoi(feedbackIDStr)
 	if err != nil {
@@ -790,7 +924,7 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackDelete(callback *tgbotapi.CallbackQ
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to delete feedback",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"DeleteFeedback",
@@ -799,18 +933,20 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackDelete(callback *tgbotapi.CallbackQ
 				"error":       err.Error(),
 			},
 		)
+
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка удаления отзыва")
 	}
 
 	// Отправляем подтверждение удаления
 	deleteMsg := fmt.Sprintf("🗑️ Отзыв #%d <b>удален</b>", feedbackID)
 	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, deleteMsg)
+
 	msg.ParseMode = tgbotapi.ModeHTML
 	if _, err := fh.bot.Send(msg); err != nil {
 		// Используем структурированное логирование
 		fh.service.LoggingService.Telegram().ErrorWithContext(
 			"Failed to send deletion confirmation",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"SendDeletionConfirmation",
@@ -824,7 +960,7 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackDelete(callback *tgbotapi.CallbackQ
 	return nil
 }
 
-// HandleShowActiveFeedbacks показывает активные отзывы
+// HandleShowActiveFeedbacks показывает активные отзывы.
 func (fh *FeedbackHandlerImpl) HandleShowActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем все отзывы
 	feedbacks, err := fh.service.GetAllFeedback()
@@ -832,7 +968,7 @@ func (fh *FeedbackHandlerImpl) HandleShowActiveFeedbacks(callback *tgbotapi.Call
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"GetAllFeedback",
@@ -840,6 +976,7 @@ func (fh *FeedbackHandlerImpl) HandleShowActiveFeedbacks(callback *tgbotapi.Call
 				"error": err.Error(),
 			},
 		)
+
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
@@ -849,6 +986,7 @@ func (fh *FeedbackHandlerImpl) HandleShowActiveFeedbacks(callback *tgbotapi.Call
 
 	// Фильтруем только активные отзывы (не архивные)
 	var activeFeedbacks []map[string]interface{}
+
 	for _, fb := range feedbacks {
 		if isArchived, ok := fb["is_processed"].(bool); !ok || !isArchived {
 			activeFeedbacks = append(activeFeedbacks, fb)
@@ -863,7 +1001,7 @@ func (fh *FeedbackHandlerImpl) HandleShowActiveFeedbacks(callback *tgbotapi.Call
 	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, activeFeedbacks, 0, "active")
 }
 
-// HandleShowArchiveFeedbacks показывает архивные отзывы
+// HandleShowArchiveFeedbacks показывает архивные отзывы.
 func (fh *FeedbackHandlerImpl) HandleShowArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем все отзывы
 	feedbacks, err := fh.service.GetAllFeedback()
@@ -871,7 +1009,7 @@ func (fh *FeedbackHandlerImpl) HandleShowArchiveFeedbacks(callback *tgbotapi.Cal
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"GetAllFeedback",
@@ -879,6 +1017,7 @@ func (fh *FeedbackHandlerImpl) HandleShowArchiveFeedbacks(callback *tgbotapi.Cal
 				"error": err.Error(),
 			},
 		)
+
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
@@ -888,6 +1027,7 @@ func (fh *FeedbackHandlerImpl) HandleShowArchiveFeedbacks(callback *tgbotapi.Cal
 
 	// Фильтруем только архивные отзывы
 	var archivedFeedbacks []map[string]interface{}
+
 	for _, fb := range feedbacks {
 		if isArchived, ok := fb["is_processed"].(bool); ok && isArchived {
 			archivedFeedbacks = append(archivedFeedbacks, fb)
@@ -902,7 +1042,7 @@ func (fh *FeedbackHandlerImpl) HandleShowArchiveFeedbacks(callback *tgbotapi.Cal
 	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, archivedFeedbacks, 0, "archive")
 }
 
-// HandleShowAllFeedbacks показывает все отзывы
+// HandleShowAllFeedbacks показывает все отзывы.
 func (fh *FeedbackHandlerImpl) HandleShowAllFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем все отзывы
 	feedbacks, err := fh.service.GetAllFeedback()
@@ -910,7 +1050,7 @@ func (fh *FeedbackHandlerImpl) HandleShowAllFeedbacks(callback *tgbotapi.Callbac
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"GetAllFeedback",
@@ -918,6 +1058,7 @@ func (fh *FeedbackHandlerImpl) HandleShowAllFeedbacks(callback *tgbotapi.Callbac
 				"error": err.Error(),
 			},
 		)
+
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
@@ -926,25 +1067,31 @@ func (fh *FeedbackHandlerImpl) HandleShowAllFeedbacks(callback *tgbotapi.Callbac
 	}
 
 	// Показываем первый отзыв с навигацией (редактируем существующее сообщение)
-	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, feedbacks, 0, "all")
+	return fh.editFeedbackWithNavigation(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		feedbacks,
+		0,
+		"all",
+	)
 }
 
-// HandleBrowseActiveFeedbacks просматривает активные отзывы
+// HandleBrowseActiveFeedbacks просматривает активные отзывы.
 func (fh *FeedbackHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	return fh.handleBrowseFeedbacks(callback, user, indexStr, "active")
 }
 
-// HandleBrowseArchiveFeedbacks просматривает архивные отзывы
+// HandleBrowseArchiveFeedbacks просматривает архивные отзывы.
 func (fh *FeedbackHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	return fh.handleBrowseFeedbacks(callback, user, indexStr, "archive")
 }
 
-// HandleBrowseAllFeedbacks просматривает все отзывы
+// HandleBrowseAllFeedbacks просматривает все отзывы.
 func (fh *FeedbackHandlerImpl) HandleBrowseAllFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	return fh.handleBrowseFeedbacks(callback, user, indexStr, "all")
 }
 
-// handleBrowseFeedbacks общая функция для навигации по отзывам
+// handleBrowseFeedbacks общая функция для навигации по отзывам.
 func (fh *FeedbackHandlerImpl) handleBrowseFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string, feedbackType string) error {
 	// Парсим индекс
 	index, err := strconv.Atoi(indexStr)
@@ -958,7 +1105,7 @@ func (fh *FeedbackHandlerImpl) handleBrowseFeedbacks(callback *tgbotapi.Callback
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"GetAllFeedback",
@@ -966,11 +1113,13 @@ func (fh *FeedbackHandlerImpl) handleBrowseFeedbacks(callback *tgbotapi.Callback
 				"error": err.Error(),
 			},
 		)
+
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
 	// Фильтруем отзывы по типу
 	var feedbacks []map[string]interface{}
+
 	switch feedbackType {
 	case "active":
 		for _, fb := range allFeedbacks {
@@ -997,15 +1146,23 @@ func (fh *FeedbackHandlerImpl) handleBrowseFeedbacks(callback *tgbotapi.Callback
 	}
 
 	// Показываем отзыв с навигацией (редактируем существующее сообщение)
-	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, feedbacks, index, feedbackType)
+	return fh.editFeedbackWithNavigation(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		feedbacks,
+		index,
+		feedbackType,
+	)
 }
 
-// HandleNavigateFeedback обрабатывает навигацию по отзывам
+// HandleNavigateFeedback обрабатывает навигацию по отзывам.
 func (fh *FeedbackHandlerImpl) HandleNavigateFeedback(callback *tgbotapi.CallbackQuery, user *models.User, feedbackType string, indexStr string) error {
 	return fh.handleBrowseFeedbacks(callback, user, indexStr, feedbackType)
 }
 
-// HandleArchiveFeedback архивирует отзыв
+// HandleArchiveFeedback архивирует отзыв.
+//
+//nolint:cyclop,funlen // функция содержит последовательную логику архивирования, длина оправдана
 func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	// Получаем все активные отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
@@ -1013,7 +1170,7 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"GetAllFeedback",
@@ -1021,11 +1178,13 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 				"error": err.Error(),
 			},
 		)
+
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
 	// Фильтруем активные отзывы
 	var activeFeedbacks []map[string]interface{}
+
 	for _, fb := range allFeedbacks {
 		if isArchived, ok := fb["is_processed"].(bool); !ok || !isArchived {
 			activeFeedbacks = append(activeFeedbacks, fb)
@@ -1048,7 +1207,7 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 		// Используем структурированное логирование
 		fh.service.LoggingService.Database().ErrorWithContext(
 			"Failed to archive feedback",
-			"req_"+fmt.Sprintf("%d", time.Now().UnixNano()),
+			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"ArchiveFeedback",
@@ -1057,6 +1216,7 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 				"error":       err.Error(),
 			},
 		)
+
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка архивирования отзыва")
 	}
 
@@ -1076,6 +1236,7 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 		editMsg := tgbotapi.NewEditMessageText(callback.Message.Chat.ID, callback.Message.MessageID, text)
 		editMsg.ReplyMarkup = &keyboard
 		_, err := fh.bot.Send(editMsg)
+
 		return err
 	}
 
@@ -1088,7 +1249,7 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, activeFeedbacks, nextIndex, "active")
 }
 
-// HandleBackToFeedbacks возвращает к списку отзывов
+// HandleBackToFeedbacks возвращает к списку отзывов.
 func (fh *FeedbackHandlerImpl) HandleBackToFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, feedbackType string) error {
 	switch feedbackType {
 	case "active":
@@ -1102,12 +1263,12 @@ func (fh *FeedbackHandlerImpl) HandleBackToFeedbacks(callback *tgbotapi.Callback
 	}
 }
 
-// HandleBackToFeedbackStats возвращает к статистике отзывов
+// HandleBackToFeedbackStats возвращает к статистике отзывов.
 func (fh *FeedbackHandlerImpl) HandleBackToFeedbackStats(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	return fh.editFeedbackStatistics(callback.Message.Chat.ID, callback.Message.MessageID, user)
 }
 
-// editActiveFeedbacks редактирует сообщение со списком активных отзывов
+// editActiveFeedbacks редактирует сообщение со списком активных отзывов.
 func (fh *FeedbackHandlerImpl) editActiveFeedbacks(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
@@ -1117,6 +1278,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacks(chatID int64, messageID int, 
 
 	// Фильтруем только активные отзывы
 	var activeFeedbacks []map[string]interface{}
+
 	for _, feedback := range allFeedbacks {
 		if isArchived, ok := feedback["is_processed"].(bool); !ok || !isArchived {
 			activeFeedbacks = append(activeFeedbacks, feedback)
@@ -1136,6 +1298,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacks(chatID int64, messageID int, 
 		editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 		editMsg.ReplyMarkup = &keyboard
 		_, err := fh.bot.Send(editMsg)
+
 		return err
 	}
 
@@ -1143,7 +1306,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacks(chatID int64, messageID int, 
 	return fh.editFeedbackWithNavigation(chatID, messageID, activeFeedbacks, 0, "active")
 }
 
-// editArchiveFeedbacks редактирует сообщение со списком обработанных отзывов
+// editArchiveFeedbacks редактирует сообщение со списком обработанных отзывов.
 func (fh *FeedbackHandlerImpl) editArchiveFeedbacks(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
@@ -1153,6 +1316,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacks(chatID int64, messageID int,
 
 	// Фильтруем только обработанные отзывы
 	var archiveFeedbacks []map[string]interface{}
+
 	for _, feedback := range allFeedbacks {
 		if isArchived, ok := feedback["is_processed"].(bool); ok && isArchived {
 			archiveFeedbacks = append(archiveFeedbacks, feedback)
@@ -1172,6 +1336,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacks(chatID int64, messageID int,
 		editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 		editMsg.ReplyMarkup = &keyboard
 		_, err := fh.bot.Send(editMsg)
+
 		return err
 	}
 
@@ -1179,7 +1344,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacks(chatID int64, messageID int,
 	return fh.editFeedbackWithNavigation(chatID, messageID, archiveFeedbacks, 0, "archive")
 }
 
-// editAllFeedbacks редактирует сообщение со списком всех отзывов
+// editAllFeedbacks редактирует сообщение со списком всех отзывов.
 func (fh *FeedbackHandlerImpl) editAllFeedbacks(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
@@ -1200,6 +1365,7 @@ func (fh *FeedbackHandlerImpl) editAllFeedbacks(chatID int64, messageID int, use
 		editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 		editMsg.ReplyMarkup = &keyboard
 		_, err := fh.bot.Send(editMsg)
+
 		return err
 	}
 
@@ -1207,7 +1373,7 @@ func (fh *FeedbackHandlerImpl) editAllFeedbacks(chatID int64, messageID int, use
 	return fh.editFeedbackWithNavigation(chatID, messageID, allFeedbacks, 0, "all")
 }
 
-// editActiveFeedbacksList редактирует сообщение со списком активных отзывов (заголовок)
+// editActiveFeedbacksList редактирует сообщение со списком активных отзывов (заголовок).
 func (fh *FeedbackHandlerImpl) editActiveFeedbacksList(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
@@ -1217,6 +1383,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacksList(chatID int64, messageID i
 
 	// Фильтруем только активные отзывы
 	var activeFeedbacks []map[string]interface{}
+
 	for _, feedback := range allFeedbacks {
 		if isArchived, ok := feedback["is_processed"].(bool); !ok || !isArchived {
 			activeFeedbacks = append(activeFeedbacks, feedback)
@@ -1235,15 +1402,17 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacksList(chatID int64, messageID i
 
 		editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 		editMsg.ReplyMarkup = &keyboard
-		_, err := fh.bot.Send(editMsg)
-		return err
+		_, sendErr := fh.bot.Send(editMsg)
+
+		return sendErr
 	}
 
 	// Показываем заголовок списка активных отзывов
 	text := fmt.Sprintf("🔥 <b>Активные отзывы (%d):</b>\n\nВыберите отзыв для просмотра:", len(activeFeedbacks))
 
 	// Создаем клавиатуру с кнопками для каждого отзыва
-	var rows [][]tgbotapi.InlineKeyboardButton
+	rows := make([][]tgbotapi.InlineKeyboardButton, 0, len(activeFeedbacks))
+
 	for i, feedback := range activeFeedbacks {
 		feedbackID := feedback["id"].(int)
 		firstName := feedback["first_name"].(string)
@@ -1252,6 +1421,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacksList(chatID int64, messageID i
 		if username, ok := feedback["username"].(string); ok && username != "" {
 			buttonText = fmt.Sprintf("📝 %s (@%s) (ID: %d)", firstName, username, feedbackID)
 		}
+
 		buttonData := fmt.Sprintf("nav_active_feedback_%d", i)
 
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
@@ -1270,10 +1440,11 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacksList(chatID int64, messageID i
 	editMsg.ReplyMarkup = &keyboard
 	editMsg.ParseMode = tgbotapi.ModeHTML
 	_, err = fh.bot.Send(editMsg)
+
 	return err
 }
 
-// editArchiveFeedbacksList редактирует сообщение со списком обработанных отзывов (заголовок)
+// editArchiveFeedbacksList редактирует сообщение со списком обработанных отзывов (заголовок).
 func (fh *FeedbackHandlerImpl) editArchiveFeedbacksList(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
@@ -1283,6 +1454,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacksList(chatID int64, messageID 
 
 	// Фильтруем только обработанные отзывы
 	var archiveFeedbacks []map[string]interface{}
+
 	for _, feedback := range allFeedbacks {
 		if isArchived, ok := feedback["is_processed"].(bool); ok && isArchived {
 			archiveFeedbacks = append(archiveFeedbacks, feedback)
@@ -1301,15 +1473,17 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacksList(chatID int64, messageID 
 
 		editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 		editMsg.ReplyMarkup = &keyboard
-		_, err := fh.bot.Send(editMsg)
-		return err
+		_, sendErr := fh.bot.Send(editMsg)
+
+		return sendErr
 	}
 
 	// Показываем заголовок списка обработанных отзывов
 	text := fmt.Sprintf("📦 <b>Обработанные отзывы (%d):</b>\n\nВыберите отзыв для просмотра:", len(archiveFeedbacks))
 
 	// Создаем клавиатуру с кнопками для каждого отзыва
-	var rows [][]tgbotapi.InlineKeyboardButton
+	rows := make([][]tgbotapi.InlineKeyboardButton, 0, len(archiveFeedbacks))
+
 	for i, feedback := range archiveFeedbacks {
 		feedbackID := feedback["id"].(int)
 		firstName := feedback["first_name"].(string)
@@ -1318,6 +1492,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacksList(chatID int64, messageID 
 		if username, ok := feedback["username"].(string); ok && username != "" {
 			buttonText = fmt.Sprintf("📝 %s (@%s) (ID: %d)", firstName, username, feedbackID)
 		}
+
 		buttonData := fmt.Sprintf("nav_archive_feedback_%d", i)
 
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
@@ -1336,10 +1511,11 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacksList(chatID int64, messageID 
 	editMsg.ReplyMarkup = &keyboard
 	editMsg.ParseMode = tgbotapi.ModeHTML
 	_, err = fh.bot.Send(editMsg)
+
 	return err
 }
 
-// editAllFeedbacksList редактирует сообщение со списком всех отзывов (заголовок)
+// editAllFeedbacksList редактирует сообщение со списком всех отзывов (заголовок).
 func (fh *FeedbackHandlerImpl) editAllFeedbacksList(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
 	allFeedbacks, err := fh.service.GetAllFeedback()
@@ -1359,15 +1535,17 @@ func (fh *FeedbackHandlerImpl) editAllFeedbacksList(chatID int64, messageID int,
 
 		editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 		editMsg.ReplyMarkup = &keyboard
-		_, err := fh.bot.Send(editMsg)
-		return err
+		_, sendErr := fh.bot.Send(editMsg)
+
+		return sendErr
 	}
 
 	// Показываем заголовок списка всех отзывов
 	text := fmt.Sprintf("📋 <b>Все отзывы (%d):</b>\n\nВыберите отзыв для просмотра:", len(allFeedbacks))
 
 	// Создаем клавиатуру с кнопками для каждого отзыва
-	var rows [][]tgbotapi.InlineKeyboardButton
+	rows := make([][]tgbotapi.InlineKeyboardButton, 0, len(allFeedbacks))
+
 	for i, feedback := range allFeedbacks {
 		feedbackID := feedback["id"].(int)
 		firstName := feedback["first_name"].(string)
@@ -1382,6 +1560,7 @@ func (fh *FeedbackHandlerImpl) editAllFeedbacksList(chatID int64, messageID int,
 		if username, ok := feedback["username"].(string); ok && username != "" {
 			buttonText = fmt.Sprintf("%s %s (@%s) (ID: %d)", status, firstName, username, feedbackID)
 		}
+
 		buttonData := fmt.Sprintf("nav_all_feedback_%d", i)
 
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
@@ -1400,69 +1579,22 @@ func (fh *FeedbackHandlerImpl) editAllFeedbacksList(chatID int64, messageID int,
 	editMsg.ReplyMarkup = &keyboard
 	editMsg.ParseMode = tgbotapi.ModeHTML
 	_, err = fh.bot.Send(editMsg)
+
 	return err
 }
 
-// HandleDeleteCurrentFeedback удаляет текущий отзыв
+// HandleDeleteCurrentFeedback удаляет текущий отзыв.
 func (fh *FeedbackHandlerImpl) HandleDeleteCurrentFeedback(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
-	// Получаем все обработанные отзывы
-	allFeedbacks, err := fh.service.GetAllFeedback()
-	if err != nil {
-		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов: "+err.Error())
-	}
-
-	// Фильтруем только обработанные отзывы
-	var archiveFeedbacks []map[string]interface{}
-	for _, feedback := range allFeedbacks {
-		if isProcessed, ok := feedback["is_processed"].(bool); ok && isProcessed {
-			archiveFeedbacks = append(archiveFeedbacks, feedback)
-		}
-	}
-
-	// Парсим индекс
-	index, err := strconv.Atoi(indexStr)
-	if err != nil || index < 0 || index >= len(archiveFeedbacks) {
-		return fh.sendMessage(callback.Message.Chat.ID, "❌ Неверный индекс отзыва")
-	}
-
-	// Получаем ID отзыва для удаления
-	feedbackID := archiveFeedbacks[index]["id"].(int)
-
-	// Удаляем отзыв
-	err = fh.service.DeleteFeedback(feedbackID)
-	if err != nil {
-		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка удаления отзыва: "+err.Error())
-	}
-
-	// Обновляем список (удаляем удаленный отзыв)
-	archiveFeedbacks = append(archiveFeedbacks[:index], archiveFeedbacks[index+1:]...)
-
-	// Показываем следующий отзыв или сообщение об отсутствии отзывов
-	if len(archiveFeedbacks) == 0 {
-		// Редактируем сообщение, показывая что все отзывы удалены
-		text := "✅ Отзыв удален!\n\n🎉 Все обработанные отзывы удалены!"
-		keyboard := tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("📊 К статистике", "back_to_feedback_stats"),
-			),
-		)
-
-		editMsg := tgbotapi.NewEditMessageText(callback.Message.Chat.ID, callback.Message.MessageID, text)
-		editMsg.ReplyMarkup = &keyboard
-		_, err := fh.bot.Send(editMsg)
-		return err
-	}
-
-	// Показываем следующий отзыв (или предыдущий, если это был последний)
-	nextIndex := index
-	if nextIndex >= len(archiveFeedbacks) {
-		nextIndex = len(archiveFeedbacks) - 1
-	}
-
-	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, archiveFeedbacks, nextIndex, "archive")
+	return fh.processArchiveFeedbackAction(
+		callback,
+		user,
+		indexStr,
+		fh.service.DeleteFeedback,
+		"✅ Отзыв удален!\n\n🎉 Все обработанные отзывы удалены!",
+	)
 }
 
-// HandleDeleteAllArchiveFeedbacks показывает подтверждение удаления всех обработанных отзывов
+// HandleDeleteAllArchiveFeedbacks показывает подтверждение удаления всех обработанных отзывов.
 func (fh *FeedbackHandlerImpl) HandleDeleteAllArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем количество обработанных отзывов
 	allFeedbacks, err := fh.service.GetAllFeedback()
@@ -1472,6 +1604,7 @@ func (fh *FeedbackHandlerImpl) HandleDeleteAllArchiveFeedbacks(callback *tgbotap
 
 	// Подсчитываем обработанные отзывы
 	processedCount := 0
+
 	for _, feedback := range allFeedbacks {
 		if isProcessed, ok := feedback["is_processed"].(bool); ok && isProcessed {
 			processedCount++
@@ -1496,10 +1629,11 @@ func (fh *FeedbackHandlerImpl) HandleDeleteAllArchiveFeedbacks(callback *tgbotap
 	editMsg.ReplyMarkup = &keyboard
 	editMsg.ParseMode = tgbotapi.ModeHTML
 	_, err = fh.bot.Send(editMsg)
+
 	return err
 }
 
-// HandleConfirmDeleteAllArchive подтверждает и выполняет удаление всех обработанных отзывов
+// HandleConfirmDeleteAllArchive подтверждает и выполняет удаление всех обработанных отзывов.
 func (fh *FeedbackHandlerImpl) HandleConfirmDeleteAllArchive(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Удаляем все обработанные отзывы
 	deletedCount, err := fh.service.DeleteAllProcessedFeedbacks()
@@ -1520,81 +1654,34 @@ func (fh *FeedbackHandlerImpl) HandleConfirmDeleteAllArchive(callback *tgbotapi.
 	editMsg.ReplyMarkup = &keyboard
 	editMsg.ParseMode = tgbotapi.ModeHTML
 	_, err = fh.bot.Send(editMsg)
+
 	return err
 }
 
-// HandleUnarchiveFeedback возвращает отзыв в активные
+// HandleUnarchiveFeedback возвращает отзыв в активные.
 func (fh *FeedbackHandlerImpl) HandleUnarchiveFeedback(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
-	// Получаем все обработанные отзывы
-	allFeedbacks, err := fh.service.GetAllFeedback()
-	if err != nil {
-		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов: "+err.Error())
-	}
-
-	// Фильтруем только обработанные отзывы
-	var archiveFeedbacks []map[string]interface{}
-	for _, feedback := range allFeedbacks {
-		if isProcessed, ok := feedback["is_processed"].(bool); ok && isProcessed {
-			archiveFeedbacks = append(archiveFeedbacks, feedback)
-		}
-	}
-
-	// Парсим индекс
-	index, err := strconv.Atoi(indexStr)
-	if err != nil || index < 0 || index >= len(archiveFeedbacks) {
-		return fh.sendMessage(callback.Message.Chat.ID, "❌ Неверный индекс отзыва")
-	}
-
-	// Получаем ID отзыва для возврата в активные
-	feedbackID := archiveFeedbacks[index]["id"].(int)
-
-	// Возвращаем отзыв в активные
-	err = fh.service.UnarchiveFeedback(feedbackID)
-	if err != nil {
-		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка возврата отзыва в активные: "+err.Error())
-	}
-
-	// Обновляем список (удаляем возвращенный отзыв)
-	archiveFeedbacks = append(archiveFeedbacks[:index], archiveFeedbacks[index+1:]...)
-
-	// Показываем следующий отзыв или сообщение об отсутствии отзывов
-	if len(archiveFeedbacks) == 0 {
-		// Редактируем сообщение, показывая что все отзывы возвращены
-		text := "✅ Отзыв возвращен в активные!\n\n🎉 Все обработанные отзывы возвращены!"
-		keyboard := tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("📊 К статистике", "back_to_feedback_stats"),
-			),
-		)
-
-		editMsg := tgbotapi.NewEditMessageText(callback.Message.Chat.ID, callback.Message.MessageID, text)
-		editMsg.ReplyMarkup = &keyboard
-		_, err := fh.bot.Send(editMsg)
-		return err
-	}
-
-	// Показываем следующий отзыв (или предыдущий, если это был последний)
-	nextIndex := index
-	if nextIndex >= len(archiveFeedbacks) {
-		nextIndex = len(archiveFeedbacks) - 1
-	}
-
-	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, archiveFeedbacks, nextIndex, "archive")
+	return fh.processArchiveFeedbackAction(
+		callback,
+		user,
+		indexStr,
+		fh.service.UnarchiveFeedback,
+		"✅ Отзыв возвращен в активные!\n\n🎉 Все обработанные отзывы возвращены!",
+	)
 }
 
-// HandleFeedbackPrev переходит к предыдущему отзыву
+// HandleFeedbackPrev переходит к предыдущему отзыву.
 func (fh *FeedbackHandlerImpl) HandleFeedbackPrev(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string, feedbackType string) error {
 	// TODO: Реализовать позже - навигация назад
 	return fh.sendMessage(callback.Message.Chat.ID, "⬅️ Предыдущий отзыв (в разработке)")
 }
 
-// HandleFeedbackNext переходит к следующему отзыву
+// HandleFeedbackNext переходит к следующему отзыву.
 func (fh *FeedbackHandlerImpl) HandleFeedbackNext(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string, feedbackType string) error {
 	// TODO: Реализовать позже - навигация вперед
 	return fh.sendMessage(callback.Message.Chat.ID, "➡️ Следующий отзыв (в разработке)")
 }
 
-// HandleFeedbackBack возвращается к списку отзывов
+// HandleFeedbackBack возвращается к списку отзывов.
 func (fh *FeedbackHandlerImpl) HandleFeedbackBack(callback *tgbotapi.CallbackQuery, user *models.User, feedbackType string) error {
 	// TODO: Реализовать позже - возврат к списку
 	return fh.sendMessage(callback.Message.Chat.ID, "🔙 Назад к списку (в разработке)")

@@ -1,10 +1,11 @@
+// Package helpers provides test helper functions and utilities.
 package helpers
 
 import (
 	"language-exchange-bot/internal/config"
 )
 
-// GetTestConfig возвращает конфигурацию для тестов
+// GetTestConfig возвращает конфигурацию для тестов.
 func GetTestConfig() *config.Config {
 	return &config.Config{
 		TelegramToken:  "test_token_12345",
@@ -17,12 +18,16 @@ func GetTestConfig() *config.Config {
 	}
 }
 
-// GetTestAdminUser возвращает данные тестового администратора
+// GetTestAdminUser возвращает данные тестового администратора.
+//
+//nolint:mnd
 func GetTestAdminUser() (int64, string) {
 	return 123456789, "testadmin"
 }
 
-// GetTestRegularUser возвращает данные тестового обычного пользователя
+// GetTestRegularUser возвращает данные тестового обычного пользователя.
+//
+//nolint:mnd
 func GetTestRegularUser() (int64, string) {
 	return 555666777, "testuser"
 }

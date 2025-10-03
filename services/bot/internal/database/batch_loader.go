@@ -8,19 +8,54 @@ import (
 	"time"
 
 	errorsPkg "language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/logging"
 	"language-exchange-bot/internal/models"
 
 	"github.com/lib/pq"
 )
 
+// Константы для BatchLoader.
+const (
+	// DefaultQueryTimeout - таймаут по умолчанию для SQL запросов.
+	DefaultQueryTimeout = 30 * time.Second
+	// MaxBatchSize - максимальный размер батча для загрузки.
+	MaxBatchSize = 1000
+)
+
 // BatchLoader оптимизирует загрузку данных для предотвращения N+1 запросов.
 type BatchLoader struct {
-	db *DB
+	db           *DB
+	logger       *logging.DatabaseLogger
+	errorHandler *errorsPkg.ErrorHandler
 }
 
 // NewBatchLoader создает новый экземпляр BatchLoader.
 func NewBatchLoader(db *DB) *BatchLoader {
-	return &BatchLoader{db: db}
+	return &BatchLoader{
+		db:           db,
+		logger:       logging.NewDatabaseLogger(),
+		errorHandler: errorsPkg.NewErrorHandler(nil),
+	}
+}
+
+// handleRowsError обрабатывает ошибки rows с правильным закрытием.
+func (bl *BatchLoader) handleRowsError(rows *sql.Rows, operation string) error {
+	if err := rows.Err(); err != nil {
+		if closeErr := rows.Close(); closeErr != nil {
+			return fmt.Errorf("failed to close rows after error in %s: %w (original error: %w)", operation, closeErr, err)
+		}
+
+		return fmt.Errorf("rows error in %s: %w", operation, err)
+	}
+
+	return nil
+}
+
+// closeRowsSafely безопасно закрывает rows с логированием ошибок.
+func (bl *BatchLoader) closeRowsSafely(rows *sql.Rows, operation string) {
+	if closeErr := rows.Close(); closeErr != nil {
+		log.Printf("Warning: failed to close rows in %s: %v", operation, closeErr)
+	}
 }
 
 // UserWithInterests представляет пользователя с его интересами.
@@ -40,33 +75,34 @@ type UserWithAllData struct {
 }
 
 // BatchLoadUsersWithInterests загружает пользователей с их интересами одним запросом.
-func (bl *BatchLoader) BatchLoadUsersWithInterests(telegramIDs []int64) (map[int64]*UserWithInterests, error) {
+func (bl *BatchLoader) BatchLoadUsersWithInterests(
+	ctx context.Context,
+	telegramIDs []int64,
+) (map[int64]*UserWithInterests, error) {
 	if len(telegramIDs) == 0 {
 		return make(map[int64]*UserWithInterests), nil
 	}
 
 	query := getBatchLoadUsersWithInterestsQuery()
 
-	rows, err := bl.db.conn.QueryContext(context.Background(), query, telegramIDs)
+	// Создаем контекст с таймаутом если не передан
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	defer cancel()
+
+	rows, err := bl.db.conn.QueryContext(ctx, query, telegramIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load users with interests: %w", err)
 	}
 
-	if err := rows.Err(); err != nil {
-		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
-		}
-
-		return nil, fmt.Errorf("rows error: %w", err)
+	if err := bl.handleRowsError(rows, "BatchLoadUsersWithInterests"); err != nil {
+		return nil, err
 	}
 
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
-		}
-	}()
+	defer bl.closeRowsSafely(rows, "BatchLoadUsersWithInterests")
 
 	return bl.processUsersWithInterestsRows(rows), nil
 }
@@ -132,12 +168,15 @@ func (bl *BatchLoader) scanUserWithInterestRow(rows *sql.Rows) (models.User, sql
 		&user.State, &user.ProfileCompletionLevel, &user.Status,
 		&interestID,
 	)
+	if err != nil {
+		return user, interestID, fmt.Errorf("failed to scan user row: %w", err)
+	}
 
-	return user, interestID, fmt.Errorf("operation failed: %w", err)
+	return user, interestID, nil
 }
 
 // BatchLoadInterestsWithTranslations загружает интересы с переводами для нескольких языков.
-func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (map[string]map[int]string, error) {
+func (bl *BatchLoader) BatchLoadInterestsWithTranslations(ctx context.Context, languages []string) (map[string]map[int]string, error) {
 	if len(languages) == 0 {
 		return make(map[string]map[int]string), nil
 	}
@@ -155,26 +194,25 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 		ORDER BY i.id, it.language_code
 	`
 
-	rows, err := bl.db.conn.QueryContext(context.Background(), query, languages)
+	// Создаем контекст с таймаутом если не передан
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	defer cancel()
+
+	rows, err := bl.db.conn.QueryContext(ctx, query, languages)
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load interests with translations: %w", err)
 	}
 
-	if err := rows.Err(); err != nil {
-		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
-		}
-
-		return nil, fmt.Errorf("rows error: %w", err)
+	if err := bl.handleRowsError(rows, "BatchLoadInterestsWithTranslations"); err != nil {
+		return nil, err
 	}
 
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
-		}
-	}()
+	defer func() { _ = rows.Close() }()
+	defer bl.closeRowsSafely(rows, "BatchLoadInterestsWithTranslations")
 
 	interests := make(map[string]map[int]string)
 
@@ -203,7 +241,7 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(languages []string) (m
 }
 
 // BatchLoadLanguagesWithTranslations загружает языки с переводами для нескольких языков.
-func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (map[string][]*models.Language, error) {
+func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(ctx context.Context, languages []string) (map[string][]*models.Language, error) {
 	if len(languages) == 0 {
 		return make(map[string][]*models.Language), nil
 	}
@@ -217,26 +255,25 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (m
 		ORDER BY l.id, lt.language_code
 	`
 
-	rows, err := bl.db.conn.QueryContext(context.Background(), query, languages)
+	// Создаем контекст с таймаутом если не передан
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	defer cancel()
+
+	rows, err := bl.db.conn.QueryContext(ctx, query, languages)
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load languages with translations: %w", err)
 	}
 
-	if err := rows.Err(); err != nil {
-		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
-		}
-
-		return nil, fmt.Errorf("rows error: %w", err)
+	if err := bl.handleRowsError(rows, "BatchLoadLanguagesWithTranslations"); err != nil {
+		return nil, err
 	}
 
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
-		}
-	}()
+	defer func() { _ = rows.Close() }()
+	defer bl.closeRowsSafely(rows, "BatchLoadLanguagesWithTranslations")
 
 	langs := make(map[string][]*models.Language)
 
@@ -263,7 +300,7 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(languages []string) (m
 }
 
 // BatchLoadUserInterests загружает интересы для нескольких пользователей одним запросом.
-func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, error) {
+func (bl *BatchLoader) BatchLoadUserInterests(ctx context.Context, userIDs []int) (map[int][]int, error) {
 	if len(userIDs) == 0 {
 		return make(map[int][]int), nil
 	}
@@ -275,26 +312,25 @@ func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, err
 		ORDER BY user_id, interest_id
 	`
 
-	rows, err := bl.db.conn.QueryContext(context.Background(), query, pq.Array(userIDs))
+	// Создаем контекст с таймаутом если не передан
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	defer cancel()
+
+	rows, err := bl.db.conn.QueryContext(ctx, query, pq.Array(userIDs))
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load user interests: %w", err)
 	}
 
-	if err := rows.Err(); err != nil {
-		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
-		}
-
-		return nil, fmt.Errorf("rows error: %w", err)
+	if err := bl.handleRowsError(rows, "BatchLoadUserInterests"); err != nil {
+		return nil, err
 	}
 
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
-		}
-	}()
+	defer func() { _ = rows.Close() }()
+	defer bl.closeRowsSafely(rows, "BatchLoadUserInterests")
 
 	interests := make(map[int][]int)
 
@@ -319,7 +355,7 @@ func (bl *BatchLoader) BatchLoadUserInterests(userIDs []int) (map[int][]int, err
 }
 
 // BatchLoadUsers загружает пользователей по Telegram ID одним запросом.
-func (bl *BatchLoader) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.User, error) {
+func (bl *BatchLoader) BatchLoadUsers(ctx context.Context, telegramIDs []int64) (map[int64]*models.User, error) {
 	if len(telegramIDs) == 0 {
 		return make(map[int64]*models.User), nil
 	}
@@ -335,26 +371,25 @@ func (bl *BatchLoader) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.Us
 		WHERE telegram_id = ANY($1)
 	`
 
-	rows, err := bl.db.conn.QueryContext(context.Background(), query, telegramIDs)
+	// Создаем контекст с таймаутом если не передан
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	defer cancel()
+
+	rows, err := bl.db.conn.QueryContext(ctx, query, telegramIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load users: %w", err)
 	}
 
-	if err := rows.Err(); err != nil {
-		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
-		}
-
-		return nil, fmt.Errorf("rows error: %w", err)
+	if err := bl.handleRowsError(rows, "BatchLoadUsers"); err != nil {
+		return nil, err
 	}
 
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
-		}
-	}()
+	defer func() { _ = rows.Close() }()
+	defer bl.closeRowsSafely(rows, "BatchLoadUsers")
 
 	users := make(map[int64]*models.User)
 
@@ -380,29 +415,27 @@ func (bl *BatchLoader) BatchLoadUsers(telegramIDs []int64) (map[int64]*models.Us
 }
 
 // GetUserWithAllData загружает пользователя со всеми связанными данными одним запросом.
-func (bl *BatchLoader) GetUserWithAllData(telegramID int64) (*UserWithAllData, error) {
+func (bl *BatchLoader) GetUserWithAllData(ctx context.Context, telegramID int64) (*UserWithAllData, error) {
 	query := getUserWithAllDataQuery()
 
-	rows, err := bl.db.conn.QueryContext(context.Background(), query, telegramID)
+	// Создаем контекст с таймаутом если не передан
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	defer cancel()
+
+	rows, err := bl.db.conn.QueryContext(ctx, query, telegramID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user with all data: %w", err)
 	}
 
-	if err := rows.Err(); err != nil {
-		if closeErr := rows.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %v)", closeErr, err)
-		}
-
-		return nil, fmt.Errorf("rows error: %w", err)
+	if err := bl.handleRowsError(rows, "GetUserWithAllData"); err != nil {
+		return nil, err
 	}
 
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			// В defer мы не можем вернуть ошибку, но можем логировать
-			// TODO: интегрировать с системой логирования
-			_ = closeErr // Подавляем предупреждение линтера
-		}
-	}()
+	defer bl.closeRowsSafely(rows, "GetUserWithAllData")
 
 	userData, interests, translations, languages := bl.processUserDataRows(rows)
 
@@ -545,18 +578,26 @@ func (bl *BatchLoader) loadUserStats() map[string]interface{} {
 
 	err := bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM users").Scan(&totalUsers)
 	if err != nil {
-		// Логируем ошибку получения общего количества пользователей
-		// TODO: интегрировать с системой логирования
-		_ = err // Подавляем предупреждение линтера
+		bl.logger.ErrorWithContext(
+			"Failed to get total users count",
+			"", 0, 0, "LoadUserStats",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 	}
 
 	query := "SELECT COUNT(*) FROM users WHERE status = 'active'"
 
 	err = bl.db.conn.QueryRowContext(context.Background(), query).Scan(&activeUsers)
 	if err != nil {
-		// Логируем ошибку получения количества активных пользователей
-		// TODO: интегрировать с системой логирования
-		_ = err // Подавляем предупреждение линтера
+		bl.logger.ErrorWithContext(
+			"Failed to get active users count",
+			"", 0, 0, "LoadUserStats",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 	}
 
 	return map[string]interface{}{
@@ -571,9 +612,13 @@ func (bl *BatchLoader) loadInterestStats() map[string]interface{} {
 
 	err := bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM interests").Scan(&totalInterests)
 	if err != nil {
-		// Логируем ошибку получения общего количества интересов
-		// TODO: интегрировать с системой логирования
-		_ = err // Подавляем предупреждение линтера
+		bl.logger.ErrorWithContext(
+			"Failed to get total interests count",
+			"", 0, 0, "LoadInterestStats",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 	}
 
 	err = bl.db.conn.QueryRowContext(context.Background(), `
@@ -584,9 +629,13 @@ func (bl *BatchLoader) loadInterestStats() map[string]interface{} {
 		LIMIT 1
 	`).Scan(&popularInterests)
 	if err != nil {
-		// Логируем ошибку получения количества популярных интересов
-		// TODO: интегрировать с системой логирования
-		_ = err // Подавляем предупреждение линтера
+		bl.logger.ErrorWithContext(
+			"Failed to get popular interests count",
+			"", 0, 0, "LoadInterestStats",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 	}
 
 	return map[string]interface{}{
@@ -601,18 +650,26 @@ func (bl *BatchLoader) loadFeedbackStats() map[string]interface{} {
 
 	err := bl.db.conn.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM user_feedback").Scan(&totalFeedbacks)
 	if err != nil {
-		// Логируем ошибку получения общего количества отзывов
-		// TODO: интегрировать с системой логирования
-		_ = err // Подавляем предупреждение линтера
+		bl.logger.ErrorWithContext(
+			"Failed to get total feedbacks count",
+			"", 0, 0, "LoadFeedbackStats",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 	}
 
 	query := "SELECT COUNT(*) FROM user_feedback WHERE is_processed = true"
 
 	err = bl.db.conn.QueryRowContext(context.Background(), query).Scan(&processedFeedbacks)
 	if err != nil {
-		// Логируем ошибку получения количества обработанных отзывов
-		// TODO: интегрировать с системой логирования
-		_ = err // Подавляем предупреждение линтера
+		bl.logger.ErrorWithContext(
+			"Failed to get processed feedbacks count",
+			"", 0, 0, "LoadFeedbackStats",
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
 	}
 
 	return map[string]interface{}{

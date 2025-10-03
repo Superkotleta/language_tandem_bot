@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -8,13 +9,18 @@ import (
 	"strings"
 
 	"language-exchange-bot/internal/core"
-	"language-exchange-bot/internal/errors"
+	customErrors "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// NewInterestHandler интерфейс для новой системы интересов
+// Константы для работы с профилем.
+const (
+	NewInterestProfileCompletionLevelComplete = 100 // Профиль полностью завершен
+)
+
+// NewInterestHandler интерфейс для новой системы интересов.
 type NewInterestHandler interface {
 	HandleInterestCategorySelection(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error
 	HandleInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error
@@ -25,17 +31,23 @@ type NewInterestHandler interface {
 	HandleBackToInterests(callback *tgbotapi.CallbackQuery, user *models.User) error
 }
 
-// NewInterestHandlerImpl реализация нового обработчика интересов
+// NewInterestHandlerImpl реализация нового обработчика интересов.
 type NewInterestHandlerImpl struct {
 	service         *core.BotService
 	interestService *core.InterestService
 	bot             *tgbotapi.BotAPI
 	keyboardBuilder *KeyboardBuilder
-	errorHandler    *errors.ErrorHandler
+	errorHandler    *customErrors.ErrorHandler
 }
 
-// NewNewInterestHandler создает новый обработчик интересов
-func NewNewInterestHandler(service *core.BotService, interestService *core.InterestService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, errorHandler *errors.ErrorHandler) NewInterestHandler {
+// NewNewInterestHandler создает новый обработчик интересов.
+func NewNewInterestHandler(
+	service *core.BotService,
+	interestService *core.InterestService,
+	bot *tgbotapi.BotAPI,
+	keyboardBuilder *KeyboardBuilder,
+	errorHandler *customErrors.ErrorHandler,
+) *NewInterestHandlerImpl {
 	return &NewInterestHandlerImpl{
 		service:         service,
 		interestService: interestService,
@@ -45,7 +57,7 @@ func NewNewInterestHandler(service *core.BotService, interestService *core.Inter
 	}
 }
 
-// HandleInterestCategorySelection обрабатывает выбор категории интересов
+// HandleInterestCategorySelection обрабатывает выбор категории интересов.
 func (h *NewInterestHandlerImpl) HandleInterestCategorySelection(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error {
 	// Получаем категории
 	categories, err := h.interestService.GetInterestCategories()
@@ -55,9 +67,11 @@ func (h *NewInterestHandlerImpl) HandleInterestCategorySelection(callback *tgbot
 
 	// Находим выбранную категорию
 	var selectedCategory *models.InterestCategory
+
 	for _, category := range categories {
 		if category.KeyName == categoryKey {
 			selectedCategory = &category
+
 			break
 		}
 	}
@@ -85,7 +99,12 @@ func (h *NewInterestHandlerImpl) HandleInterestCategorySelection(callback *tgbot
 	}
 
 	// Создаем клавиатуру для интересов в категории
-	keyboard := h.keyboardBuilder.CreateCategoryInterestsKeyboard(interests, selectedMap, selectedCategory.KeyName, user.InterfaceLanguageCode)
+	keyboard := h.keyboardBuilder.CreateCategoryInterestsKeyboard(
+		interests,
+		selectedMap,
+		selectedCategory.KeyName,
+		user.InterfaceLanguageCode,
+	)
 
 	// Создаем текст сообщения
 	categoryName := h.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
@@ -107,7 +126,7 @@ func (h *NewInterestHandlerImpl) HandleInterestCategorySelection(callback *tgbot
 	return nil
 }
 
-// HandleInterestSelection обрабатывает выбор интереса в категории
+// HandleInterestSelection обрабатывает выбор интереса в категории.
 func (h *NewInterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
@@ -122,9 +141,11 @@ func (h *NewInterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.Call
 
 	// Проверяем, выбран ли уже этот интерес
 	isSelected := false
+
 	for _, selection := range userSelections {
 		if selection.InterestID == interestID {
 			isSelected = true
+
 			break
 		}
 	}
@@ -158,7 +179,7 @@ func (h *NewInterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.Call
 	return h.updateCategoryInterestsKeyboard(callback, user, category.KeyName)
 }
 
-// HandlePrimaryInterestSelection обрабатывает выбор основного интереса
+// HandlePrimaryInterestSelection обрабатывает выбор основного интереса.
 func (h *NewInterestHandlerImpl) HandlePrimaryInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
@@ -173,9 +194,11 @@ func (h *NewInterestHandlerImpl) HandlePrimaryInterestSelection(callback *tgbota
 
 	// Находим выбор для этого интереса
 	var currentSelection *models.InterestSelection
+
 	for _, selection := range userSelections {
 		if selection.InterestID == interestID {
 			currentSelection = &selection
+
 			break
 		}
 	}
@@ -196,7 +219,7 @@ func (h *NewInterestHandlerImpl) HandlePrimaryInterestSelection(callback *tgbota
 	return h.updatePrimaryInterestsKeyboard(callback, user)
 }
 
-// HandleInterestsContinue обрабатывает продолжение после выбора интересов
+// HandleInterestsContinue обрабатывает продолжение после выбора интересов.
 func (h *NewInterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем выбранные интересы
 	userSelections, err := h.interestService.GetUserInterestSelections(user.ID)
@@ -220,6 +243,7 @@ func (h *NewInterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Call
 			keyboard,
 		)
 		_, err = h.bot.Request(editMsg)
+
 		return err
 	}
 
@@ -227,7 +251,7 @@ func (h *NewInterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Call
 	return h.showPrimaryInterestsSelection(callback, user)
 }
 
-// HandlePrimaryInterestsContinue обрабатывает завершение выбора основных интересов
+// HandlePrimaryInterestsContinue обрабатывает завершение выбора основных интересов.
 func (h *NewInterestHandlerImpl) HandlePrimaryInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем выборы пользователя
 	userSelections, err := h.interestService.GetUserInterestSelections(user.ID)
@@ -237,6 +261,7 @@ func (h *NewInterestHandlerImpl) HandlePrimaryInterestsContinue(callback *tgbota
 
 	// Подсчитываем основные интересы
 	primaryCount := 0
+
 	for _, selection := range userSelections {
 		if selection.IsPrimary {
 			primaryCount++
@@ -264,6 +289,7 @@ func (h *NewInterestHandlerImpl) HandlePrimaryInterestsContinue(callback *tgbota
 			h.keyboardBuilder.CreatePrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode),
 		)
 		_, err = h.bot.Request(editMsg)
+
 		return err
 	}
 
@@ -271,7 +297,7 @@ func (h *NewInterestHandlerImpl) HandlePrimaryInterestsContinue(callback *tgbota
 	return h.completeProfileSetup(callback, user)
 }
 
-// HandleBackToCategories возвращает к выбору категорий
+// HandleBackToCategories возвращает к выбору категорий.
 func (h *NewInterestHandlerImpl) HandleBackToCategories(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	keyboard := h.keyboardBuilder.CreateInterestCategoriesKeyboard(user.InterfaceLanguageCode)
 	messageText := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
@@ -284,16 +310,17 @@ func (h *NewInterestHandlerImpl) HandleBackToCategories(callback *tgbotapi.Callb
 	)
 
 	_, err := h.bot.Request(editMsg)
+
 	return err
 }
 
-// HandleBackToInterests возвращает к выбору интересов
+// HandleBackToInterests возвращает к выбору интересов.
 func (h *NewInterestHandlerImpl) HandleBackToInterests(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Показываем выбор основных интересов
 	return h.showPrimaryInterestsSelection(callback, user)
 }
 
-// showPrimaryInterestsSelection показывает интерфейс выбора основных интересов
+// showPrimaryInterestsSelection показывает интерфейс выбора основных интересов.
 func (h *NewInterestHandlerImpl) showPrimaryInterestsSelection(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем выборы пользователя
 	userSelections, err := h.interestService.GetUserInterestSelections(user.ID)
@@ -318,6 +345,7 @@ func (h *NewInterestHandlerImpl) showPrimaryInterestsSelection(callback *tgbotap
 	if recommendedPrimary < limits.MinPrimaryInterests {
 		recommendedPrimary = limits.MinPrimaryInterests
 	}
+
 	if recommendedPrimary > limits.MaxPrimaryInterests {
 		recommendedPrimary = limits.MaxPrimaryInterests
 	}
@@ -334,10 +362,11 @@ func (h *NewInterestHandlerImpl) showPrimaryInterestsSelection(callback *tgbotap
 	)
 
 	_, err = h.bot.Request(editMsg)
+
 	return err
 }
 
-// updateCategoryInterestsKeyboard обновляет клавиатуру интересов в категории
+// updateCategoryInterestsKeyboard обновляет клавиатуру интересов в категории.
 func (h *NewInterestHandlerImpl) updateCategoryInterestsKeyboard(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error {
 	// Получаем категории
 	categories, err := h.interestService.GetInterestCategories()
@@ -347,9 +376,11 @@ func (h *NewInterestHandlerImpl) updateCategoryInterestsKeyboard(callback *tgbot
 
 	// Находим категорию
 	var selectedCategory *models.InterestCategory
+
 	for _, category := range categories {
 		if category.KeyName == categoryKey {
 			selectedCategory = &category
+
 			break
 		}
 	}
@@ -391,10 +422,11 @@ func (h *NewInterestHandlerImpl) updateCategoryInterestsKeyboard(callback *tgbot
 	)
 
 	_, err = h.bot.Request(editMsg)
+
 	return err
 }
 
-// updatePrimaryInterestsKeyboard обновляет клавиатуру выбора основных интересов
+// updatePrimaryInterestsKeyboard обновляет клавиатуру выбора основных интересов.
 func (h *NewInterestHandlerImpl) updatePrimaryInterestsKeyboard(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем выборы пользователя
 	userSelections, err := h.interestService.GetUserInterestSelections(user.ID)
@@ -416,11 +448,20 @@ func (h *NewInterestHandlerImpl) updatePrimaryInterestsKeyboard(callback *tgbota
 	)
 
 	_, err = h.bot.Request(editMsg)
+
 	return err
 }
 
-// completeProfileSetup завершает настройку профиля
+// completeProfileSetup завершает настройку профиля.
+//
+//nolint:cyclop,funlen // функция содержит последовательную логику завершения профиля, длина оправдана
 func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// New interest handler implementation
+	// Legacy implementation for backward compatibility
+	// Additional check for new handler
+	if user == nil {
+		return errors.New("user cannot be nil")
+	}
 	// Получаем сводку интересов пользователя
 	summary, err := h.interestService.GetUserInterestSummary(user.ID)
 	if err != nil {
@@ -432,25 +473,31 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 
 	if len(summary.PrimaryInterests) > 0 {
 		primaryText.WriteString("⭐ Основные: ")
+
 		for i, interest := range summary.PrimaryInterests {
 			if i > 0 {
 				primaryText.WriteString(", ")
 			}
+
 			interestName := h.service.Localizer.Get(user.InterfaceLanguageCode, "interest_"+interest.KeyName)
 			primaryText.WriteString(interestName)
 		}
+
 		primaryText.WriteString("\n")
 	}
 
 	if len(summary.AdditionalInterests) > 0 {
 		additionalText.WriteString("➕ Дополнительные: ")
+
 		for i, interest := range summary.AdditionalInterests {
 			if i > 0 {
 				additionalText.WriteString(", ")
 			}
+
 			interestName := h.service.Localizer.Get(user.InterfaceLanguageCode, "interest_"+interest.KeyName)
 			additionalText.WriteString(interestName)
 		}
+
 		additionalText.WriteString("\n")
 	}
 
@@ -488,7 +535,7 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 	}
 
 	// Обновляем уровень завершения профиля
-	err = h.updateProfileCompletionLevel(user.ID, 100)
+	err = h.updateProfileCompletionLevel(user.ID, NewInterestProfileCompletionLevelComplete)
 	if err != nil {
 		log.Printf("Error updating profile completion level: %v", err)
 	}
@@ -496,12 +543,13 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 	return nil
 }
 
-// updateProfileCompletionLevel обновляет уровень завершения профиля
+// updateProfileCompletionLevel обновляет уровень завершения профиля.
 func (h *NewInterestHandlerImpl) updateProfileCompletionLevel(userID int, completionLevel int) error {
 	_, err := h.service.DB.GetConnection().Exec(`
 		UPDATE users
 		SET profile_completion_level = $1, updated_at = NOW()
 		WHERE id = $2
 	`, completionLevel, userID)
+
 	return err
 }

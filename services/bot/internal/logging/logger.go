@@ -9,17 +9,21 @@ import (
 	"time"
 )
 
-// LogLevel определяет уровень логирования
+// LogLevel определяет уровень логирования.
 type LogLevel int
 
 const (
+	// DEBUG represents debug log level for detailed information.
 	DEBUG LogLevel = iota
+	// INFO represents info log level for general information.
 	INFO
+	// WARN represents warning log level for non-critical issues.
 	WARN
+	// ERROR represents error log level for critical issues.
 	ERROR
 )
 
-// String возвращает строковое представление уровня логирования
+// String возвращает строковое представление уровня логирования.
 func (ll LogLevel) String() string {
 	switch ll {
 	case DEBUG:
@@ -35,7 +39,7 @@ func (ll LogLevel) String() string {
 	}
 }
 
-// ParseLogLevel парсит строку в LogLevel
+// ParseLogLevel парсит строку в LogLevel.
 func ParseLogLevel(level string) LogLevel {
 	switch level {
 	case "DEBUG":
@@ -51,27 +55,27 @@ func ParseLogLevel(level string) LogLevel {
 	}
 }
 
-// LogEntry представляет структурированную запись лога
+// LogEntry представляет структурированную запись лога.
 type LogEntry struct {
 	Timestamp time.Time              `json:"timestamp"`
 	Level     LogLevel               `json:"level"`
 	Message   string                 `json:"message"`
-	RequestID string                 `json:"request_id,omitempty"`
-	UserID    int64                  `json:"user_id,omitempty"`
-	ChatID    int64                  `json:"chat_id,omitempty"`
+	RequestID string                 `json:"requestId,omitempty"`
+	UserID    int64                  `json:"userId,omitempty"`
+	ChatID    int64                  `json:"chatId,omitempty"`
 	Operation string                 `json:"operation,omitempty"`
 	Component string                 `json:"component,omitempty"`
 	Fields    map[string]interface{} `json:"fields,omitempty"`
 	Error     string                 `json:"error,omitempty"`
 }
 
-// Logger предоставляет структурированное логирование
+// Logger предоставляет структурированное логирование.
 type Logger struct {
 	level     LogLevel
 	component string
 }
 
-// NewLogger создает новый логгер
+// NewLogger создает новый логгер.
 func NewLogger(level LogLevel, component string) *Logger {
 	return &Logger{
 		level:     level,
@@ -79,57 +83,86 @@ func NewLogger(level LogLevel, component string) *Logger {
 	}
 }
 
-// NewLoggerFromEnv создает логгер из переменных окружения
+// NewLoggerFromEnv создает логгер из переменных окружения.
 func NewLoggerFromEnv(component string) *Logger {
 	level := ParseLogLevel(os.Getenv("LOG_LEVEL"))
+
 	return NewLogger(level, component)
 }
 
-// Debug логирует сообщение уровня DEBUG
+// Debug логирует сообщение уровня DEBUG.
 func (l *Logger) Debug(message string, fields ...map[string]interface{}) {
 	l.log(DEBUG, message, fields...)
 }
 
-// Info логирует сообщение уровня INFO
+// Info логирует сообщение уровня INFO.
 func (l *Logger) Info(message string, fields ...map[string]interface{}) {
 	l.log(INFO, message, fields...)
 }
 
-// Warn логирует сообщение уровня WARN
+// Warn логирует сообщение уровня WARN.
 func (l *Logger) Warn(message string, fields ...map[string]interface{}) {
 	l.log(WARN, message, fields...)
 }
 
-// Error логирует сообщение уровня ERROR
+// Error логирует сообщение уровня ERROR.
 func (l *Logger) Error(message string, fields ...map[string]interface{}) {
 	l.log(ERROR, message, fields...)
 }
 
-// DebugWithContext логирует сообщение уровня DEBUG с контекстом
-func (l *Logger) DebugWithContext(message string, requestID string, userID, chatID int64, operation string, fields ...map[string]interface{}) {
+// DebugWithContext логирует сообщение уровня DEBUG с контекстом.
+func (l *Logger) DebugWithContext(
+	message string,
+	requestID string,
+	userID,
+	chatID int64,
+	operation string,
+	fields ...map[string]interface{},
+) {
 	entry := l.createLogEntry(DEBUG, message, requestID, userID, chatID, operation, fields...)
 	l.writeLog(entry)
 }
 
-// InfoWithContext логирует сообщение уровня INFO с контекстом
-func (l *Logger) InfoWithContext(message string, requestID string, userID, chatID int64, operation string, fields ...map[string]interface{}) {
+// InfoWithContext логирует сообщение уровня INFO с контекстом.
+func (l *Logger) InfoWithContext(
+	message string,
+	requestID string,
+	userID,
+	chatID int64,
+	operation string,
+	fields ...map[string]interface{},
+) {
 	entry := l.createLogEntry(INFO, message, requestID, userID, chatID, operation, fields...)
 	l.writeLog(entry)
 }
 
-// WarnWithContext логирует сообщение уровня WARN с контекстом
-func (l *Logger) WarnWithContext(message string, requestID string, userID, chatID int64, operation string, fields ...map[string]interface{}) {
+// WarnWithContext логирует сообщение уровня WARN с контекстом.
+func (l *Logger) WarnWithContext(
+	message string,
+	requestID string,
+	userID,
+	chatID int64,
+	operation string,
+	fields ...map[string]interface{},
+) {
 	entry := l.createLogEntry(WARN, message, requestID, userID, chatID, operation, fields...)
 	l.writeLog(entry)
 }
 
-// ErrorWithContext логирует сообщение уровня ERROR с контекстом
-func (l *Logger) ErrorWithContext(message string, requestID string, userID, chatID int64, operation string, fields ...map[string]interface{}) {
+// ErrorWithContext логирует сообщение уровня ERROR с контекстом.
+func (l *Logger) ErrorWithContext(
+	message string,
+	requestID string,
+	userID,
+	chatID int64,
+	operation string,
+	fields ...map[string]interface{},
+) {
 	entry := l.createLogEntry(ERROR, message, requestID, userID, chatID, operation, fields...)
 	l.writeLog(entry)
 }
 
-// log внутренний метод для логирования
+// log внутренний метод для логирования.
 func (l *Logger) log(level LogLevel, message string, fields ...map[string]interface{}) {
 	if level < l.level {
 		return
@@ -139,7 +172,7 @@ func (l *Logger) log(level LogLevel, message string, fields ...map[string]interf
 	l.writeLog(entry)
 }
 
-// createLogEntry создает структурированную запись лога
+// createLogEntry создает структурированную запись лога.
 func (l *Logger) createLogEntry(level LogLevel, message string, requestID string, userID, chatID int64, operation string, fields ...map[string]interface{}) *LogEntry {
 	entry := &LogEntry{
 		Timestamp: time.Now(),
@@ -167,6 +200,7 @@ func (l *Logger) createLogEntry(level LogLevel, message string, requestID string
 	// Объединяем все поля
 	if len(fields) > 0 {
 		entry.Fields = make(map[string]interface{})
+
 		for _, fieldMap := range fields {
 			for key, value := range fieldMap {
 				entry.Fields[key] = value
@@ -177,7 +211,7 @@ func (l *Logger) createLogEntry(level LogLevel, message string, requestID string
 	return entry
 }
 
-// writeLog записывает лог в формате JSON
+// writeLog записывает лог в формате JSON.
 func (l *Logger) writeLog(entry *LogEntry) {
 	if entry.Level < l.level {
 		return
@@ -187,6 +221,7 @@ func (l *Logger) writeLog(entry *LogEntry) {
 	if err != nil {
 		// Fallback на простое логирование
 		log.Printf("[%s] %s: %s", entry.Level.String(), entry.Component, entry.Message)
+
 		return
 	}
 
@@ -194,25 +229,25 @@ func (l *Logger) writeLog(entry *LogEntry) {
 	fmt.Println(string(jsonData))
 }
 
-// SetLevel устанавливает уровень логирования
+// SetLevel устанавливает уровень логирования.
 func (l *Logger) SetLevel(level LogLevel) {
 	l.level = level
 }
 
-// GetLevel возвращает текущий уровень логирования
+// GetLevel возвращает текущий уровень логирования.
 func (l *Logger) GetLevel() LogLevel {
 	return l.level
 }
 
-// WithFields создает новый логгер с дополнительными полями
-func (l *Logger) WithFields(fields map[string]interface{}) *Logger {
+// WithFields creates a new logger with additional fields.
+func (l *Logger) WithFields(_ map[string]interface{}) *Logger {
 	return &Logger{
 		level:     l.level,
 		component: l.component,
 	}
 }
 
-// WithComponent создает новый логгер с указанным компонентом
+// WithComponent создает новый логгер с указанным компонентом.
 func (l *Logger) WithComponent(component string) *Logger {
 	return &Logger{
 		level:     l.level,

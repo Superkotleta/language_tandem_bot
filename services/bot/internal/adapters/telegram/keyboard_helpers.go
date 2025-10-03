@@ -3,6 +3,7 @@ package telegram
 import (
 	"fmt"
 	"sort"
+	"strconv"
 
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/models"
@@ -10,19 +11,24 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// KeyboardBuilder создает различные типы клавиатур для Telegram
+// Константы для символов.
+const (
+	SymbolUnchecked = "☐ "
+)
+
+// KeyboardBuilder создает различные типы клавиатур для Telegram.
 type KeyboardBuilder struct {
 	service *core.BotService
 }
 
-// NewKeyboardBuilder создает новый экземпляр KeyboardBuilder
+// NewKeyboardBuilder создает новый экземпляр KeyboardBuilder.
 func NewKeyboardBuilder(service *core.BotService) *KeyboardBuilder {
 	return &KeyboardBuilder{
 		service: service,
 	}
 }
 
-// CreateInterestCategoriesKeyboard создает клавиатуру для выбора категорий интересов
+// CreateInterestCategoriesKeyboard создает клавиатуру для выбора категорий интересов.
 func (kb *KeyboardBuilder) CreateInterestCategoriesKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	categories := []struct {
 		key  string
@@ -78,7 +84,7 @@ func (kb *KeyboardBuilder) CreateInterestCategoriesKeyboard(interfaceLang string
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// CreateCategoryInterestsKeyboard создает клавиатуру для выбора интересов в категории
+// CreateCategoryInterestsKeyboard создает клавиатуру для выбора интересов в категории.
 func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.Interest, selectedMap map[int]bool, categoryKey, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 
@@ -94,13 +100,15 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 		// Первая кнопка в ряду
 		interest1 := interests[i]
 		interestName1 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest1.KeyName)
-		prefix1 := "☐ "
+
+		prefix1 := SymbolUnchecked
 		if selectedMap[interest1.ID] {
 			prefix1 = "✅ "
 		}
+
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
 			prefix1+interestName1,
-			"interest_select_"+fmt.Sprintf("%d", interest1.ID),
+			"interest_select_"+strconv.Itoa(interest1.ID),
 		)
 		row = append(row, button1)
 
@@ -108,13 +116,15 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 		if i+1 < len(interests) {
 			interest2 := interests[i+1]
 			interestName2 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest2.KeyName)
-			prefix2 := "☐ "
+
+			prefix2 := SymbolUnchecked
 			if selectedMap[interest2.ID] {
 				prefix2 = "✅ "
 			}
+
 			button2 := tgbotapi.NewInlineKeyboardButtonData(
 				prefix2+interestName2,
-				"interest_select_"+fmt.Sprintf("%d", interest2.ID),
+				"interest_select_"+strconv.Itoa(interest2.ID),
 			)
 			row = append(row, button2)
 		}
@@ -138,8 +148,11 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// CreatePrimaryInterestsKeyboard создает клавиатуру для выбора основных интересов
-func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+// CreatePrimaryInterestsKeyboard создает клавиатуру для выбора основных интересов.
+func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(
+	selections interface{},
+	interfaceLang string,
+) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 
 	// Приводим к правильному типу
@@ -161,13 +174,15 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 		selection1 := tempSelections[i]
 		// Получаем название интереса (упрощенно, в реальности нужно загружать из БД)
 		interestName1 := fmt.Sprintf("Интерес %d", selection1.InterestID)
-		prefix1 := "☐ "
+
+		prefix1 := SymbolUnchecked
 		if selection1.IsPrimary {
 			prefix1 = "⭐ "
 		}
+
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
 			prefix1+interestName1,
-			"primary_interest_"+fmt.Sprintf("%d", selection1.InterestID),
+			"primary_interest_"+strconv.Itoa(selection1.InterestID),
 		)
 		row = append(row, button1)
 
@@ -175,13 +190,15 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 		if i+1 < len(tempSelections) {
 			selection2 := tempSelections[i+1]
 			interestName2 := fmt.Sprintf("Интерес %d", selection2.InterestID)
-			prefix2 := "☐ "
+
+			prefix2 := SymbolUnchecked
 			if selection2.IsPrimary {
 				prefix2 = "⭐ "
 			}
+
 			button2 := tgbotapi.NewInlineKeyboardButtonData(
 				prefix2+interestName2,
-				"primary_interest_"+fmt.Sprintf("%d", selection2.InterestID),
+				"primary_interest_"+strconv.Itoa(selection2.InterestID),
 			)
 			row = append(row, button2)
 		}
@@ -205,7 +222,7 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// CreateProfileCompletedKeyboard создает клавиатуру после завершения настройки профиля
+// CreateProfileCompletedKeyboard создает клавиатуру после завершения настройки профиля.
 func (kb *KeyboardBuilder) CreateProfileCompletedKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	mainMenu := tgbotapi.NewInlineKeyboardButtonData(
 		kb.service.Localizer.Get(interfaceLang, "main_menu_title"),
@@ -218,5 +235,6 @@ func (kb *KeyboardBuilder) CreateProfileCompletedKeyboard(interfaceLang string) 
 	buttons := [][]tgbotapi.InlineKeyboardButton{
 		{mainMenu, viewProfile},
 	}
+
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }

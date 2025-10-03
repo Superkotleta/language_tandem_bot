@@ -13,7 +13,12 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// ProfileInterestHandler обрабатывает редактирование интересов из профиля
+// Константы для работы с callback data.
+const (
+	MinPartsForInterestCallback = 4 // Минимальное количество частей в callback data для интересов
+)
+
+// ProfileInterestHandler обрабатывает редактирование интересов из профиля.
 type ProfileInterestHandler struct {
 	service         *core.BotService
 	interestService *core.InterestService
@@ -22,8 +27,14 @@ type ProfileInterestHandler struct {
 	errorHandler    *errors.ErrorHandler
 }
 
-// NewProfileInterestHandler создает новый обработчик интересов для профиля
-func NewProfileInterestHandler(service *core.BotService, interestService *core.InterestService, bot *tgbotapi.BotAPI, keyboardBuilder *KeyboardBuilder, errorHandler *errors.ErrorHandler) *ProfileInterestHandler {
+// NewProfileInterestHandler создает новый обработчик интересов для профиля.
+func NewProfileInterestHandler(
+	service *core.BotService,
+	interestService *core.InterestService,
+	bot *tgbotapi.BotAPI,
+	keyboardBuilder *KeyboardBuilder,
+	errorHandler *errors.ErrorHandler,
+) *ProfileInterestHandler {
 	return &ProfileInterestHandler{
 		service:         service,
 		interestService: interestService,
@@ -33,7 +44,7 @@ func NewProfileInterestHandler(service *core.BotService, interestService *core.I
 	}
 }
 
-// HandleEditInterestsFromProfile обрабатывает редактирование интересов из профиля
+// HandleEditInterestsFromProfile обрабатывает редактирование интересов из профиля.
 func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем категории интересов через кэш
 	categories, err := pih.interestService.GetInterestCategories()
@@ -67,7 +78,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 	return nil
 }
 
-// HandleEditInterestCategoryFromProfile обрабатывает выбор категории для редактирования
+// HandleEditInterestCategoryFromProfile обрабатывает выбор категории для редактирования.
 func (pih *ProfileInterestHandler) HandleEditInterestCategoryFromProfile(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error {
 	log.Printf("ProfileInterestHandler: User %d selected category '%s' for editing", user.ID, categoryKey)
 
@@ -79,9 +90,11 @@ func (pih *ProfileInterestHandler) HandleEditInterestCategoryFromProfile(callbac
 
 	// Находим выбранную категорию
 	var selectedCategory *models.InterestCategory
+
 	for _, category := range categories {
 		if category.KeyName == categoryKey {
 			selectedCategory = &category
+
 			break
 		}
 	}
@@ -99,7 +112,12 @@ func (pih *ProfileInterestHandler) HandleEditInterestCategoryFromProfile(callbac
 	// Получаем текущие выборы пользователя
 	userSelections, err := pih.interestService.GetUserInterestSelections(user.ID)
 	if err != nil {
-		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
+		return pih.errorHandler.HandleTelegramError(
+			err,
+			callback.Message.Chat.ID,
+			int64(user.ID),
+			"GetUserInterestSelections",
+		)
 	}
 
 	// Создаем карту выбранных интересов
@@ -131,7 +149,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestCategoryFromProfile(callbac
 	return nil
 }
 
-// HandleEditInterestSelectionFromProfile обрабатывает выбор/отмену интереса при редактировании из профиля
+// HandleEditInterestSelectionFromProfile обрабатывает выбор/отмену интереса при редактировании из профиля.
 func (pih *ProfileInterestHandler) HandleEditInterestSelectionFromProfile(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
@@ -148,9 +166,11 @@ func (pih *ProfileInterestHandler) HandleEditInterestSelectionFromProfile(callba
 
 	// Проверяем, выбран ли уже этот интерес
 	isSelected := false
+
 	for _, selection := range userSelections {
 		if selection.InterestID == interestID {
 			isSelected = true
+
 			break
 		}
 	}
@@ -172,7 +192,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestSelectionFromProfile(callba
 	return pih.updateCategoryInterestsKeyboardFromProfile(callback, user, interestIDStr)
 }
 
-// HandleEditPrimaryInterestsFromProfile обрабатывает редактирование основных интересов из профиля
+// HandleEditPrimaryInterestsFromProfile обрабатывает редактирование основных интересов из профиля.
 func (pih *ProfileInterestHandler) HandleEditPrimaryInterestsFromProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем текущие выборы пользователя
 	userSelections, err := pih.interestService.GetUserInterestSelections(user.ID)
@@ -203,11 +223,16 @@ func (pih *ProfileInterestHandler) HandleEditPrimaryInterestsFromProfile(callbac
 	return nil
 }
 
-// HandleEditPrimaryInterestSelectionFromProfile обрабатывает выбор/отмену основного интереса
+// HandleEditPrimaryInterestSelectionFromProfile обрабатывает выбор/отмену основного интереса.
 func (pih *ProfileInterestHandler) HandleEditPrimaryInterestSelectionFromProfile(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
-		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ParseInterestID")
+		return pih.errorHandler.HandleTelegramError(
+			err,
+			callback.Message.Chat.ID,
+			int64(user.ID),
+			"ParseInterestID",
+		)
 	}
 
 	// Получаем текущие выборы пользователя
@@ -218,9 +243,11 @@ func (pih *ProfileInterestHandler) HandleEditPrimaryInterestSelectionFromProfile
 
 	// Находим текущий выбор
 	var currentSelection *models.InterestSelection
+
 	for _, selection := range userSelections {
 		if selection.InterestID == interestID {
 			currentSelection = &selection
+
 			break
 		}
 	}
@@ -231,7 +258,11 @@ func (pih *ProfileInterestHandler) HandleEditPrimaryInterestSelectionFromProfile
 	}
 
 	// Переключаем статус основного
-	err = pih.interestService.SetPrimaryInterest(user.ID, interestID, !currentSelection.IsPrimary)
+	err = pih.interestService.SetPrimaryInterest(
+		user.ID,
+		interestID,
+		!currentSelection.IsPrimary,
+	)
 	if err != nil {
 		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "TogglePrimaryInterest")
 	}
@@ -240,7 +271,7 @@ func (pih *ProfileInterestHandler) HandleEditPrimaryInterestSelectionFromProfile
 	return pih.updatePrimaryInterestsKeyboardFromProfile(callback, user)
 }
 
-// HandleSaveInterestEditsFromProfile сохраняет изменения интересов и возвращается к профилю
+// HandleSaveInterestEditsFromProfile сохраняет изменения интересов и возвращается к профилю.
 func (pih *ProfileInterestHandler) HandleSaveInterestEditsFromProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	log.Printf("ProfileInterestHandler: User %d saving interest edits", user.ID)
 
@@ -276,14 +307,16 @@ func (pih *ProfileInterestHandler) HandleSaveInterestEditsFromProfile(callback *
 	return nil
 }
 
-// updateCategoryInterestsKeyboardFromProfile обновляет клавиатуру интересов в категории
+// updateCategoryInterestsKeyboardFromProfile обновляет клавиатуру интересов в категории.
 func (pih *ProfileInterestHandler) updateCategoryInterestsKeyboardFromProfile(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	// Извлекаем categoryKey из callback data (предполагаем формат "edit_interest_category_<key>_<id>")
 	parts := strings.Split(callback.Data, "_")
-	if len(parts) < 4 {
+	if len(parts) < MinPartsForInterestCallback {
 		log.Printf("Invalid callback data format: %s", callback.Data)
+
 		return nil
 	}
+
 	categoryKey := parts[3] // "edit_interest_category_<key>_<id>"
 
 	// Получаем категории
@@ -294,9 +327,11 @@ func (pih *ProfileInterestHandler) updateCategoryInterestsKeyboardFromProfile(ca
 
 	// Находим выбранную категорию
 	var selectedCategory *models.InterestCategory
+
 	for _, category := range categories {
 		if category.KeyName == categoryKey {
 			selectedCategory = &category
+
 			break
 		}
 	}
@@ -324,15 +359,21 @@ func (pih *ProfileInterestHandler) updateCategoryInterestsKeyboardFromProfile(ca
 	}
 
 	// Создаем обновленную клавиатуру
-	keyboard := pih.keyboardBuilder.CreateCategoryInterestsKeyboard(interests, selectedMap, categoryKey, user.InterfaceLanguageCode)
+	keyboard := pih.keyboardBuilder.CreateCategoryInterestsKeyboard(
+		interests,
+		selectedMap,
+		categoryKey,
+		user.InterfaceLanguageCode,
+	)
 
 	// Обновляем только клавиатуру
 	editMsg := tgbotapi.NewEditMessageReplyMarkup(callback.Message.Chat.ID, callback.Message.MessageID, keyboard)
 	_, err = pih.bot.Request(editMsg)
+
 	return err
 }
 
-// updatePrimaryInterestsKeyboardFromProfile обновляет клавиатуру основных интересов
+// updatePrimaryInterestsKeyboardFromProfile обновляет клавиатуру основных интересов.
 func (pih *ProfileInterestHandler) updatePrimaryInterestsKeyboardFromProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем обновленные выборы пользователя
 	userSelections, err := pih.interestService.GetUserInterestSelections(user.ID)
@@ -346,5 +387,6 @@ func (pih *ProfileInterestHandler) updatePrimaryInterestsKeyboardFromProfile(cal
 	// Обновляем только клавиатуру
 	editMsg := tgbotapi.NewEditMessageReplyMarkup(callback.Message.Chat.ID, callback.Message.MessageID, keyboard)
 	_, err = pih.bot.Request(editMsg)
+
 	return err
 }
