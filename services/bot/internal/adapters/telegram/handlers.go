@@ -312,6 +312,27 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 	return nil
 }
 
+// isAdmin проверяет, является ли пользователь администратором
+func (h *TelegramHandler) isAdmin(userID int64, username string) bool {
+	// Проверяем по Chat ID
+	for _, adminID := range h.adminChatIDs {
+		if userID == adminID {
+			return true
+		}
+	}
+
+	// Проверяем по username
+	if username != "" {
+		for _, adminUsername := range h.adminUsernames {
+			if username == adminUsername {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // handleMainViewProfile делегирует просмотр профиля в menu handler
 // TODO: функция может быть использована в будущем для обработки просмотра профиля
 //
@@ -571,6 +592,11 @@ func (h *TelegramHandler) handleMenuCallbacks(callback *tgbotapi.CallbackQuery, 
 
 // handleFeedbackCallbacks обрабатывает callback'и связанные с отзывами.
 func (h *TelegramHandler) handleFeedbackCallbacks(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
+	// Проверяем права администратора для доступа к отзывам
+	if !h.isAdmin(callback.From.ID, callback.From.UserName) {
+		// Если это не администратор, игнорируем callback
+		return nil
+	}
 	switch {
 	case strings.HasPrefix(data, "fb_process_"):
 		feedbackIDStr := strings.TrimPrefix(data, "fb_process_")
@@ -639,8 +665,10 @@ func (h *TelegramHandler) handleFeedbackCallbacks(callback *tgbotapi.CallbackQue
 		indexStr := strings.TrimPrefix(data, "archive_feedback_")
 
 		return h.feedbackHandler.HandleArchiveFeedback(callback, user, indexStr)
-	case strings.HasPrefix(data, "back_to_"):
-		// Обработка возврата к списку: back_to_active_feedbacks, back_to_archive_feedbacks, etc.
+	case strings.HasPrefix(data, "back_to_active_feedbacks") ||
+		strings.HasPrefix(data, "back_to_archive_feedbacks") ||
+		strings.HasPrefix(data, "back_to_all_feedbacks"):
+		// Обработка возврата к списку отзывов: back_to_active_feedbacks, back_to_archive_feedbacks, etc.
 		parts := strings.Split(data, "_")
 		if len(parts) >= MinPartsForNav {
 			feedbackType := parts[2] // active, archive, all
