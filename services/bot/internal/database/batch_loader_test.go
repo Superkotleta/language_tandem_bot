@@ -12,7 +12,6 @@ import (
 
 func TestBatchLoader_scanUserWithInterestRow(t *testing.T) {
 	t.Parallel()
-	t.Parallel()
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite3", ":memory:")
 	require.NoError(t, err)

@@ -239,8 +239,8 @@ func TestService_GetCacheStats(t *testing.T) {
 
 	// Начальная статистика
 	stats := service.GetCacheStats(context.Background())
-	assert.Equal(t, 0, stats.Hits)
-	assert.Equal(t, 0, stats.Misses)
+	assert.Equal(t, int64(0), stats.Hits)
+	assert.Equal(t, int64(0), stats.Misses)
 	assert.Equal(t, 0, stats.Size)
 
 	// Добавляем данные и делаем запросы
@@ -257,8 +257,8 @@ func TestService_GetCacheStats(t *testing.T) {
 
 	// Проверяем статистику
 	stats = service.GetCacheStats(context.Background())
-	assert.Equal(t, 1, stats.Hits)
-	assert.Equal(t, 1, stats.Misses)
+	assert.Equal(t, int64(1), stats.Hits)
+	assert.Equal(t, int64(1), stats.Misses)
 	assert.Equal(t, 1, stats.Size)
 }
 

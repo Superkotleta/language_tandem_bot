@@ -9,6 +9,8 @@
   "choose_primary_interests_remaining": "⭐ Choose {remaining} more out of {max} primary interests from selected:",
   "max_primary_interests_reached": "✅ Maximum number of primary interests selected!",
   "interests_selection_complete": "✅ Great! Your interests are saved!",
+  "primary_interests_label": "⭐ Primary:",
+  "additional_interests_label": "➕ Additional:",
   "interests_edit_mode": "✏️ Edit interests",
   "interests_edit_primary": "⭐ Edit primary interests",
   "interests_edit_additional": "➕ Edit additional interests",

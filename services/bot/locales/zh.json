@@ -10,6 +10,8 @@
   "max_primary_interests_reached": "✅ 已达到主要兴趣的最大数量！",
   "interests_new_system": "🎯 选择兴趣类别：",
   "interests_selection_complete": "✅ 太好了！你的兴趣已保存！",
+  "primary_interests_label": "⭐ 主要:",
+  "additional_interests_label": "➕ 附加:",
   "interests_edit_mode": "✏️ 编辑兴趣",
   "interests_edit_primary": "⭐ 编辑主要兴趣",
   "interests_edit_additional": "➕ 编辑附加兴趣",

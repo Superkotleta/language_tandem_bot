@@ -475,6 +475,30 @@ func (db *DatabaseMock) Close() error {
 	return nil
 }
 
+// GetUserInterestSelections получает выборы интересов пользователя.
+func (db *DatabaseMock) GetUserInterestSelections(userID int) ([]models.InterestSelection, error) {
+	if db.lastError != nil {
+		return nil, db.lastError
+	}
+
+	// Возвращаем пустой список для тестов
+	return []models.InterestSelection{}, nil
+}
+
+// GetInterestByID получает интерес по ID.
+func (db *DatabaseMock) GetInterestByID(interestID int) (*models.Interest, error) {
+	if db.lastError != nil {
+		return nil, db.lastError
+	}
+
+	// Возвращаем тестовый интерес
+	if interest, exists := db.interests[interestID]; exists {
+		return interest, nil
+	}
+
+	return nil, nil
+}
+
 // Вспомогательные методы для тестов
 
 // SetError устанавливает ошибку, которую будут возвращать методы.

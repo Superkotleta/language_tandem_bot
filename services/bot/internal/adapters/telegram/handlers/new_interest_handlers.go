@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"math"
 	"strconv"
@@ -593,7 +592,7 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 	var primaryText, additionalText strings.Builder
 
 	if len(summary.PrimaryInterests) > 0 {
-		primaryText.WriteString("⭐ Основные: ")
+		primaryText.WriteString(h.service.Localizer.Get(user.InterfaceLanguageCode, "primary_interests_label") + " ")
 
 		for i, interest := range summary.PrimaryInterests {
 			if i > 0 {
@@ -608,7 +607,7 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 	}
 
 	if len(summary.AdditionalInterests) > 0 {
-		additionalText.WriteString("➕ Дополнительные: ")
+		additionalText.WriteString(h.service.Localizer.Get(user.InterfaceLanguageCode, "additional_interests_label") + " ")
 
 		for i, interest := range summary.AdditionalInterests {
 			if i > 0 {

@@ -10,6 +10,8 @@
   "max_primary_interests_reached": "✅ ¡Número máximo de intereses principales seleccionados!",
   "interests_new_system": "🎯 Elige categoría de intereses:",
   "interests_selection_complete": "✅ ¡Excelente! Tus intereses han sido guardados!",
+  "primary_interests_label": "⭐ Principales:",
+  "additional_interests_label": "➕ Adicionales:",
   "interests_edit_mode": "✏️ Editar intereses",
   "interests_edit_primary": "⭐ Editar intereses principales",
   "interests_edit_additional": "➕ Editar intereses adicionales",
