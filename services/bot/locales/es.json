@@ -5,6 +5,8 @@
   "choose_interface_language": "🌐 Elige el idioma de la interfaz:",
   "choose_interests": "🎯 Elige tus intereses (puedes seleccionar varios):",
   "choose_primary_interests": "⭐ Elige hasta 3 intereses principales de los seleccionados:",
+  "choose_primary_interests_dynamic": "⭐ Elige hasta {max} intereses principales de los seleccionados:",
+  "choose_primary_interests_remaining": "⭐ Elige {remaining} más de {max} intereses principales de los seleccionados:",
   "max_primary_interests_reached": "✅ ¡Número máximo de intereses principales seleccionados!",
   "interests_new_system": "🎯 Elige categoría de intereses:",
   "interests_selection_complete": "✅ ¡Excelente! Tus intereses han sido guardados!",

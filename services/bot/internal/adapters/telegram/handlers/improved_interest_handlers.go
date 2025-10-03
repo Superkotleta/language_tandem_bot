@@ -487,11 +487,14 @@ func (h *ImprovedInterestHandler) showPrimaryInterestsSelection(callback *tgbota
 	// Создаем текст сообщения с динамическим количеством
 	var messageText string
 	if selectedPrimaryCount == 0 {
-		messageText = fmt.Sprintf("⭐ Выбери до %d основных интересов из выбранных:", recommendedPrimary)
+		messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_dynamic")
+		messageText = strings.ReplaceAll(messageText, "{max}", strconv.Itoa(recommendedPrimary))
 	} else {
 		remaining := recommendedPrimary - selectedPrimaryCount
 		if remaining > 0 {
-			messageText = fmt.Sprintf("⭐ Выбери ещё %d из %d основных интересов из выбранных:", remaining, recommendedPrimary)
+			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_remaining")
+			messageText = strings.ReplaceAll(messageText, "{remaining}", strconv.Itoa(remaining))
+			messageText = strings.ReplaceAll(messageText, "{max}", strconv.Itoa(recommendedPrimary))
 		} else {
 			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "max_primary_interests_reached")
 			if messageText == "max_primary_interests_reached" {
@@ -618,11 +621,14 @@ func (h *ImprovedInterestHandler) updatePrimaryInterestsKeyboard(callback *tgbot
 	// Создаем текст сообщения с динамическим количеством
 	var messageText string
 	if selectedPrimaryCount == 0 {
-		messageText = fmt.Sprintf("⭐ Выбери до %d основных интересов из выбранных:", recommendedPrimary)
+		messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_dynamic")
+		messageText = strings.ReplaceAll(messageText, "{max}", strconv.Itoa(recommendedPrimary))
 	} else {
 		remaining := recommendedPrimary - selectedPrimaryCount
 		if remaining > 0 {
-			messageText = fmt.Sprintf("⭐ Выбери ещё %d из %d основных интересов из выбранных:", remaining, recommendedPrimary)
+			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_remaining")
+			messageText = strings.ReplaceAll(messageText, "{remaining}", strconv.Itoa(remaining))
+			messageText = strings.ReplaceAll(messageText, "{max}", strconv.Itoa(recommendedPrimary))
 		} else {
 			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "max_primary_interests_reached")
 			if messageText == "max_primary_interests_reached" {

@@ -5,6 +5,8 @@
   "choose_interface_language": "🌐 选择界面语言：",
   "choose_interests": "🎯 选择你的兴趣（可以选择多个）：",
   "choose_primary_interests": "⭐ 从已选择的兴趣中选择最多3个主要兴趣：",
+  "choose_primary_interests_dynamic": "⭐ 从已选择的兴趣中选择最多{max}个主要兴趣：",
+  "choose_primary_interests_remaining": "⭐ 从已选择的兴趣中再选择{remaining}个，共{max}个主要兴趣：",
   "max_primary_interests_reached": "✅ 已达到主要兴趣的最大数量！",
   "interests_new_system": "🎯 选择兴趣类别：",
   "interests_selection_complete": "✅ 太好了！你的兴趣已保存！",

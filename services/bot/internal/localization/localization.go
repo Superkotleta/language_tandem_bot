@@ -226,7 +226,7 @@ func (l *Localizer) getFallbackInterests(lang string) map[int]string {
 		3: "Sports",
 		4: "Travel",
 	}
-	
+
 	// Для русского языка используем русские переводы
 	if lang == "ru" {
 		interests = map[int]string{
@@ -236,7 +236,7 @@ func (l *Localizer) getFallbackInterests(lang string) map[int]string {
 			4: "Путешествия",
 		}
 	}
-	
+
 	// Для испанского языка
 	if lang == "es" {
 		interests = map[int]string{
@@ -246,7 +246,7 @@ func (l *Localizer) getFallbackInterests(lang string) map[int]string {
 			4: "Viajes",
 		}
 	}
-	
+
 	// Для китайского языка
 	if lang == "zh" {
 		interests = map[int]string{
@@ -355,7 +355,7 @@ func (l *Localizer) loadFallbackTranslations() {
 		"profile_field_interests": "Интересы",
 		"unknown_command":         "❓ Неизвестная команда. Используй /start для начала",
 	}
-	
+
 	l.translations["en"] = map[string]string{
 		"welcome_message":         "👋 Hi, {name}! Welcome to Language Exchange Bot!",
 		"choose_native_language":  "🌍 Choose your native language:",
@@ -366,7 +366,7 @@ func (l *Localizer) loadFallbackTranslations() {
 		"profile_field_interests": "Interests",
 		"unknown_command":         "❓ Unknown command. Use /start to begin",
 	}
-	
+
 	l.translations["es"] = map[string]string{
 		"welcome_message":         "👋 ¡Hola, {name}! ¡Bienvenido a Language Exchange Bot!",
 		"choose_native_language":  "🌍 Elige tu idioma nativo:",
@@ -377,7 +377,7 @@ func (l *Localizer) loadFallbackTranslations() {
 		"profile_field_interests": "Intereses",
 		"unknown_command":         "❓ Comando desconocido. Usa /start para comenzar",
 	}
-	
+
 	l.translations["zh"] = map[string]string{
 		"welcome_message":         "👋 你好，{name}！欢迎使用语言交换机器人！",
 		"choose_native_language":  "🌍 选择你的母语：",
