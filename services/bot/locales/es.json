@@ -4,6 +4,8 @@
   "choose_target_language": "📚 ¿Qué idioma estás aprendiendo?",
   "choose_interface_language": "🌐 Elige el idioma de la interfaz:",
   "choose_interests": "🎯 Elige tus intereses (puedes seleccionar varios):",
+  "choose_primary_interests": "⭐ Elige hasta 3 intereses principales de los seleccionados:",
+  "max_primary_interests_reached": "✅ ¡Número máximo de intereses principales seleccionados!",
   "native_language_confirmed": "Idioma nativo",
   "target_language_confirmed": "Idioma que estudias",
   "profile_completed": "✅ ¡Excelente! ¡Tu perfil está listo!\n\n🔍 Comenzando a buscar compañeros de conversación adecuados...",

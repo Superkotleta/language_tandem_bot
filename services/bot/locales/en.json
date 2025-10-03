@@ -5,6 +5,7 @@
   "choose_interface_language": "🌐 Choose interface language:",
   "choose_interests": "🎯 Choose your interests (you can select multiple):",
   "choose_primary_interests": "⭐ Choose up to 3 primary interests from selected:",
+  "max_primary_interests_reached": "✅ Maximum number of primary interests selected!",
   "interests_selection_complete": "✅ Great! Your interests are saved!",
   "interests_edit_mode": "✏️ Edit interests",
   "interests_edit_primary": "⭐ Edit primary interests",

@@ -1,11 +1,14 @@
 {
+  "_comment": "Конфигурация системы интересов - настройки для умной системы выбора интересов",
   "matching": {
+    "_comment": "Настройки алгоритма совместимости при подборе партнеров",
     "primary_interest_score": 3,
     "additional_interest_score": 1,
     "min_compatibility_score": 5,
     "max_matches_per_user": 10
   },
   "interest_limits": {
+    "_comment": "Лимиты для основных интересов - автоматическое назначение работает если выбрано <= max_primary_interests",
     "min_primary_interests": 1,
     "max_primary_interests": 10,
     "primary_percentage": 0.1
