@@ -226,12 +226,34 @@ func (l *Localizer) getFallbackInterests(lang string) map[int]string {
 		3: "Sports",
 		4: "Travel",
 	}
+	
+	// Для русского языка используем русские переводы
 	if lang == "ru" {
 		interests = map[int]string{
 			1: "Фильмы",
 			2: "Музыка",
 			3: "Спорт",
 			4: "Путешествия",
+		}
+	}
+	
+	// Для испанского языка
+	if lang == "es" {
+		interests = map[int]string{
+			1: "Películas",
+			2: "Música",
+			3: "Deportes",
+			4: "Viajes",
+		}
+	}
+	
+	// Для китайского языка
+	if lang == "zh" {
+		interests = map[int]string{
+			1: "电影",
+			2: "音乐",
+			3: "运动",
+			4: "旅行",
 		}
 	}
 
@@ -322,6 +344,7 @@ func (l *Localizer) loadFallbackTranslations() {
 	}
 
 	// Русский
+	// Инициализация базовых переводов для всех языков
 	l.translations["ru"] = map[string]string{
 		"welcome_message":         "👋 Привет, {name}! Добро пожаловать в Language Exchange Bot!",
 		"choose_native_language":  "🌍 Выбери свой родной язык:",
@@ -331,5 +354,38 @@ func (l *Localizer) loadFallbackTranslations() {
 		"profile_field_target":    "Изучаемый язык",
 		"profile_field_interests": "Интересы",
 		"unknown_command":         "❓ Неизвестная команда. Используй /start для начала",
+	}
+	
+	l.translations["en"] = map[string]string{
+		"welcome_message":         "👋 Hi, {name}! Welcome to Language Exchange Bot!",
+		"choose_native_language":  "🌍 Choose your native language:",
+		"choose_target_language":  "📚 What language are you learning?",
+		"profile_summary_title":   "👤 Your profile",
+		"profile_field_native":    "Native language",
+		"profile_field_target":    "Target language",
+		"profile_field_interests": "Interests",
+		"unknown_command":         "❓ Unknown command. Use /start to begin",
+	}
+	
+	l.translations["es"] = map[string]string{
+		"welcome_message":         "👋 ¡Hola, {name}! ¡Bienvenido a Language Exchange Bot!",
+		"choose_native_language":  "🌍 Elige tu idioma nativo:",
+		"choose_target_language":  "📚 ¿Qué idioma estás aprendiendo?",
+		"profile_summary_title":   "👤 Tu perfil",
+		"profile_field_native":    "Idioma nativo",
+		"profile_field_target":    "Idioma de aprendizaje",
+		"profile_field_interests": "Intereses",
+		"unknown_command":         "❓ Comando desconocido. Usa /start para comenzar",
+	}
+	
+	l.translations["zh"] = map[string]string{
+		"welcome_message":         "👋 你好，{name}！欢迎使用语言交换机器人！",
+		"choose_native_language":  "🌍 选择你的母语：",
+		"choose_target_language":  "📚 你正在学习什么语言？",
+		"profile_summary_title":   "👤 你的个人资料",
+		"profile_field_native":    "母语",
+		"profile_field_target":    "学习语言",
+		"profile_field_interests": "兴趣",
+		"unknown_command":         "❓ 未知命令。使用 /start 开始",
 	}
 }

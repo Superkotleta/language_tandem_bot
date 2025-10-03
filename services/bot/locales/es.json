@@ -6,6 +6,53 @@
   "choose_interests": "🎯 Elige tus intereses (puedes seleccionar varios):",
   "choose_primary_interests": "⭐ Elige hasta 3 intereses principales de los seleccionados:",
   "max_primary_interests_reached": "✅ ¡Número máximo de intereses principales seleccionados!",
+  "interests_new_system": "🎯 Elige categoría de intereses:",
+  "interests_selection_complete": "✅ ¡Excelente! Tus intereses han sido guardados!",
+  "interests_edit_mode": "✏️ Editar intereses",
+  "interests_edit_primary": "⭐ Editar intereses principales",
+  "interests_edit_additional": "➕ Editar intereses adicionales",
+  "interests_feedback_suggestion": "💡 Si tu interés no está en la lista, escríbelo en comentarios (/feedback)",
+  "choose_at_least_one_interest": "Por favor selecciona al menos un interés",
+  "choose_at_least_primary_interests": "Por favor selecciona al menos {count} intereses principales",
+  "continue_button": "➡️ Continuar",
+  "back_button": "⬅️ Atrás",
+  
+  "category_entertainment": "🎬 Entretenimiento",
+  "category_education": "📚 Educación", 
+  "category_active": "⚽ Estilo de Vida Activo",
+  "category_creative": "🎨 Creatividad",
+  "category_social": "👥 Social",
+  
+  "interest_movies_tv": "🎬 Películas y Series",
+  "interest_music": "🎵 Música",
+  "interest_games": "🎮 Juegos",
+  "interest_tv_shows": "📺 TV y Shows",
+  "interest_comedy": "😄 Comedia",
+  "interest_anime": "🎌 Anime",
+  
+  "interest_books": "📚 Libros",
+  "interest_technology": "💻 Tecnología",
+  "interest_science": "🔬 Ciencia",
+  "interest_languages": "🌍 Idiomas",
+  "interest_history": "📜 Historia",
+  "interest_philosophy": "🤔 Filosofía",
+  
+  "interest_sports": "⚽ Deportes",
+  "interest_travel": "🗺️ Viajes",
+  "interest_fitness": "💪 Fitness",
+  "interest_outdoor": "🏔️ Naturaleza",
+  "interest_dancing": "💃 Baile",
+  
+  "interest_cooking": "👨‍🍳 Cocina",
+  "interest_art": "🎨 Arte",
+  "interest_photography": "📸 Fotografía",
+  "interest_writing": "✍️ Escritura",
+  "interest_design": "🎨 Diseño",
+  
+  "interest_volunteering": "🤝 Voluntariado",
+  "interest_politics": "🏛️ Política",
+  "interest_psychology": "🧠 Psicología",
+  
   "native_language_confirmed": "Idioma nativo",
   "target_language_confirmed": "Idioma que estudias",
   "profile_completed": "✅ ¡Excelente! ¡Tu perfil está listo!\n\n🔍 Comenzando a buscar compañeros de conversación adecuados...",
@@ -123,5 +170,11 @@
   "feedback_help": "❓ Ayuda",
   
   "feedback_help_title": "❓ Ayuda de Comentarios",
-  "feedback_help_content": "📝 Cómo escribir comentarios:\n\n• Describe un problema: \"Carga lenta\", \"Configuración de perfil confusa\"\n• Sugiere mejora: \"Agregar nuevos idiomas\", \"Mejorar interfaz\"\n• Haz una pregunta: \"¿Cómo funciona el emparejamiento?\", \"¿Cuándo estarán disponibles las nuevas funciones?\"\n\n⏰ Tiempo de respuesta: Respondemos dentro de 24 horas\n📏 Limitaciones: De 10 a 1000 caracteres\n\n💡 Ejemplos de buenos comentarios:\n• \"¡Excelente bot! Me gustaría agregar soporte para japonés\"\n• \"La interfaz es intuitiva, pero la navegación se puede mejorar\"\n• \"Encontré rápidamente un compañero para practicar inglés\"\n• \"Me gustaría más configuraciones de notificaciones\""
+  "feedback_help_content": "📝 Cómo escribir comentarios:\n\n• Describe un problema: \"Carga lenta\", \"Configuración de perfil confusa\"\n• Sugiere mejora: \"Agregar nuevos idiomas\", \"Mejorar interfaz\"\n• Haz una pregunta: \"¿Cómo funciona el emparejamiento?\", \"¿Cuándo estarán disponibles las nuevas funciones?\"\n\n⏰ Tiempo de respuesta: Respondemos dentro de 24 horas\n📏 Limitaciones: De 10 a 1000 caracteres\n\n💡 Ejemplos de buenos comentarios:\n• \"¡Excelente bot! Me gustaría agregar soporte para japonés\"\n• \"La interfaz es intuitiva, pero la navegación se puede mejorar\"\n• \"Encontré rápidamente un compañero para practicar inglés\"\n• \"Me gustaría más configuraciones de notificaciones\"",
+  
+  "edit_interests_from_profile": "🔧 Editar intereses",
+  "choose_interest_category": "Elige categoría para editar:",
+  "edit_interests_in_category": "Editando intereses en categoría:",
+  "edit_primary_interests": "⭐ Editando intereses principales",
+  "profile_edit_interests_new": "🔧 Editar intereses (nuevo sistema)"
 }
