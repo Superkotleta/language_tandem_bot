@@ -470,7 +470,7 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
 			prefix1+interestName1,
-			"interest_select_"+strconv.Itoa(interest1.ID),
+			"edit_interest_select_"+strconv.Itoa(interest1.ID),
 		)
 		row = append(row, button1)
 
@@ -486,7 +486,7 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 
 			button2 := tgbotapi.NewInlineKeyboardButtonData(
 				prefix2+interestName2,
-				"interest_select_"+strconv.Itoa(interest2.ID),
+				"edit_interest_select_"+strconv.Itoa(interest2.ID),
 			)
 			row = append(row, button2)
 		}
@@ -494,8 +494,12 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 		buttonRows = append(buttonRows, row)
 	}
 
-	// Добавляем только кнопку "Назад"
+	// Добавляем кнопки управления
 	controlRow := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData(
+			kb.service.Localizer.Get(interfaceLang, "save_button"),
+			"save_interest_edits",
+		),
 		tgbotapi.NewInlineKeyboardButtonData(
 			kb.service.Localizer.Get(interfaceLang, "back_button"),
 			"back_to_categories",

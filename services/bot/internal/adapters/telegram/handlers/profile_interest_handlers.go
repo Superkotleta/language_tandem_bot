@@ -283,9 +283,12 @@ func (pih *ProfileInterestHandler) HandleSaveInterestEditsFromProfile(callback *
 
 	// Создаем текст с обновленными интересами
 	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, "interests_updated_successfully") + "\n\n" +
-		fmt.Sprintf("Всего интересов: %d\nОсновные: %d\nДополнительные: %d",
+		fmt.Sprintf("%s: %d\n%s: %d\n%s: %d",
+			pih.service.Localizer.Get(user.InterfaceLanguageCode, "total_interests"),
 			summary.TotalInterests,
+			pih.service.Localizer.Get(user.InterfaceLanguageCode, "primary_interests_label"),
 			len(summary.PrimaryInterests),
+			pih.service.Localizer.Get(user.InterfaceLanguageCode, "additional_interests_label"),
 			len(summary.AdditionalInterests))
 
 	// Создаем клавиатуру для возврата к профилю

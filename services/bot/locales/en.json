@@ -187,5 +187,7 @@
   "choose_interest_category": "Choose a category to edit:",
   "edit_interests_in_category": "Editing interests in category:",
   "edit_primary_interests": "⭐ Edit Primary Interests",
-  "profile_edit_interests_new": "🔧 Edit Interests (New System)"
+  "profile_edit_interests_new": "🔧 Edit Interests (New System)",
+  "interests_updated_successfully": "✅ Interests updated successfully!",
+  "total_interests": "Total interests"
 }

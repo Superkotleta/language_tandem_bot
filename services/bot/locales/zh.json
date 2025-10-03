@@ -188,5 +188,7 @@
   "choose_interest_category": "选择要编辑的类别：",
   "edit_interests_in_category": "编辑类别中的兴趣：",
   "edit_primary_interests": "⭐ 编辑主要兴趣",
-  "profile_edit_interests_new": "🔧 编辑兴趣（新系统）"
+  "profile_edit_interests_new": "🔧 编辑兴趣（新系统）",
+  "interests_updated_successfully": "✅ 兴趣更新成功！",
+  "total_interests": "总兴趣数"
 }

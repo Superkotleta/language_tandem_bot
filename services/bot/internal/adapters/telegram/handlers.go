@@ -536,6 +536,8 @@ func (h *TelegramHandler) handleProfileInterestEditing(callback *tgbotapi.Callba
 		return h.profileInterestHandler.HandleEditPrimaryInterestSelectionFromProfile(callback, user, interestID)
 	case data == "save_interest_edits":
 		return h.profileInterestHandler.HandleSaveInterestEditsFromProfile(callback, user)
+	case data == "back_to_categories":
+		return h.profileInterestHandler.HandleEditInterestsFromProfile(callback, user)
 	}
 
 	return nil
