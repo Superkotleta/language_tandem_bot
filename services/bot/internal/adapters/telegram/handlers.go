@@ -308,7 +308,8 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		return err
 	}
 
-	return h.utilityHandler.SendMessage(callback.Message.Chat.ID, h.service.Localizer.Get(user.InterfaceLanguageCode, "unknown_command"))
+	// Если callback не был обработан ни одним обработчиком, просто игнорируем
+	return nil
 }
 
 // handleMainViewProfile делегирует просмотр профиля в menu handler

@@ -38,8 +38,8 @@ func main() {
 	ctx, cancel := setupGracefulShutdown()
 	defer cancel()
 
-	bots := startBots(ctx, cfg, db, errorHandler)
-	waitForShutdown(bots, cancel)
+	bots, wg := startBots(ctx, cfg, db, errorHandler)
+	waitForShutdown(bots, wg, cancel)
 }
 
 // initializeTelegramBot инициализирует Telegram бота с сервисом.
@@ -121,7 +121,7 @@ func startBots(
 	cfg *config.Config,
 	db *database.DB,
 	errorHandler *errors.ErrorHandler,
-) []adapters.BotAdapter {
+) ([]adapters.BotAdapter, *sync.WaitGroup) {
 	var (
 		wg   sync.WaitGroup
 		bots []adapters.BotAdapter
@@ -158,12 +158,38 @@ func startBots(
 		log.Fatal("No bots are enabled. Please check your configuration.")
 	}
 
-	return bots
+	return bots, &wg
 }
 
 // waitForShutdown ждет завершения работы ботов.
-func waitForShutdown(bots []adapters.BotAdapter, cancel context.CancelFunc) {
-	// Останавливаем кэш-сервис
+func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, cancel context.CancelFunc) {
+	// Ждем завершения всех горутин
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	// Ждем либо завершения работы, либо сигнала остановки
+	select {
+	case <-done:
+		log.Println("All bots stopped gracefully")
+	case <-time.After(ForceShutdownTimeout):
+		log.Println("Force shutdown")
+		cancel()
+	}
+
+	// Останавливаем все боты
+	ctx, cancelStop := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelStop()
+
+	for _, bot := range bots {
+		if err := bot.Stop(ctx); err != nil {
+			log.Printf("Error stopping bot: %v", err)
+		}
+	}
+
+	// Останавливаем кэш-сервис только после остановки ботов
 	for _, bot := range bots {
 		if telegramBot, ok := bot.(*telegram.TelegramBot); ok {
 			service := telegramBot.GetService()
@@ -172,22 +198,5 @@ func waitForShutdown(bots []adapters.BotAdapter, cancel context.CancelFunc) {
 				log.Println("Cache service stopped")
 			}
 		}
-	}
-
-	// Ждем завершения всех горутин
-	done := make(chan struct{})
-
-	go func() {
-		// В оригинальном коде была wg.Wait(), но wg объявлена локально в startBots
-		// Для простоты используем time.Sleep, но лучше передать wg как параметр
-		time.Sleep(1 * time.Second) // Имитация ожидания
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		log.Println("All bots stopped gracefully")
-	case <-time.After(ForceShutdownTimeout):
-		log.Println("Force shutdown")
 	}
 }
