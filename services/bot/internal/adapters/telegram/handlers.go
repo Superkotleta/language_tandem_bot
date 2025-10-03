@@ -256,10 +256,9 @@ func (h *TelegramHandler) handleState(message *tgbotapi.Message, user *models.Us
 	case models.StateWaitingFeedbackContact:
 		return h.feedbackHandler.HandleFeedbackContactMessage(message, user)
 	default:
-		return h.utilityHandler.SendMessage(
-			message.Chat.ID,
-			h.service.Localizer.Get(user.InterfaceLanguageCode, "unknown_command"),
-		)
+		// Игнорируем текстовые сообщения, если пользователь не в специальном состоянии
+		// Пользователь должен использовать кнопки меню
+		return nil
 	}
 }
 
