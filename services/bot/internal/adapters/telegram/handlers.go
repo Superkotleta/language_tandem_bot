@@ -834,6 +834,10 @@ func (h *TelegramHandler) handleMenuCallbacks(callback *tgbotapi.CallbackQuery, 
 		return h.menuHandler.HandleFeedbackHelp(callback, user)
 	case "start_profile_setup":
 		return h.profileHandler.StartProfileSetup(callback, user)
+	case "show_profile_setup_features":
+		return h.profileHandler.ShowProfileSetupFeatures(callback, user)
+	case "profile_setup_continue":
+		return h.profileHandler.StartProfileSetup(callback, user)
 	case "back_to_main_menu":
 		return h.menuHandler.HandleBackToMainMenu(callback, user)
 	}

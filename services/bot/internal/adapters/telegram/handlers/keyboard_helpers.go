@@ -494,10 +494,10 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 		buttonRows = append(buttonRows, row)
 	}
 
-	// Добавляем только кнопку "Назад" для возврата к редактированию интересов
+	// Добавляем кнопку "К категориям" для возврата к редактированию интересов
 	controlRow := []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData(
-			kb.service.Localizer.Get(interfaceLang, "back_button"),
+			kb.service.Localizer.Get(interfaceLang, "to_categories_button"),
 			"back_to_categories",
 		),
 	}
@@ -811,7 +811,7 @@ func (kb *KeyboardBuilder) CreateEditPrimaryInterestsKeyboard(selections interfa
 	// Добавляем кнопки управления для режима редактирования
 	controlRow := []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData(
-			kb.service.Localizer.Get(interfaceLang, "back_button"),
+			kb.service.Localizer.Get(interfaceLang, "to_categories_button"),
 			"back_to_categories",
 		),
 		tgbotapi.NewInlineKeyboardButtonData(

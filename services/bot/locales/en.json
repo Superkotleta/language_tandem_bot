@@ -111,7 +111,7 @@
   "edit_interests_detailed_statistics": "📊 Detailed editing statistics",
   "changes_count": "Changes",
   "session_duration": "Session duration",
-  "category_statistics": "Category statistics"
+  "category_statistics": "Category statistics",
   
   "time_weekdays": "weekdays",
   "time_weekends": "weekends", 
@@ -219,5 +219,16 @@
   "edit_primary_interests": "⭐ Edit Primary Interests",
   "profile_edit_interests_new": "🔧 Edit Interests (New System)",
   "interests_updated_successfully": "✅ Interests updated successfully!",
-  "total_interests": "Total interests"
+  "total_interests": "Total interests",
+  
+  "profile_setup_features": "🎯 New Profile Setup Features:",
+  "profile_setup_isolated_editing": "🔧 Isolated Interest Editing",
+  "profile_setup_detailed_changes": "📝 Detailed Change Display",
+  "profile_setup_safe_editing": "🛡️ Safe Editing with Cancel",
+  "profile_setup_mass_operations": "⚡ Mass Operations",
+  "profile_setup_undo": "↩️ Undo Last Action",
+  "to_categories_button": "📂 To Categories",
+  "to_primary_button": "⭐ To Primary",
+  "profile_setup_enhanced_navigation": "🧭 Enhanced Navigation",
+  "profile_setup_real_time_updates": "⚡ Real-time Updates"
 }

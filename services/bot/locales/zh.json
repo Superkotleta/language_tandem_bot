@@ -112,7 +112,7 @@
   "edit_interests_detailed_statistics": "📊 详细编辑统计",
   "changes_count": "更改",
   "session_duration": "会话持续时间",
-  "category_statistics": "类别统计"
+  "category_statistics": "类别统计",
   
   "time_weekdays": "工作日",
   "time_weekends": "周末", 
@@ -220,5 +220,16 @@
   "edit_primary_interests": "⭐ 编辑主要兴趣",
   "profile_edit_interests_new": "🔧 编辑兴趣（新系统）",
   "interests_updated_successfully": "✅ 兴趣更新成功！",
-  "total_interests": "总兴趣数"
+  "total_interests": "总兴趣数",
+  
+  "profile_setup_features": "🎯 新的个人资料设置功能：",
+  "profile_setup_isolated_editing": "🔧 隔离式兴趣编辑",
+  "profile_setup_detailed_changes": "📝 详细变更显示",
+  "profile_setup_safe_editing": "🛡️ 安全编辑与取消",
+  "profile_setup_mass_operations": "⚡ 批量操作",
+  "profile_setup_undo": "↩️ 撤销最后操作",
+  "to_categories_button": "📂 到类别",
+  "to_primary_button": "⭐ 到主要",
+  "profile_setup_enhanced_navigation": "🧭 增强导航",
+  "profile_setup_real_time_updates": "⚡ 实时更新"
 }

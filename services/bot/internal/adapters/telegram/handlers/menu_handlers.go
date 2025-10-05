@@ -136,10 +136,10 @@ func (mh *MenuHandler) HandleMainViewProfile(callback *tgbotapi.CallbackQuery, u
 		// Профиль не заполнен - показываем информационное сообщение и кнопку настройки
 		text := mh.service.Localizer.Get(user.InterfaceLanguageCode, "empty_profile_message")
 
-		// Создаем клавиатуру с кнопкой настройки профиля
+		// Создаем клавиатуру с кнопками настройки профиля
 		setupButton := tgbotapi.NewInlineKeyboardButtonData(
 			mh.service.Localizer.Get(user.InterfaceLanguageCode, "setup_profile_button"),
-			"start_profile_setup",
+			"show_profile_setup_features",
 		)
 
 		keyboard := tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{setupButton})

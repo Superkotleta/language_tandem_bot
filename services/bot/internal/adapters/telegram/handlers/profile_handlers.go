@@ -476,3 +476,45 @@ func (ph *ProfileHandlerImpl) HandleEditLevelLang(callback *tgbotapi.CallbackQue
 
 	return err
 }
+
+// ShowProfileSetupFeatures показывает новые возможности заполнения профиля.
+func (ph *ProfileHandlerImpl) ShowProfileSetupFeatures(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	// Создаем сообщение с новыми возможностями
+	featuresText := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_setup_features")
+	isolatedText := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_setup_isolated_editing")
+	detailedText := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_setup_detailed_changes")
+	safeText := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_setup_safe_editing")
+	massText := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_setup_mass_operations")
+	undoText := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_setup_undo")
+	navText := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_setup_enhanced_navigation")
+	realtimeText := ph.service.Localizer.Get(user.InterfaceLanguageCode, "profile_setup_real_time_updates")
+
+	fullText := fmt.Sprintf("%s\n\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
+		featuresText,
+		isolatedText,
+		detailedText,
+		safeText,
+		massText,
+		undoText,
+		navText,
+		realtimeText,
+	)
+
+	// Создаем клавиатуру с кнопкой "Продолжить"
+	continueButton := tgbotapi.NewInlineKeyboardButtonData(
+		ph.service.Localizer.Get(user.InterfaceLanguageCode, "continue_button"),
+		"profile_setup_continue",
+	)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{continueButton})
+
+	// Обновляем сообщение
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		fullText,
+		keyboard,
+	)
+	_, err := ph.bot.Request(editMsg)
+
+	return err
+}
