@@ -29,11 +29,25 @@ type ServiceInterface interface {
 	GetStats(ctx context.Context, statsType string) (map[string]interface{}, bool)
 	SetStats(ctx context.Context, statsType string, data map[string]interface{})
 
+	// Interest Categories
+	GetInterestCategories(ctx context.Context, lang string) ([]*models.InterestCategory, bool)
+	SetInterestCategories(ctx context.Context, lang string, categories []*models.InterestCategory)
+
+	// User Statistics
+	GetUserStats(ctx context.Context, userID int64) (map[string]interface{}, bool)
+	SetUserStats(ctx context.Context, userID int64, stats map[string]interface{})
+
+	// Configuration
+	GetConfig(ctx context.Context, configKey string) (interface{}, bool)
+	SetConfig(ctx context.Context, configKey string, value interface{})
+
 	// Invalidation
 	InvalidateUser(ctx context.Context, userID int64)
 	InvalidateLanguages(ctx context.Context)
 	InvalidateInterests(ctx context.Context)
 	InvalidateTranslations(ctx context.Context)
+	InvalidateInterestCategories(ctx context.Context)
+	InvalidateUserStats(ctx context.Context, userID int64)
 	ClearAll(ctx context.Context)
 
 	// Generic methods for arbitrary data

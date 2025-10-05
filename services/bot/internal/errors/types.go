@@ -213,4 +213,79 @@ var (
 	ErrRedisConnectionFailed = NewCustomError(
 		ErrorTypeCache, "ошибка подключения к Redis", "Ошибка подключения к кэшу", "",
 	)
+
+	// ===== НОВЫЕ ТИПЫ ОШИБОК =====
+
+	// Ошибки изолированного редактирования
+	ErrEditSessionNotFound = NewCustomError(
+		ErrorTypeInternal, "сессия редактирования не найдена", "Сессия редактирования не найдена", "",
+	)
+	ErrEditSessionExpired = NewCustomError(
+		ErrorTypeInternal, "сессия редактирования истекла", "Сессия редактирования истекла", "",
+	)
+	ErrEditSessionInvalid = NewCustomError(
+		ErrorTypeValidation, "некорректная сессия редактирования", "Некорректная сессия редактирования", "",
+	)
+
+	// Ошибки батчинга
+	ErrBatchOperationFailed = NewCustomError(
+		ErrorTypeDatabase, "ошибка батчевой операции", "Ошибка при выполнении батчевой операции", "",
+	)
+	ErrBatchSizeExceeded = NewCustomError(
+		ErrorTypeValidation, "превышен размер батча", "Превышен максимальный размер батча", "",
+	)
+	ErrBatchTimeout = NewCustomError(
+		ErrorTypeDatabase, "таймаут батчевой операции", "Превышено время выполнения батчевой операции", "",
+	)
+
+	// Ошибки кеширования
+	ErrCacheOperationFailed = NewCustomError(
+		ErrorTypeCache, "ошибка операции с кэшем", "Ошибка при работе с кэшем", "",
+	)
+	ErrCacheSerializationFailed = NewCustomError(
+		ErrorTypeCache, "ошибка сериализации кэша", "Ошибка сериализации данных кэша", "",
+	)
+	ErrCacheDeserializationFailed = NewCustomError(
+		ErrorTypeCache, "ошибка десериализации кэша", "Ошибка десериализации данных кэша", "",
+	)
+
+	// Ошибки трейсинга
+	ErrTraceNotFound = NewCustomError(
+		ErrorTypeInternal, "трейс не найден", "Трейс запроса не найден", "",
+	)
+	ErrTraceExpired = NewCustomError(
+		ErrorTypeInternal, "трейс истек", "Трейс запроса истек", "",
+	)
+
+	// Ошибки метрик
+	ErrMetricCollectionFailed = NewCustomError(
+		ErrorTypeInternal, "ошибка сбора метрик", "Ошибка при сборе метрик производительности", "",
+	)
+	ErrMetricExportFailed = NewCustomError(
+		ErrorTypeInternal, "ошибка экспорта метрик", "Ошибка при экспорте метрик", "",
+	)
+
+	// Ошибки конфигурации
+	ErrConfigNotFound = NewCustomError(
+		ErrorTypeInternal, "конфигурация не найдена", "Конфигурация не найдена", "",
+	)
+	ErrConfigInvalid = NewCustomError(
+		ErrorTypeValidation, "некорректная конфигурация", "Некорректная конфигурация", "",
+	)
+
+	// Ошибки локализации
+	ErrLocalizationNotFound = NewCustomError(
+		ErrorTypeInternal, "локализация не найдена", "Перевод не найден", "",
+	)
+	ErrLocalizationInvalid = NewCustomError(
+		ErrorTypeValidation, "некорректная локализация", "Некорректная локализация", "",
+	)
+
+	// Ошибки уведомлений
+	ErrNotificationFailed = NewCustomError(
+		ErrorTypeTelegramAPI, "ошибка отправки уведомления", "Ошибка отправки уведомления", "",
+	)
+	ErrNotificationRateLimit = NewCustomError(
+		ErrorTypeTelegramAPI, "превышен лимит уведомлений", "Превышен лимит отправки уведомлений", "",
+	)
 )

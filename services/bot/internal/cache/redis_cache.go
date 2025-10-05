@@ -468,3 +468,81 @@ func (r *RedisCacheService) Delete(ctx context.Context, key string) error {
 
 	return nil
 }
+
+// ===== НОВЫЕ МЕТОДЫ КЕШИРОВАНИЯ =====
+
+// GetInterestCategories получает категории интересов из Redis кэша.
+func (r *RedisCacheService) GetInterestCategories(ctx context.Context, lang string) ([]*models.InterestCategory, bool) {
+	key := fmt.Sprintf("interest_categories:%s", lang)
+
+	var categories []*models.InterestCategory
+	err := r.Get(ctx, key, &categories)
+	if err != nil {
+		return nil, false
+	}
+
+	return categories, true
+}
+
+// SetInterestCategories сохраняет категории интересов в Redis кэш.
+func (r *RedisCacheService) SetInterestCategories(ctx context.Context, lang string, categories []*models.InterestCategory) {
+	key := fmt.Sprintf("interest_categories:%s", lang)
+	r.Set(ctx, key, categories, r.config.LanguagesTTL)
+}
+
+// GetUserStats получает статистику пользователя из Redis кэша.
+func (r *RedisCacheService) GetUserStats(ctx context.Context, userID int64) (map[string]interface{}, bool) {
+	key := fmt.Sprintf("user_stats:%d", userID)
+
+	var stats map[string]interface{}
+	err := r.Get(ctx, key, &stats)
+	if err != nil {
+		return nil, false
+	}
+
+	return stats, true
+}
+
+// SetUserStats сохраняет статистику пользователя в Redis кэш.
+func (r *RedisCacheService) SetUserStats(ctx context.Context, userID int64, stats map[string]interface{}) {
+	key := fmt.Sprintf("user_stats:%d", userID)
+	r.Set(ctx, key, stats, r.config.UsersTTL)
+}
+
+// GetConfig получает конфигурацию из Redis кэша.
+func (r *RedisCacheService) GetConfig(ctx context.Context, configKey string) (interface{}, bool) {
+	key := fmt.Sprintf("config:%s", configKey)
+
+	var value interface{}
+	err := r.Get(ctx, key, &value)
+	if err != nil {
+		return nil, false
+	}
+
+	return value, true
+}
+
+// SetConfig сохраняет конфигурацию в Redis кэш.
+func (r *RedisCacheService) SetConfig(ctx context.Context, configKey string, value interface{}) {
+	key := fmt.Sprintf("config:%s", configKey)
+	r.Set(ctx, key, value, r.config.LanguagesTTL)
+}
+
+// InvalidateInterestCategories инвалидирует кэш категорий интересов.
+func (r *RedisCacheService) InvalidateInterestCategories(ctx context.Context) {
+	pattern := "interest_categories:*"
+	keys, err := r.client.Keys(ctx, pattern).Result()
+	if err != nil {
+		return
+	}
+
+	if len(keys) > 0 {
+		r.client.Del(ctx, keys...)
+	}
+}
+
+// InvalidateUserStats инвалидирует кэш статистики пользователя.
+func (r *RedisCacheService) InvalidateUserStats(ctx context.Context, userID int64) {
+	key := fmt.Sprintf("user_stats:%d", userID)
+	r.client.Del(ctx, key)
+}

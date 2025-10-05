@@ -22,11 +22,14 @@ const (
 // Service основной сервис кэширования.
 type Service struct {
 	// Кэши для разных типов данных
-	languages    map[string]*Entry // Ключ: язык интерфейса
-	interests    map[string]*Entry // Ключ: язык интерфейса
-	translations map[string]*Entry // Ключ: язык интерфейса
-	users        map[int64]*Entry  // Ключ: user ID
-	stats        map[string]*Entry // Ключ: тип статистики
+	languages          map[string]*Entry // Ключ: язык интерфейса
+	interests          map[string]*Entry // Ключ: язык интерфейса
+	translations       map[string]*Entry // Ключ: язык интерфейса
+	users              map[int64]*Entry  // Ключ: user ID
+	stats              map[string]*Entry // Ключ: тип статистики
+	interestCategories map[string]*Entry // Ключ: язык интерфейса
+	userStats          map[int64]*Entry  // Ключ: user ID
+	configCache        map[string]*Entry // Ключ: config key
 
 	// Конфигурация
 	config *Config
@@ -48,14 +51,17 @@ func NewService(config *Config) *Service {
 	}
 
 	cacheService := &Service{
-		languages:    make(map[string]*Entry),
-		interests:    make(map[string]*Entry),
-		translations: make(map[string]*Entry),
-		users:        make(map[int64]*Entry),
-		stats:        make(map[string]*Entry),
-		config:       config,
-		stopCleanup:  make(chan struct{}),
-		mutex:        sync.RWMutex{},
+		languages:          make(map[string]*Entry),
+		interests:          make(map[string]*Entry),
+		translations:       make(map[string]*Entry),
+		users:              make(map[int64]*Entry),
+		stats:              make(map[string]*Entry),
+		interestCategories: make(map[string]*Entry),
+		userStats:          make(map[int64]*Entry),
+		configCache:        make(map[string]*Entry),
+		config:             config,
+		stopCleanup:        make(chan struct{}),
+		mutex:              sync.RWMutex{},
 		cacheStats: Stats{
 			Hits:   0,
 			Misses: 0,
@@ -506,4 +512,105 @@ func (cacheService *Service) Delete(ctx context.Context, key string) error {
 	delete(cacheService.stats, key)
 	cacheService.updateSize()
 	return nil
+}
+
+// ===== НОВЫЕ МЕТОДЫ КЕШИРОВАНИЯ =====
+
+// GetInterestCategories получает категории интересов из кэша.
+func (cacheService *Service) GetInterestCategories(ctx context.Context, lang string) ([]*models.InterestCategory, bool) {
+	cacheService.mutex.RLock()
+	defer cacheService.mutex.RUnlock()
+
+	entry, exists := cacheService.interestCategories[lang]
+	if !exists || entry.IsExpired() {
+		cacheService.cacheStats.Misses++
+		return nil, false
+	}
+
+	cacheService.cacheStats.Hits++
+	return entry.Data.([]*models.InterestCategory), true
+}
+
+// SetInterestCategories сохраняет категории интересов в кэш.
+func (cacheService *Service) SetInterestCategories(ctx context.Context, lang string, categories []*models.InterestCategory) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	cacheService.interestCategories[lang] = &Entry{
+		Data:      categories,
+		ExpiresAt: time.Now().Add(cacheService.config.LanguagesTTL),
+	}
+	cacheService.updateSize()
+}
+
+// GetUserStats получает статистику пользователя из кэша.
+func (cacheService *Service) GetUserStats(ctx context.Context, userID int64) (map[string]interface{}, bool) {
+	cacheService.mutex.RLock()
+	defer cacheService.mutex.RUnlock()
+
+	entry, exists := cacheService.userStats[userID]
+	if !exists || entry.IsExpired() {
+		cacheService.cacheStats.Misses++
+		return nil, false
+	}
+
+	cacheService.cacheStats.Hits++
+	return entry.Data.(map[string]interface{}), true
+}
+
+// SetUserStats сохраняет статистику пользователя в кэш.
+func (cacheService *Service) SetUserStats(ctx context.Context, userID int64, stats map[string]interface{}) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	cacheService.userStats[userID] = &Entry{
+		Data:      stats,
+		ExpiresAt: time.Now().Add(cacheService.config.LanguagesTTL),
+	}
+	cacheService.updateSize()
+}
+
+// GetConfig получает конфигурацию из кэша.
+func (cacheService *Service) GetConfig(ctx context.Context, configKey string) (interface{}, bool) {
+	cacheService.mutex.RLock()
+	defer cacheService.mutex.RUnlock()
+
+	entry, exists := cacheService.configCache[configKey]
+	if !exists || entry.IsExpired() {
+		cacheService.cacheStats.Misses++
+		return nil, false
+	}
+
+	cacheService.cacheStats.Hits++
+	return entry.Data, true
+}
+
+// SetConfig сохраняет конфигурацию в кэш.
+func (cacheService *Service) SetConfig(ctx context.Context, configKey string, value interface{}) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	cacheService.configCache[configKey] = &Entry{
+		Data:      value,
+		ExpiresAt: time.Now().Add(cacheService.config.LanguagesTTL),
+	}
+	cacheService.updateSize()
+}
+
+// InvalidateInterestCategories инвалидирует кэш категорий интересов.
+func (cacheService *Service) InvalidateInterestCategories(ctx context.Context) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	cacheService.interestCategories = make(map[string]*Entry)
+	cacheService.updateSize()
+}
+
+// InvalidateUserStats инвалидирует кэш статистики пользователя.
+func (cacheService *Service) InvalidateUserStats(ctx context.Context, userID int64) {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	delete(cacheService.userStats, userID)
+	cacheService.updateSize()
 }

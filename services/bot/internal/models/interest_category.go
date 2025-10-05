@@ -7,6 +7,8 @@ type InterestCategory struct {
 	ID           int       `db:"id"`
 	KeyName      string    `db:"key_name"`
 	DisplayOrder int       `db:"display_order"`
+	Name         string    `db:"name"`
+	Description  string    `db:"description"`
 	CreatedAt    time.Time `db:"created_at"`
 }
 

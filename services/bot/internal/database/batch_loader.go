@@ -678,3 +678,242 @@ func (bl *BatchLoader) loadFeedbackStats() map[string]interface{} {
 		"timestamp":           time.Now(),
 	}
 }
+
+// ===== НОВЫЕ МЕТОДЫ БАТЧИНГА =====
+
+// BatchUpdateUserInterests обновляет интересы пользователя батчем.
+func (bl *BatchLoader) BatchUpdateUserInterests(ctx context.Context, userID int, interests []int, primaryInterests []int) error {
+	if len(interests) == 0 {
+		return nil
+	}
+
+	// Создаем контекст с таймаутом если не передан
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	defer cancel()
+
+	// Начинаем транзакцию
+	tx, err := bl.db.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Удаляем старые интересы
+	_, err = tx.ExecContext(ctx, "DELETE FROM user_interest_selections WHERE user_id = $1", userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete old interests: %w", err)
+	}
+
+	// Подготавливаем данные для вставки
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO user_interest_selections (user_id, interest_id, is_primary, created_at)
+		VALUES ($1, $2, $3, NOW())
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	// Вставляем новые интересы
+	for _, interestID := range interests {
+		isPrimary := false
+		for _, primaryID := range primaryInterests {
+			if interestID == primaryID {
+				isPrimary = true
+				break
+			}
+		}
+
+		_, err = stmt.ExecContext(ctx, userID, interestID, isPrimary)
+		if err != nil {
+			return fmt.Errorf("failed to insert interest %d: %w", interestID, err)
+		}
+	}
+
+	// Коммитим транзакцию
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	bl.logger.InfoWithContext(
+		"Batch updated user interests",
+		"", int64(userID), 0, "BatchUpdateUserInterests",
+		map[string]interface{}{
+			"user_id":         userID,
+			"interests_count": len(interests),
+			"primary_count":   len(primaryInterests),
+		},
+	)
+
+	return nil
+}
+
+// BatchLoadInterestCategories загружает категории интересов батчем.
+func (bl *BatchLoader) BatchLoadInterestCategories(ctx context.Context, lang string) ([]*models.InterestCategory, error) {
+	// Создаем контекст с таймаутом если не передан
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	defer cancel()
+
+	query := `
+		SELECT ic.id, ic.key_name, ic.display_order,
+		       COALESCE(ict.name, ic.key_name) as name,
+		       COALESCE(ict.description, '') as description
+		FROM interest_categories ic
+		LEFT JOIN interest_category_translations ict ON ic.id = ict.category_id 
+			AND ict.language_code = $1
+		ORDER BY ic.display_order, ic.id
+	`
+
+	rows, err := bl.db.conn.QueryContext(ctx, query, lang)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load interest categories: %w", err)
+	}
+	defer bl.closeRowsSafely(rows, "BatchLoadInterestCategories")
+
+	var categories []*models.InterestCategory
+	for rows.Next() {
+		var category models.InterestCategory
+		err := rows.Scan(
+			&category.ID,
+			&category.KeyName,
+			&category.DisplayOrder,
+			&category.Name,
+			&category.Description,
+		)
+		if err != nil {
+			log.Printf("Error scanning interest category row: %v", err)
+			continue
+		}
+
+		categories = append(categories, &category)
+	}
+
+	return categories, nil
+}
+
+// BatchLoadUserStatistics загружает статистику пользователей батчем.
+func (bl *BatchLoader) BatchLoadUserStatistics(ctx context.Context, userIDs []int64) (map[int64]map[string]interface{}, error) {
+	if len(userIDs) == 0 {
+		return make(map[int64]map[string]interface{}), nil
+	}
+
+	// Создаем контекст с таймаутом если не передан
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	defer cancel()
+
+	query := `
+		SELECT 
+			u.telegram_id,
+			COUNT(DISTINCT ui.interest_id) as interests_count,
+			COUNT(DISTINCT CASE WHEN ui.is_primary = true THEN ui.interest_id END) as primary_interests_count,
+			u.profile_completion_level,
+			u.status,
+			u.created_at
+		FROM users u
+		LEFT JOIN user_interest_selections ui ON u.id = ui.user_id
+		WHERE u.telegram_id = ANY($1)
+		GROUP BY u.telegram_id, u.profile_completion_level, u.status, u.created_at
+	`
+
+	rows, err := bl.db.conn.QueryContext(ctx, query, userIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load user statistics: %w", err)
+	}
+	defer bl.closeRowsSafely(rows, "BatchLoadUserStatistics")
+
+	stats := make(map[int64]map[string]interface{})
+	for rows.Next() {
+		var telegramID int64
+		var interestsCount, primaryInterestsCount int
+		var profileCompletionLevel, status string
+		var createdAt time.Time
+
+		err := rows.Scan(
+			&telegramID,
+			&interestsCount,
+			&primaryInterestsCount,
+			&profileCompletionLevel,
+			&status,
+			&createdAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning user statistics row: %v", err)
+			continue
+		}
+
+		stats[telegramID] = map[string]interface{}{
+			"interests_count":          interestsCount,
+			"primary_interests_count":  primaryInterestsCount,
+			"profile_completion_level": profileCompletionLevel,
+			"status":                   status,
+			"created_at":               createdAt,
+			"timestamp":                time.Now(),
+		}
+	}
+
+	return stats, nil
+}
+
+// BatchLoadPopularInterests загружает популярные интересы батчем.
+func (bl *BatchLoader) BatchLoadPopularInterests(ctx context.Context, limit int) ([]map[string]interface{}, error) {
+	// Создаем контекст с таймаутом если не передан
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	defer cancel()
+
+	query := `
+		SELECT 
+			i.id, i.key_name,
+			COUNT(ui.user_id) as user_count,
+			COUNT(CASE WHEN ui.is_primary = true THEN 1 END) as primary_count
+		FROM interests i
+		LEFT JOIN user_interest_selections ui ON i.id = ui.interest_id
+		GROUP BY i.id, i.key_name
+		ORDER BY user_count DESC, primary_count DESC
+		LIMIT $1
+	`
+
+	rows, err := bl.db.conn.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load popular interests: %w", err)
+	}
+	defer bl.closeRowsSafely(rows, "BatchLoadPopularInterests")
+
+	var interests []map[string]interface{}
+	for rows.Next() {
+		var id int
+		var keyName string
+		var userCount, primaryCount int
+
+		err := rows.Scan(&id, &keyName, &userCount, &primaryCount)
+		if err != nil {
+			log.Printf("Error scanning popular interest row: %v", err)
+			continue
+		}
+
+		interests = append(interests, map[string]interface{}{
+			"id":            id,
+			"key_name":      keyName,
+			"user_count":    userCount,
+			"primary_count": primaryCount,
+		})
+	}
+
+	return interests, nil
+}
