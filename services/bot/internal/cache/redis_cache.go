@@ -424,3 +424,47 @@ func (r *RedisCacheService) String() string {
 
 	return fmt.Sprintf("Redis Cache Stats: Size=%d", stats.Size)
 }
+
+// Set сохраняет произвольные данные в Redis кэш.
+func (r *RedisCacheService) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Errorf("failed to marshal value: %w", err)
+	}
+
+	err = r.client.Set(ctx, key, data, ttl).Err()
+	if err != nil {
+		return fmt.Errorf("failed to set value in Redis: %w", err)
+	}
+
+	return nil
+}
+
+// Get получает произвольные данные из Redis кэша.
+func (r *RedisCacheService) Get(ctx context.Context, key string, dest interface{}) error {
+	val, err := r.client.Get(ctx, key).Result()
+	if errors.Is(err, redis.Nil) {
+		return fmt.Errorf("key not found: %s", key)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to get value from Redis: %w", err)
+	}
+
+	err = json.Unmarshal([]byte(val), dest)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal value: %w", err)
+	}
+
+	return nil
+}
+
+// Delete удаляет ключ из Redis кэша.
+func (r *RedisCacheService) Delete(ctx context.Context, key string) error {
+	err := r.client.Del(ctx, key).Err()
+	if err != nil {
+		return fmt.Errorf("failed to delete key from Redis: %w", err)
+	}
+
+	return nil
+}

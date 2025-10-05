@@ -212,9 +212,9 @@ func (kb *KeyboardBuilder) CreateMainMenuKeyboard(interfaceLang string, hasProfi
 // CreateProfileMenuKeyboard создает меню профиля.
 func (kb *KeyboardBuilder) CreateProfileMenuKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	// Кнопки для управления профилем
-	editInterests := tgbotapi.NewInlineKeyboardButtonData(
-		kb.service.Localizer.Get(interfaceLang, "profile_edit_interests"),
-		"edit_interests",
+	editInterestsIsolated := tgbotapi.NewInlineKeyboardButtonData(
+		kb.service.Localizer.Get(interfaceLang, "profile_edit_interests_isolated"),
+		"isolated_edit_start",
 	)
 	editLanguages := tgbotapi.NewInlineKeyboardButtonData(
 		kb.service.Localizer.Get(interfaceLang, "profile_edit_languages"),
@@ -233,9 +233,9 @@ func (kb *KeyboardBuilder) CreateProfileMenuKeyboard(interfaceLang string) tgbot
 		"back_to_main_menu",
 	)
 
-	// Пять рядов: интересы, языки, язык интерфейса, сброс, главное меню
+	// Пять рядов: интересы (новая изолированная), языки, язык интерфейса, сброс, главное меню
 	buttons := [][]tgbotapi.InlineKeyboardButton{
-		{editInterests},
+		{editInterestsIsolated},
 		{editLanguages},
 		{changeInterfaceLang},
 		{reconfig},
@@ -494,12 +494,8 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 		buttonRows = append(buttonRows, row)
 	}
 
-	// Добавляем кнопки управления
+	// Добавляем только кнопку "Назад" для возврата к редактированию интересов
 	controlRow := []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData(
-			kb.service.Localizer.Get(interfaceLang, "save_button"),
-			"save_interest_edits",
-		),
 		tgbotapi.NewInlineKeyboardButtonData(
 			kb.service.Localizer.Get(interfaceLang, "back_button"),
 			"back_to_categories",
@@ -632,6 +628,259 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 		tgbotapi.NewInlineKeyboardButtonData(
 			kb.service.Localizer.Get(interfaceLang, "back_button"),
 			"back_to_interests",
+		),
+	}
+	buttonRows = append(buttonRows, controlRow)
+
+	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
+}
+
+// CreateEditInterestCategoriesKeyboard создает клавиатуру для выбора категорий в режиме редактирования.
+func (kb *KeyboardBuilder) CreateEditInterestCategoriesKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+	categories := []struct {
+		key  string
+		icon string
+	}{
+		{"entertainment", "🎬"},
+		{"education", "📚"},
+		{"active", "⚽"},
+		{"creative", "🎨"},
+		{"social", "👥"},
+	}
+
+	var buttonRows [][]tgbotapi.InlineKeyboardButton
+
+	// Создаем кнопки категорий (по 2 в ряд)
+	for i := 0; i < len(categories); i += 2 {
+		var row []tgbotapi.InlineKeyboardButton
+
+		// Первая кнопка в ряду
+		categoryName := kb.service.Localizer.Get(interfaceLang, "category_"+categories[i].key)
+		button1 := tgbotapi.NewInlineKeyboardButtonData(
+			categoryName,
+			"edit_interest_category_"+categories[i].key,
+		)
+		row = append(row, button1)
+
+		// Вторая кнопка в ряду (если есть)
+		if i+1 < len(categories) {
+			categoryName2 := kb.service.Localizer.Get(interfaceLang, "category_"+categories[i+1].key)
+			button2 := tgbotapi.NewInlineKeyboardButtonData(
+				categoryName2,
+				"edit_interest_category_"+categories[i+1].key,
+			)
+			row = append(row, button2)
+		}
+
+		buttonRows = append(buttonRows, row)
+	}
+
+	// Добавляем кнопки управления для режима редактирования
+	controlRow := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData(
+			kb.service.Localizer.Get(interfaceLang, "continue_button"),
+			"interests_continue",
+		),
+		tgbotapi.NewInlineKeyboardButtonData(
+			kb.service.Localizer.Get(interfaceLang, "cancel_button"),
+			"back_to_profile",
+		),
+	}
+	buttonRows = append(buttonRows, controlRow)
+
+	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
+}
+
+// CreateEditPrimaryInterestsKeyboard создает клавиатуру для выбора основных интересов в режиме редактирования.
+func (kb *KeyboardBuilder) CreateEditPrimaryInterestsKeyboard(selections interface{}, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+	var buttonRows [][]tgbotapi.InlineKeyboardButton
+
+	// Получаем локализованные названия интересов
+	localizedInterests, err := kb.service.GetCachedInterests(interfaceLang)
+	if err != nil {
+		// Fallback - создаем пустую карту
+		localizedInterests = make(map[int]string)
+	}
+
+	// Конвертируем selections в нужный формат
+	var tempSelections []struct {
+		InterestID int
+		IsPrimary  bool
+	}
+
+	switch s := selections.(type) {
+	case []models.InterestSelection:
+		for _, selection := range s {
+			tempSelections = append(tempSelections, struct {
+				InterestID int
+				IsPrimary  bool
+			}{
+				InterestID: selection.InterestID,
+				IsPrimary:  selection.IsPrimary,
+			})
+		}
+	}
+
+	// Сортируем: сначала основные, потом дополнительные
+	sort.Slice(tempSelections, func(i, j int) bool {
+		if tempSelections[i].IsPrimary != tempSelections[j].IsPrimary {
+			return tempSelections[i].IsPrimary
+		}
+		return tempSelections[i].InterestID < tempSelections[j].InterestID
+	})
+
+	// Создаем кнопки для каждого выбранного интереса
+	for i := 0; i < len(tempSelections); i += 2 {
+		var row []tgbotapi.InlineKeyboardButton
+
+		// Первая кнопка в ряду
+		selection1 := tempSelections[i]
+		// Получаем локализованное название интереса
+		interestName1, exists := localizedInterests[selection1.InterestID]
+		if !exists {
+			// Fallback: пытаемся получить через getInterestName
+			var err error
+			interestName1, err = kb.getInterestName(selection1.InterestID, interfaceLang)
+			if err != nil {
+				interestName1 = fmt.Sprintf("Интерес %d", selection1.InterestID)
+			}
+		} else {
+			// Проверяем, что это не просто key_name (английское название)
+			// Если название совпадает с key_name, пытаемся найти перевод
+			interest, err := kb.service.DB.GetInterestByID(selection1.InterestID)
+			if err == nil {
+				// Всегда пытаемся найти перевод в JSON файлах
+				translatedName := kb.service.Localizer.Get(interfaceLang, "interest_"+interest.KeyName)
+				if translatedName != "interest_"+interest.KeyName {
+					interestName1 = translatedName
+				}
+			}
+		}
+
+		prefix1 := SymbolUnchecked
+		if selection1.IsPrimary {
+			prefix1 = "⭐ "
+		}
+
+		button1 := tgbotapi.NewInlineKeyboardButtonData(
+			prefix1+interestName1,
+			"edit_primary_interest_"+strconv.Itoa(selection1.InterestID),
+		)
+		row = append(row, button1)
+
+		// Вторая кнопка в ряду (если есть)
+		if i+1 < len(tempSelections) {
+			selection2 := tempSelections[i+1]
+
+			// Получаем локализованное название интереса
+			interestName2, exists := localizedInterests[selection2.InterestID]
+			if !exists {
+				// Fallback: пытаемся получить через getInterestName
+				var err error
+				interestName2, err = kb.getInterestName(selection2.InterestID, interfaceLang)
+				if err != nil {
+					interestName2 = fmt.Sprintf("Интерес %d", selection2.InterestID)
+				}
+			} else {
+				// Проверяем, что это не просто key_name (английское название)
+				// Если название совпадает с key_name, пытаемся найти перевод
+				interest, err := kb.service.DB.GetInterestByID(selection2.InterestID)
+				if err == nil {
+					// Всегда пытаемся найти перевод в JSON файлах
+					translatedName := kb.service.Localizer.Get(interfaceLang, "interest_"+interest.KeyName)
+					if translatedName != "interest_"+interest.KeyName {
+						interestName2 = translatedName
+					}
+				}
+			}
+
+			prefix2 := SymbolUnchecked
+			if selection2.IsPrimary {
+				prefix2 = "⭐ "
+			}
+
+			button2 := tgbotapi.NewInlineKeyboardButtonData(
+				prefix2+interestName2,
+				"edit_primary_interest_"+strconv.Itoa(selection2.InterestID),
+			)
+			row = append(row, button2)
+		}
+		buttonRows = append(buttonRows, row)
+	}
+
+	// Добавляем кнопки управления для режима редактирования
+	controlRow := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData(
+			kb.service.Localizer.Get(interfaceLang, "back_button"),
+			"back_to_categories",
+		),
+		tgbotapi.NewInlineKeyboardButtonData(
+			kb.service.Localizer.Get(interfaceLang, "cancel_button"),
+			"back_to_profile",
+		),
+		tgbotapi.NewInlineKeyboardButtonData(
+			kb.service.Localizer.Get(interfaceLang, "save_button"),
+			"save_interest_edits",
+		),
+	}
+	buttonRows = append(buttonRows, controlRow)
+
+	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
+}
+
+// CreateEditCategoryInterestsKeyboard создает клавиатуру для редактирования интересов в категории.
+func (kb *KeyboardBuilder) CreateEditCategoryInterestsKeyboard(interests []models.Interest, selectedMap map[int]bool, categoryKey, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+	var buttonRows [][]tgbotapi.InlineKeyboardButton
+
+	// Сортируем интересы по display_order
+	sort.Slice(interests, func(i, j int) bool {
+		return interests[i].DisplayOrder < interests[j].DisplayOrder
+	})
+
+	// Создаем кнопки интересов (по 2 в ряд)
+	for i := 0; i < len(interests); i += 2 {
+		var row []tgbotapi.InlineKeyboardButton
+
+		// Первая кнопка в ряду
+		interest1 := interests[i]
+		interestName1 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest1.KeyName)
+
+		prefix1 := SymbolUnchecked
+		if selectedMap[interest1.ID] {
+			prefix1 = "✅ "
+		}
+
+		button1 := tgbotapi.NewInlineKeyboardButtonData(
+			prefix1+interestName1,
+			"edit_interest_select_"+strconv.Itoa(interest1.ID),
+		)
+		row = append(row, button1)
+
+		// Вторая кнопка в ряду (если есть)
+		if i+1 < len(interests) {
+			interest2 := interests[i+1]
+			interestName2 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest2.KeyName)
+
+			prefix2 := SymbolUnchecked
+			if selectedMap[interest2.ID] {
+				prefix2 = "✅ "
+			}
+
+			button2 := tgbotapi.NewInlineKeyboardButtonData(
+				prefix2+interestName2,
+				"edit_interest_select_"+strconv.Itoa(interest2.ID),
+			)
+			row = append(row, button2)
+		}
+
+		buttonRows = append(buttonRows, row)
+	}
+
+	// Добавляем только кнопку "Назад" для возврата к редактированию интересов
+	controlRow := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData(
+			kb.service.Localizer.Get(interfaceLang, "back_button"),
+			"back_to_edit_categories",
 		),
 	}
 	buttonRows = append(buttonRows, controlRow)

@@ -10,4 +10,5 @@ type Interest struct {
 	DisplayOrder int       `db:"display_order"`
 	Type         string    `db:"type"`
 	CreatedAt    time.Time `db:"created_at"`
+	CategoryKey  string    `db:"category_key"` // Добавляем для удобства
 }

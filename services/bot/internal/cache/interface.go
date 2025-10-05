@@ -2,6 +2,8 @@ package cache
 
 import (
 	"context"
+	"time"
+
 	"language-exchange-bot/internal/models"
 )
 
@@ -33,6 +35,11 @@ type ServiceInterface interface {
 	InvalidateInterests(ctx context.Context)
 	InvalidateTranslations(ctx context.Context)
 	ClearAll(ctx context.Context)
+
+	// Generic methods for arbitrary data
+	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
+	Get(ctx context.Context, key string, dest interface{}) error
+	Delete(ctx context.Context, key string) error
 
 	// Stats and control
 	GetCacheStats(ctx context.Context) Stats

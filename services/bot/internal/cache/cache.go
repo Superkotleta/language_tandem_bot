@@ -462,3 +462,48 @@ func (cacheService *Service) cleanupStats() int {
 
 	return cleaned
 }
+
+// Set сохраняет произвольные данные в кэш.
+func (cacheService *Service) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	// Используем общую карту для произвольных данных
+	if cacheService.stats == nil {
+		cacheService.stats = make(map[string]*Entry)
+	}
+
+	cacheService.stats[key] = &Entry{
+		Data:      value,
+		ExpiresAt: time.Now().Add(ttl),
+	}
+
+	cacheService.updateSize()
+	return nil
+}
+
+// Get получает произвольные данные из кэша.
+func (cacheService *Service) Get(ctx context.Context, key string, dest interface{}) error {
+	cacheService.mutex.RLock()
+	defer cacheService.mutex.RUnlock()
+
+	entry, exists := cacheService.stats[key]
+	if !exists || entry == nil || entry.IsExpired() {
+		return fmt.Errorf("key not found: %s", key)
+	}
+
+	// Простое присваивание для совместимости
+	// В реальной реализации нужно было бы использовать reflection
+	*dest.(*interface{}) = entry.Data
+	return nil
+}
+
+// Delete удаляет ключ из кэша.
+func (cacheService *Service) Delete(ctx context.Context, key string) error {
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	delete(cacheService.stats, key)
+	cacheService.updateSize()
+	return nil
+}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/errors"
@@ -46,21 +45,26 @@ func NewProfileInterestHandler(
 
 // HandleEditInterestsFromProfile обрабатывает редактирование интересов из профиля.
 func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("DEBUG: HandleEditInterestsFromProfile called for user %d", user.ID)
+
 	// Получаем категории интересов через кэш
 	categories, err := pih.interestService.GetInterestCategories()
 	if err != nil {
+		log.Printf("ERROR: Failed to get interest categories for user %d: %v", user.ID, err)
 		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestCategories")
 	}
 
 	// Логируем получение категорий
-	log.Printf("ProfileInterestHandler: Retrieved %d interest categories for user %d", len(categories), user.ID)
+	log.Printf("DEBUG: Retrieved %d interest categories for user %d", len(categories), user.ID)
 
-	// Создаем клавиатуру с категориями
-	keyboard := pih.keyboardBuilder.CreateInterestCategoriesKeyboard(user.InterfaceLanguageCode)
+	// Создаем клавиатуру с категориями для редактирования
+	keyboard := pih.keyboardBuilder.CreateEditInterestCategoriesKeyboard(user.InterfaceLanguageCode)
+	log.Printf("DEBUG: Created keyboard for user %d", user.ID)
 
 	// Создаем текст с инструкциями
 	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, "edit_interests_from_profile") + "\n\n" +
 		pih.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interest_category")
+	log.Printf("DEBUG: Created text for user %d: %s", user.ID, text)
 
 	// Обновляем сообщение
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
@@ -72,9 +76,11 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 
 	_, err = pih.bot.Request(editMsg)
 	if err != nil {
+		log.Printf("ERROR: Failed to send edit message for user %d: %v", user.ID, err)
 		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "EditMessage")
 	}
 
+	log.Printf("DEBUG: Successfully sent edit message for user %d", user.ID)
 	return nil
 }
 
@@ -126,8 +132,8 @@ func (pih *ProfileInterestHandler) HandleEditInterestCategoryFromProfile(callbac
 		selectedMap[selection.InterestID] = true
 	}
 
-	// Создаем клавиатуру с интересами
-	keyboard := pih.keyboardBuilder.CreateCategoryInterestsKeyboard(interests, selectedMap, categoryKey, user.InterfaceLanguageCode)
+	// Создаем клавиатуру с интересами для редактирования
+	keyboard := pih.keyboardBuilder.CreateEditCategoryInterestsKeyboard(interests, selectedMap, categoryKey, user.InterfaceLanguageCode)
 
 	// Создаем текст
 	categoryName := pih.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
@@ -200,8 +206,8 @@ func (pih *ProfileInterestHandler) HandleEditPrimaryInterestsFromProfile(callbac
 		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
 
-	// Создаем клавиатуру для выбора основных интересов
-	keyboard := pih.keyboardBuilder.CreatePrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode)
+	// Создаем клавиатуру для выбора основных интересов в режиме редактирования
+	keyboard := pih.keyboardBuilder.CreateEditPrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode)
 
 	// Создаем текст
 	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, "edit_primary_interests") + "\n\n" +
@@ -312,36 +318,25 @@ func (pih *ProfileInterestHandler) HandleSaveInterestEditsFromProfile(callback *
 
 // updateCategoryInterestsKeyboardFromProfile обновляет клавиатуру интересов в категории.
 func (pih *ProfileInterestHandler) updateCategoryInterestsKeyboardFromProfile(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
-	// Извлекаем categoryKey из callback data (предполагаем формат "edit_interest_category_<key>_<id>")
-	parts := strings.Split(callback.Data, "_")
-	if len(parts) < MinPartsForInterestCallback {
-		log.Printf("Invalid callback data format: %s", callback.Data)
-
-		return nil
-	}
-
-	categoryKey := parts[3] // "edit_interest_category_<key>_<id>"
-
-	// Получаем категории
-	categories, err := pih.interestService.GetInterestCategories()
+	// Получаем ID интереса
+	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
-		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestCategories")
+		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ParseInterestID")
 	}
 
-	// Находим выбранную категорию
-	var selectedCategory *models.InterestCategory
-
-	for _, category := range categories {
-		if category.KeyName == categoryKey {
-			selectedCategory = &category
-
-			break
-		}
+	// Получаем интерес по ID
+	interest, err := pih.interestService.GetInterestByID(interestID)
+	if err != nil {
+		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestByID")
 	}
 
-	if selectedCategory == nil {
-		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "CategoryNotFound")
+	// Получаем категорию по ID
+	category, err := pih.interestService.GetInterestCategoryByID(interest.CategoryID)
+	if err != nil {
+		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestCategoryByID")
 	}
+
+	selectedCategory := category
 
 	// Получаем интересы в категории
 	interests, err := pih.interestService.GetInterestsByCategory(selectedCategory.ID)
@@ -365,7 +360,7 @@ func (pih *ProfileInterestHandler) updateCategoryInterestsKeyboardFromProfile(ca
 	keyboard := pih.keyboardBuilder.CreateCategoryInterestsKeyboard(
 		interests,
 		selectedMap,
-		categoryKey,
+		selectedCategory.KeyName,
 		user.InterfaceLanguageCode,
 	)
 
@@ -384,8 +379,8 @@ func (pih *ProfileInterestHandler) updatePrimaryInterestsKeyboardFromProfile(cal
 		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
 
-	// Создаем обновленную клавиатуру
-	keyboard := pih.keyboardBuilder.CreatePrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode)
+	// Создаем обновленную клавиатуру для редактирования
+	keyboard := pih.keyboardBuilder.CreateEditPrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode)
 
 	// Обновляем только клавиатуру
 	editMsg := tgbotapi.NewEditMessageReplyMarkup(callback.Message.Chat.ID, callback.Message.MessageID, keyboard)

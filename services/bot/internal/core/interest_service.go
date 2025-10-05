@@ -594,3 +594,105 @@ func (s *InterestService) GetAllInterests() ([]models.Interest, error) {
 
 	return interests, nil
 }
+
+// GetInterestsByCategoryKey возвращает интересы по ключу категории
+func (s *InterestService) GetInterestsByCategoryKey(categoryKey string) ([]models.Interest, error) {
+	query := `
+		SELECT i.id, i.key_name, i.category_id, i.display_order, i.type, i.created_at, ic.key_name
+		FROM interests i
+		JOIN interest_categories ic ON i.category_id = ic.id
+		WHERE ic.key_name = $1 
+		ORDER BY i.display_order ASC, i.key_name ASC
+	`
+
+	rows, err := s.db.QueryContext(context.Background(), query, categoryKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query interests by category key: %w", err)
+	}
+
+	return s.scanInterestsWithCategory(rows)
+}
+
+// BatchUpdateUserInterests обновляет интересы пользователя батчем
+func (s *InterestService) BatchUpdateUserInterests(userID int, selections []models.InterestSelection) error {
+	// Начинаем транзакцию
+	tx, err := s.db.BeginTx(context.Background(), nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Удаляем все текущие выборы пользователя
+	_, err = tx.ExecContext(context.Background(), "DELETE FROM user_interest_selections WHERE user_id = $1", userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete existing selections: %w", err)
+	}
+
+	// Вставляем новые выборы батчем
+	if len(selections) > 0 {
+		query := `
+			INSERT INTO user_interest_selections (user_id, interest_id, is_primary, created_at)
+			VALUES ($1, $2, $3, NOW())
+		`
+
+		stmt, err := tx.PrepareContext(context.Background(), query)
+		if err != nil {
+			return fmt.Errorf("failed to prepare statement: %w", err)
+		}
+		defer stmt.Close()
+
+		for _, selection := range selections {
+			_, err = stmt.ExecContext(context.Background(), userID, selection.InterestID, selection.IsPrimary)
+			if err != nil {
+				return fmt.Errorf("failed to insert selection: %w", err)
+			}
+		}
+	}
+
+	// Подтверждаем транзакцию
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// scanInterestsWithCategory сканирует строки интересов с категорией
+func (s *InterestService) scanInterestsWithCategory(rows *sql.Rows) ([]models.Interest, error) {
+	if err := rows.Err(); err != nil {
+		if closeErr := rows.Close(); closeErr != nil {
+			return nil, fmt.Errorf("failed to close rows after error: %w (original error: %w)", closeErr, err)
+		}
+
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			s.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "scanInterestsWithCategory",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
+		}
+	}()
+
+	var interests []models.Interest
+
+	for rows.Next() {
+		var interest models.Interest
+
+		err := rows.Scan(&interest.ID, &interest.KeyName, &interest.CategoryID,
+			&interest.DisplayOrder, &interest.Type, &interest.CreatedAt, &interest.CategoryKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan interest with category: %w", err)
+		}
+
+		interests = append(interests, interest)
+	}
+
+	return interests, nil
+}

@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"log"
+	"strconv"
 	"strings"
 
 	"language-exchange-bot/internal/adapters/telegram/handlers"
@@ -33,6 +34,7 @@ type TelegramHandler struct {
 	languageHandler        *handlers.LanguageHandlerImpl
 	interestHandler        *handlers.NewInterestHandlerImpl
 	profileInterestHandler *handlers.ProfileInterestHandler
+	isolatedInterestEditor *handlers.IsolatedInterestEditor
 	adminHandler           *handlers.AdminHandlerImpl
 	utilityHandler         *handlers.UtilityHandlerImpl
 	errorHandler           *errors.ErrorHandler
@@ -66,6 +68,14 @@ func NewTelegramHandler(
 		keyboardBuilder,
 		errorHandler,
 	)
+	isolatedInterestEditor := handlers.NewIsolatedInterestEditor(
+		service,
+		interestService,
+		bot,
+		keyboardBuilder,
+		errorHandler,
+		service.Cache,
+	)
 	adminHandler := handlers.NewAdminHandler(service, bot, keyboardBuilder, adminChatIDs, make([]string, 0), errorHandler)
 	utilityHandler := handlers.NewUtilityHandler(service, bot, errorHandler)
 
@@ -81,6 +91,7 @@ func NewTelegramHandler(
 		languageHandler:        languageHandler,
 		interestHandler:        interestHandler,
 		profileInterestHandler: profileInterestHandler,
+		isolatedInterestEditor: isolatedInterestEditor,
 		adminHandler:           adminHandler,
 		utilityHandler:         utilityHandler,
 		errorHandler:           errorHandler,
@@ -127,6 +138,14 @@ func NewTelegramHandlerWithAdmins(
 		keyboardBuilder,
 		errorHandler,
 	)
+	isolatedInterestEditor := handlers.NewIsolatedInterestEditor(
+		service,
+		interestService,
+		bot,
+		keyboardBuilder,
+		errorHandler,
+		service.Cache,
+	)
 	adminHandler := handlers.NewAdminHandler(
 		service,
 		bot,
@@ -153,6 +172,7 @@ func NewTelegramHandlerWithAdmins(
 		languageHandler:        languageHandler,
 		interestHandler:        interestHandler,
 		profileInterestHandler: profileInterestHandler,
+		isolatedInterestEditor: isolatedInterestEditor,
 		adminHandler:           adminHandler,
 		utilityHandler:         utilityHandler,
 		errorHandler:           errorHandler,
@@ -264,6 +284,8 @@ func (h *TelegramHandler) handleState(message *tgbotapi.Message, user *models.Us
 
 // handleCallbackQuery обрабатывает нажатия на inline-кнопки.
 func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
+	log.Printf("DEBUG: handleCallbackQuery called with data: '%s' from user %d", callback.Data, callback.From.ID)
+
 	user, err := h.service.HandleUserRegistration(
 		callback.From.ID,
 		callback.From.UserName,
@@ -271,20 +293,23 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		callback.From.LanguageCode,
 	)
 	if err != nil {
-		log.Printf("Error handling user registration: %v", err)
-
+		log.Printf("ERROR: Failed to handle user registration for user %d: %v", callback.From.ID, err)
 		return err
 	}
+
+	log.Printf("DEBUG: User found: ID=%d, State=%s, InterfaceLang=%s", user.ID, user.State, user.InterfaceLanguageCode)
 
 	data := callback.Data
 	_, _ = h.bot.Request(tgbotapi.NewCallback(callback.ID, ""))
 
 	// Разделяем обработку callback'ов по категориям для уменьшения сложности
 	if err := h.handleLanguageCallbacks(callback, user, data); err != nil {
+		log.Printf("DEBUG: handleLanguageCallbacks returned error: %v", err)
 		return err
 	}
 
 	if err := h.handleInterestCallbacks(callback, user, data); err != nil {
+		log.Printf("DEBUG: handleInterestCallbacks returned error: %v", err)
 		return err
 	}
 
@@ -293,6 +318,7 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		user,
 		data,
 	); err != nil {
+		log.Printf("DEBUG: handleProfileCallbacks returned error: %v", err)
 		return err
 	}
 
@@ -301,14 +327,17 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		user,
 		data,
 	); err != nil {
+		log.Printf("DEBUG: handleMenuCallbacks returned error: %v", err)
 		return err
 	}
 
 	if err := h.handleFeedbackCallbacks(callback, user, data); err != nil {
+		log.Printf("DEBUG: handleFeedbackCallbacks returned error: %v", err)
 		return err
 	}
 
 	// Если callback не был обработан ни одним обработчиком, просто игнорируем
+	log.Printf("DEBUG: No handler processed callback data: '%s'", data)
 	return nil
 }
 
@@ -495,7 +524,12 @@ func (h *TelegramHandler) handleInterestCallbacks(callback *tgbotapi.CallbackQue
 
 // handleProfileCallbacks обрабатывает callback'и связанные с профилем.
 func (h *TelegramHandler) handleProfileCallbacks(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
-	// Обработка редактирования интересов
+	// Обработка изолированного редактирования интересов
+	if strings.HasPrefix(data, "isolated_") {
+		return h.handleIsolatedCallbacks(callback, user, data)
+	}
+
+	// Обработка редактирования интересов (только для совместимости с существующими сессиями)
 	if strings.HasPrefix(data, "edit_interest") || data == "save_interest_edits" {
 		return h.handleProfileInterestEditing(
 			callback,
@@ -519,6 +553,8 @@ func (h *TelegramHandler) handleProfileCallbacks(callback *tgbotapi.CallbackQuer
 }
 
 func (h *TelegramHandler) handleProfileInterestEditing(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
+	log.Printf("DEBUG: handleProfileInterestEditing called with data: '%s' for user %d", data, user.ID)
+
 	switch {
 	case strings.HasPrefix(data, "edit_interest_category_"):
 		categoryKey := strings.TrimPrefix(data, "edit_interest_category_")
@@ -538,35 +574,248 @@ func (h *TelegramHandler) handleProfileInterestEditing(callback *tgbotapi.Callba
 		return h.profileInterestHandler.HandleSaveInterestEditsFromProfile(callback, user)
 	case data == "back_to_categories":
 		return h.profileInterestHandler.HandleEditInterestsFromProfile(callback, user)
+	case data == "back_to_edit_categories":
+		return h.profileInterestHandler.HandleEditInterestsFromProfile(callback, user)
+	case data == "back_to_profile":
+		return h.profileHandler.HandleProfileShow(callback, user)
 	}
 
+	log.Printf("DEBUG: No handler found in handleProfileInterestEditing for data: '%s'", data)
+	return nil
+}
+
+// HandleIsolatedEditStart начинает изолированное редактирование интересов
+func (h *TelegramHandler) HandleIsolatedEditStart(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Starting isolated edit session for user %d", user.ID)
+	return h.isolatedInterestEditor.StartEditSession(callback, user)
+}
+
+// HandleIsolatedMainMenu обрабатывает главное меню изолированного редактирования
+func (h *TelegramHandler) HandleIsolatedMainMenu(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Showing isolated main menu for user %d", user.ID)
+
+	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
+	}
+
+	return h.isolatedInterestEditor.ShowEditMainMenu(callback, user, session)
+}
+
+// HandleIsolatedEditCategories обрабатывает меню категорий
+func (h *TelegramHandler) HandleIsolatedEditCategories(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Showing isolated categories menu for user %d", user.ID)
+
+	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
+	}
+
+	return h.isolatedInterestEditor.ShowEditCategoriesMenu(callback, user, session)
+}
+
+// HandleIsolatedEditCategory обрабатывает выбор категории для редактирования
+func (h *TelegramHandler) HandleIsolatedEditCategory(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error {
+	log.Printf("Showing isolated category interests for user %d, category: %s", user.ID, categoryKey)
+
+	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
+	}
+
+	return h.isolatedInterestEditor.ShowEditCategoryInterests(callback, user, session, categoryKey)
+}
+
+// HandleIsolatedEditPrimary обрабатывает редактирование основных интересов
+func (h *TelegramHandler) HandleIsolatedEditPrimary(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Showing isolated primary interests for user %d", user.ID)
+
+	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
+	}
+
+	return h.isolatedInterestEditor.ShowEditPrimaryInterests(callback, user, session)
+}
+
+// HandleIsolatedToggleInterest обрабатывает переключение выбора интереса
+func (h *TelegramHandler) HandleIsolatedToggleInterest(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
+	interestID, err := strconv.Atoi(interestIDStr)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ParseInterestID")
+	}
+
+	log.Printf("Toggling interest %d for user %d", interestID, user.ID)
+	return h.isolatedInterestEditor.ToggleInterestSelection(callback, user, interestID)
+}
+
+// HandleIsolatedTogglePrimary обрабатывает переключение основного интереса
+func (h *TelegramHandler) HandleIsolatedTogglePrimary(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
+	interestID, err := strconv.Atoi(interestIDStr)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ParseInterestID")
+	}
+
+	log.Printf("Toggling primary status for interest %d for user %d", interestID, user.ID)
+	return h.isolatedInterestEditor.TogglePrimaryInterest(callback, user, interestID)
+}
+
+// HandleIsolatedPreviewChanges обрабатывает предварительный просмотр изменений
+func (h *TelegramHandler) HandleIsolatedPreviewChanges(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Showing changes preview for user %d", user.ID)
+
+	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
+	}
+
+	return h.isolatedInterestEditor.ShowChangesPreview(callback, user, session)
+}
+
+// HandleIsolatedSaveChanges обрабатывает сохранение изменений
+func (h *TelegramHandler) HandleIsolatedSaveChanges(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Saving changes for user %d", user.ID)
+
+	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
+	}
+
+	return h.isolatedInterestEditor.SaveChanges(callback, user, session)
+}
+
+// HandleIsolatedCancelEdit обрабатывает отмену редактирования
+func (h *TelegramHandler) HandleIsolatedCancelEdit(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Canceling edit for user %d", user.ID)
+	return h.isolatedInterestEditor.CancelEdit(callback, user)
+}
+
+// HandleIsolatedMassSelect обрабатывает массовый выбор в категории
+func (h *TelegramHandler) HandleIsolatedMassSelect(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error {
+	log.Printf("Mass selecting all interests in category %s for user %d", categoryKey, user.ID)
+
+	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
+	}
+
+	return h.isolatedInterestEditor.MassSelectCategory(callback, user, session, categoryKey)
+}
+
+// HandleIsolatedMassClear обрабатывает массовую очистку категории
+func (h *TelegramHandler) HandleIsolatedMassClear(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error {
+	log.Printf("Mass clearing all interests in category %s for user %d", categoryKey, user.ID)
+
+	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
+	}
+
+	return h.isolatedInterestEditor.MassClearCategory(callback, user, session, categoryKey)
+}
+
+// HandleIsolatedUndoLast обрабатывает отмену последнего действия
+func (h *TelegramHandler) HandleIsolatedUndoLast(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Undoing last action for user %d", user.ID)
+
+	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
+	}
+
+	return h.isolatedInterestEditor.UndoLastChange(callback, user, session)
+}
+
+// HandleIsolatedShowStats обрабатывает показ статистики
+func (h *TelegramHandler) HandleIsolatedShowStats(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Showing edit statistics for user %d", user.ID)
+
+	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
+	if err != nil {
+		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
+	}
+
+	return h.isolatedInterestEditor.ShowEditStatistics(callback, user, session)
+}
+
+// handleIsolatedCallbacks обрабатывает все callback'и изолированной системы
+func (h *TelegramHandler) handleIsolatedCallbacks(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
+	log.Printf("Handling isolated callback: %s for user %d", data, user.ID)
+
+	switch {
+	case data == "isolated_edit_start":
+		return h.HandleIsolatedEditStart(callback, user)
+	case data == "isolated_main_menu":
+		return h.HandleIsolatedMainMenu(callback, user)
+	case data == "isolated_edit_categories":
+		return h.HandleIsolatedEditCategories(callback, user)
+	case data == "isolated_edit_primary":
+		return h.HandleIsolatedEditPrimary(callback, user)
+	case strings.HasPrefix(data, "isolated_edit_category_"):
+		categoryKey := strings.TrimPrefix(data, "isolated_edit_category_")
+		return h.HandleIsolatedEditCategory(callback, user, categoryKey)
+	case strings.HasPrefix(data, "isolated_toggle_interest_"):
+		interestID := strings.TrimPrefix(data, "isolated_toggle_interest_")
+		return h.HandleIsolatedToggleInterest(callback, user, interestID)
+	case strings.HasPrefix(data, "isolated_toggle_primary_"):
+		interestID := strings.TrimPrefix(data, "isolated_toggle_primary_")
+		return h.HandleIsolatedTogglePrimary(callback, user, interestID)
+	case data == "isolated_preview_changes":
+		return h.HandleIsolatedPreviewChanges(callback, user)
+	case data == "isolated_save_changes":
+		return h.HandleIsolatedSaveChanges(callback, user)
+	case data == "isolated_cancel_edit":
+		return h.HandleIsolatedCancelEdit(callback, user)
+	case strings.HasPrefix(data, "isolated_select_all_"):
+		categoryKey := strings.TrimPrefix(data, "isolated_select_all_")
+		return h.HandleIsolatedMassSelect(callback, user, categoryKey)
+	case strings.HasPrefix(data, "isolated_clear_all_"):
+		categoryKey := strings.TrimPrefix(data, "isolated_clear_all_")
+		return h.HandleIsolatedMassClear(callback, user, categoryKey)
+	case data == "isolated_undo_last":
+		return h.HandleIsolatedUndoLast(callback, user)
+	case data == "isolated_show_stats":
+		return h.HandleIsolatedShowStats(callback, user)
+	}
+
+	log.Printf("No handler found for isolated callback: %s", data)
 	return nil
 }
 
 func (h *TelegramHandler) handleProfileCommands(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
+	log.Printf("DEBUG: handleProfileCommands called with data: '%s' for user %d", data, user.ID)
+
 	switch data {
 	case "profile_show":
+		log.Printf("DEBUG: Handling profile_show for user %d", user.ID)
 		return h.profileHandler.HandleProfileShow(callback, user)
 	case "profile_reset_ask":
+		log.Printf("DEBUG: Handling profile_reset_ask for user %d", user.ID)
 		return h.profileHandler.HandleProfileResetAsk(callback, user)
 	case "profile_reset_yes":
+		log.Printf("DEBUG: Handling profile_reset_yes for user %d", user.ID)
 		return h.profileHandler.HandleProfileResetYes(callback, user)
 	case "profile_reset_no":
+		log.Printf("DEBUG: Handling profile_reset_no for user %d", user.ID)
 		return h.menuHandler.HandleBackToMainMenu(callback, user)
 	case "back_to_previous_step":
+		log.Printf("DEBUG: Handling back_to_previous_step for user %d", user.ID)
 		return h.profileHandler.HandleProfileShow(callback, user)
-	case "edit_interests":
-		return h.profileInterestHandler.HandleEditInterestsFromProfile(callback, user)
 	case "edit_languages":
+		log.Printf("DEBUG: Handling edit_languages for user %d", user.ID)
 		return h.profileHandler.HandleEditLanguages(callback, user)
 	case "edit_native_lang":
+		log.Printf("DEBUG: Handling edit_native_lang for user %d", user.ID)
 		return h.profileHandler.HandleEditNativeLang(callback, user)
 	case "edit_target_lang":
+		log.Printf("DEBUG: Handling edit_target_lang for user %d", user.ID)
 		return h.profileHandler.HandleEditTargetLang(callback, user)
 	case "edit_level":
+		log.Printf("DEBUG: Handling edit_level for user %d", user.ID)
 		return h.profileHandler.HandleEditLevelLang(callback, user)
 	}
 
+	log.Printf("DEBUG: No handler found for data: '%s' for user %d", data, user.ID)
 	return nil
 }
 

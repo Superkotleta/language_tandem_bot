@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"language-exchange-bot/internal/cache"
 	"language-exchange-bot/internal/circuit_breaker"
+	"language-exchange-bot/internal/config"
 	"language-exchange-bot/internal/database"
 	errorsPkg "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/localization"
@@ -38,6 +39,7 @@ type BotService struct {
 	Service                  *validation.Service
 	LoggingService           *logging.LoggingService
 	FeedbackNotificationFunc func(data map[string]interface{}) error // функция для отправки уведомлений
+	Config                   *config.Config                          // конфигурация приложения
 
 	// Circuit Breakers для защиты от сбоев внешних сервисов
 	TelegramCircuitBreaker *circuit_breaker.CircuitBreaker
@@ -47,6 +49,9 @@ type BotService struct {
 
 // NewBotService creates a new BotService instance.
 func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
+	// Создаем конфигурацию
+	cfg := config.Load()
+
 	// Создаем кэш с конфигурацией по умолчанию
 	cacheService := cache.NewService(cache.DefaultConfig())
 
@@ -84,6 +89,7 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 		Service:                  validationService,
 		LoggingService:           loggingService,
 		FeedbackNotificationFunc: nil,
+		Config:                   cfg,
 		TelegramCircuitBreaker:   telegramCB,
 		DatabaseCircuitBreaker:   databaseCB,
 		RedisCircuitBreaker:      redisCB,
@@ -1587,4 +1593,9 @@ func (s *BotService) GetCircuitBreakerCounts() map[string]interface{} {
 	}
 
 	return counts
+}
+
+// GetConfig возвращает конфигурацию приложения
+func (s *BotService) GetConfig() *config.Config {
+	return s.Config
 }
