@@ -282,7 +282,7 @@ func (a *databaseAdapter) GetUserSelectedInterests(userID int) ([]int, error) {
 	return interests, nil
 }
 
-func (a *databaseAdapter) SaveUserInterests(userID int64, interestIDs []int) error {
+func (a *databaseAdapter) SaveUserInterests(userID int, interestIDs []int) error {
 	err := a.db.SaveUserInterests(userID, interestIDs)
 	if err != nil {
 		return fmt.Errorf("failed to save user interests: %w", err)
@@ -1307,7 +1307,9 @@ func (s *BotService) GetCacheStats() map[string]interface{} {
 
 // StopCache останавливает кэш-сервис.
 func (s *BotService) StopCache() {
-	s.Cache.Stop()
+	if s.Cache != nil {
+		s.Cache.Stop()
+	}
 }
 
 // ===== BATCH LOADING МЕТОДЫ =====

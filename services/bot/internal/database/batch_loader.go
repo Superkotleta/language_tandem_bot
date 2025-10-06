@@ -713,7 +713,7 @@ func (bl *BatchLoader) BatchUpdateUserInterests(ctx context.Context, userID int,
 	// Подготавливаем данные для вставки
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO user_interest_selections (user_id, interest_id, is_primary, created_at)
-		VALUES ($1, $2, $3, NOW())
+		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
 	`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)

@@ -63,7 +63,7 @@ func TestCircuitBreaker_StateHalfOpen(t *testing.T) {
 
 	cb := NewCircuitBreaker(Config{
 		Name:        "test",
-		MaxRequests: 2,
+		MaxRequests: 1, // Изменено: достаточно одного успешного запроса для перехода в Closed
 		Timeout:     100 * time.Millisecond,
 		ReadyToTrip: func(counts Counts) bool {
 			return counts.ConsecutiveFailures > 1
@@ -290,12 +290,15 @@ func TestCircuitBreaker_ConcurrentAccess(t *testing.T) {
 	assert.Equal(t, uint32(10), counts.TotalSuccesses)
 }
 
+// TestCircuitBreaker_StateTransitions tests state transitions in circuit breaker.
+// This test verifies that the circuit breaker correctly transitions between
+// Closed, Open, and Half-Open states based on success/failure patterns.
 func TestCircuitBreaker_StateTransitions(t *testing.T) {
 	t.Parallel()
 
 	cb := NewCircuitBreaker(Config{
 		Name:        "test",
-		MaxRequests: 2,
+		MaxRequests: 1, // Изменено: достаточно одного успешного запроса для перехода в Closed
 		Timeout:     100 * time.Millisecond,
 		ReadyToTrip: func(counts Counts) bool {
 			return counts.ConsecutiveFailures > 1

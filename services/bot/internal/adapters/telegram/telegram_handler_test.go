@@ -1,0 +1,401 @@
+package telegram
+
+import (
+	"errors"
+	"testing"
+
+	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/models"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
+
+// mockBotService provides a mock implementation of BotService for testing.
+// This mock allows us to isolate Telegram handler tests from actual business logic
+// and simulate various service behaviors without external dependencies.
+type mockBotService struct {
+	mock.Mock
+}
+
+func (m *mockBotService) HandleUserRegistration(telegramID int64, username, firstName, telegramLangCode string) (*models.User, error) {
+	args := m.Called(telegramID, username, firstName, telegramLangCode)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.User), args.Error(1)
+}
+
+func (m *mockBotService) GetWelcomeMessage(user *models.User) string {
+	args := m.Called(user)
+	return args.String(0)
+}
+
+// mockBotAPI provides a minimal mock implementation of Telegram Bot API for testing.
+// This mock simulates the basic BotAPI interface methods needed for handler testing,
+// allowing us to verify Telegram API interactions without actual network calls.
+type mockBotAPI struct {
+	mock.Mock
+}
+
+func (m *mockBotAPI) Send(c tgbotapi.Chattable) (tgbotapi.Message, error) {
+	args := m.Called(c)
+	return tgbotapi.Message{}, args.Error(0)
+}
+
+func (m *mockBotAPI) GetUpdatesChan(config tgbotapi.UpdateConfig) tgbotapi.UpdatesChannel {
+	args := m.Called(config)
+	return args.Get(0).(tgbotapi.UpdatesChannel)
+}
+
+func (m *mockBotAPI) Request(c tgbotapi.Chattable) (*tgbotapi.APIResponse, error) {
+	args := m.Called(c)
+	return args.Get(0).(*tgbotapi.APIResponse), args.Error(1)
+}
+
+func (m *mockBotAPI) MakeRequest(endpoint string, params interface{}) (*tgbotapi.APIResponse, error) {
+	args := m.Called(endpoint, params)
+	return args.Get(0).(*tgbotapi.APIResponse), args.Error(1)
+}
+
+func (m *mockBotAPI) GetUpdates(config tgbotapi.UpdateConfig) ([]tgbotapi.Update, error) {
+	args := m.Called(config)
+	return args.Get(0).([]tgbotapi.Update), args.Error(1)
+}
+
+func (m *mockBotAPI) AnswerCallbackQuery(config tgbotapi.CallbackConfig) (*tgbotapi.APIResponse, error) {
+	args := m.Called(config)
+	return args.Get(0).(*tgbotapi.APIResponse), args.Error(1)
+}
+
+func (m *mockBotAPI) EditMessageText(config tgbotapi.EditMessageTextConfig) (tgbotapi.Message, error) {
+	args := m.Called(config)
+	return args.Get(0).(tgbotapi.Message), args.Error(1)
+}
+
+// TestTelegramHandler_HandleUpdate_Message tests message handling functionality.
+// This smoke test verifies that the handler properly processes incoming messages
+// and handles error cases when the service is not initialized.
+func TestTelegramHandler_HandleUpdate_Message(t *testing.T) {
+	// Создаем rate limiter для тестов
+	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
+	defer rateLimiter.Stop() // Останавливаем после теста
+
+	// Создаем минимальный handler без service (для smoke теста)
+	handler := &TelegramHandler{
+		rateLimiter: rateLimiter,
+	}
+
+	// Создаем тестовое сообщение
+	message := &tgbotapi.Message{
+		MessageID: 1,
+		From: &tgbotapi.User{
+			ID:           123,
+			UserName:     "testuser",
+			FirstName:    "Test",
+			LanguageCode: "en",
+		},
+		Chat: &tgbotapi.Chat{
+			ID: 123,
+		},
+		Text: "Hello",
+	}
+
+	update := tgbotapi.Update{
+		UpdateID: 1,
+		Message:  message,
+	}
+
+	// Тестируем, что handler возвращает ошибку при отсутствии service
+	err := handler.HandleUpdate(update)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "service not initialized")
+}
+
+// TestTelegramHandler_HandleUpdate_CallbackQuery - smoke тест обработки callback'ов
+func TestTelegramHandler_HandleUpdate_CallbackQuery(t *testing.T) {
+	// Создаем rate limiter для тестов
+	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
+	defer rateLimiter.Stop()
+
+	// Создаем минимальный handler
+	handler := &TelegramHandler{
+		rateLimiter: rateLimiter,
+	}
+
+	// Создаем тестовый callback
+	callback := &tgbotapi.CallbackQuery{
+		ID: "test_callback",
+		From: &tgbotapi.User{
+			ID:           123,
+			UserName:     "testuser",
+			FirstName:    "Test",
+			LanguageCode: "en",
+		},
+		Message: &tgbotapi.Message{
+			MessageID: 1,
+			Chat: &tgbotapi.Chat{
+				ID: 123,
+			},
+		},
+		Data: "test_data",
+	}
+
+	update := tgbotapi.Update{
+		UpdateID:      1,
+		CallbackQuery: callback,
+	}
+
+	// Тестируем, что handler возвращает ошибку при отсутствии service
+	err := handler.HandleUpdate(update)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "service not initialized")
+}
+
+// TestTelegramHandler_isAdmin - тест проверки прав администратора
+func TestTelegramHandler_isAdmin(t *testing.T) {
+	tests := []struct {
+		name       string
+		adminIDs   []int64
+		adminNames []string
+		userID     int64
+		username   string
+		expected   bool
+	}{
+		{
+			name:       "Admin by Chat ID",
+			adminIDs:   []int64{123, 456},
+			adminNames: []string{},
+			userID:     123,
+			username:   "user",
+			expected:   true,
+		},
+		{
+			name:       "Admin by Username",
+			adminIDs:   []int64{},
+			adminNames: []string{"admin", "moderator"},
+			userID:     999,
+			username:   "admin",
+			expected:   true,
+		},
+		{
+			name:       "Not Admin",
+			adminIDs:   []int64{123},
+			adminNames: []string{"admin"},
+			userID:     999,
+			username:   "user",
+			expected:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := &TelegramHandler{
+				adminChatIDs:   tt.adminIDs,
+				adminUsernames: tt.adminNames,
+			}
+
+			result := handler.isAdmin(tt.userID, tt.username)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestTelegramHandler_GetRateLimiterStats - тест получения статистики rate limiter
+func TestTelegramHandler_GetRateLimiterStats(t *testing.T) {
+	t.Run("With rate limiter", func(t *testing.T) {
+		mockRateLimiter := &RateLimiter{}
+		handler := &TelegramHandler{
+			rateLimiter: mockRateLimiter,
+		}
+
+		stats := handler.GetRateLimiterStats()
+		assert.NotNil(t, stats)
+	})
+
+	t.Run("Without rate limiter", func(t *testing.T) {
+		handler := &TelegramHandler{
+			rateLimiter: nil,
+		}
+
+		stats := handler.GetRateLimiterStats()
+		assert.NotNil(t, stats)
+		assert.Contains(t, stats, "error")
+		assert.Equal(t, "rate limiter not initialized", stats["error"])
+	})
+}
+
+// TestTelegramHandler_Stop - тест остановки handler
+func TestTelegramHandler_Stop(t *testing.T) {
+	t.Run("With rate limiter", func(t *testing.T) {
+		rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
+		handler := &TelegramHandler{
+			rateLimiter: rateLimiter,
+		}
+
+		// Should not panic
+		assert.NotPanics(t, func() {
+			handler.Stop()
+		})
+
+		// Should not panic on second call
+		assert.NotPanics(t, func() {
+			handler.Stop()
+		})
+	})
+
+	t.Run("Without rate limiter", func(t *testing.T) {
+		handler := &TelegramHandler{
+			rateLimiter: nil,
+		}
+
+		// Should not panic
+		assert.NotPanics(t, func() {
+			handler.Stop()
+		})
+	})
+}
+
+// TestTelegramHandler_GettersSetters - тест геттеров и сеттеров
+func TestTelegramHandler_GettersSetters(t *testing.T) {
+	handler := &TelegramHandler{}
+
+	// Test service getter/setter
+	mockService := &core.BotService{}
+	handler.SetService(mockService)
+	assert.Equal(t, mockService, handler.GetService())
+
+	// Test bot API getter/setter
+	mockBot := &tgbotapi.BotAPI{}
+	handler.SetBotAPI(mockBot)
+	assert.Equal(t, mockBot, handler.GetBotAPI())
+}
+
+// TestTelegramHandler_sendRateLimitMessage - тест отправки сообщения о rate limit
+func TestTelegramHandler_sendRateLimitMessage(t *testing.T) {
+	mockBot := &tgbotapi.BotAPI{} // Используем реальный BotAPI для простоты
+	handler := &TelegramHandler{
+		bot: mockBot,
+	}
+
+	// Should not panic (в реальном использовании отправит сообщение)
+	assert.NotPanics(t, func() {
+		handler.sendRateLimitMessage(123, errors.New("rate limit exceeded"))
+	})
+}
+
+// TestNewTelegramHandler - тест конструктора (пропускаем для mock объектов)
+func TestNewTelegramHandler(t *testing.T) {
+	t.Skip("Skipping test with mock objects - requires full service initialization")
+
+	// В будущем можно добавить тест с реальными объектами
+	// mockBot := &tgbotapi.BotAPI{}
+	// mockService := &core.BotService{}
+	// mockErrorHandler := &errorsPkg.ErrorHandler{}
+	//
+	// handler := NewTelegramHandler(
+	// 	mockBot,
+	// 	mockService,
+	// 	[]int64{123},
+	// 	mockErrorHandler,
+	// )
+	//
+	// assert.NotNil(t, handler)
+}
+
+// TestNewTelegramHandlerWithAdmins - тест конструктора с админами (пропускаем для mock объектов)
+func TestNewTelegramHandlerWithAdmins(t *testing.T) {
+	t.Skip("Skipping test with mock objects - requires full service initialization")
+
+	// В будущем можно добавить тест с реальными объектами
+	// mockBot := &tgbotapi.BotAPI{}
+	// mockService := &core.BotService{}
+	// mockErrorHandler := &errorsPkg.ErrorHandler{}
+	//
+	// handler := NewTelegramHandlerWithAdmins(
+	// 	mockBot,
+	// 	mockService,
+	// 	[]int64{123},
+	// 	[]string{"admin"},
+	// 	mockErrorHandler,
+	// )
+	//
+	// assert.NotNil(t, handler)
+}
+
+// TestTelegramHandler_HandleCommand_Unknown - smoke тест неизвестной команды
+func TestTelegramHandler_HandleCommand_Unknown(t *testing.T) {
+	// Создаем rate limiter для тестов
+	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
+	defer rateLimiter.Stop()
+
+	// Создаем минимальный handler
+	handler := &TelegramHandler{
+		rateLimiter: rateLimiter,
+	}
+
+	user := &models.User{
+		ID:                    1,
+		TelegramID:            123,
+		InterfaceLanguageCode: "en",
+	}
+
+	message := &tgbotapi.Message{
+		MessageID: 1,
+		From: &tgbotapi.User{
+			ID: 123,
+		},
+		Chat: &tgbotapi.Chat{
+			ID: 123,
+		},
+		Text: "/unknown_command",
+		Entities: []tgbotapi.MessageEntity{
+			{
+				Type:   "bot_command",
+				Offset: 0,
+				Length: 16,
+			},
+		},
+	}
+
+	// Тестируем, что handler возвращает ошибку при отсутствии service
+	err := handler.handleCommand(message, user)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "service not initialized")
+}
+
+// TestTelegramHandler_HandleState - smoke тест обработки состояний
+func TestTelegramHandler_HandleState(t *testing.T) {
+	// Создаем rate limiter для тестов
+	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
+	defer rateLimiter.Stop()
+
+	// Создаем минимальный handler
+	handler := &TelegramHandler{
+		rateLimiter: rateLimiter,
+	}
+
+	user := &models.User{
+		ID:                    1,
+		TelegramID:            123,
+		State:                 models.StateWaitingLanguage,
+		InterfaceLanguageCode: "en",
+	}
+
+	message := &tgbotapi.Message{
+		MessageID: 1,
+		From: &tgbotapi.User{
+			ID: 123,
+		},
+		Chat: &tgbotapi.Chat{
+			ID: 123,
+		},
+		Text: "Test message",
+	}
+
+	// Тестируем, что handler возвращает ошибку при отсутствии service
+	err := handler.handleState(message, user)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "service not initialized")
+}

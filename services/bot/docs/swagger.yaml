@@ -314,6 +314,54 @@ paths:
       summary: Get webhook status
       tags:
       - webhook
+  /api/v2/metrics/performance:
+    get:
+      description: Returns detailed performance and monitoring metrics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get performance metrics
+      tags:
+      - metrics
+  /api/v2/stats:
+    get:
+      description: Returns comprehensive system statistics including performance metrics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get enhanced statistics
+      tags:
+      - statistics
+  /api/v2/system/health:
+    get:
+      description: Returns detailed health status of all system components
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get system health
+      tags:
+      - health
   /healthz:
     get:
       description: Check if the service is healthy

@@ -75,7 +75,7 @@ func (db *DB) GetConnection() *sql.DB {
 //nolint:funlen
 func (db *DB) GetLanguages() ([]*models.Language, error) {
 	query := `
-		SELECT id, code, name_native, name_en
+		SELECT id, code, name_native, name_en, is_interface_language
 		FROM languages
 		ORDER BY id
 	`
@@ -117,7 +117,7 @@ func (db *DB) GetLanguages() ([]*models.Language, error) {
 			CreatedAt:           time.Now(),
 		}
 
-		err := rows.Scan(&lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn)
+		err := rows.Scan(&lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn, &lang.IsInterfaceLanguage)
 		if err != nil {
 			continue
 		}
@@ -141,7 +141,7 @@ func (db *DB) GetLanguages() ([]*models.Language, error) {
 // GetLanguageByCode возвращает язык по его коду.
 func (db *DB) GetLanguageByCode(code string) (*models.Language, error) {
 	query := `
-		SELECT id, code, name_native, name_en
+		SELECT id, code, name_native, name_en, is_interface_language
 		FROM languages
 		WHERE code = $1
 	`
@@ -155,7 +155,7 @@ func (db *DB) GetLanguageByCode(code string) (*models.Language, error) {
 	}
 
 	err := db.conn.QueryRowContext(context.Background(), query, code).Scan(
-		&lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn,
+		&lang.ID, &lang.Code, &lang.NameNative, &lang.NameEn, &lang.IsInterfaceLanguage,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
@@ -290,7 +290,7 @@ func (db *DB) UpdateUser(user *models.User) error {
 		SET username = $1, first_name = $2, native_language_code = $3,
 		    target_language_code = $4, target_language_level = $5,
 		    interface_language_code = $6, state = $7, status = $8,
-		    profile_completion_level = $9, updated_at = NOW()
+		    profile_completion_level = $9, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $10
 	`, user.Username, user.FirstName, user.NativeLanguageCode,
 		user.TargetLanguageCode, user.TargetLanguageLevel,
@@ -305,16 +305,16 @@ func (db *DB) UpdateUser(user *models.User) error {
 }
 
 // SaveUserInterests сохраняет интересы пользователя.
-func (db *DB) SaveUserInterests(userID int64, interestIDs []int) error {
+func (db *DB) SaveUserInterests(userID int, interestIDs []int) error {
 	// Сначала удаляем все интересы пользователя
-	err := db.ClearUserInterests(int(userID))
+	err := db.ClearUserInterests(userID)
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	// Затем добавляем новые
 	for _, interestID := range interestIDs {
-		err := db.SaveUserInterest(int(userID), interestID, false)
+		err := db.SaveUserInterest(userID, interestID, false)
 		if err != nil {
 			return fmt.Errorf("operation failed: %w", err)
 		}
@@ -358,7 +358,7 @@ func (db *DB) FindOrCreateUser(telegramID int64, username, firstName string) (*m
         ON CONFLICT (telegram_id) DO UPDATE SET
             username = EXCLUDED.username,
             first_name = EXCLUDED.first_name,
-            updated_at = NOW()
+            updated_at = CURRENT_TIMESTAMP
         RETURNING id, telegram_id, username, first_name,
         COALESCE(native_language_code, '') as native_language_code,
         COALESCE(target_language_code, '') as target_language_code,
@@ -381,7 +381,7 @@ func (db *DB) FindOrCreateUser(telegramID int64, username, firstName string) (*m
 // UpdateUserState обновляет состояние пользователя.
 func (db *DB) UpdateUserState(userID int, state string) error {
 	_, err := db.conn.ExecContext(context.Background(), `
-        UPDATE users SET state = $1, updated_at = NOW() WHERE id = $2
+        UPDATE users SET state = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2
     `, state, userID)
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
@@ -393,7 +393,7 @@ func (db *DB) UpdateUserState(userID int, state string) error {
 // UpdateUserStatus обновляет статус пользователя.
 func (db *DB) UpdateUserStatus(userID int, status string) error {
 	_, err := db.conn.ExecContext(context.Background(), `
-        UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2
+        UPDATE users SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2
     `, status, userID)
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
@@ -405,7 +405,7 @@ func (db *DB) UpdateUserStatus(userID int, status string) error {
 // UpdateUserInterfaceLanguage обновляет язык интерфейса пользователя.
 func (db *DB) UpdateUserInterfaceLanguage(userID int, langCode string) error {
 	_, err := db.conn.ExecContext(context.Background(), `
-        UPDATE users SET interface_language_code = $1, updated_at = NOW() WHERE id = $2
+        UPDATE users SET interface_language_code = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2
     `, langCode, userID)
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
@@ -417,7 +417,7 @@ func (db *DB) UpdateUserInterfaceLanguage(userID int, langCode string) error {
 // UpdateUserNativeLanguage обновляет родной язык пользователя.
 func (db *DB) UpdateUserNativeLanguage(userID int, langCode string) error {
 	_, err := db.conn.ExecContext(context.Background(),
-		"UPDATE users SET native_language_code = $1, updated_at = NOW() WHERE id = $2",
+		"UPDATE users SET native_language_code = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
 		langCode, userID,
 	)
 	if err != nil {
@@ -430,7 +430,7 @@ func (db *DB) UpdateUserNativeLanguage(userID int, langCode string) error {
 // UpdateUserTargetLanguage обновляет целевой язык пользователя.
 func (db *DB) UpdateUserTargetLanguage(userID int, langCode string) error {
 	_, err := db.conn.ExecContext(context.Background(),
-		"UPDATE users SET target_language_code = $1, updated_at = NOW() WHERE id = $2",
+		"UPDATE users SET target_language_code = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
 		langCode, userID,
 	)
 	if err != nil {
@@ -443,7 +443,7 @@ func (db *DB) UpdateUserTargetLanguage(userID int, langCode string) error {
 // UpdateUserTargetLanguageLevel обновляет уровень целевого языка пользователя.
 func (db *DB) UpdateUserTargetLanguageLevel(userID int, level string) error {
 	_, err := db.conn.ExecContext(context.Background(),
-		"UPDATE users SET target_language_level = $1, updated_at = NOW() WHERE id = $2",
+		"UPDATE users SET target_language_level = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
 		level, userID,
 	)
 	if err != nil {
@@ -467,7 +467,7 @@ func (db *DB) SaveTargetLanguage(userID int, langCode string) error {
 func (db *DB) SaveUserInterest(userID, interestID int, isPrimary bool) error {
 	_, err := db.conn.ExecContext(context.Background(), `
         INSERT INTO user_interests (user_id, interest_id, is_primary, created_at) 
-        VALUES ($1, $2, $3, NOW()) 
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP) 
         ON CONFLICT (user_id, interest_id) DO NOTHING
     `, userID, interestID, isPrimary)
 	if err != nil {
@@ -540,7 +540,7 @@ func (db *DB) RemoveUserInterest(userID, interestID int) error {
 // ClearUserInterests удаляет все интересы пользователя.
 func (db *DB) ClearUserInterests(userID int) error {
 	_, err := db.conn.ExecContext(context.Background(), `
-        DELETE FROM user_interest_selections WHERE user_id = $1
+        DELETE FROM user_interests WHERE user_id = $1
     `, userID)
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
@@ -638,7 +638,7 @@ func (db *DB) ResetUserProfile(userID int) error {
 		    state = $1,
 		    status = $2,
 		    profile_completion_level = 0,
-		    updated_at = NOW()
+		    updated_at = CURRENT_TIMESTAMP
 		WHERE id = $3
 	`, models.StateWaitingLanguage, models.StatusFilling, userID); err != nil {
 		return fmt.Errorf("operation failed: %w", err)
@@ -657,7 +657,7 @@ func (db *DB) ResetUserProfile(userID int) error {
 func (db *DB) SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error {
 	query := `
         INSERT INTO user_feedback (user_id, feedback_text, contact_info, created_at, is_processed)
-        VALUES ($1, $2, $3, NOW(), false)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP, false)
     `
 
 	_, err := db.conn.ExecContext(context.Background(), query, userID, feedbackText, contactInfo)
@@ -671,7 +671,7 @@ func (db *DB) SaveUserFeedback(userID int, feedbackText string, contactInfo *str
 // GetUserFeedbackByUserID получает отзывы пользователя.
 func (db *DB) GetUserFeedbackByUserID(userID int) ([]map[string]interface{}, error) {
 	query := `
-        SELECT id, feedback_text, contact_info, created_at, is_processed, admin_response
+        SELECT id, user_id, feedback_text, contact_info, created_at, is_processed, admin_response
         FROM user_feedback
         WHERE user_id = $1
         ORDER BY created_at DESC
@@ -723,6 +723,7 @@ func (db *DB) processUserFeedbackRows(rows *sql.Rows) []map[string]interface{} {
 func (db *DB) scanUserFeedbackRow(rows *sql.Rows) map[string]interface{} {
 	var (
 		feedbackID    int
+		userID        int
 		feedbackText  string
 		contactInfo   sql.NullString
 		createdAt     sql.NullTime
@@ -730,13 +731,14 @@ func (db *DB) scanUserFeedbackRow(rows *sql.Rows) map[string]interface{} {
 		adminResponse sql.NullString
 	)
 
-	err := rows.Scan(&feedbackID, &feedbackText, &contactInfo, &createdAt, &isProcessed, &adminResponse)
+	err := rows.Scan(&feedbackID, &userID, &feedbackText, &contactInfo, &createdAt, &isProcessed, &adminResponse)
 	if err != nil {
 		return nil // Пропускаем ошибочные записи
 	}
 
 	feedback := map[string]interface{}{
 		"id":            feedbackID,
+		"user_id":       userID,
 		"feedback_text": feedbackText,
 		"created_at":    createdAt.Time,
 		"is_processed":  isProcessed,
@@ -792,7 +794,7 @@ func (db *DB) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 // getUnprocessedFeedbackQuery возвращает SQL запрос для получения необработанных отзывов.
 func getUnprocessedFeedbackQuery() string {
 	return `
-        SELECT uf.id, uf.feedback_text, uf.contact_info, uf.created_at,
+        SELECT uf.id, uf.user_id, uf.feedback_text, uf.contact_info, uf.created_at,
                u.username, u.telegram_id, u.first_name
         FROM user_feedback uf
         JOIN users u ON uf.user_id = u.id
@@ -821,6 +823,7 @@ func (db *DB) processFeedbackRows(rows *sql.Rows) []map[string]interface{} {
 func (db *DB) scanFeedbackRow(rows *sql.Rows) (map[string]interface{}, error) {
 	var (
 		feedbackID   int
+		userID       int
 		feedbackText string
 		contactInfo  sql.NullString
 		createdAt    sql.NullTime
@@ -829,13 +832,14 @@ func (db *DB) scanFeedbackRow(rows *sql.Rows) (map[string]interface{}, error) {
 		firstName    string
 	)
 
-	err := rows.Scan(&feedbackID, &feedbackText, &contactInfo, &createdAt, &username, &telegramID, &firstName)
+	err := rows.Scan(&feedbackID, &userID, &feedbackText, &contactInfo, &createdAt, &username, &telegramID, &firstName)
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 
 	feedback := map[string]interface{}{
 		"id":            feedbackID,
+		"user_id":       userID,
 		"feedback_text": feedbackText,
 		"created_at":    createdAt.Time,
 		"telegram_id":   telegramID,
@@ -862,7 +866,7 @@ func getStringValue(nullStr sql.NullString) interface{} {
 func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
 	query := `
         UPDATE user_feedback
-        SET is_processed = true, admin_response = $1, updated_at = NOW()
+        SET is_processed = true, admin_response = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
     `
 

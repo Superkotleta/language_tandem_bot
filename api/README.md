@@ -1,8 +1,56 @@
-# Language Exchange Bot - gRPC API Documentation
+# Language Exchange Bot - API Documentation
 
-Этот документ описывает gRPC API для микросервисной архитектуры Language Exchange Bot.
+Этот документ описывает API (gRPC + REST) для микросервисной архитектуры Language Exchange Bot.
 
-## Обзор сервисов
+## 🎯 API Overview
+
+### REST API (Admin)
+- **Base URL:** `http://localhost:8080`
+- **Version:** v1/v2
+- **Authentication:** `X-Admin-Key` header
+- **Documentation:** [Swagger UI](http://localhost:8080/swagger/)
+
+### gRPC API (Services)
+- **Protocol:** gRPC with Protocol Buffers
+- **Services:** User, Interest, Matcher
+- **Authentication:** mTLS for internal communication
+
+## REST API Endpoints
+
+### 🔧 Admin API v1
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/healthz` | Health check | No |
+| `GET` | `/readyz` | Readiness check | No |
+| `GET` | `/api/v1/stats` | System statistics | Admin Key |
+| `GET` | `/api/v1/users/{id}` | Get user by ID | Admin Key |
+| `GET` | `/api/v1/users` | List users (paginated) | Admin Key |
+| `GET` | `/api/v1/feedback/unprocessed` | Unprocessed feedback | Admin Key |
+| `POST` | `/api/v1/feedback/{id}/process` | Process feedback | Admin Key |
+| `GET` | `/api/v1/rate-limits/stats` | Rate limiting stats | Admin Key |
+| `GET` | `/api/v1/cache/stats` | Cache statistics | Admin Key |
+| `GET` | `/api/v1/webhook/status` | Webhook status | Admin Key |
+| `POST` | `/api/v1/webhook/setup` | Setup webhook | Admin Key |
+| `POST` | `/api/v1/webhook/remove` | Remove webhook | Admin Key |
+
+### 🚀 Admin API v2 (Enhanced)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/v2/stats` | Enhanced system statistics | Admin Key |
+| `GET` | `/api/v2/system/health` | Detailed system health | Admin Key |
+| `GET` | `/api/v2/metrics/performance` | Performance metrics | Admin Key |
+
+### 📊 Authentication
+
+```bash
+# All admin API requests require X-Admin-Key header
+curl -H "X-Admin-Key: your-admin-secret-key" \
+     http://localhost:8080/api/v1/stats
+```
+
+## gRPC Services Overview
 
 Система состоит из следующих микросервисов:
 

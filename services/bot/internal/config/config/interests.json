@@ -1,0 +1,23 @@
+{
+  "matching": {
+    "primaryInterestScore": 4,
+    "additionalInterestScore": 2,
+    "minCompatibilityScore": 6,
+    "maxMatchesPerUser": 15
+  },
+  "interestLimits": {
+    "minPrimaryInterests": 1,
+    "maxPrimaryInterests": 7,
+    "primaryPercentage": 0.35
+  },
+  "categories": {
+    "test1": {
+      "displayOrder": 1,
+      "maxPrimaryPerCategory": 2
+    },
+    "test2": {
+      "displayOrder": 2,
+      "maxPrimaryPerCategory": 3
+    }
+  }
+}

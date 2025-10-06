@@ -150,6 +150,10 @@ func GetInterestsConfig() *InterestsConfig {
 
 // SaveInterestsConfig сохраняет конфигурацию в файл.
 func SaveInterestsConfig(config *InterestsConfig) error {
+	if config == nil {
+		return fmt.Errorf("config cannot be nil")
+	}
+
 	// Определяем путь для сохранения
 	configPath := "config/interests.json"
 

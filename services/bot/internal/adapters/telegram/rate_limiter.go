@@ -172,7 +172,14 @@ func (rl *RateLimiter) cleanup() {
 
 // Stop останавливает rate limiter
 func (rl *RateLimiter) Stop() {
-	close(rl.stopChan)
+	if rl.stopChan != nil {
+		select {
+		case <-rl.stopChan:
+			// Канал уже закрыт
+		default:
+			close(rl.stopChan)
+		}
+	}
 }
 
 // CheckRateLimit проверяет rate limit и возвращает ошибку если превышен

@@ -58,7 +58,14 @@ func NewTelegramHandler(
 		errorHandler,
 	)
 	languageHandler := handlers.NewLanguageHandler(service, bot, keyboardBuilder, errorHandler)
-	interestService := core.NewInterestService(service.DB.GetConnection())
+
+	var interestService *core.InterestService
+	if service.DB != nil {
+		interestService = core.NewInterestService(service.DB.GetConnection())
+	} else {
+		interestService = nil // Для тестов без DB
+	}
+
 	interestHandler := handlers.NewNewInterestHandler(service, interestService, bot, keyboardBuilder, errorHandler)
 	profileInterestHandler := handlers.NewProfileInterestHandler(
 		service,
@@ -239,6 +246,10 @@ func (h *TelegramHandler) HandleUpdate(update tgbotapi.Update) error {
 
 // handleMessage обрабатывает входящие текстовые сообщения.
 func (h *TelegramHandler) handleMessage(message *tgbotapi.Message) error {
+	if h.service == nil {
+		return fmt.Errorf("service not initialized")
+	}
+
 	user, err := h.service.HandleUserRegistration(
 		message.From.ID,
 		message.From.UserName,
@@ -275,6 +286,10 @@ func (h *TelegramHandler) handleMessage(message *tgbotapi.Message) error {
 
 // handleCommand обрабатывает команды пользователя (начинающиеся с /).
 func (h *TelegramHandler) handleCommand(message *tgbotapi.Message, user *models.User) error {
+	if h.service == nil {
+		return fmt.Errorf("service not initialized")
+	}
+
 	switch message.Command() {
 	case "start":
 		return h.menuHandler.HandleStartCommand(message, user)
@@ -308,6 +323,10 @@ func (h *TelegramHandler) handleCommand(message *tgbotapi.Message, user *models.
 
 // handleState обрабатывает сообщения в зависимости от текущего состояния пользователя.
 func (h *TelegramHandler) handleState(message *tgbotapi.Message, user *models.User) error {
+	if h.service == nil {
+		return fmt.Errorf("service not initialized")
+	}
+
 	switch user.State {
 	case models.StateWaitingLanguage,
 		models.StateWaitingInterests,
@@ -329,6 +348,10 @@ func (h *TelegramHandler) handleState(message *tgbotapi.Message, user *models.Us
 
 // handleCallbackQuery обрабатывает нажатия на inline-кнопки.
 func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
+	if h.service == nil {
+		return fmt.Errorf("service not initialized")
+	}
+
 	log.Printf("DEBUG: handleCallbackQuery called with data: '%s' from user %d", callback.Data, callback.From.ID)
 
 	user, err := h.service.HandleUserRegistration(

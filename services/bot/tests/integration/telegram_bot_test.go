@@ -1,3 +1,45 @@
+// Package integration contains end-to-end tests for the Language Exchange Bot
+//
+// E2E Test Scenarios:
+//
+// 1. User Registration Flow:
+//   - New user sends /start command
+//   - Bot detects interface language from Telegram settings
+//   - User profile is created with detected language
+//   - Bot sends welcome message in appropriate language
+//
+// 2. Profile Completion Flow:
+//   - User selects native language from available options
+//   - User selects target language and proficiency level
+//   - User selects interests from categorized list
+//   - Profile completion status is properly tracked
+//   - Bot notifies when profile is complete
+//
+// 3. Partner Matching Flow:
+//   - User with complete profile requests partner search
+//   - System finds compatible users based on:
+//   - Complementary language pairs (A learns B's native, B learns A's native)
+//   - Matching interests
+//   - Compatible proficiency levels
+//   - Matching results are returned with contact information
+//
+// 4. Admin Feedback Flow:
+//   - User submits feedback through bot interface
+//   - Feedback is stored in database with user info
+//   - Admin receives notification (if configured)
+//   - Admin can view and process feedback via Admin API
+//
+// 5. Rate Limiting Flow:
+//   - User sends multiple messages rapidly
+//   - Rate limiter activates after threshold
+//   - User receives rate limit warning
+//   - Rate limit is properly reset after cooldown period
+//
+// 6. Error Recovery Flow:
+//   - Database connection is lost during operation
+//   - Circuit breaker activates
+//   - Bot gracefully handles error and provides user feedback
+//   - System recovers when database is restored
 package integration //nolint:testpackage
 
 import (

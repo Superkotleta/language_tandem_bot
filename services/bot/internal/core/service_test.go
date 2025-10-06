@@ -95,7 +95,7 @@ func (m *MockDatabase) GetUserSelectedInterests(userID int) ([]int, error) {
 	return args.Get(0).([]int), args.Error(1)
 }
 
-func (m *MockDatabase) SaveUserInterests(userID int64, interestIDs []int) error {
+func (m *MockDatabase) SaveUserInterests(userID int, interestIDs []int) error {
 	args := m.Called(userID, interestIDs)
 	return args.Error(0)
 }
@@ -342,5 +342,150 @@ func TestGetDisplayName(t *testing.T) {
 
 		result := service.getDisplayName(user)
 		assert.Equal(t, "Лисёнок 🦊", result)
+	})
+}
+
+func TestGetWelcomeMessage(t *testing.T) {
+	mockLocalizer := &localization.Localizer{}
+
+	// Mock для тестирования локализации
+	service := &BotService{
+		Localizer: mockLocalizer,
+	}
+
+	user := &models.User{
+		ID:                    1,
+		FirstName:             "John",
+		InterfaceLanguageCode: "en",
+	}
+
+	// Поскольку мы не можем легко замокать Localizer.GetWithParams,
+	// тестируем что метод не падает и возвращает не пустую строку
+	message := service.GetWelcomeMessage(user)
+	assert.NotEmpty(t, message)
+}
+
+func TestGetLanguagePrompt(t *testing.T) {
+	mockLocalizer := &localization.Localizer{}
+
+	service := &BotService{
+		Localizer: mockLocalizer,
+	}
+
+	user := &models.User{
+		ID:                    1,
+		InterfaceLanguageCode: "en",
+	}
+
+	// Test native language prompt
+	nativePrompt := service.GetLanguagePrompt(user, "native")
+	assert.NotEmpty(t, nativePrompt)
+
+	// Test target language prompt
+	targetPrompt := service.GetLanguagePrompt(user, "target")
+	assert.NotEmpty(t, targetPrompt)
+
+	// Test default prompt
+	defaultPrompt := service.GetLanguagePrompt(user, "unknown")
+	assert.NotEmpty(t, defaultPrompt)
+}
+
+func TestGetLocalizedLanguageName(t *testing.T) {
+	mockLocalizer := &localization.Localizer{}
+
+	service := &BotService{
+		Localizer: mockLocalizer,
+	}
+
+	// Test with existing language
+	name := service.GetLocalizedLanguageName("en", "ru")
+	assert.NotEmpty(t, name)
+
+	// Test with non-existing language
+	name = service.GetLocalizedLanguageName("unknown", "en")
+	assert.NotEmpty(t, name)
+}
+
+func TestSetFeedbackNotificationFunc(t *testing.T) {
+	service := &BotService{}
+
+	// Test setting notification function
+	called := false
+	testFunc := func(data map[string]interface{}) error {
+		called = true
+		return nil
+	}
+
+	service.SetFeedbackNotificationFunc(testFunc)
+	assert.NotNil(t, service.FeedbackNotificationFunc)
+
+	// Test calling the function
+	err := service.FeedbackNotificationFunc(map[string]interface{}{"test": "data"})
+	assert.NoError(t, err)
+	assert.True(t, called)
+}
+
+func TestExecuteWithCircuitBreakers(t *testing.T) {
+	service := &BotService{}
+
+	t.Run("ExecuteWithTelegramCircuitBreaker - no circuit breaker", func(t *testing.T) {
+		result, err := service.ExecuteWithTelegramCircuitBreaker(func() (interface{}, error) {
+			return "success", nil
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "success", result)
+	})
+
+	t.Run("ExecuteWithDatabaseCircuitBreaker - no circuit breaker", func(t *testing.T) {
+		result, err := service.ExecuteWithDatabaseCircuitBreaker(func() (interface{}, error) {
+			return "success", nil
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "success", result)
+	})
+
+	t.Run("ExecuteWithRedisCircuitBreaker - no circuit breaker", func(t *testing.T) {
+		result, err := service.ExecuteWithRedisCircuitBreaker(func() (interface{}, error) {
+			return "success", nil
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "success", result)
+	})
+}
+
+func TestGetCircuitBreakerStates(t *testing.T) {
+	service := &BotService{}
+
+	// Test with no circuit breakers initialized - should return empty map
+	states := service.GetCircuitBreakerStates()
+	assert.NotNil(t, states)
+	assert.Empty(t, states) // No circuit breakers initialized in empty service
+}
+
+func TestGetCircuitBreakerCounts(t *testing.T) {
+	service := &BotService{}
+
+	// Test with no circuit breakers initialized - should return empty map
+	counts := service.GetCircuitBreakerCounts()
+	assert.NotNil(t, counts)
+	assert.Empty(t, counts) // No circuit breakers initialized in empty service
+}
+
+func TestStopCache(t *testing.T) {
+	service := &BotService{}
+
+	// Test that StopCache doesn't panic when cache is nil
+	// The method should check if cache is not nil before calling Stop()
+	assert.NotPanics(t, func() {
+		service.StopCache()
+	})
+}
+
+func TestGetConfig(t *testing.T) {
+	service := &BotService{}
+
+	// Test that GetConfig doesn't panic (may return nil for empty service)
+	assert.NotPanics(t, func() {
+		_ = service.GetConfig()
 	})
 }

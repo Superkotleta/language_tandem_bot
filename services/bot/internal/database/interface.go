@@ -27,7 +27,7 @@ type Database interface {
 	// Интересы
 	GetInterests() ([]*models.Interest, error)
 	GetUserSelectedInterests(userID int) ([]int, error)
-	SaveUserInterests(userID int64, interestIDs []int) error
+	SaveUserInterests(userID int, interestIDs []int) error
 	SaveUserInterest(userID, interestID int, isPrimary bool) error
 	RemoveUserInterest(userID, interestID int) error
 	ClearUserInterests(userID int) error

@@ -98,28 +98,40 @@ func getDatabaseURL(getFromFile func(string) string) string {
 
 // getRedisDB получает номер базы данных Redis.
 func getRedisDB() int {
-	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
+	redisDB, err := strconv.Atoi(getEnv("REDIS_DB", "0"))
+	if err != nil {
+		return 0 // default value
+	}
 
 	return redisDB
 }
 
 // getDebug получает флаг отладки.
 func getDebug() bool {
-	debug, _ := strconv.ParseBool(getEnv("DEBUG", "false"))
+	debug, err := strconv.ParseBool(getEnv("DEBUG", "false"))
+	if err != nil {
+		return false // default value
+	}
 
 	return debug
 }
 
 // getEnableTelegram получает флаг включения Telegram.
 func getEnableTelegram() bool {
-	enableTelegram, _ := strconv.ParseBool(getEnv("ENABLE_TELEGRAM", "true"))
+	enableTelegram, err := strconv.ParseBool(getEnv("ENABLE_TELEGRAM", "true"))
+	if err != nil {
+		return true // default value
+	}
 
 	return enableTelegram
 }
 
 // getEnableDiscord получает флаг включения Discord.
 func getEnableDiscord() bool {
-	enableDiscord, _ := strconv.ParseBool(getEnv("ENABLE_DISCORD", "false"))
+	enableDiscord, err := strconv.ParseBool(getEnv("ENABLE_DISCORD", "false"))
+	if err != nil {
+		return false // default value
+	}
 
 	return enableDiscord
 }
@@ -159,6 +171,11 @@ func parseAdminChatIDs() []int64 {
 		}
 	}
 
+	// Возвращаем пустой slice вместо nil
+	if adminChatIDs == nil {
+		adminChatIDs = []int64{}
+	}
+
 	return adminChatIDs
 }
 
@@ -176,8 +193,16 @@ func parseAdminUsernames() []string {
 			}
 
 			username = strings.TrimPrefix(username, "@")
+			if username == "" {
+				continue
+			}
 			adminUsernames = append(adminUsernames, username)
 		}
+	}
+
+	// Возвращаем пустой slice вместо nil
+	if adminUsernames == nil {
+		adminUsernames = []string{}
 	}
 
 	return adminUsernames
@@ -185,49 +210,70 @@ func parseAdminUsernames() []string {
 
 // getPrimaryInterestScore получает баллы за основные интересы.
 func getPrimaryInterestScore() int {
-	score, _ := strconv.Atoi(getEnv("PRIMARY_INTEREST_SCORE", "3"))
+	score, err := strconv.Atoi(getEnv("PRIMARY_INTEREST_SCORE", "3"))
+	if err != nil {
+		return 3 // default value
+	}
 
 	return score
 }
 
 // getAdditionalInterestScore получает баллы за дополнительные интересы.
 func getAdditionalInterestScore() int {
-	score, _ := strconv.Atoi(getEnv("ADDITIONAL_INTEREST_SCORE", "1"))
+	score, err := strconv.Atoi(getEnv("ADDITIONAL_INTEREST_SCORE", "1"))
+	if err != nil {
+		return 1 // default value
+	}
 
 	return score
 }
 
 // getMinCompatibilityScore получает минимальный балл совместимости.
 func getMinCompatibilityScore() int {
-	score, _ := strconv.Atoi(getEnv("MIN_COMPATIBILITY_SCORE", "5"))
+	score, err := strconv.Atoi(getEnv("MIN_COMPATIBILITY_SCORE", "5"))
+	if err != nil {
+		return 5 // default value
+	}
 
 	return score
 }
 
 // getMaxMatchesPerUser получает максимальное количество совпадений на пользователя.
 func getMaxMatchesPerUser() int {
-	matches, _ := strconv.Atoi(getEnv("MAX_MATCHES_PER_USER", "10"))
+	matches, err := strconv.Atoi(getEnv("MAX_MATCHES_PER_USER", "10"))
+	if err != nil {
+		return 10 // default value
+	}
 
 	return matches
 }
 
 // getMinPrimaryInterests получает минимальное количество основных интересов.
 func getMinPrimaryInterests() int {
-	interests, _ := strconv.Atoi(getEnv("MIN_PRIMARY_INTERESTS", "1"))
+	interests, err := strconv.Atoi(getEnv("MIN_PRIMARY_INTERESTS", "1"))
+	if err != nil {
+		return 1 // default value
+	}
 
 	return interests
 }
 
 // getMaxPrimaryInterests получает максимальное количество основных интересов.
 func getMaxPrimaryInterests() int {
-	interests, _ := strconv.Atoi(getEnv("MAX_PRIMARY_INTERESTS", "5"))
+	interests, err := strconv.Atoi(getEnv("MAX_PRIMARY_INTERESTS", "5"))
+	if err != nil {
+		return 5 // default value
+	}
 
 	return interests
 }
 
 // getPrimaryPercentage получает процент основных интересов.
 func getPrimaryPercentage() float64 {
-	percentage, _ := strconv.ParseFloat(getEnv("PRIMARY_PERCENTAGE", "0.3"), 64)
+	percentage, err := strconv.ParseFloat(getEnv("PRIMARY_PERCENTAGE", "0.3"), 64)
+	if err != nil {
+		return 0.3 // default value
+	}
 
 	return percentage
 }
@@ -242,6 +288,11 @@ func getEnv(key, defaultValue string) string {
 
 // loadEnvFile загружает .env файл из возможных путей.
 func loadEnvFile() {
+	// Пропускаем загрузку .env файлов в тестах
+	if os.Getenv("GO_TEST") == "1" {
+		return
+	}
+
 	envPaths := []string{
 		"../../deploy/.env", // из services/bot/cmd/bot/
 		"../deploy/.env",    // из services/bot/

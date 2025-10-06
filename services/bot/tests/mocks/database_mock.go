@@ -3,6 +3,7 @@ package mocks
 
 import (
 	"database/sql"
+	"fmt"
 	"language-exchange-bot/internal/models"
 	"time"
 )
@@ -179,17 +180,27 @@ func (db *DatabaseMock) GetInterests() ([]*models.Interest, error) {
 }
 
 // SaveUserInterests сохраняет интересы пользователя.
-func (db *DatabaseMock) SaveUserInterests(userID int64, interestIDs []int) error {
+func (db *DatabaseMock) SaveUserInterests(userID int, interestIDs []int) error {
 	if db.lastError != nil {
 		return db.lastError
 	}
 
 	// В реальной БД здесь была бы таблица user_interests
 	// Для мока просто сохраняем в пользователе
-	user, exists := db.users[userID]
-	if exists {
-		user.Interests = interestIDs
-		user.UpdatedAt = time.Now()
+	// userID здесь database ID, но в mock используем telegram ID
+	// Для простоты сохраняем по первому найденному пользователю
+	for telegramID, user := range db.users {
+		if user.ID == userID {
+			user.Interests = interestIDs
+			user.UpdatedAt = time.Now()
+			break
+		}
+		// Альтернативно, если userID совпадает с telegramID
+		if int64(userID) == telegramID {
+			user.Interests = interestIDs
+			user.UpdatedAt = time.Now()
+			break
+		}
 	}
 
 	return nil
@@ -209,9 +220,20 @@ func (db *DatabaseMock) GetUserInterests(userID int64) ([]int, error) {
 	return user.Interests, nil
 }
 
-// GetUserSelectedInterests возвращает выбранные интересы пользователя (alias для GetUserInterests).
+// GetUserSelectedInterests возвращает выбранные интересы пользователя.
 func (db *DatabaseMock) GetUserSelectedInterests(userID int) ([]int, error) {
-	return db.GetUserInterests(int64(userID))
+	if db.lastError != nil {
+		return nil, db.lastError
+	}
+
+	// Ищем пользователя по database ID
+	for _, user := range db.users {
+		if user.ID == userID {
+			return user.Interests, nil
+		}
+	}
+
+	return nil, fmt.Errorf("user not found")
 }
 
 // UpdateUserInterfaceLanguage обновляет язык интерфейса пользователя.
