@@ -5,15 +5,17 @@ import "time"
 
 // Состояния пользователя.
 const (
-	StateNew                    = "new"
-	StateWaitingLanguage        = "waiting_language"
-	StateWaitingTargetLanguage  = "waiting_target_language"
-	StateWaitingLanguageLevel   = "waiting_language_level"
-	StateWaitingInterests       = "waiting_interests"
-	StateWaitingTime            = "waiting_time"
-	StateWaitingFeedback        = "waiting_feedback"
-	StateWaitingFeedbackContact = "waiting_feedback_contact" // Для сбора контактной информации без username
-	StateActive                 = "active"
+	StateNew                          = "new"
+	StateWaitingLanguage              = "waiting_language"
+	StateWaitingTargetLanguage        = "waiting_target_language"
+	StateWaitingLanguageLevel         = "waiting_language_level"
+	StateWaitingInterests             = "waiting_interests"
+	StateWaitingTimeAvailability      = "waiting_time_availability"
+	StateWaitingFriendshipPreferences = "waiting_friendship_preferences"
+	StateWaitingTime                  = "waiting_time" // Legacy, оставлено для совместимости
+	StateWaitingFeedback              = "waiting_feedback"
+	StateWaitingFeedbackContact       = "waiting_feedback_contact" // Для сбора контактной информации без username
+	StateActive                       = "active"
 )
 
 // Статусы пользователя.

@@ -160,6 +160,10 @@ type databaseAdapter struct {
 
 // Реализуем все методы интерфейса, делегируя к db или создавая заглушки
 
+func (a *databaseAdapter) UpdateUserProfileCompletionLevel(userID int, level int) error {
+	return a.db.UpdateUserProfileCompletionLevel(userID, level)
+}
+
 func (a *databaseAdapter) FindOrCreateUser(telegramID int64, username, firstName string) (*models.User, error) {
 	user, err := a.db.FindOrCreateUser(telegramID, username, firstName)
 	if err != nil {
@@ -1604,4 +1608,26 @@ func (s *BotService) GetCircuitBreakerCounts() map[string]interface{} {
 // GetConfig возвращает конфигурацию приложения
 func (s *BotService) GetConfig() *config.Config {
 	return s.Config
+}
+
+// === Методы databaseAdapter для работы с доступностью ===
+
+// SaveTimeAvailability сохраняет временную доступность пользователя
+func (a *databaseAdapter) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
+	return a.db.SaveTimeAvailability(userID, availability)
+}
+
+// GetTimeAvailability получает временную доступность пользователя
+func (a *databaseAdapter) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
+	return a.db.GetTimeAvailability(userID)
+}
+
+// SaveFriendshipPreferences сохраняет предпочтения общения пользователя
+func (a *databaseAdapter) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
+	return a.db.SaveFriendshipPreferences(userID, preferences)
+}
+
+// GetFriendshipPreferences получает предпочтения общения пользователя
+func (a *databaseAdapter) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
+	return a.db.GetFriendshipPreferences(userID)
 }

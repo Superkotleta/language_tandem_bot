@@ -15,6 +15,7 @@ type Database interface {
 	UpdateUserInterfaceLanguage(userID int, language string) error
 	UpdateUserState(userID int, state string) error
 	UpdateUserStatus(userID int, status string) error
+	UpdateUserProfileCompletionLevel(userID int, level int) error
 	UpdateUserNativeLanguage(userID int, langCode string) error
 	UpdateUserTargetLanguage(userID int, langCode string) error
 	UpdateUserTargetLanguageLevel(userID int, level string) error
@@ -40,6 +41,12 @@ type Database interface {
 	SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error
 	GetUnprocessedFeedback() ([]map[string]interface{}, error)
 	MarkFeedbackProcessed(feedbackID int, adminResponse string) error
+
+	// Доступность пользователя
+	SaveTimeAvailability(userID int, availability *models.TimeAvailability) error
+	GetTimeAvailability(userID int) (*models.TimeAvailability, error)
+	SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error
+	GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error)
 
 	// Соединение
 	GetConnection() *sql.DB

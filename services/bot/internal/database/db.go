@@ -402,6 +402,18 @@ func (db *DB) UpdateUserStatus(userID int, status string) error {
 	return nil
 }
 
+// UpdateUserProfileCompletionLevel обновляет уровень завершения профиля пользователя.
+func (db *DB) UpdateUserProfileCompletionLevel(userID int, level int) error {
+	_, err := db.conn.ExecContext(context.Background(), `
+        UPDATE users SET profile_completion_level = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2
+    `, level, userID)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+
+	return nil
+}
+
 // UpdateUserInterfaceLanguage обновляет язык интерфейса пользователя.
 func (db *DB) UpdateUserInterfaceLanguage(userID int, langCode string) error {
 	_, err := db.conn.ExecContext(context.Background(), `
@@ -877,4 +889,116 @@ func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error 
 	}
 
 	return nil
+}
+
+// SaveTimeAvailability сохраняет временную доступность пользователя
+func (db *DB) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
+	query := `
+		INSERT INTO user_time_availability (user_id, day_type, specific_days, time_slot)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (user_id) DO UPDATE SET
+			day_type = EXCLUDED.day_type,
+			specific_days = EXCLUDED.specific_days,
+			time_slot = EXCLUDED.time_slot,
+			created_at = CURRENT_TIMESTAMP
+	`
+
+	_, err := db.conn.ExecContext(context.Background(), query,
+		userID,
+		availability.DayType,
+		availability.SpecificDays,
+		availability.TimeSlot,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to save time availability: %w", err)
+	}
+
+	return nil
+}
+
+// GetTimeAvailability получает временную доступность пользователя
+func (db *DB) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
+	query := `
+		SELECT day_type, specific_days, time_slot
+		FROM user_time_availability
+		WHERE user_id = $1
+	`
+
+	var availability models.TimeAvailability
+	err := db.conn.QueryRowContext(context.Background(), query, userID).Scan(
+		&availability.DayType,
+		&availability.SpecificDays,
+		&availability.TimeSlot,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Возвращаем значения по умолчанию, если данных нет
+			return &models.TimeAvailability{
+				DayType:      "any",
+				SpecificDays: []string{},
+				TimeSlot:     "any",
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to get time availability: %w", err)
+	}
+
+	return &availability, nil
+}
+
+// SaveFriendshipPreferences сохраняет предпочтения общения пользователя
+func (db *DB) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
+	query := `
+		INSERT INTO friendship_preferences (user_id, activity_type, communication_style, communication_frequency)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (user_id) DO UPDATE SET
+			activity_type = EXCLUDED.activity_type,
+			communication_style = EXCLUDED.communication_style,
+			communication_frequency = EXCLUDED.communication_frequency,
+			created_at = CURRENT_TIMESTAMP
+	`
+
+	_, err := db.conn.ExecContext(context.Background(), query,
+		userID,
+		preferences.ActivityType,
+		preferences.CommunicationStyle,
+		preferences.CommunicationFreq,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to save friendship preferences: %w", err)
+	}
+
+	return nil
+}
+
+// GetFriendshipPreferences получает предпочтения общения пользователя
+func (db *DB) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
+	query := `
+		SELECT activity_type, communication_style, communication_frequency
+		FROM friendship_preferences
+		WHERE user_id = $1
+	`
+
+	var preferences models.FriendshipPreferences
+	err := db.conn.QueryRowContext(context.Background(), query, userID).Scan(
+		&preferences.ActivityType,
+		&preferences.CommunicationStyle,
+		&preferences.CommunicationFreq,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Возвращаем значения по умолчанию, если данных нет
+			return &models.FriendshipPreferences{
+				ActivityType:       "casual_chat",
+				CommunicationStyle: "text",
+				CommunicationFreq:  "weekly",
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to get friendship preferences: %w", err)
+	}
+
+	return &preferences, nil
 }

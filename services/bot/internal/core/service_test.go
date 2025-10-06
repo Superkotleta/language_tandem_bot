@@ -52,6 +52,11 @@ func (m *MockDatabase) UpdateUserStatus(userID int, status string) error {
 	return args.Error(0)
 }
 
+func (m *MockDatabase) UpdateUserProfileCompletionLevel(userID int, level int) error {
+	args := m.Called(userID, level)
+	return args.Error(0)
+}
+
 func (m *MockDatabase) UpdateUserNativeLanguage(userID int, langCode string) error {
 	args := m.Called(userID, langCode)
 	return args.Error(0)
@@ -154,6 +159,33 @@ func (m *MockDatabase) GetConnection() *sql.DB {
 func (m *MockDatabase) Close() error {
 	args := m.Called()
 	return args.Error(0)
+}
+
+// Методы для работы с доступностью
+func (m *MockDatabase) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
+	args := m.Called(userID, availability)
+	return args.Error(0)
+}
+
+func (m *MockDatabase) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
+	args := m.Called(userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.TimeAvailability), args.Error(1)
+}
+
+func (m *MockDatabase) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
+	args := m.Called(userID, preferences)
+	return args.Error(0)
+}
+
+func (m *MockDatabase) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
+	args := m.Called(userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.FriendshipPreferences), args.Error(1)
 }
 
 func TestHandleUserRegistration(t *testing.T) {

@@ -2,14 +2,12 @@ package handlers
 
 import (
 	"errors"
-	"log"
 	"math"
 	"strconv"
 	"strings"
 
 	"language-exchange-bot/internal/core"
 	customErrors "language-exchange-bot/internal/errors"
-	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -625,15 +623,21 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 
 	fullMessage := completionMsg + "\n\n" + primaryText.String() + additionalText.String() + "\n" + feedbackSuggestion
 
-	// Создаем клавиатуру
-	keyboard := h.keyboardBuilder.CreateProfileCompletedKeyboard(user.InterfaceLanguageCode)
+	// Показываем сообщение о завершении интересов
+	completionKeyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(
+				"✅ "+h.service.Localizer.Get(user.InterfaceLanguageCode, "continue_button"),
+				"continue_to_availability",
+			),
+		),
+	)
 
-	// Обновляем сообщение
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		fullMessage,
-		keyboard,
+		completionKeyboard,
 	)
 
 	_, err = h.bot.Request(editMsg)
@@ -641,23 +645,8 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 		return err
 	}
 
-	// Обновляем состояние пользователя
-	err = h.service.DB.UpdateUserState(user.ID, models.StateActive)
-	if err != nil {
-		log.Printf("Error updating user state: %v", err)
-	}
-
-	err = h.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
-	if err != nil {
-		log.Printf("Error updating user status: %v", err)
-	}
-
-	// Обновляем уровень завершения профиля
-	err = h.updateProfileCompletionLevel(user.ID, localization.ProfileCompletionLevelComplete)
-	if err != nil {
-		log.Printf("Error updating profile completion level: %v", err)
-	}
-
+	// Не переводим пользователя в активное состояние сразу,
+	// ждем нажатия кнопки "Продолжить"
 	return nil
 }
 

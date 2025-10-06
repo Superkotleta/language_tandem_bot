@@ -217,6 +217,10 @@ func (kb *KeyboardBuilder) CreateProfileMenuKeyboard(interfaceLang string) tgbot
 		kb.service.Localizer.Get(interfaceLang, "main_menu_change_lang"),
 		"main_change_language",
 	)
+	editAvailability := tgbotapi.NewInlineKeyboardButtonData(
+		"⏰ "+kb.service.Localizer.Get(interfaceLang, "edit_availability"),
+		"edit_availability",
+	)
 	reconfig := tgbotapi.NewInlineKeyboardButtonData(
 		kb.service.Localizer.Get(interfaceLang, "profile_reconfigure"),
 		"profile_reset_ask",
@@ -226,9 +230,10 @@ func (kb *KeyboardBuilder) CreateProfileMenuKeyboard(interfaceLang string) tgbot
 		"back_to_main_menu",
 	)
 
-	// Пять рядов: интересы (новая изолированная), языки, язык интерфейса, сброс, главное меню
+	// Шесть рядов: интересы, доступность, языки, язык интерфейса, сброс, главное меню
 	buttons := [][]tgbotapi.InlineKeyboardButton{
 		{editInterestsIsolated},
+		{editAvailability},
 		{editLanguages},
 		{changeInterfaceLang},
 		{reconfig},
@@ -288,6 +293,31 @@ func (kb *KeyboardBuilder) CreateProfileCompletedKeyboard(interfaceLang string) 
 	)
 
 	buttons := [][]tgbotapi.InlineKeyboardButton{
+		{viewProfileButton, mainMenuButton},
+	}
+
+	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
+}
+
+// CreateAvailabilitySetupKeyboard создает клавиатуру для перехода к настройке доступности
+func (kb *KeyboardBuilder) CreateAvailabilitySetupKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
+	setupAvailabilityButton := tgbotapi.NewInlineKeyboardButtonData(
+		"⏰ "+kb.service.Localizer.Get(interfaceLang, "setup_availability_button"),
+		"setup_availability",
+	)
+
+	viewProfileButton := tgbotapi.NewInlineKeyboardButtonData(
+		kb.service.Localizer.Get(interfaceLang, "profile_show"),
+		"profile_show",
+	)
+
+	mainMenuButton := tgbotapi.NewInlineKeyboardButtonData(
+		kb.service.Localizer.Get(interfaceLang, "profile_completed_main"),
+		"back_to_main_menu",
+	)
+
+	buttons := [][]tgbotapi.InlineKeyboardButton{
+		{setupAvailabilityButton},
 		{viewProfileButton, mainMenuButton},
 	}
 

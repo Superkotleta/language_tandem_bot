@@ -538,6 +538,76 @@ func (db *DatabaseMock) GetUser(telegramID int64) *models.User {
 	return db.users[telegramID]
 }
 
+// UpdateUserProfileCompletionLevel обновляет уровень завершения профиля
+func (db *DatabaseMock) UpdateUserProfileCompletionLevel(userID int, level int) error {
+	for _, user := range db.users {
+		if user.ID == userID {
+			user.ProfileCompletionLevel = level
+			user.UpdatedAt = time.Now()
+			return nil
+		}
+	}
+	return fmt.Errorf("user not found")
+}
+
+// SaveTimeAvailability сохраняет временную доступность пользователя
+func (db *DatabaseMock) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
+	for _, user := range db.users {
+		if user.ID == userID {
+			user.TimeAvailability = availability
+			user.UpdatedAt = time.Now()
+			return nil
+		}
+	}
+	return fmt.Errorf("user not found")
+}
+
+// GetTimeAvailability получает временную доступность пользователя
+func (db *DatabaseMock) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
+	for _, user := range db.users {
+		if user.ID == userID {
+			if user.TimeAvailability == nil {
+				return &models.TimeAvailability{
+					DayType:      "any",
+					SpecificDays: []string{},
+					TimeSlot:     "any",
+				}, nil
+			}
+			return user.TimeAvailability, nil
+		}
+	}
+	return nil, fmt.Errorf("user not found")
+}
+
+// SaveFriendshipPreferences сохраняет предпочтения общения пользователя
+func (db *DatabaseMock) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
+	for _, user := range db.users {
+		if user.ID == userID {
+			user.FriendshipPreferences = preferences
+			user.UpdatedAt = time.Now()
+			return nil
+		}
+	}
+	return fmt.Errorf("user not found")
+}
+
+// GetFriendshipPreferences получает предпочтения общения пользователя
+func (db *DatabaseMock) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
+	for _, user := range db.users {
+		if user.ID == userID {
+			if user.FriendshipPreferences == nil {
+				return &models.FriendshipPreferences{
+					ActivityType:       "casual_chat",
+					CommunicationStyle: "text",
+					CommunicationFreq:  "weekly",
+				}, nil
+			}
+			return user.FriendshipPreferences, nil
+		}
+	}
+	return nil, fmt.Errorf("user not found")
+}
+
 // Reset очищает все данные в моке.
 func (db *DatabaseMock) Reset() {
 	db.users = make(map[int64]*models.User)
