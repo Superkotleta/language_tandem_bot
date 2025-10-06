@@ -1,1345 +1,374 @@
-# Архитектура Language Exchange Bot
+# 🏗️ Архитектура Language Exchange Bot
+
+## 🎯 Обзор системы
+
+**Language Exchange Bot** - это enterprise-уровень микросервисная система для поиска партнеров по изучению языков через Telegram.
+
+### 🚀 Ключевые характеристики
+
+- **Архитектура**: Clean Architecture + микросервисы
+- **Технологии**: Go, PostgreSQL, Redis, Docker
+- **Масштабируемость**: Circuit Breaker, Rate Limiting, кеширование
+- **Надежность**: 200+ unit тестов, централизованная обработка ошибок
+- **Мониторинг**: REST API, health checks, метрики
 
 ## 🏗️ Общая архитектура системы
 
 ```mermaid
 graph TB
-    subgraph "External Services"
-        TG[📱 Telegram Bot API<br/>Webhook Push]
-        USER[👤 Users]
+    subgraph "👤 Пользователи"
+        USER[👤 Telegram Users]
         ADMIN[👨‍💼 Administrators]
     end
 
-    subgraph "Language Exchange Bot System"
-        subgraph "API Layer"
-            ADMIN_API[🔌 Admin REST API<br/>Port: 8080<br/>• Swagger UI<br/>• Statistics<br/>• Monitoring<br/>• Cache Stats]
+    subgraph "🤖 Language Exchange Bot"
+        subgraph "🔌 API Layer"
+            ADMIN_API[🔌 Admin REST API<br/>Port: 8080<br/>• Swagger UI<br/>• Statistics<br/>• Health Checks]
             NAV[🗺️ Navigation Dashboard<br/>http://localhost:8080/]
         end
 
-        subgraph "Bot Core"
-            BOT[🤖 Bot Service<br/>Go + Docker<br/>• Webhook Handler<br/>• Rate Limiter<br/>• Command Processor<br/>• Message Handler]
+        subgraph "🎯 Bot Core"
+            BOT[🤖 Bot Service<br/>• Webhook Handler<br/>• Rate Limiter<br/>• Command Processor]
             CIRCUIT[🛡️ Circuit Breaker<br/>• Telegram CB<br/>• Database CB<br/>• Redis CB]
-            RATE_LIMIT[⚡ Rate Limiter<br/>20 msg/min<br/>2min block]
+            CACHE[⚡ Multi-Level Cache<br/>• Redis Primary<br/>• In-Memory Fallback]
         end
 
-        subgraph "Business Logic"
-            HANDLERS[🎯 Message Handlers<br/>• Profile Handler<br/>• Interest Handler<br/>• Feedback Handler<br/>• Admin Handler]
-            SERVICES[⚙️ Core Services<br/>• User Service<br/>• Interest Service<br/>• Validation Service<br/>• Cache Service]
-            VALIDATION[✅ Validation Layer<br/>• User Validator<br/>• Message Validator<br/>• Data Sanitizer]
+        subgraph "🎨 Business Logic"
+            HANDLERS[🎯 Message Handlers<br/>• Profile • Interest • Admin]
+            SERVICES[⚙️ Core Services<br/>• User • Interest • Validation]
+            VALIDATION[✅ Validation Layer<br/>• Data Sanitizer • Rules]
         end
 
-        subgraph "Data Layer"
-            PG[(🗄️ PostgreSQL<br/>Port: 5432<br/>• Users<br/>• Profiles<br/>• Interests<br/>• Languages<br/>• Feedback)]
-            REDIS[(⚡ Redis Cache<br/>Port: 6379<br/>• User Sessions<br/>• Interests Cache<br/>• Rate Limits<br/>• API Responses)]
-        end
-
-        subgraph "Management Tools"
-            PGADMIN[🌐 PgAdmin<br/>Port: 8080<br/>Web Interface]
-            SWAGGER[📋 Swagger UI<br/>API Documentation<br/>Interactive Testing]
+        subgraph "🗄️ Data Layer"
+            PG[(🗄️ PostgreSQL<br/>Users • Interests • Feedback)]
+            REDIS[(⚡ Redis<br/>Cache • Sessions • Rate Limits)]
         end
     end
 
-    USER --> TG
-    TG --> BOT
+    USER --> BOT
     BOT --> CIRCUIT
-    BOT --> RATE_LIMIT
+    BOT --> CACHE
     BOT --> HANDLERS
     HANDLERS --> SERVICES
     SERVICES --> VALIDATION
     SERVICES --> PG
-    SERVICES --> REDIS
+    CACHE --> REDIS
 
     ADMIN --> ADMIN_API
     ADMIN --> NAV
-    ADMIN --> SWAGGER
-    ADMIN --> PGADMIN
-
-    CIRCUIT --> PG
-    CIRCUIT --> REDIS
-    RATE_LIMIT --> REDIS
-
     ADMIN_API --> SERVICES
-    NAV --> ADMIN_API
-    SWAGGER --> ADMIN_API
 
-    classDef active fill:#90EE90,stroke:#333,stroke-width:2px
+    classDef core fill:#90EE90,stroke:#333,stroke-width:2px
     classDef api fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef core fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef business fill:#DDA0DD,stroke:#333,stroke-width:2px
-    classDef database fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef management fill:#FFA07A,stroke:#333,stroke-width:2px
+    classDef business fill:#FFD700,stroke:#333,stroke-width:2px
+    classDef data fill:#FFA07A,stroke:#333,stroke-width:2px
     classDef external fill:#FFB6C1,stroke:#333,stroke-width:2px
 
-    class BOT,CIRCUIT,RATE_LIMIT,HANDLERS,SERVICES,VALIDATION,PG,REDIS,ADMIN_API,NAV,SWAGGER,PGADMIN active
+    class BOT,CIRCUIT,CACHE core
     class ADMIN_API,NAV api
-    class BOT,CIRCUIT,RATE_LIMIT core
     class HANDLERS,SERVICES,VALIDATION business
-    class PG,REDIS database
-    class PGADMIN,SWAGGER management
-    class TG,USER,ADMIN external
+    class PG,REDIS data
+    class USER,ADMIN external
 ```
 
-## 🔧 Текущая архитектура (Enterprise-уровень)
+## 🔧 Компоненты системы
 
-### Активные компоненты
+### 🤖 **Bot Service** - Основной микросервис
 
-#### 🤖 **Bot Service** - Основной сервис
+| Компонент | Описание | Статус |
+|-----------|----------|---------|
+| **Telegram Handler** | Обработка webhook/callback от Telegram | ✅ Активен |
+| **Rate Limiter** | Защита от спама (20 msg/min) | ✅ Активен |
+| **Circuit Breaker** | Защита от каскадных сбоев | ✅ Активен |
+| **Message Handlers** | Обработка команд и сообщений | ✅ Активен |
+| **Admin API** | REST API для администрирования | ✅ Активен |
+| **Health Checks** | Мониторинг состояния системы | ✅ Активен |
 
-- **Статус**: ✅ Полностью функционален
-- **Технологии**: Go, Telegram Bot API, PostgreSQL, Redis
-- **Порт**: Webhook (Telegram)
-- **Функции**:
-  - Webhook обработка сообщений Telegram
-  - Rate limiting (20 msg/min, 2min block)
-  - Circuit Breaker защита
-  - Обработка команд и callback'ов
-  - Управление профилями пользователей
-  - Система интересов и языков
-  - Административные функции
-  - Многоуровневое кэширование
+### 🗄️ **База данных**
 
-#### 🔌 **Admin REST API** - Административное API
+| Компонент | Технология | Назначение |
+|-----------|------------|------------|
+| **PostgreSQL** | Реляционная БД | Основное хранилище данных |
+| **Redis** | In-memory cache | Кеширование и сессии |
+| **SQLite** | Для тестирования | Изоляция unit тестов |
 
-- **Статус**: ✅ Активен
-- **Порт**: 8080
-- **Технологии**: REST API, Swagger/OpenAPI
-- **Функции**:
-  - Статистика системы (`GET /api/v1/stats`)
-  - Управление пользователями (`GET /api/v1/users/{id}`)
-  - Статистика rate limiting (`GET /api/v1/rate-limits/stats`)
-  - Статистика кэша (`GET /api/v1/cache/stats`)
-  - Обработка отзывов (`POST /api/v1/feedback/{id}/process`)
-  - Аутентификация через `X-Admin-Key` header
+### 🧪 **Тестирование**
 
-#### 🗺️ **Navigation Dashboard** - Навигационная панель
+| Тип тестов | Покрытие | Количество | Описание |
+|------------|----------|------------|----------|
+| **Unit Tests** | 20.6% | 200+ | Изоляция компонентов |
+| **Integration** | 31.9% | 5+ | E2E сценарии |
+| **Database Tests** | 28.6% | 25+ | CRUD операции |
+| **API Tests** | 41.5% | 20+ | HTTP endpoints |
 
-- **Статус**: ✅ Активен
-- **URL**: `http://localhost:8080/`
-- **Функции**:
-  - Централизованная навигация по всем сервисам
-  - Статусы компонентов в реальном времени
-  - Прямые ссылки на API endpoints
-  - Команды для мониторинга и отладки
+## 🎯 Clean Architecture
 
-#### 📋 **Swagger UI** - Документация API
+### 📦 **Слои архитектуры**
 
-- **Статус**: ✅ Активен
-- **URL**: `http://localhost:8080/swagger/`
-- **Функции**:
-  - Интерактивная документация REST API
-  - Возможность тестирования endpoints
-  - Автоматическая генерация из кода
-  - Поддержка OpenAPI 3.0
-
-#### 🛡️ **Circuit Breaker** - Защита от сбоев
-
-- **Статус**: ✅ Активен
-- **Компоненты**:
-  - Telegram Circuit Breaker
-  - Database Circuit Breaker
-  - Redis Circuit Breaker
-- **Функции**:
-  - Автоматическая защита от каскадных сбоев
-  - Состояния: Closed/Open/Half-Open
-  - Recovery timeout и failure threshold
-
-#### ⚡ **Rate Limiter** - Защита от спама
-
-- **Статус**: ✅ Активен
-- **Настройки**:
-  - Max 20 сообщений в минуту
-  - Block duration: 2 минуты
-  - Cleanup interval: 10 минут
-- **Функции**:
-  - Защита от злоупотреблений
-  - Пользовательские лимиты
-  - Redis-based хранение счетчиков
-
-#### 🗄️ **PostgreSQL** - База данных
-
-- **Статус**: ✅ Активна
-- **Порт**: 5432
-- **Функции**:
-  - Хранение пользовательских данных
-  - Профили и настройки
-  - Интересы и языки
-  - Система отзывов
-  - Batch operations для оптимизации
-
-#### ⚡ **Redis Cache** - Многоуровневое кэширование
-
-- **Статус**: ✅ Активен
-- **Порт**: 6379
-- **Функции**:
-  - Primary Redis cache с TTL
-  - In-memory fallback cache
-  - Rate limiting storage
-  - User sessions и interests cache
-  - API responses caching
-  - 3-5x производительность
-
-#### 🌐 **PgAdmin** - Администрирование БД
-
-- **Статус**: ✅ Активен
-- **Порт**: 8081 (отдельный от API)
-- **Функции**: Веб-интерфейс для управления базой данных
-
-### Отключенные компоненты (Временно)
-
-#### 🎯 **Matcher Service** - Подбор партнеров
-
-- **Статус**: ⏸️ Временно отключен
-- **Причина**: Проблемы с миграциями
-- **Планы**: Восстановление в будущих версиях
-
-#### 👤 **Profile Service** - Управление профилями
-
-- **Статус**: ⏸️ Временно отключен
-- **Причина**: Проблемы с миграциями
-- **Функциональность**: Перенесена в основной Bot Service
-- **Новые возможности**: Расширенный профиль с детальной информацией о пользователе, временной доступности и предпочтениях общения
-
-## 🎯 Архитектура новой системы интересов
-
-### Структура данных
-
-```mermaid
-erDiagram
-    INTEREST_CATEGORIES {
-        int id PK
-        string key_name UK
-        int display_order
-        timestamp created_at
-    }
-    
-    INTERESTS {
-        int id PK
-        string key_name UK
-        int category_id FK
-        int display_order
-        string type
-        timestamp created_at
-    }
-    
-    USER_INTEREST_SELECTIONS {
-        int id PK
-        int user_id FK
-        int interest_id FK
-        boolean is_primary
-        int selection_order
-        timestamp created_at
-    }
-    
-    INTEREST_LIMITS_CONFIG {
-        int id PK
-        int min_primary_interests
-        int max_primary_interests
-        decimal primary_percentage
-        timestamp created_at
-        timestamp updated_at
-    }
-    
-    MATCHING_CONFIG {
-        int id PK
-        string config_key UK
-        string config_value
-        timestamp created_at
-        timestamp updated_at
-    }
-    
-    USERS {
-        int id PK
-        bigint telegram_id UK
-        string first_name
-        string last_name
-        string username
-        string interface_language_code
-        string state
-        string status
-        timestamp created_at
-        timestamp updated_at
-    }
-    
-    INTEREST_CATEGORIES ||--o{ INTERESTS : "contains"
-    USERS ||--o{ USER_INTEREST_SELECTIONS : "selects"
-    INTERESTS ||--o{ USER_INTEREST_SELECTIONS : "selected_in"
+```shell
+┌─────────────────────────────────────────────────┐
+│                 Delivery Layer                   │
+│  ┌─────────────────────────────────────────────┐ │
+│  │           Adapters Layer                     │ │
+│  │  ┌─────────────────────────────────────────┐ │ │
+│  │  │        Core Business Logic               │ │ │
+│  │  │  ┌─────────────────────────────────────┐ │ │ │
+│  │  │  │      Database/External APIs          │ │ │ │
+│  │  │  └─────────────────────────────────────┘ │ │ │
+│  │  └─────────────────────────────────────────┘ │ │
+│  └─────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────┘
 ```
 
-### Поток обработки интересов
+### 🎨 **Принципы реализации**
+
+- **Dependency Inversion**: Высокий уровень не зависит от низкого
+- **Single Responsibility**: Каждый компонент отвечает за одну функцию
+- **Interface Segregation**: Клиенты не зависят от неиспользуемых интерфейсов
+- **Open/Closed**: Открыты для расширения, закрыты для изменений
+
+## 🚀 **Масштабируемость**
+
+### ⚡ **Производительность**
+
+- **Многоуровневое кеширование**: Redis + In-memory fallback
+- **Batch loading**: 75% снижение запросов к БД
+- **Connection pooling**: Оптимизация подключений к PostgreSQL
+- **Rate limiting**: Защита от перегрузок
+
+### 🛡️ **Надежность**
+
+- **Circuit Breaker**: Автоматическое восстановление после сбоев
+- **Graceful shutdown**: Безопасное завершение работы
+- **Health checks**: Мониторинг состояния компонентов
+- **Error handling**: Централизованная обработка ошибок
+
+## 🔄 **Потоки данных**
+
+### 📨 **Пользовательский поток**
 
 ```mermaid
 sequenceDiagram
-    participant U as 👤 User
-    participant BOT as 🤖 Bot
-    participant HANDLER as 🎯 Interest Handler
-    participant SERVICE as ⚙️ Interest Service
-    participant DB as 🗄️ Database
-    participant CACHE as ⚡ Cache
-    
-    U->>BOT: Select Interest Category
-    BOT->>HANDLER: HandleInterestCategorySelection
-    HANDLER->>SERVICE: GetInterestCategories
-    SERVICE->>CACHE: Check Cache
-    alt Cache Hit
-        CACHE-->>SERVICE: Return Cached Categories
-    else Cache Miss
-        SERVICE->>DB: Query Categories
-        DB-->>SERVICE: Return Categories
-        SERVICE->>CACHE: Store in Cache
-    end
-    SERVICE-->>HANDLER: Return Categories
-    HANDLER->>BOT: Send Category Interests
-    BOT->>U: Display Interests
-    
-    U->>BOT: Select Interest
-    BOT->>HANDLER: HandleInterestSelection
-    HANDLER->>SERVICE: ToggleInterestSelection
-    SERVICE->>DB: Update Selection
-    DB-->>SERVICE: Confirm Update
-    SERVICE-->>HANDLER: Return Success
-    HANDLER->>BOT: Update Keyboard
-    BOT->>U: Show Updated Selection
-```
-
-### Компоненты системы
-
-#### 🎯 InterestService
-
-```go
-type InterestService struct {
-    db     *sql.DB
-    config *InterestsConfig
-}
-
-// Основные методы
-func (s *InterestService) GetInterestCategories() ([]InterestCategory, error)
-func (s *InterestService) GetInterestsByCategory(categoryID int) ([]Interest, error)
-func (s *InterestService) GetUserInterestSelections(userID int) ([]InterestSelection, error)
-func (s *InterestService) AddUserInterestSelection(userID, interestID int, isPrimary bool) error
-func (s *InterestService) RemoveUserInterestSelection(userID, interestID int) error
-func (s *InterestService) SetPrimaryInterest(userID, interestID int, isPrimary bool) error
-func (s *InterestService) GetUserInterestSummary(userID int) (*UserInterestSummary, error)
-func (s *InterestService) CalculateCompatibilityScore(user1ID, user2ID int) (int, error)
-```
-
-#### 🔧 ProfileInterestHandler
-
-```go
-type ProfileInterestHandler struct {
-    service         *BotService
-    interestService *InterestService
-    bot             *BotAPI
-    keyboardBuilder *KeyboardBuilder
-    errorHandler    *ErrorHandler
-}
-
-// Методы для редактирования из профиля
-func (h *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *CallbackQuery, user *User) error
-func (h *ProfileInterestHandler) HandleEditInterestCategoryFromProfile(callback *CallbackQuery, user *User, categoryKey string) error
-func (h *ProfileInterestHandler) HandleEditInterestSelectionFromProfile(callback *CallbackQuery, user *User, interestIDStr string) error
-func (h *ProfileInterestHandler) HandleEditPrimaryInterestsFromProfile(callback *CallbackQuery, user *User) error
-func (h *ProfileInterestHandler) HandleSaveInterestEditsFromProfile(callback *CallbackQuery, user *User) error
-```
-
-#### 💾 TemporaryInterestStorage
-
-```go
-type TemporaryInterestStorage struct {
-    mu      sync.RWMutex
-    storage map[int][]TemporaryInterestSelection
-}
-
-// Thread-safe операции
-func (s *TemporaryInterestStorage) AddInterest(userID, interestID int, isPrimary bool)
-func (s *TemporaryInterestStorage) RemoveInterest(userID, interestID int)
-func (s *TemporaryInterestStorage) ToggleInterest(userID, interestID int) bool
-func (s *TemporaryInterestStorage) TogglePrimary(userID, interestID int) bool
-func (s *TemporaryInterestStorage) SaveToDatabase(userID int, interestService *InterestService) error
-```
-
-### Конфигурация системы
-
-#### ⚙️ interests.json
-
-```json
-{
-  "matching": {
-    "primary_interest_score": 3,
-    "additional_interest_score": 1,
-    "min_compatibility_score": 5,
-    "max_matches_per_user": 10
-  },
-  "interest_limits": {
-    "min_primary_interests": 1,
-    "max_primary_interests": 5,
-    "primary_percentage": 0.3
-  },
-  "categories": {
-    "entertainment": { "display_order": 1, "max_primary_per_category": 2 },
-    "education": { "display_order": 2, "max_primary_per_category": 2 },
-    "active": { "display_order": 3, "max_primary_per_category": 2 },
-    "creative": { "display_order": 4, "max_primary_per_category": 2 },
-    "social": { "display_order": 5, "max_primary_per_category": 2 }
-  }
-}
-```
-
-### Алгоритм совместимости
-
-```mermaid
-flowchart TD
-    START[🎯 Start Matching] --> GET_USER1[👤 Get User 1 Interests]
-    GET_USER1 --> GET_USER2[👤 Get User 2 Interests]
-    GET_USER2 --> CALC_PRIMARY[⭐ Calculate Primary Score]
-    CALC_PRIMARY --> CALC_ADDITIONAL[➕ Calculate Additional Score]
-    CALC_ADDITIONAL --> TOTAL_SCORE[📊 Total Compatibility Score]
-    TOTAL_SCORE --> CHECK_MIN{🔍 Score >= Min?}
-    CHECK_MIN -->|Yes| MATCH[✅ Compatible Match]
-    CHECK_MIN -->|No| NO_MATCH[❌ No Match]
-    
-    subgraph "Scoring Algorithm"
-        PRIMARY[⭐ Primary Interests<br/>Score: 3 points each]
-        ADDITIONAL[➕ Additional Interests<br/>Score: 1 point each]
-        CONFIG[⚙️ Configurable Weights<br/>From interests.json]
-    end
-    
-    CALC_PRIMARY --> PRIMARY
-    CALC_ADDITIONAL --> ADDITIONAL
-    PRIMARY --> CONFIG
-    ADDITIONAL --> CONFIG
-```
-
-## 🚀 Архитектура кэширования и производительности
-
-```mermaid
-graph TD
-    subgraph "Bot Service"
-        BOT[🤖 Bot Service<br/>• Languages<br/>• Interests<br/>• Users<br/>• Batch Loading]
-    end
-    
-    subgraph "Cache Layer"
-        CACHE[🔄 Cache Interface<br/>• Get/Set<br/>• Invalidate<br/>• Stats<br/>• Batch Ops]
-        
-        subgraph "Cache Storage"
-            REDIS[(⚡ Redis Cache<br/>Primary<br/>• Persistent<br/>• TTL Support<br/>• JSON Serial<br/>• Batch Support)]
-            MEMORY[(💾 In-Memory Cache<br/>Fallback<br/>• Fast Access<br/>• No Network<br/>• Batch Support)]
-        end
-    end
-    
-    subgraph "Optimization Layer"
-        BATCH[📊 Batch Loader<br/>• N+1 Fix<br/>• JOIN Queries<br/>• 75% Reduction]
-        DB[(🗄️ PostgreSQL<br/>Database)]
-    end
-    
-    BOT --> CACHE
-    CACHE --> REDIS
-    CACHE --> MEMORY
-    CACHE --> BATCH
-    BATCH --> DB
-    
-    classDef service fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef cache fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef database fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef optimization fill:#DDA0DD,stroke:#333,stroke-width:2px
-    
-    class BOT service
-    class CACHE,REDIS,MEMORY cache
-    class DB database
-    class BATCH optimization
-```
-
-## 🎯 Подробная схема работы системы интересов
-
-### Архитектура компонентов системы интересов
-
-```mermaid
-graph TB
-    subgraph "👤 Пользовательский интерфейс"
-        USER[👤 User]
-        TG[📱 Telegram Bot]
-    end
-    
-    subgraph "🎯 Система интересов"
-        subgraph "Обработчики"
-            PROFILE_H[🔧 ProfileInterestHandler<br/>Редактирование из профиля]
-            NEW_H[🆕 NewInterestHandler<br/>Новая система выбора]
-            IMPROVED_H[⚡ ImprovedInterestHandler<br/>Улучшенный UX с временным хранением]
-        end
-        
-        subgraph "Сервисы"
-            INTEREST_S[⚙️ InterestService<br/>Бизнес-логика интересов]
-            TEMP_STORAGE[💾 TemporaryInterestStorage<br/>Временное хранение]
-        end
-        
-        subgraph "Клавиатуры"
-            CATEGORY_KB[📂 CreateInterestCategoriesKeyboard<br/>Выбор категорий]
-            INTEREST_KB[🎯 CreateCategoryInterestsKeyboard<br/>Выбор интересов в категории]
-            PRIMARY_KB[⭐ CreatePrimaryInterestsKeyboard<br/>Выбор основных интересов]
-        end
-    end
-    
-    subgraph "🗄️ База данных"
-        CATEGORIES_TBL[(📂 interest_categories<br/>Категории интересов)]
-        INTERESTS_TBL[(🎯 interests<br/>Интересы с категориями)]
-        SELECTIONS_TBL[(⭐ user_interest_selections<br/>Выборы пользователей)]
-        LIMITS_TBL[(⚙️ interest_limits_config<br/>Конфигурация лимитов)]
-        MATCHING_TBL[(📊 matching_config<br/>Настройки алгоритма)]
-    end
-    
-    subgraph "⚡ Кэширование"
-        CACHE[🔄 Cache Interface]
-        REDIS[(⚡ Redis Cache)]
-        MEMORY[(💾 In-Memory Cache)]
-    end
-    
-    subgraph "📊 Алгоритм совместимости"
-        COMPAT[📊 CalculateCompatibilityScore<br/>Расчет баллов совместимости]
-        MATCHING[🎯 Matching Algorithm<br/>Подбор партнеров]
-    end
-    
-    USER --> TG
-    TG --> PROFILE_H
-    TG --> NEW_H
-    TG --> IMPROVED_H
-    
-    PROFILE_H --> INTEREST_S
-    NEW_H --> INTEREST_S
-    IMPROVED_H --> INTEREST_S
-    IMPROVED_H --> TEMP_STORAGE
-    
-    INTEREST_S --> CATEGORY_KB
-    INTEREST_S --> INTEREST_KB
-    INTEREST_S --> PRIMARY_KB
-    
-    INTEREST_S --> CACHE
-    CACHE --> REDIS
-    CACHE --> MEMORY
-    
-    INTEREST_S --> CATEGORIES_TBL
-    INTEREST_S --> INTERESTS_TBL
-    INTEREST_S --> SELECTIONS_TBL
-    INTEREST_S --> LIMITS_TBL
-    INTEREST_S --> MATCHING_TBL
-    
-    INTEREST_S --> COMPAT
-    COMPAT --> MATCHING
-    
-    classDef user fill:#FFB6C1,stroke:#333,stroke-width:2px
-    classDef handler fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef service fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef keyboard fill:#DDA0DD,stroke:#333,stroke-width:2px
-    classDef database fill:#F0E68C,stroke:#333,stroke-width:2px
-    classDef cache fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef algorithm fill:#FFA07A,stroke:#333,stroke-width:2px
-    
-    class USER,TG user
-    class PROFILE_H,NEW_H,IMPROVED_H handler
-    class INTEREST_S,TEMP_STORAGE service
-    class CATEGORY_KB,INTEREST_KB,PRIMARY_KB keyboard
-    class CATEGORIES_TBL,INTERESTS_TBL,SELECTIONS_TBL,LIMITS_TBL,MATCHING_TBL database
-    class CACHE,REDIS,MEMORY cache
-    class COMPAT,MATCHING algorithm
-```
-
-### Детальный поток выбора интересов
-
-```mermaid
-sequenceDiagram
-    participant U as 👤 User
+    participant U as 👤 Пользователь
     participant TG as 📱 Telegram
     participant BOT as 🤖 Bot Service
-    participant PROFILE_H as 🔧 ProfileInterestHandler
-    participant INTEREST_S as ⚙️ InterestService
     participant CACHE as ⚡ Cache
     participant DB as 🗄️ Database
-    participant TEMP as 💾 TemporaryStorage
-    
-    Note over U,TEMP: 🎯 Процесс выбора интересов из профиля
-    
-    U->>TG: Нажимает "Редактировать интересы"
-    TG->>BOT: Callback: edit_interests_new
-    BOT->>PROFILE_H: HandleEditInterestsFromProfile()
-    
-    PROFILE_H->>INTEREST_S: GetInterestCategories()
-    INTEREST_S->>CACHE: Check Cache
-    alt Cache Hit
-        CACHE-->>INTEREST_S: Return Cached Categories
-    else Cache Miss
-        INTEREST_S->>DB: SELECT * FROM interest_categories
-        DB-->>INTEREST_S: Return Categories
-        INTEREST_S->>CACHE: Store in Cache
+
+    U->>TG: Отправка сообщения
+    TG->>BOT: Webhook/Polling
+    BOT->>CACHE: Проверка кеша
+    alt Кеш HIT
+        CACHE-->>BOT: Возврат данных
+    else Кеш MISS
+        BOT->>DB: Запрос к БД
+        DB-->>BOT: Данные
+        BOT->>CACHE: Сохранение в кеш
     end
-    INTEREST_S-->>PROFILE_H: Return Categories
-    
-    PROFILE_H->>BOT: CreateInterestCategoriesKeyboard()
-    BOT->>TG: Send Categories Keyboard
-    TG->>U: Показать категории интересов
-    
-    U->>TG: Выбирает категорию "Развлечения"
-    TG->>BOT: Callback: edit_interest_category_entertainment
-    BOT->>PROFILE_H: HandleEditInterestCategoryFromProfile()
-    
-    PROFILE_H->>INTEREST_S: GetInterestsByCategoryKey("entertainment")
-    INTEREST_S->>CACHE: Check Cache
-    alt Cache Hit
-        CACHE-->>INTEREST_S: Return Cached Interests
-    else Cache Miss
-        INTEREST_S->>DB: SELECT * FROM interests WHERE category_id = ?
-        DB-->>INTEREST_S: Return Interests
-        INTEREST_S->>CACHE: Store in Cache
-    end
-    INTEREST_S-->>PROFILE_H: Return Interests
-    
-    PROFILE_H->>INTEREST_S: GetUserInterestSelections(userID)
-    INTEREST_S->>DB: SELECT * FROM user_interest_selections WHERE user_id = ?
-    DB-->>INTEREST_S: Return Selections
-    INTEREST_S-->>PROFILE_H: Return Selections
-    
-    PROFILE_H->>BOT: CreateCategoryInterestsKeyboard()
-    BOT->>TG: Send Interests Keyboard
-    TG->>U: Показать интересы в категории
-    
-    U->>TG: Выбирает интерес "Фильмы"
-    TG->>BOT: Callback: edit_interest_select_entertainment_1
-    BOT->>PROFILE_H: HandleEditInterestSelectionFromProfile()
-    
-    PROFILE_H->>INTEREST_S: ToggleInterestSelection(userID, interestID)
-    INTEREST_S->>DB: INSERT/UPDATE/DELETE user_interest_selections
-    DB-->>INTEREST_S: Confirm Update
-    INTEREST_S-->>PROFILE_H: Return Success
-    
-    PROFILE_H->>BOT: Update Keyboard
-    BOT->>TG: Update Interests Keyboard
-    TG->>U: Показать обновленный выбор
-    
-    Note over U,TEMP: 🔄 Процесс продолжается для других категорий
-    
-    U->>TG: Нажимает "Выбрать основные интересы"
-    TG->>BOT: Callback: edit_primary_interests
-    BOT->>PROFILE_H: HandleEditPrimaryInterestsFromProfile()
-    
-    PROFILE_H->>INTEREST_S: GetUserInterestSelections(userID)
-    INTEREST_S->>DB: SELECT * FROM user_interest_selections WHERE user_id = ?
-    DB-->>INTEREST_S: Return Selections
-    INTEREST_S-->>PROFILE_H: Return Selections
-    
-    PROFILE_H->>BOT: CreatePrimaryInterestsKeyboard()
-    BOT->>TG: Send Primary Interests Keyboard
-    TG->>U: Показать выбор основных интересов
-    
-    U->>TG: Выбирает основной интерес "Фильмы"
-    TG->>BOT: Callback: edit_primary_interest_1
-    BOT->>PROFILE_H: HandleEditPrimaryInterestSelectionFromProfile()
-    
-    PROFILE_H->>INTEREST_S: UpdateUserInterestPrimaryStatus(userID, interestID, true)
-    INTEREST_S->>DB: UPDATE user_interest_selections SET is_primary = true
-    DB-->>INTEREST_S: Confirm Update
-    INTEREST_S-->>PROFILE_H: Return Success
-    
-    PROFILE_H->>BOT: Update Keyboard
-    BOT->>TG: Update Primary Interests Keyboard
-    TG->>U: Показать обновленный выбор основных интересов
-    
-    U->>TG: Нажимает "Сохранить изменения"
-    TG->>BOT: Callback: save_interest_edits
-    BOT->>PROFILE_H: HandleSaveInterestEditsFromProfile()
-    
-    PROFILE_H->>INTEREST_S: GetUserInterestSummary(userID)
-    INTEREST_S->>DB: SELECT с JOIN для получения сводки
-    DB-->>INTEREST_S: Return Summary
-    INTEREST_S-->>PROFILE_H: Return Summary
-    
-    PROFILE_H->>BOT: CreateProfileMenuKeyboard()
-    BOT->>TG: Send Profile Menu
-    TG->>U: Показать обновленный профиль
+    BOT->>TG: Ответ пользователю
+    TG->>U: Отображение ответа
 ```
 
-### Алгоритм совместимости и подбора партнеров
-
-```mermaid
-flowchart TD
-    START[🎯 Начало подбора партнеров] --> GET_USER1[👤 Получить интересы пользователя 1]
-    GET_USER1 --> GET_USER2[👤 Получить интересы пользователя 2]
-    GET_USER2 --> GET_CONFIG[⚙️ Загрузить конфигурацию алгоритма]
-    GET_CONFIG --> CALC_PRIMARY[⭐ Расчет баллов основных интересов]
-    CALC_PRIMARY --> CALC_ADDITIONAL[➕ Расчет баллов дополнительных интересов]
-    CALC_ADDITIONAL --> TOTAL_SCORE[📊 Общий балл совместимости]
-    TOTAL_SCORE --> CHECK_MIN{🔍 Балл >= Минимального порога?}
-    CHECK_MIN -->|Да| CHECK_MAX{🔍 Количество совпадений < Максимального?}
-    CHECK_MAX -->|Да| MATCH[✅ Совместимые партнеры]
-    CHECK_MAX -->|Нет| NO_MATCH[❌ Превышен лимит совпадений]
-    CHECK_MIN -->|Нет| NO_MATCH
-    
-    subgraph "📊 Детальный расчет баллов"
-        PRIMARY_SCORE[⭐ Основные интересы<br/>Балл: 3 за совпадение<br/>Настраивается в config]
-        ADDITIONAL_SCORE[➕ Дополнительные интересы<br/>Балл: 1 за совпадение<br/>Настраивается в config]
-        MIN_THRESHOLD[🔍 Минимальный порог<br/>По умолчанию: 5 баллов<br/>Настраивается в config]
-        MAX_MATCHES[🔢 Максимум совпадений<br/>По умолчанию: 10<br/>Настраивается в config]
-    end
-    
-    CALC_PRIMARY --> PRIMARY_SCORE
-    CALC_ADDITIONAL --> ADDITIONAL_SCORE
-    CHECK_MIN --> MIN_THRESHOLD
-    CHECK_MAX --> MAX_MATCHES
-    
-    classDef start fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef process fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef decision fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef result fill:#FFA07A,stroke:#333,stroke-width:2px
-    classDef config fill:#DDA0DD,stroke:#333,stroke-width:2px
-    
-    class START start
-    class GET_USER1,GET_USER2,GET_CONFIG,CALC_PRIMARY,CALC_ADDITIONAL,TOTAL_SCORE process
-    class CHECK_MIN,CHECK_MAX decision
-    class MATCH,NO_MATCH result
-    class PRIMARY_SCORE,ADDITIONAL_SCORE,MIN_THRESHOLD,MAX_MATCHES config
-```
-
-### Временное хранение и улучшенный UX
-
-```mermaid
-graph TB
-    subgraph "💾 TemporaryInterestStorage"
-        TEMP_STORAGE[💾 TemporaryInterestStorage<br/>Thread-safe операции]
-        
-        subgraph "Операции"
-            ADD[➕ AddInterest<br/>Добавить интерес]
-            REMOVE[➖ RemoveInterest<br/>Удалить интерес]
-            TOGGLE[🔄 ToggleInterest<br/>Переключить выбор]
-            TOGGLE_PRIMARY[⭐ TogglePrimary<br/>Переключить основной статус]
-            GET_SELECTIONS[📋 GetSelections<br/>Получить выборы]
-            SAVE_DB[💾 SaveToDatabase<br/>Сохранить в БД]
-        end
-        
-        subgraph "Thread Safety"
-            MUTEX[🔒 sync.RWMutex<br/>Безопасность потоков]
-            STORAGE[🗄️ map[int][]TemporaryInterestSelection<br/>Временное хранилище]
-        end
-    end
-    
-    subgraph "🔄 Поток данных"
-        USER_ACTION[👤 Действие пользователя] --> TEMP_OP[💾 Операция с временным хранилищем]
-        TEMP_OP --> UPDATE_UI[🖥️ Обновление интерфейса]
-        UPDATE_UI --> USER_CONFIRM{👤 Подтверждение?}
-        USER_CONFIRM -->|Да| SAVE_DB
-        USER_CONFIRM -->|Нет| CANCEL[❌ Отмена изменений]
-        SAVE_DB --> CLEAR_TEMP[🧹 Очистка временного хранилища]
-        CANCEL --> CLEAR_TEMP
-    end
-    
-    TEMP_STORAGE --> ADD
-    TEMP_STORAGE --> REMOVE
-    TEMP_STORAGE --> TOGGLE
-    TEMP_STORAGE --> TOGGLE_PRIMARY
-    TEMP_STORAGE --> GET_SELECTIONS
-    TEMP_STORAGE --> SAVE_DB
-    
-    ADD --> MUTEX
-    REMOVE --> MUTEX
-    TOGGLE --> MUTEX
-    TOGGLE_PRIMARY --> MUTEX
-    GET_SELECTIONS --> MUTEX
-    SAVE_DB --> MUTEX
-    
-    MUTEX --> STORAGE
-    
-    classDef storage fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef operation fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef safety fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef flow fill:#DDA0DD,stroke:#333,stroke-width:2px
-    classDef decision fill:#FFA07A,stroke:#333,stroke-width:2px
-    
-    class TEMP_STORAGE storage
-    class ADD,REMOVE,TOGGLE,TOGGLE_PRIMARY,GET_SELECTIONS,SAVE_DB operation
-    class MUTEX,STORAGE safety
-    class USER_ACTION,TEMP_OP,UPDATE_UI,CLEAR_TEMP flow
-    class USER_CONFIRM decision
-```
-
-## 📊 Потоки данных
-
-### 1. Пользовательский поток (Webhook)
+### 👨‍💼 **Административный поток**
 
 ```mermaid
 sequenceDiagram
-    participant U as 👤 User
-    participant TG as 📱 Telegram API
-    participant WEBHOOK as 🔔 Webhook Handler
-    participant RATE as ⚡ Rate Limiter
-    participant CIRCUIT as 🛡️ Circuit Breaker
-    participant BOT as 🤖 Bot Core
-    participant CACHE as ⚡ Cache Layer
-    participant DB as 🗄️ Database
-
-    U->>TG: Send Message/Command
-    TG->>WEBHOOK: POST /webhook (JSON payload)
-    WEBHOOK->>RATE: CheckRateLimit(userID)
-    alt Rate Limit Exceeded
-        RATE-->>WEBHOOK: Block user (2 min)
-        WEBHOOK->>TG: Send rate limit message
-    else Within Limits
-        RATE-->>WEBHOOK: Allow request
-        WEBHOOK->>CIRCUIT: Execute with Circuit Breaker
-        CIRCUIT->>BOT: Process Message
-        BOT->>CACHE: Check Cache (Redis/In-Memory)
-        alt Cache Hit
-            CACHE-->>BOT: Return Cached Data
-        else Cache Miss
-            BOT->>DB: Query Database (with Batch Loading)
-            DB-->>BOT: Return Data
-            BOT->>CACHE: Store in Cache with TTL
-        end
-        BOT-->>CIRCUIT: Return Response
-        CIRCUIT-->>WEBHOOK: Success
-        WEBHOOK->>TG: Send Response
-        TG->>U: Display Message/Keyboard
-    end
-```
-
-### 2. Административный поток (REST API + Webhook)
-
-```mermaid
-sequenceDiagram
-    participant A as 👨‍💼 Administrator
-    participant NAV as 🗺️ Navigation Dashboard
-    participant SWAGGER as 📋 Swagger UI
-    participant API as 🔌 REST API
-    participant AUTH as 🔐 API Auth (X-Admin-Key)
+    participant A as 👨‍💼 Администратор
+    participant API as 🔌 Admin API
     participant BOT as 🤖 Bot Service
-    participant CACHE as ⚡ Cache Stats
     participant DB as 🗄️ Database
 
-    rect rgb(240, 248, 255)
-        Note over A,DB: 🌐 Web-based Administration (Primary)
-        A->>NAV: Open http://localhost:8080/
-        NAV-->>A: Display Services Dashboard
-        A->>SWAGGER: Click "API Documentation"
-        SWAGGER-->>A: Interactive API Docs
-        A->>API: GET /api/v1/stats
-        API->>AUTH: Check X-Admin-Key Header
-        alt Authorized
-            AUTH-->>API: Access Granted
-            API->>BOT: Request System Statistics
-            BOT->>CACHE: Get Cache Statistics
-            BOT->>DB: Get Database Statistics
-            CACHE-->>BOT: Cache Stats (Hits/Misses)
-            DB-->>BOT: User/Feedback Stats
-            BOT-->>API: Compiled Statistics
-            API-->>A: JSON Response
-        else Unauthorized
-            AUTH-->>API: 401 Unauthorized
-            API-->>A: Authentication Error
-        end
-    end
-
-    rect rgb(255, 248, 240)
-        Note over A,DB: 📱 Telegram-based Administration (Legacy)
-        A->>A: Send /admin_stats in Telegram
-        A->>BOT: Webhook with admin command
-        BOT->>BOT: Check admin permissions
-        BOT->>DB: Query statistics
-        DB-->>BOT: Return data
-        BOT->>A: Send formatted report
-    end
+    A->>API: GET /api/v1/stats
+    API->>BOT: Запрос статистики
+    BOT->>DB: Сбор данных
+    DB-->>BOT: Статистика
+    BOT-->>API: Форматированные данные
+    API-->>A: JSON ответ
 ```
 
-### 3. Многоуровневая система кэширования
+## 📊 **Мониторинг и метрики**
 
-```mermaid
-flowchart TD
-    subgraph "Application Layer"
-        BOT[🤖 Bot Service<br/>Webhook Handler]
-        API[🔌 Admin API<br/>REST Endpoints]
-        VALIDATION[✅ Validation Service]
-    end
+### 🌐 **Admin Dashboard**
 
-    subgraph "Cache Layer (Multi-Level)"
-        CACHE_INTERFACE[🔄 Cache Interface<br/>Unified API]
-        RATE_LIMIT[⚡ Rate Limiter Cache<br/>User Limits & Blocks]
-        USER_CACHE[👤 User Cache<br/>TTL: 15 min]
-        INTEREST_CACHE[🎯 Interest Cache<br/>TTL: 30 min]
-        LANG_CACHE[🌍 Language Cache<br/>TTL: 30 min]
-        STATS_CACHE[📊 Stats Cache<br/>TTL: 5 min]
-    end
+- **URL**: `http://localhost:8080/`
+- **Swagger UI**: `http://localhost:8080/swagger/`
+- **Health checks**: `/healthz`, `/readyz`
 
-    subgraph "Storage Layer"
-        REDIS[(⚡ Redis Primary<br/>Port: 6379<br/>Persistent<br/>TTL Support<br/>JSON Storage)]
-        MEMORY[(💾 In-Memory Fallback<br/>Fast Access<br/>No Network<br/>Limited Size)]
-        DB[(🗄️ PostgreSQL<br/>Source of Truth<br/>Batch Loading)]
-    end
+### 📈 **Доступные метрики**
 
-    BOT --> CACHE_INTERFACE
-    API --> CACHE_INTERFACE
-    VALIDATION --> CACHE_INTERFACE
+| Метрика | Endpoint | Описание |
+|---------|----------|----------|
+| **System Stats** | `/api/v1/stats` | Общая статистика системы |
+| **Cache Stats** | `/api/v1/cache/stats` | Метрики кеширования |
+| **Rate Limits** | `/api/v1/rate-limits/stats` | Статистика ограничений |
+| **Circuit Breaker** | Внутренние метрики | Состояния защитных механизмов |
 
-    CACHE_INTERFACE --> RATE_LIMIT
-    CACHE_INTERFACE --> USER_CACHE
-    CACHE_INTERFACE --> INTEREST_CACHE
-    CACHE_INTERFACE --> LANG_CACHE
-    CACHE_INTERFACE --> STATS_CACHE
+### 🚀 **Планируемые улучшения Navigation Dashboard**
 
-    RATE_LIMIT --> REDIS
-    USER_CACHE --> REDIS
-    INTEREST_CACHE --> REDIS
-    LANG_CACHE --> REDIS
-    STATS_CACHE --> REDIS
+#### **Interactive API Explorer**
 
-    REDIS -->|Available| REDIS
-    REDIS -->|Unavailable| MEMORY
-    MEMORY --> DB
+- **API Testing**: Выполнение REST запросов прямо из браузера
+- **Request Builder**: Визуальный конструктор запросов с параметрами
+- **Response Viewer**: Форматированный просмотр ответов JSON/XML
+- **History**: Сохранение истории выполненных запросов
 
-    classDef app fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef cache fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef storage fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef fallback fill:#FFA07A,stroke:#333,stroke-width:2px
+#### **Real-time Monitoring**
 
-    class BOT,API,VALIDATION app
-    class CACHE_INTERFACE,RATE_LIMIT,USER_CACHE,INTEREST_CACHE,LANG_CACHE,STATS_CACHE cache
-    class REDIS storage
-    class MEMORY,DB fallback
-```
+- **Live Metrics**: Графики производительности с auto-refresh
+- **System Health**: Реальное время статус всех компонентов
+- **Performance Charts**: CPU, память, network utilization
+- **Alert Dashboard**: Активные алерты с возможностью разрешения
 
-## 🛡️ Система обработки ошибок
+#### **System Management**
 
-### Архитектура обработки ошибок (Enterprise-уровень)
+- **Quick Actions**: Очистка кеша, перезапуск сервисов, управление конфигурацией
+- **Command Execution**: Выполнение административных команд через веб-интерфейс
+- **Log Management**: Просмотр и фильтрация логов в реальном времени
+- **Backup/Restore**: Управление резервным копированием данных
 
-```mermaid
-graph TD
-    subgraph "Error Sources"
-        WEBHOOK_ERR[🔔 Webhook Processing<br/>Rate Limit / Circuit Breaker]
-        API_ERR[🔌 REST API<br/>Authentication / Validation]
-        TG_ERR[📱 Telegram API<br/>Network / API Limits]
-        DB_ERR[🗄️ Database<br/>Connection / Query Errors]
-        CACHE_ERR[⚡ Cache Layer<br/>Redis / In-Memory]
-        VALIDATION_ERR[✅ Business Validation<br/>User Input / Data Integrity]
-    end
+## 🚀 **Развертывание**
 
-    subgraph "Error Processing Pipeline"
-        ERROR_HANDLER[🛡️ Centralized Error Handler<br/>Error Classification]
-        CIRCUIT_BREAKER[🛡️ Circuit Breaker<br/>Failure Detection<br/>Auto Recovery]
-        RATE_LIMITER[⚡ Rate Limiter<br/>Spam Protection<br/>User Blocking]
-        TRACE_SYSTEM[🔍 Request Tracing<br/>req_1759152914113401600_2914<br/>Context Propagation]
-    end
-
-    subgraph "Error Outputs"
-        LOG_SYSTEM[📝 Structured Logging<br/>JSON Format<br/>Multiple Levels]
-        ALERT_SYSTEM[🚨 Admin Notifications<br/>Telegram Alerts<br/>Critical Errors]
-        METRICS[📊 Error Metrics<br/>Failure Rates<br/>Recovery Times]
-        USER_FEEDBACK[💬 User-Friendly Messages<br/>Localized Responses]
-    end
-
-    subgraph "Error Context"
-        REQUEST_CTX[📋 Request Context<br/>userID, chatID, operation<br/>timestamp, component]
-        ERROR_TYPES[🏷️ Error Classification<br/>6 Categories<br/>Severity Levels]
-        BUSINESS_LOGIC[🎯 Business Rules<br/>Retry Policies<br/>Fallback Strategies]
-    end
-
-    WEBHOOK_ERR --> ERROR_HANDLER
-    API_ERR --> ERROR_HANDLER
-    TG_ERR --> ERROR_HANDLER
-    DB_ERR --> ERROR_HANDLER
-    CACHE_ERR --> ERROR_HANDLER
-    VALIDATION_ERR --> ERROR_HANDLER
-
-    ERROR_HANDLER --> CIRCUIT_BREAKER
-    ERROR_HANDLER --> RATE_LIMITER
-    ERROR_HANDLER --> TRACE_SYSTEM
-
-    CIRCUIT_BREAKER --> ALERT_SYSTEM
-    RATE_LIMITER --> USER_FEEDBACK
-    TRACE_SYSTEM --> LOG_SYSTEM
-    TRACE_SYSTEM --> METRICS
-
-    ERROR_HANDLER --> USER_FEEDBACK
-
-    REQUEST_CTX --> ERROR_HANDLER
-    ERROR_TYPES --> ERROR_HANDLER
-    BUSINESS_LOGIC --> ERROR_HANDLER
-
-    classDef source fill:#FFB6C1,stroke:#333,stroke-width:2px
-    classDef process fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef output fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef context fill:#87CEEB,stroke:#333,stroke-width:2px
-
-    class WEBHOOK_ERR,API_ERR,TG_ERR,DB_ERR,CACHE_ERR,VALIDATION_ERR source
-    class ERROR_HANDLER,CIRCUIT_BREAKER,RATE_LIMITER,TRACE_SYSTEM process
-    class LOG_SYSTEM,ALERT_SYSTEM,METRICS,USER_FEEDBACK output
-    class REQUEST_CTX,ERROR_TYPES,BUSINESS_LOGIC context
-```
-
-### Типизированные ошибки
-
-```go
-ErrorTypeTelegramAPI  // Ошибки Telegram API
-ErrorTypeDatabase     // Ошибки базы данных
-ErrorTypeValidation   // Ошибки валидации
-ErrorTypeCache        // Ошибки кэша
-ErrorTypeNetwork      // Сетевые ошибки
-ErrorTypeInternal     // Внутренние ошибки
-```
-
-### RequestID трейсинг
-
-```go
-ctx := errors.NewRequestContext(userID, chatID, "SendMessage")
-// RequestID: req_1759152914113401600_2914
-```
-
-### Централизованная обработка
-
-```go
-return errorHandler.HandleTelegramError(
-    err,
-    message.Chat.ID,
-    int64(user.ID),
-    "SendMessage",
-)
-```
-
-## 📝 Структурированное логирование
-
-### Уровни логирования
-
-- **DEBUG**: Детальная отладочная информация
-- **INFO**: Общая информация о работе
-- **WARN**: Предупреждения
-- **ERROR**: Ошибки
-
-### Специализированные логгеры
-
-- **TelegramLogger**: Сообщения, команды, callback'и
-- **DatabaseLogger**: Запросы, транзакции, соединения
-- **CacheLogger**: Попадания/промахи кэша, инвалидация
-- **ValidationLogger**: Валидация данных
-
-### JSON формат логов
-
-```json
-{
-  "timestamp": "2025-09-29T20:45:21.903065157+07:00",
-  "level": 1,
-  "message": "Message received",
-  "request_id": "req_123",
-  "user_id": 67890,
-  "chat_id": 12345,
-  "operation": "HandleMessage",
-  "component": "telegram",
-  "fields": {
-    "text_length": 11,
-    "has_text": true
-  }
-}
-```
-
-## ✅ Система валидации
-
-### Базовые валидаторы
-
-```go
-// Валидация строк
-validator.ValidateString("text", []string{"required", "max:50"})
-
-// Валидация Telegram ID
-validator.ValidateTelegramID(123456789)
-
-// Валидация кода языка
-validator.ValidateLanguageCode("en")
-
-// Валидация состояния пользователя
-validator.ValidateUserState("idle")
-```
-
-### Специализированные валидаторы
-
-- **UserValidator**: Валидация пользователей и регистрации
-- **MessageValidator**: Валидация сообщений и callback'ов
-- **ValidationService**: Интеграция с системой ошибок
-
-## 🚀 Развертывание
-
-### Docker Compose архитектура (Enterprise)
-
-```mermaid
-graph TB
-    subgraph "Docker Network"
-        subgraph "API Layer"
-            BOT_CORE[🤖 Bot Service Core<br/>Webhook Handler<br/>Rate Limiter<br/>Circuit Breaker]
-            ADMIN_API[🔌 Admin REST API<br/>Port: 8080<br/>Swagger + Navigation]
-            NAV_DASH[🗺️ Navigation Dashboard<br/>http://localhost:8080/]
-            SWAGGER_UI[📋 Swagger UI<br/>API Documentation<br/>Interactive Testing]
-        end
-
-        subgraph "Data Layer"
-            PG[(🗄️ PostgreSQL<br/>Port: 5432<br/>Database<br/>Batch Operations)]
-            REDIS[(⚡ Redis Cache<br/>Port: 6379<br/>Multi-Level Cache<br/>Rate Limit Storage)]
-        end
-
-        subgraph "Management Layer"
-            PGADMIN[🌐 PgAdmin<br/>Port: 8080*<br/>Database Admin<br/>*Shared with API]
-        end
-    end
-
-    subgraph "External Services"
-        TG[📱 Telegram Bot API<br/>Webhook Push<br/>Real-time Messages]
-        TG_WEBHOOK[🔔 Webhook Receiver<br/>JSON Payloads<br/>Update Processing]
-    end
-
-    subgraph "Administrators"
-        ADMIN_WEB[🌐 Web Admin<br/>REST API + Dashboard]
-        ADMIN_TG[📱 Telegram Admin<br/>Legacy Commands]
-    end
-
-    TG --> TG_WEBHOOK
-    TG_WEBHOOK --> BOT_CORE
-    BOT_CORE --> ADMIN_API
-
-    ADMIN_WEB --> NAV_DASH
-    ADMIN_WEB --> SWAGGER_UI
-    ADMIN_WEB --> ADMIN_API
-
-    ADMIN_TG --> TG_WEBHOOK
-
-    BOT_CORE --> PG
-    BOT_CORE --> REDIS
-    ADMIN_API --> PG
-    ADMIN_API --> REDIS
-
-    PGADMIN --> PG
-
-    classDef api fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef data fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef mgmt fill:#DDA0DD,stroke:#333,stroke-width:2px
-    classDef external fill:#FFB6C1,stroke:#333,stroke-width:2px
-    classDef admin fill:#FFD700,stroke:#333,stroke-width:2px
-
-    class BOT_CORE,ADMIN_API,NAV_DASH,SWAGGER_UI api
-    class PG,REDIS data
-    class PGADMIN mgmt
-    class TG,TG_WEBHOOK external
-    class ADMIN_WEB,ADMIN_TG admin
-```
-
-### Docker Compose сервисы
+### 🐳 **Docker Compose**
 
 ```yaml
 services:
-  bot:           # 🤖 Bot Service Core + Admin API
-    ports:
-      - "8080:8080"  # REST API + Navigation + Swagger
-    environment:
-      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-      - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgresql://...
-      - ADMIN_API_KEY=${ADMIN_API_KEY}
-
-  postgres:      # 🗄️ PostgreSQL Database
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
+  bot:           # 🤖 Bot Service + Admin API
+    ports: ["8080:8080"]
+  postgres:      # 🗄️ PostgreSQL
+    ports: ["5432:5432"]
   redis:         # ⚡ Redis Cache
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-  pgadmin:       # 🌐 PgAdmin (Shared Port)
-    ports:
-      - "8081:80"    # Separate port to avoid conflict
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@example.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports: ["6379:6379"]
+  pgadmin:       # 🌐 Database Admin
+    ports: ["8081:80"]
 ```
 
-### Порты и endpoints
-
-| Сервис | Порт | Endpoints | Назначение |
-|--------|------|-----------|------------|
-| **Bot Service** | `8080` | - `/` (Navigation) - `/swagger/` (API Docs) - `/api/v1/*` (REST API) - `/healthz` (Health) - `/readyz` (Readiness) | Основной API сервер |
-| **PostgreSQL** | `5432` | Internal DB access | База данных |
-| **Redis** | `6379` | Internal cache access | Кэширование |
-| **PgAdmin** | `8081` | Web interface | Управление БД |
-| **Telegram** | Webhook | Push to bot service | Сообщения пользователей |
-
-### Переменные окружения
+### 🔧 **Конфигурация**
 
 | Переменная | Обязательность | Описание |
 |------------|----------------|----------|
-| `TELEGRAM_TOKEN` | ✅ Required | Токен бота от @BotFather |
-| `ADMIN_API_KEY` | ✅ Required | Ключ для доступа к REST API |
-| `ADMIN_CHAT_IDS` | ✅ Required | Chat ID администраторов (через запятую) |
-| `ADMIN_USERNAMES` | ✅ Required | Username администраторов (через запятую) |
-| `REDIS_URL` | ✅ Required | Адрес Redis сервера (redis://host:port) |
-| `REDIS_PASSWORD` | ❌ Optional | Пароль Redis (если требуется) |
-| `DATABASE_URL` | ✅ Required | Строка подключения PostgreSQL |
-| `DEBUG` | ❌ Optional | Режим отладки (true/false) |
+| `TELEGRAM_TOKEN` | ✅ | Токен бота от @BotFather |
+| `ADMIN_API_KEY` | ✅ | Ключ для REST API |
+| `DATABASE_URL` | ✅ | PostgreSQL connection string |
+| `REDIS_URL` | ✅ | Redis server URL |
 
-### Мониторинг и health checks
+## 📅 **Прогноз реализации проекта**
 
-```bash
-# Health checks
-curl http://localhost:8080/healthz  # Общее здоровье
-curl http://localhost:8080/readyz   # Готовность к работе
+### 📊 **Общий прогноз по фазам**
 
-# API endpoints для мониторинга
-curl -H "X-Admin-Key: admin-secret-key" \
-     http://localhost:8080/api/v1/stats
+| Фаза | Название | Сроки | Статус | Приоритет | Ресурсы | Зависимости | Риски |
+|------|----------|--------|---------|-----------|----------|-------------|--------|
+| **Phase 1** | Enterprise-grade монолит | ✅ Завершена (2025-09) | ✅ Готово | Критический | 160 ч/чел | - | Низкий |
+| **Phase 2** | Navigation Dashboard 2.0 | 🔄 В работе (2025-01 - 2025-03) | 🔄 Активна | Высокий | 240 ч/чел | Phase 1 | Средний |
+| **Phase 3** | Микросервисы (Matcher + Profile) | 📋 Планируется (2025-04 - 2025-06) | 📋 Ожидает | Высокий | 320 ч/чел | Phase 1, Phase 2 | Высокий |
+| **Phase 4** | Kubernetes оркестрация | 📋 Планируется (2025-07 - 2025-09) | 📋 Ожидает | Средний | 200 ч/чел | Phase 3 | Средний |
+| **Phase 5** | Multi-region развертывание | 📋 Планируется (2025-10 - 2025-12) | 📋 Ожидает | Средний | 160 ч/чел | Phase 4 | Высокий |
 
-curl -H "X-Admin-Key: admin-secret-key" \
-     http://localhost:8080/api/v1/cache/stats
+### 🎯 **Детальная разбивка Phase 2: Navigation Dashboard 2.0**
 
-curl -H "X-Admin-Key: admin-secret-key" \
-     http://localhost:8080/api/v1/rate-limits/stats
-```
+| Этап | Компонент | Сроки | Статус | Ресурсы | Критерии готовности |
+|------|------------|--------|---------|----------|---------------------|
+| **2.1** | API Explorer | 2 недели (2025-01) | 📋 Планируется | 40 ч/чел | • Визуальный конструктор запросов; • Форматированный просмотр ответов; • История запросов; • Автоматическая аутентификация |
+| **2.2** | Real-time Metrics | 1 неделя (2025-02) | 📋 Планируется | 20 ч/чел | • Live графики производительности; • Auto-refresh каждые 5 сек; • System health indicators; • Historical data за 24 часа |
+| **2.3** | System Management | 2 недели (2025-02) | 📋 Планируется | 40 ч/чел | • Quick actions (кеш, сервисы); • Configuration editor; • Backup/Restore; • Command execution |
+| **2.4** | Live Log Viewer | 1 неделя (2025-02) | 📋 Планируется | 20 ч/чел | • Real-time log streaming; • Filtering и search; • Log levels с цветовой индикацией; • Export functionality |
+| **2.5** | Alert Management | 1 неделя (2025-03) | 📋 Планируется | 20 ч/чел | • Alert center с разрешением; • Real-time notifications; • Alert history и статистика; • Notification channels |
+| **2.6** | UI/UX Polish | 1 неделя (2025-03) | 📋 Планируется | 20 ч/чел | • Responsive design; • Performance optimization; • Accessibility (WCAG 2.1); • Cross-browser compatibility |
 
-## 🔮 Планы развития
+### 📈 **Метрики успеха и KPIs**
 
-### Roadmap развития системы
+| Метрика | Текущий статус | Цель Phase 2 | Цель Phase 3 | Измерение |
+|---------|----------------|--------------|--------------|-----------|
+| **Test Coverage** | 20.6% | 35% | 50% | Автоматизированные тесты |
+| **Performance** | Baseline | +50% faster | +100% faster | Response times, throughput |
+| **Availability** | 99.5% | 99.9% | 99.95% | Uptime monitoring |
+| **User Satisfaction** | - | 4.5/5 | 4.8/5 | Admin feedback survey |
+| **Time to Deploy** | 15 min | 5 min | 2 min | CI/CD pipeline metrics |
+| **MTTR** | 30 min | 10 min | 5 min | Mean Time To Recovery |
 
-```mermaid
-gantt
-    title Language Exchange Bot Development Roadmap
-    dateFormat  YYYY-MM-DD
-    section Phase 1 - Current
-    Core Bot Functionality   :crit, core, 2025-09-01, 2025-09-29
-    Redis Caching            :crit, cache, 2025-09-15, 2025-09-29
-    Batch Loading            :crit, batch, 2025-09-20, 2025-09-29
-    Error Handling           :crit, error, 2025-09-25, 2025-09-29
-    
-    section Phase 2 - Microservices
-    Matcher Service          :active, matcher, 2025-10-01, 2025-10-15
-    Profile Service          :profile, 2025-10-10, 2025-10-25
-    API Gateway              :gateway, 2025-10-20, 2025-11-05
-    
-    section Phase 3 - Scaling
-    Webhook Support          :webhook, 2025-11-01, 2025-11-15
-    Redis Clustering         :redis-cluster, 2025-11-10, 2025-11-25
-    Monitoring & Metrics     :monitoring, 2025-11-20, 2025-12-05
-    
-    section Phase 4 - DevOps
-    CI/CD Pipeline           :cicd, 2025-12-01, 2025-12-15
-    Auto Deployment          :deploy, 2025-12-10, 2025-12-25
-```
+### 🎯 **Технические риски и mitigation**
 
-### Архитектура будущего развития
+| Риск | Вероятность | Влияние | Mitigation Strategy | Ответственный |
+|------|-------------|---------|-------------------|---------------|
+| **WebSocket scalability** | Средняя | Высокое | • Load testing до 1000+ connections; • Connection pooling; • Horizontal scaling | Dev Team |
+| **Browser compatibility** | Низкая | Среднее | • Testing на Chrome, Firefox, Safari, Edge; • Progressive enhancement; • Fallback для старых браузеров | Frontend Team |
+| **Security vulnerabilities** | Средняя | Высокое | • Security code review; • Automated security scanning; • Penetration testing | Security Team |
+| **Database performance** | Высокая | Высокое | • Query optimization; • Connection pooling; • Caching strategies | DBA Team |
+| **API breaking changes** | Средняя | Высокое | • API versioning; • Backward compatibility; • Migration guides | API Team |
 
-```mermaid
-graph TB
-    subgraph "Current Architecture"
-        BOT[🤖 Bot Service<br/>Monolithic]
-        PG[(🗄️ PostgreSQL)]
-        REDIS[(⚡ Redis)]
-    end
-    
-    subgraph "Future Microservices"
-        GATEWAY[🌐 API Gateway<br/>Load Balancer]
-        
-        subgraph "Core Services"
-            BOT_MS[🤖 Bot Service<br/>Microservice]
-            MATCHER[🎯 Matcher Service<br/>Partner Matching]
-            PROFILE[👤 Profile Service<br/>User Management]
-        end
-        
-        subgraph "Infrastructure"
-            PG_CLUSTER[(🗄️ PostgreSQL<br/>Cluster)]
-            REDIS_CLUSTER[(⚡ Redis<br/>Cluster)]
-            MONITOR[📊 Monitoring<br/>Prometheus + Grafana]
-        end
-    end
-    
-    BOT -.->|Migration| GATEWAY
-    PG -.->|Scaling| PG_CLUSTER
-    REDIS -.->|Clustering| REDIS_CLUSTER
-    
-    GATEWAY --> BOT_MS
-    GATEWAY --> MATCHER
-    GATEWAY --> PROFILE
-    
-    BOT_MS --> PG_CLUSTER
-    MATCHER --> PG_CLUSTER
-    PROFILE --> PG_CLUSTER
-    
-    BOT_MS --> REDIS_CLUSTER
-    MATCHER --> REDIS_CLUSTER
-    PROFILE --> REDIS_CLUSTER
-    
-    MONITOR --> BOT_MS
-    MONITOR --> MATCHER
-    MONITOR --> PROFILE
-    
-    classDef current fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef future fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef infrastructure fill:#87CEEB,stroke:#333,stroke-width:2px
-    
-    class BOT,PG,REDIS current
-    class GATEWAY,BOT_MS,MATCHER,PROFILE future
-    class PG_CLUSTER,REDIS_CLUSTER,MONITOR infrastructure
-```
+### 💰 **Ресурсный план**
 
-### Восстановление микросервисов
+#### **Команда разработки**
 
-1. **Matcher Service** - алгоритмы подбора партнеров
-2. **Profile Service** - выделенное управление профилями
-3. **API Gateway** - единая точка входа для микросервисов
+- **Backend Developer**: 1 FTE (Full-time equivalent)
+- **Frontend Developer**: 0.5 FTE (для Phase 2)
+- **DevOps Engineer**: 0.3 FTE
+- **QA Engineer**: 0.5 FTE
+- **Technical Lead**: 0.2 FTE (oversight)
 
-### Дополнительные возможности
+#### **Инфраструктура и инструменты**
 
-1. **Webhook поддержка** - для высоконагруженных систем
-2. **Кластеризация Redis** - для масштабирования
-3. **Мониторинг и метрики** - Prometheus + Grafana
-4. **CI/CD пайплайн** - автоматическое развертывание
+- **Development Environment**: Docker, VS Code, GitHub
+- **Testing**: Jest (frontend), Go testing (backend), Selenium (E2E)
+- **CI/CD**: GitHub Actions, Docker Hub
+- **Monitoring**: Prometheus, Grafana, ELK stack
+- **Documentation**: Markdown, Mermaid diagrams
 
----
+#### **Бюджет (примерный)**
 
-## 📊 Текущий статус системы
+- **Phase 2 (Navigation Dashboard)**: $15,000 - $20,000
+- **Phase 3 (Microservices)**: $25,000 - $35,000
+- **Phase 4 (Kubernetes)**: $12,000 - $18,000
+- **Phase 5 (Multi-region)**: $20,000 - $30,000
 
-### ✅ **Enterprise-уровень достигнут**
+### 📋 **Критерии перехода между фазами**
 
-**Language Exchange Bot** теперь представляет собой полнофункциональную enterprise-систему со следующими характеристиками:
+#### **Phase 1 → Phase 2**
 
-#### 🚀 **Производительность**
+- ✅ Все unit тесты написаны (200+ тестов)
+- ✅ Enterprise-grade архитектура реализована
+- ✅ Production-ready deployment настроен
+- ✅ Документация обновлена
 
-- **3-5x** ускорение благодаря многоуровневому кэшированию
-- **Batch operations** для оптимизации базы данных
-- **Circuit Breaker** защита от каскадных сбоев
-- **Rate Limiting** (20 msg/min) защита от спама
+#### **Phase 2 → Phase 3**
 
-#### 🛡️ **Надежность**
+- ✅ Navigation Dashboard 2.0 полностью функционален
+- ✅ API Explorer протестирован с реальными endpoints
+- ✅ Real-time monitoring показывает корректные метрики
+- ✅ System management operations работают стабильно
+- ✅ Performance benchmarks соответствуют требованиям
 
-- **Централизованная обработка ошибок** с 6 типами ошибок
-- **Request tracing** с уникальными ID
-- **Admin alerts** для критических проблем
-- **Graceful shutdown** всех компонентов
+#### **Phase 3 → Phase 4**
 
-#### 🔧 **Управление**
+- ✅ Matcher и Profile сервисы развернуты
+- ✅ Service-to-service коммуникация работает
+- ✅ API Gateway routing настроен
+- ✅ End-to-end testing всех сервисов прошло
 
-- **REST API** с полной документацией Swagger
-- **Navigation Dashboard** для быстрой навигации
-- **Интерактивное тестирование** API через Swagger UI
-- **Health checks** и метрики в реальном времени
+### 🎯 **Success Metrics по завершении проекта**
 
-#### 📊 **Мониторинг**
+| Категория | Метрика | Целевое значение | Измерение |
+|-----------|---------|------------------|-----------|
+| **Performance** | Response Time | <100ms для API | Load testing |
+| **Scalability** | Concurrent Users | 10,000+ | Load testing |
+| **Reliability** | Uptime | 99.95% | Monitoring |
+| **Security** | Vulnerabilities | 0 critical/high | Security scans |
+| **Maintainability** | Code Coverage | 50%+ | Unit tests |
+| **User Experience** | Admin Satisfaction | 4.8/5 | Surveys |
+| **Business Value** | Time Savings | 70% reduction | Time tracking |
 
-- **Статистика кэширования** (hits/misses)
-- **Rate limiting метрики** (блокировки, лимиты)
-- **Circuit Breaker состояния** (Closed/Open/Half-Open)
-- **Структурированное логирование** JSON формат
+## 🔮 **Планы развития**
 
-#### 🎯 **Архитектура**
+### 📋 **Roadmap**
 
-- **Микросервисная готовность** (Profile/Matcher services запланированы)
-- **Webhook + REST API** дуальная коммуникация
-- **Многоуровневое кэширование** Redis + In-memory
-- **Docker Compose** развертывание
+1. **Phase 1** ✅ *Завершена*: Enterprise-grade монолит
+2. **Phase 2** 🔄 *В работе*: Navigation Dashboard 2.0 (8 недель)
+3. **Phase 3** 📋 *Планируется*: Микросервисы (Matcher + Profile)
+4. **Phase 4** 📋 *Планируется*: Kubernetes оркестрация
+5. **Phase 5** 📋 *Планируется*: Multi-region развертывание
 
-### 🚀 **Новые возможности (Webhook режим)**
+### 🎯 **Будущие улучшения**
 
-- **Webhook endpoint**: `POST /webhook/telegram/{token}` для прямого приема обновлений от Telegram
-- **API управление webhook**: Полный контроль над настройкой и мониторингом webhook
-- **Переключение режимов**: Легкий переход между polling и webhook без перезапуска
-- **Production готовность**: Полная поддержка HTTPS webhook для продакшена
-
-### 🎉 **Enterprise готовность**
-
-Система полностью готова к промышленной эксплуатации с enterprise-уровнем надежности, производительности и управляемости. Поддержка как polling, так и webhook режимов для максимальной гибкости развертывания.
+- **Matcher Service**: Алгоритмы подбора партнеров
+- **Profile Service**: Управление профилями пользователей
+- **API Gateway**: Единая точка входа
+- **CI/CD Pipeline**: Полная автоматизация
