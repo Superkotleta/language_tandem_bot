@@ -560,7 +560,7 @@ func (s *AdminServer) handleGetStatsV2(w http.ResponseWriter, r *http.Request) {
 		"cache_performance": s.botService.GetCacheStats(),
 		"circuit_breakers":  s.botService.GetCircuitBreakerStates(),
 		"system_info": map[string]interface{}{
-			"go_version":    "1.22",
+			"go_version":    "1.25",
 			"server_uptime": "available", // TODO: implement uptime tracking
 			"memory_usage":  "available", // TODO: implement memory monitoring
 		},

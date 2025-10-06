@@ -213,7 +213,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.22'
+          go-version: '1.25'
       - name: Run linter
         run: make lint-gentle
 ```
