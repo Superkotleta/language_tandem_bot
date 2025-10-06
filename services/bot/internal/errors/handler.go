@@ -4,7 +4,6 @@ package errors
 import (
 	"errors"
 	"log"
-	"time"
 )
 
 // ErrorHandler обрабатывает ошибки централизованно.
@@ -36,15 +35,7 @@ func (h *ErrorHandler) Handle(err error, ctx *RequestContext) error {
 
 	// Если это критическая ошибка, уведомляем администраторов
 	if h.isCriticalError(err) {
-		customErr := &CustomError{
-			Type:        ErrorTypeInternal,
-			Message:     "critical error",
-			UserMessage: "internal error",
-			Context:     map[string]interface{}{},
-			RequestID:   "",
-			Timestamp:   time.Now(),
-			Cause:       nil,
-		}
+		var customErr *CustomError
 		if errors.As(err, &customErr) {
 			h.notifier.NotifyCriticalError(customErr)
 		}
@@ -52,15 +43,7 @@ func (h *ErrorHandler) Handle(err error, ctx *RequestContext) error {
 
 	// Если это ошибка Telegram API, уведомляем администраторов
 	if IsTelegramAPIError(err) {
-		customErr := &CustomError{
-			Type:        ErrorTypeInternal,
-			Message:     "critical error",
-			UserMessage: "internal error",
-			Context:     map[string]interface{}{},
-			RequestID:   "",
-			Timestamp:   time.Now(),
-			Cause:       nil,
-		}
+		var customErr *CustomError
 		if errors.As(err, &customErr) {
 			h.notifier.NotifyTelegramAPIError(customErr, ctx.ChatID)
 		}
@@ -143,15 +126,7 @@ func (h *ErrorHandler) HandleCacheError(err error, userID, chatID int64, operati
 
 // logError логирует ошибку с контекстом.
 func (h *ErrorHandler) logError(err error, ctx *RequestContext) {
-	customErr := &CustomError{
-		Type:        ErrorTypeInternal,
-		Message:     "log error",
-		UserMessage: "internal error",
-		Context:     map[string]interface{}{},
-		RequestID:   "",
-		Timestamp:   time.Now(),
-		Cause:       nil,
-	}
+	var customErr *CustomError
 	if errors.As(err, &customErr) {
 		log.Printf("[%s] %s: %s (User: %d, Chat: %d, Operation: %s)",
 			customErr.RequestID,
@@ -174,15 +149,7 @@ func (h *ErrorHandler) logError(err error, ctx *RequestContext) {
 
 // isCriticalError определяет, является ли ошибка критической.
 func (h *ErrorHandler) isCriticalError(err error) bool {
-	customErr := &CustomError{
-		Type:        ErrorTypeInternal,
-		Message:     "critical error check",
-		UserMessage: "internal error",
-		Context:     map[string]interface{}{},
-		RequestID:   "",
-		Timestamp:   time.Now(),
-		Cause:       nil,
-	}
+	var customErr *CustomError
 	if errors.As(err, &customErr) {
 		// Критические ошибки: Database, Network, Internal
 		return customErr.Type == ErrorTypeDatabase ||

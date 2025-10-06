@@ -199,7 +199,8 @@ func (tb *TelegramBot) Start(ctx context.Context) error {
 }
 
 func (tb *TelegramBot) Stop(ctx context.Context) error {
-	tb.api.StopReceivingUpdates()
+	// StopReceivingUpdates уже вызван в методе Start() при отмене контекста
+	// Здесь только останавливаем handler и другие компоненты
 
 	// Останавливаем handler и все его компоненты
 	if tb.handler != nil {

@@ -9,70 +9,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
-
-// mockBotService provides a mock implementation of BotService for testing.
-// This mock allows us to isolate Telegram handler tests from actual business logic
-// and simulate various service behaviors without external dependencies.
-type mockBotService struct {
-	mock.Mock
-}
-
-func (m *mockBotService) HandleUserRegistration(telegramID int64, username, firstName, telegramLangCode string) (*models.User, error) {
-	args := m.Called(telegramID, username, firstName, telegramLangCode)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.User), args.Error(1)
-}
-
-func (m *mockBotService) GetWelcomeMessage(user *models.User) string {
-	args := m.Called(user)
-	return args.String(0)
-}
-
-// mockBotAPI provides a minimal mock implementation of Telegram Bot API for testing.
-// This mock simulates the basic BotAPI interface methods needed for handler testing,
-// allowing us to verify Telegram API interactions without actual network calls.
-type mockBotAPI struct {
-	mock.Mock
-}
-
-func (m *mockBotAPI) Send(c tgbotapi.Chattable) (tgbotapi.Message, error) {
-	args := m.Called(c)
-	return tgbotapi.Message{}, args.Error(0)
-}
-
-func (m *mockBotAPI) GetUpdatesChan(config tgbotapi.UpdateConfig) tgbotapi.UpdatesChannel {
-	args := m.Called(config)
-	return args.Get(0).(tgbotapi.UpdatesChannel)
-}
-
-func (m *mockBotAPI) Request(c tgbotapi.Chattable) (*tgbotapi.APIResponse, error) {
-	args := m.Called(c)
-	return args.Get(0).(*tgbotapi.APIResponse), args.Error(1)
-}
-
-func (m *mockBotAPI) MakeRequest(endpoint string, params interface{}) (*tgbotapi.APIResponse, error) {
-	args := m.Called(endpoint, params)
-	return args.Get(0).(*tgbotapi.APIResponse), args.Error(1)
-}
-
-func (m *mockBotAPI) GetUpdates(config tgbotapi.UpdateConfig) ([]tgbotapi.Update, error) {
-	args := m.Called(config)
-	return args.Get(0).([]tgbotapi.Update), args.Error(1)
-}
-
-func (m *mockBotAPI) AnswerCallbackQuery(config tgbotapi.CallbackConfig) (*tgbotapi.APIResponse, error) {
-	args := m.Called(config)
-	return args.Get(0).(*tgbotapi.APIResponse), args.Error(1)
-}
-
-func (m *mockBotAPI) EditMessageText(config tgbotapi.EditMessageTextConfig) (tgbotapi.Message, error) {
-	args := m.Called(config)
-	return args.Get(0).(tgbotapi.Message), args.Error(1)
-}
 
 // TestTelegramHandler_HandleUpdate_Message tests message handling functionality.
 // This smoke test verifies that the handler properly processes incoming messages
@@ -285,40 +222,40 @@ func TestTelegramHandler_sendRateLimitMessage(t *testing.T) {
 	})
 }
 
-// TestNewTelegramHandler - тест конструктора (пропускаем для mock объектов)
+// TestNewTelegramHandler - тест конструктора (пропускаем для реальных объектов)
 func TestNewTelegramHandler(t *testing.T) {
-	t.Skip("Skipping test with mock objects - requires full service initialization")
+	t.Skip("Skipping test with real objects - requires full service initialization")
 
 	// В будущем можно добавить тест с реальными объектами
-	// mockBot := &tgbotapi.BotAPI{}
-	// mockService := &core.BotService{}
-	// mockErrorHandler := &errorsPkg.ErrorHandler{}
+	// bot := &tgbotapi.BotAPI{}
+	// service := &core.BotService{}
+	// errorHandler := &errorsPkg.ErrorHandler{}
 	//
 	// handler := NewTelegramHandler(
-	// 	mockBot,
-	// 	mockService,
+	// 	bot,
+	// 	service,
 	// 	[]int64{123},
-	// 	mockErrorHandler,
+	// 	errorHandler,
 	// )
 	//
 	// assert.NotNil(t, handler)
 }
 
-// TestNewTelegramHandlerWithAdmins - тест конструктора с админами (пропускаем для mock объектов)
+// TestNewTelegramHandlerWithAdmins - тест конструктора с админами (пропускаем для реальных объектов)
 func TestNewTelegramHandlerWithAdmins(t *testing.T) {
-	t.Skip("Skipping test with mock objects - requires full service initialization")
+	t.Skip("Skipping test with real objects - requires full service initialization")
 
 	// В будущем можно добавить тест с реальными объектами
-	// mockBot := &tgbotapi.BotAPI{}
-	// mockService := &core.BotService{}
-	// mockErrorHandler := &errorsPkg.ErrorHandler{}
+	// bot := &tgbotapi.BotAPI{}
+	// service := &core.BotService{}
+	// errorHandler := &errorsPkg.ErrorHandler{}
 	//
 	// handler := NewTelegramHandlerWithAdmins(
-	// 	mockBot,
-	// 	mockService,
+	// 	bot,
+	// 	service,
 	// 	[]int64{123},
 	// 	[]string{"admin"},
-	// 	mockErrorHandler,
+	// 	errorHandler,
 	// )
 	//
 	// assert.NotNil(t, handler)

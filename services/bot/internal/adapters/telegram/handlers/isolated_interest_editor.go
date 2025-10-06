@@ -211,11 +211,16 @@ func (e *IsolatedInterestEditor) ShowEditCategoryInterests(callback *tgbotapi.Ca
 
 // ShowEditPrimaryInterests показывает основные интересы для редактирования
 func (e *IsolatedInterestEditor) ShowEditPrimaryInterests(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
+	log.Printf("DEBUG: ShowEditPrimaryInterests called for user %d", user.ID)
+
 	// Получаем текущие выборы пользователя
 	selections, err := e.interestService.GetUserInterestSelections(user.ID)
 	if err != nil {
+		log.Printf("DEBUG: ShowEditPrimaryInterests GetUserInterestSelections error: %v", err)
 		return e.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
+
+	log.Printf("DEBUG: ShowEditPrimaryInterests found %d selections for user %d", len(selections), user.ID)
 
 	// Получаем общее количество интересов в системе
 	allInterests, err := e.interestService.GetAllInterests()

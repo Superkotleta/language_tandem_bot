@@ -227,6 +227,14 @@ func TestConfig_Load_TokenFromFile(t *testing.T) {
 	// Очищаем environment перед тестом
 	clearEnvironment()
 
+	// Убеждаемся что переменные пустые
+	os.Unsetenv("TELEGRAM_TOKEN")
+	os.Unsetenv("TELEGRAM_TOKEN_FILE")
+
+	// Устанавливаем флаг теста для отключения проверки безопасности файлов
+	os.Setenv("GO_TEST", "1")
+	defer os.Unsetenv("GO_TEST")
+
 	// Создаем временный файл с токеном
 	tempDir := t.TempDir()
 	tokenFile := filepath.Join(tempDir, "telegram_token.txt")
@@ -249,6 +257,14 @@ func TestConfig_Load_DatabaseURLFromFile(t *testing.T) {
 
 	// Очищаем environment перед тестом
 	clearEnvironment()
+
+	// Убеждаемся что переменные пустые
+	os.Unsetenv("DATABASE_URL")
+	os.Unsetenv("DATABASE_URL_FILE")
+
+	// Устанавливаем флаг теста для отключения проверки безопасности файлов
+	os.Setenv("GO_TEST", "1")
+	defer os.Unsetenv("GO_TEST")
 
 	// Создаем временный файл с URL базы данных
 	tempDir := t.TempDir()

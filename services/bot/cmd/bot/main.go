@@ -63,32 +63,27 @@ func main() {
 	ctx, cancel := setupGracefulShutdown()
 	defer cancel()
 
-	// Initialize Telegram handler for admin server (needed for webhook mode)
-	var telegramHandler *telegram.TelegramHandler
-	if cfg.EnableTelegram && cfg.TelegramToken != "" {
-		// Create handler for admin server (will be reused by bot if needed)
-		telegramHandler = telegram.NewTelegramHandlerWithAdmins(
-			nil,        // bot API not needed for webhook endpoint
-			nil,        // service will be set later
-			[]int64{},  // empty admin chat IDs for webhook
-			[]string{}, // empty admin usernames for webhook
-			errorHandler,
-		)
+	// Создаем общий сервис для всех компонентов (бот и admin API)
+	service, err := initializeService(cfg, db, errorHandler)
+	if err != nil {
+		log.Fatalf("Failed to initialize service: %v", err)
 	}
 
-	// Start admin API server
-	adminServer := startAdminServer(cfg, db, errorHandler, telegramHandler)
+	// Start admin API server с общим сервисом
+	adminServer := startAdminServerWithService(cfg, service, errorHandler)
 
-	bots, wg := startBots(ctx, cfg, db, errorHandler, telegramHandler)
+	// Start bots с общим сервисом
+	bots, wg, _ := startBotsWithService(ctx, cfg, service, errorHandler)
+
 	waitForShutdown(bots, wg, adminServer, cancel)
 }
 
-// initializeTelegramBot инициализирует Telegram бота с сервисом.
-func initializeTelegramBot(
+// initializeService создает общий сервис для всех компонентов
+func initializeService(
 	cfg *config.Config,
 	db *database.DB,
 	errorHandler *errors.ErrorHandler,
-) (*telegram.TelegramBot, error) {
+) (*core.BotService, error) {
 	// Создаем сервис с Redis кэшем
 	service, err := core.NewBotServiceWithRedis(db, cfg.RedisURL, cfg.RedisPassword, cfg.RedisDB, errorHandler)
 	if err != nil {
@@ -98,6 +93,15 @@ func initializeTelegramBot(
 	} else {
 		log.Printf("Redis cache initialized: %s", service.Cache.String())
 	}
+	return service, nil
+}
+
+// initializeTelegramBotWithService инициализирует Telegram бота с готовым сервисом.
+func initializeTelegramBotWithService(
+	service *core.BotService,
+	cfg *config.Config,
+	errorHandler *errors.ErrorHandler,
+) (*telegram.TelegramBot, error) {
 
 	// Создаем бота с Chat ID для уведомлений и username для проверки прав
 	telegramBot, err := telegram.NewTelegramBotWithService(cfg.TelegramToken, service, cfg.Debug, cfg.AdminUsernames)
@@ -156,86 +160,12 @@ func setupGracefulShutdown() (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-// startBots запускает все настроенные боты.
-func startBots(
-	ctx context.Context,
-	cfg *config.Config,
-	db *database.DB,
-	errorHandler *errors.ErrorHandler,
-	telegramHandler *telegram.TelegramHandler,
-) ([]adapters.BotAdapter, *sync.WaitGroup) {
-	var (
-		wg   sync.WaitGroup
-		bots []adapters.BotAdapter
-	)
+// startAdminServerWithService запускает административный API сервер с общим сервисом
+func startAdminServerWithService(cfg *config.Config, service *core.BotService, errorHandler *errors.ErrorHandler) *server.AdminServer {
+	log.Printf("Admin API using shared service: %s", service.Cache.String())
 
-	// Telegram Bot
-	if cfg.EnableTelegram && cfg.TelegramToken != "" {
-		telegramBot, err := initializeTelegramBot(cfg, db, errorHandler)
-		if err != nil {
-			log.Fatalf("Failed to initialize Telegram bot: %v", err)
-		}
-
-		// Если webhook режим, устанавливаем handler в admin server и настраиваем webhook
-		if cfg.TelegramMode == "webhook" && telegramHandler != nil {
-			// Обновляем handler в admin server с реальным сервисом
-			telegramHandler.SetService(telegramBot.GetService())
-			telegramHandler.SetBotAPI(telegramBot.GetBotAPI())
-
-			// Настраиваем webhook в Telegram
-			if cfg.WebhookURL != "" {
-				webhookURL := fmt.Sprintf("%s/webhook/telegram/%s", cfg.WebhookURL, cfg.TelegramToken)
-				if err := telegramBot.SetupWebhook(webhookURL); err != nil {
-					log.Fatalf("Failed to setup webhook: %v", err)
-				}
-				log.Printf("Webhook mode: Telegram handler configured for admin server at %s", webhookURL)
-			} else {
-				log.Fatalf("Webhook mode requires WEBHOOK_URL to be set")
-			}
-		} else {
-			// Polling режим - запускаем бота обычным образом
-			bots = append(bots, telegramBot)
-
-			wg.Add(1)
-
-			go func() {
-				defer wg.Done()
-
-				if err := telegramBot.Start(ctx); err != nil {
-					log.Printf("Telegram bot error: %v", err)
-				}
-			}()
-
-			log.Printf("Telegram bot started in polling mode with %d admin users", telegramBot.GetAdminCount())
-		}
-	}
-
-	// Будущие боты (Discord, etc)
-	if cfg.EnableDiscord {
-		log.Println("Discord bot is not implemented yet")
-	}
-
-	if len(bots) == 0 {
-		log.Fatal("No bots are enabled. Please check your configuration.")
-	}
-
-	return bots, &wg
-}
-
-// startAdminServer запускает административный API сервер
-func startAdminServer(cfg *config.Config, db *database.DB, errorHandler *errors.ErrorHandler, telegramHandler *telegram.TelegramHandler) *server.AdminServer {
-	// Создаем сервис с Redis кэшем
-	service, err := core.NewBotServiceWithRedis(db, cfg.RedisURL, cfg.RedisPassword, cfg.RedisDB, errorHandler)
-	if err != nil {
-		log.Printf("Failed to create Redis cache, falling back to in-memory cache: %v", err)
-		// Fallback на in-memory кэш если Redis недоступен
-		service = core.NewBotService(db, errorHandler)
-	} else {
-		log.Printf("Redis cache initialized for admin API: %s", service.Cache.String())
-	}
-
-	// Создаем handler для Telegram (нужен для статистики rate limiting)
-	telegramHandler = telegram.NewTelegramHandlerWithAdmins(
+	// Создаем handler для Telegram для статистики rate limiting
+	telegramHandler := telegram.NewTelegramHandlerWithAdmins(
 		nil, // bot API не нужен для admin API
 		service,
 		[]int64{},  // пустой список admin chat IDs
@@ -296,13 +226,61 @@ func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, adminServer
 	}
 
 	// Останавливаем кэш-сервис только после остановки ботов
+	// Используем общий сервис из любого бота
 	for _, bot := range bots {
 		if telegramBot, ok := bot.(*telegram.TelegramBot); ok {
 			service := telegramBot.GetService()
 			if service != nil {
 				service.StopCache()
 				log.Println("Cache service stopped")
+				break // останавливаем только один раз для общего сервиса
 			}
 		}
 	}
+}
+
+// startBotsWithService запускает все боты с общим сервисом
+func startBotsWithService(
+	ctx context.Context,
+	cfg *config.Config,
+	service *core.BotService,
+	errorHandler *errors.ErrorHandler,
+) ([]adapters.BotAdapter, *sync.WaitGroup, *telegram.TelegramHandler) {
+	var (
+		wg   sync.WaitGroup
+		bots []adapters.BotAdapter
+	)
+
+	// Telegram Bot
+	if cfg.EnableTelegram && cfg.TelegramToken != "" {
+		telegramBot, err := initializeTelegramBotWithService(service, cfg, errorHandler)
+		if err != nil {
+			log.Fatalf("Failed to initialize Telegram bot: %v", err)
+		}
+
+		// Создаем handler для Telegram для admin server
+		telegramHandler := telegram.NewTelegramHandlerWithAdmins(
+			telegramBot.GetBotAPI(),
+			service,
+			cfg.AdminChatIDs,
+			cfg.AdminUsernames,
+			errorHandler,
+		)
+
+		// Запускаем бота
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			log.Printf("Starting Telegram bot...")
+			if err := telegramBot.Start(ctx); err != nil {
+				log.Printf("Telegram bot error: %v", err)
+			}
+			log.Printf("Telegram bot stopped")
+		}()
+
+		bots = append(bots, telegramBot)
+		return bots, &wg, telegramHandler
+	}
+
+	return bots, &wg, nil
 }

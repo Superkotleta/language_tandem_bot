@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"log"
 	"regexp"
 
 	"language-exchange-bot/internal/models"
@@ -81,6 +82,7 @@ func (r *CallbackRouter) Handle(callback *tgbotapi.CallbackQuery, user *models.U
 		}
 	}
 
+	log.Printf("DEBUG: No route matched for callback data: '%s'", data)
 	return nil // Не найден подходящий обработчик
 }
 

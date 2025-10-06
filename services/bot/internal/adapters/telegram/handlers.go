@@ -667,8 +667,6 @@ func (h *TelegramHandler) HandleIsolatedEditCategory(callback *tgbotapi.Callback
 
 // HandleIsolatedEditPrimary обрабатывает редактирование основных интересов
 func (h *TelegramHandler) HandleIsolatedEditPrimary(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	log.Printf("Showing isolated primary interests for user %d", user.ID)
-
 	session, err := h.isolatedInterestEditor.GetEditSession(user.ID)
 	if err != nil {
 		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetEditSession")
@@ -779,8 +777,6 @@ func (h *TelegramHandler) HandleIsolatedShowStats(callback *tgbotapi.CallbackQue
 
 // handleIsolatedCallbacks обрабатывает все callback'и изолированной системы через роутер
 func (h *TelegramHandler) handleIsolatedCallbacks(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
-	log.Printf("Handling isolated callback: %s for user %d", data, user.ID)
-
 	// Используем роутер для обработки callback'а
 	return h.isolatedRouter.Handle(callback, user)
 }
@@ -953,11 +949,7 @@ func (h *TelegramHandler) sendRateLimitMessage(userID int64, err error) {
 	// Получаем локализацию (используем английский по умолчанию)
 	message := "Too many requests. Please try again later."
 
-	// Если есть сервис локализации, пытаемся получить сообщение на нужном языке
-	if h.service != nil && h.service.Localizer != nil {
-		// Для упрощения используем английское сообщение
-		// В будущем можно добавить локализацию
-	}
+	// В будущем можно добавить локализацию для сообщений rate limiting
 
 	// Отправляем сообщение пользователю
 	msg := tgbotapi.NewMessage(userID, message)

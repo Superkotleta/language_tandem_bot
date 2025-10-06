@@ -15,16 +15,19 @@ func TestRedisCacheServiceLanguages(t *testing.T) {
 	redisCache := createRedisCacheService(t)
 	defer redisCache.Stop()
 
+	// Используем уникальный язык для теста
+	testLang := "test_lang_" + t.Name()
+
 	languages := []*models.Language{
 		{ID: 1, Code: "en", NameNative: "English", NameEn: "English"},
 		{ID: 2, Code: "ru", NameNative: "Русский", NameEn: "Russian"},
 	}
 
 	// Сохраняем в Redis
-	redisCache.SetLanguages(context.Background(), "en", languages)
+	redisCache.SetLanguages(context.Background(), testLang, languages)
 
 	// Получаем из Redis
-	cached, found := redisCache.GetLanguages(context.Background(), "en")
+	cached, found := redisCache.GetLanguages(context.Background(), testLang)
 	if !found {
 		t.Error("Expected to find languages in Redis cache")
 	}
@@ -45,16 +48,19 @@ func TestRedisCacheServiceInterests(t *testing.T) {
 	redisCache := createRedisCacheService(t)
 	defer redisCache.Stop()
 
+	// Используем уникальный язык для теста
+	testLang := "test_lang_" + t.Name()
+
 	interests := map[int]string{
 		1: "movies",
 		2: "music",
 	}
 
 	// Сохраняем в Redis
-	redisCache.SetInterests(context.Background(), "en", interests)
+	redisCache.SetInterests(context.Background(), testLang, interests)
 
 	// Получаем из Redis
-	cached, found := redisCache.GetInterests(context.Background(), "en")
+	cached, found := redisCache.GetInterests(context.Background(), testLang)
 	if !found {
 		t.Error("Expected to find interests in Redis cache")
 	}

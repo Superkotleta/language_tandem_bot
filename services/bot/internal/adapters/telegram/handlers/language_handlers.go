@@ -45,17 +45,6 @@ func NewLanguageHandler(
 	}
 }
 
-// sendMessage отправляет сообщение пользователю
-// TODO: функция может быть использована в будущем для отправки сообщений в обработчиках языков
-//
-//nolint:unused
-func (lh *LanguageHandlerImpl) sendMessage(chatID int64, text string) error {
-	msg := tgbotapi.NewMessage(chatID, text)
-	_, err := lh.bot.Send(msg)
-
-	return err
-}
-
 // HandleLanguagesContinueFilling продолжает заполнение профиля после выбора языков.
 func (lh *LanguageHandlerImpl) HandleLanguagesContinueFilling(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Очищаем старые интересы при переходе к выбору интересов

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -435,6 +436,6 @@ func TestAdminServer_StartStop(t *testing.T) {
 
 	// Give it a moment to start
 	// Then stop it
-	err := server.Stop(nil)
+	err := server.Stop(context.TODO())
 	assert.NoError(t, err)
 }

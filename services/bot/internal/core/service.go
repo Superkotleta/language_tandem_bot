@@ -103,6 +103,9 @@ func NewBotServiceWithRedis(
 	redisDB int,
 	errorHandler interface{},
 ) (*BotService, error) {
+	// Создаем конфигурацию
+	cfg := config.Load()
+
 	// Создаем Redis кэш
 	redisCache, err := cache.NewRedisCacheService(redisURL, redisPassword, redisDB, cache.DefaultConfig())
 	if err != nil {
@@ -142,6 +145,7 @@ func NewBotServiceWithRedis(
 		BatchLoader:              batchLoader,
 		Service:                  validationService,
 		LoggingService:           loggingService,
+		Config:                   cfg,
 		FeedbackNotificationFunc: nil,
 		TelegramCircuitBreaker:   telegramCB,
 		DatabaseCircuitBreaker:   databaseCB,

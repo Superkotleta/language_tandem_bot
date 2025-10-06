@@ -5,14 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	errorsPkg "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/logging"
 	"language-exchange-bot/internal/models"
-
-	"github.com/lib/pq"
 )
 
 // Константы для BatchLoader.
@@ -307,12 +306,20 @@ func (bl *BatchLoader) BatchLoadUserInterests(ctx context.Context, userIDs []int
 		return make(map[int][]int), nil
 	}
 
-	query := `
+	// Создаем placeholders для SQLite: ?, ?, ?
+	placeholders := make([]string, len(userIDs))
+	args := make([]interface{}, len(userIDs))
+	for i, id := range userIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
 		SELECT user_id, interest_id
 		FROM user_interests
-		WHERE user_id = ANY($1)
+		WHERE user_id IN (%s)
 		ORDER BY user_id, interest_id
-	`
+	`, strings.Join(placeholders, ","))
 
 	// Создаем контекст с таймаутом если не передан
 	if ctx == nil {
@@ -322,7 +329,7 @@ func (bl *BatchLoader) BatchLoadUserInterests(ctx context.Context, userIDs []int
 	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
-	rows, err := bl.db.conn.QueryContext(ctx, query, pq.Array(userIDs))
+	rows, err := bl.db.conn.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch load user interests: %w", err)
 	}

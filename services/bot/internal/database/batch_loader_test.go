@@ -8,15 +8,15 @@ import (
 
 	"language-exchange-bot/internal/localization"
 
-	_ "github.com/mattn/go-sqlite3" // Регистрируем драйвер SQLite
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	_ "modernc.org/sqlite" // Регистрируем драйвер SQLite
 )
 
 func TestBatchLoader_scanUserWithInterestRow(t *testing.T) {
 	t.Parallel()
 	// Создаем тестовую базу данных в памяти
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
 
 	defer func() { _ = db.Close() }()
@@ -79,7 +79,7 @@ func TestBatchLoader_scanUserWithInterestRow(t *testing.T) {
 func TestBatchLoader_handleRowsError(t *testing.T) {
 	t.Parallel()
 	// Создаем тестовую базу данных в памяти
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
 
 	defer func() { _ = db.Close() }()
@@ -104,7 +104,7 @@ func TestBatchLoader_handleRowsError(t *testing.T) {
 func TestBatchLoader_BatchLoadUsersWithInterests_EmptyInput(t *testing.T) {
 	t.Parallel()
 	// Создаем тестовую базу данных в памяти
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
 
 	defer func() { _ = db.Close() }()
@@ -124,7 +124,7 @@ func TestBatchLoader_BatchLoadUsersWithInterests_EmptyInput(t *testing.T) {
 func TestBatchLoader_ContextTimeout(t *testing.T) {
 	t.Parallel()
 	// Создаем тестовую базу данных в памяти
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
 
 	defer func() { _ = db.Close() }()
@@ -158,7 +158,7 @@ func TestBatchLoader_Constants(t *testing.T) {
 func TestBatchLoader_NewBatchLoader(t *testing.T) {
 	t.Parallel()
 	// Создаем тестовую базу данных в памяти
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
 
 	defer func() { _ = db.Close() }()
@@ -174,7 +174,7 @@ func TestBatchLoader_NewBatchLoader(t *testing.T) {
 func TestBatchLoader_HelperFunctions(t *testing.T) {
 	t.Parallel()
 	// Создаем тестовую базу данных в памяти
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
 
 	defer func() { _ = db.Close() }()

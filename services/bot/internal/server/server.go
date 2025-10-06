@@ -35,6 +35,11 @@ func New(port string, botService *core.BotService, handler *telegram.TelegramHan
 	return NewWithWebhook(port, botService, handler, false)
 }
 
+// SetTelegramHandler устанавливает Telegram handler для сервера
+func (s *AdminServer) SetTelegramHandler(handler *telegram.TelegramHandler) {
+	s.handler = handler
+}
+
 // NewWithWebhook creates a new admin HTTP server with webhook support
 func NewWithWebhook(port string, botService *core.BotService, handler *telegram.TelegramHandler, webhookMode bool) *AdminServer {
 	r := mux.NewRouter()

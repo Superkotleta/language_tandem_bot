@@ -114,10 +114,11 @@ func TestCircuitBreaker_ExecuteWithContext(t *testing.T) {
 	assert.Equal(t, context.Canceled, err)
 
 	// Тест с таймаутом контекста
-	ctx, cancel = context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
-	time.Sleep(1 * time.Millisecond)
+	// Ждем, пока контекст истечет
+	<-ctx.Done()
 
 	_, err = cb.ExecuteWithContext(ctx, func() (interface{}, error) {
 		return testSuccessValue, nil
