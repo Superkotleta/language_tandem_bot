@@ -5,81 +5,37 @@
 ```mermaid
 graph TB
     subgraph "External Services"
-        TG[📱 Telegram Bot API<br/>Webhook Push]
+        TG[Telegram Bot API]
         USER[👤 Users]
-        ADMIN[👨‍💼 Administrators]
     end
-
+    
     subgraph "Language Exchange Bot System"
-        subgraph "API Layer"
-            ADMIN_API[🔌 Admin REST API<br/>Port: 8080<br/>• Swagger UI<br/>• Statistics<br/>• Monitoring<br/>• Cache Stats]
-            NAV[🗺️ Navigation Dashboard<br/>http://localhost:8080/]
-        end
-
-        subgraph "Bot Core"
-            BOT[🤖 Bot Service<br/>Go + Docker<br/>• Webhook Handler<br/>• Rate Limiter<br/>• Command Processor<br/>• Message Handler]
-            CIRCUIT[🛡️ Circuit Breaker<br/>• Telegram CB<br/>• Database CB<br/>• Redis CB]
-            RATE_LIMIT[⚡ Rate Limiter<br/>20 msg/min<br/>2min block]
-        end
-
-        subgraph "Business Logic"
-            HANDLERS[🎯 Message Handlers<br/>• Profile Handler<br/>• Interest Handler<br/>• Feedback Handler<br/>• Admin Handler]
-            SERVICES[⚙️ Core Services<br/>• User Service<br/>• Interest Service<br/>• Validation Service<br/>• Cache Service]
-            VALIDATION[✅ Validation Layer<br/>• User Validator<br/>• Message Validator<br/>• Data Sanitizer]
-        end
-
+        BOT[🤖 Bot Service<br/>Go + Docker<br/>• Handlers<br/>• Controllers<br/>• Services<br/>• Validation<br/>• Logging]
+        
         subgraph "Data Layer"
-            PG[(🗄️ PostgreSQL<br/>Port: 5432<br/>• Users<br/>• Profiles<br/>• Interests<br/>• Languages<br/>• Feedback)]
-            REDIS[(⚡ Redis Cache<br/>Port: 6379<br/>• User Sessions<br/>• Interests Cache<br/>• Rate Limits<br/>• API Responses)]
+            PG[(🗄️ PostgreSQL<br/>Database<br/>• Users<br/>• Profiles<br/>• Interests<br/>• Languages)]
+            REDIS[(⚡ Redis<br/>Cache<br/>• Languages<br/>• Interests<br/>• Translations<br/>• User Data)]
         end
-
-        subgraph "Management Tools"
-            PGADMIN[🌐 PgAdmin<br/>Port: 8080<br/>Web Interface]
-            SWAGGER[📋 Swagger UI<br/>API Documentation<br/>Interactive Testing]
-        end
+        
+        PGADMIN[🌐 PgAdmin<br/>Web Interface<br/>Port: 8080]
     end
-
+    
     USER --> TG
     TG --> BOT
-    BOT --> CIRCUIT
-    BOT --> RATE_LIMIT
-    BOT --> HANDLERS
-    HANDLERS --> SERVICES
-    SERVICES --> VALIDATION
-    SERVICES --> PG
-    SERVICES --> REDIS
-
-    ADMIN --> ADMIN_API
-    ADMIN --> NAV
-    ADMIN --> SWAGGER
-    ADMIN --> PGADMIN
-
-    CIRCUIT --> PG
-    CIRCUIT --> REDIS
-    RATE_LIMIT --> REDIS
-
-    ADMIN_API --> SERVICES
-    NAV --> ADMIN_API
-    SWAGGER --> ADMIN_API
-
+    BOT --> PG
+    BOT --> REDIS
+    PGADMIN --> PG
+    
     classDef active fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef api fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef core fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef business fill:#DDA0DD,stroke:#333,stroke-width:2px
     classDef database fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef management fill:#FFA07A,stroke:#333,stroke-width:2px
     classDef external fill:#FFB6C1,stroke:#333,stroke-width:2px
-
-    class BOT,CIRCUIT,RATE_LIMIT,HANDLERS,SERVICES,VALIDATION,PG,REDIS,ADMIN_API,NAV,SWAGGER,PGADMIN active
-    class ADMIN_API,NAV api
-    class BOT,CIRCUIT,RATE_LIMIT core
-    class HANDLERS,SERVICES,VALIDATION business
+    
+    class BOT,PG,REDIS,PGADMIN active
     class PG,REDIS database
-    class PGADMIN,SWAGGER management
-    class TG,USER,ADMIN external
+    class TG,USER external
 ```
 
-## 🔧 Текущая архитектура (Enterprise-уровень)
+## 🔧 Текущая архитектура (Упрощенная)
 
 ### Активные компоненты
 
@@ -87,101 +43,35 @@ graph TB
 
 - **Статус**: ✅ Полностью функционален
 - **Технологии**: Go, Telegram Bot API, PostgreSQL, Redis
-- **Порт**: Webhook (Telegram)
 - **Функции**:
-  - Webhook обработка сообщений Telegram
-  - Rate limiting (20 msg/min, 2min block)
-  - Circuit Breaker защита
-  - Обработка команд и callback'ов
+  - Обработка сообщений и команд
   - Управление профилями пользователей
   - Система интересов и языков
   - Административные функции
-  - Многоуровневое кэширование
-
-#### 🔌 **Admin REST API** - Административное API
-
-- **Статус**: ✅ Активен
-- **Порт**: 8080
-- **Технологии**: REST API, Swagger/OpenAPI
-- **Функции**:
-  - Статистика системы (`GET /api/v1/stats`)
-  - Управление пользователями (`GET /api/v1/users/{id}`)
-  - Статистика rate limiting (`GET /api/v1/rate-limits/stats`)
-  - Статистика кэша (`GET /api/v1/cache/stats`)
-  - Обработка отзывов (`POST /api/v1/feedback/{id}/process`)
-  - Аутентификация через `X-Admin-Key` header
-
-#### 🗺️ **Navigation Dashboard** - Навигационная панель
-
-- **Статус**: ✅ Активен
-- **URL**: `http://localhost:8080/`
-- **Функции**:
-  - Централизованная навигация по всем сервисам
-  - Статусы компонентов в реальном времени
-  - Прямые ссылки на API endpoints
-  - Команды для мониторинга и отладки
-
-#### 📋 **Swagger UI** - Документация API
-
-- **Статус**: ✅ Активен
-- **URL**: `http://localhost:8080/swagger/`
-- **Функции**:
-  - Интерактивная документация REST API
-  - Возможность тестирования endpoints
-  - Автоматическая генерация из кода
-  - Поддержка OpenAPI 3.0
-
-#### 🛡️ **Circuit Breaker** - Защита от сбоев
-
-- **Статус**: ✅ Активен
-- **Компоненты**:
-  - Telegram Circuit Breaker
-  - Database Circuit Breaker
-  - Redis Circuit Breaker
-- **Функции**:
-  - Автоматическая защита от каскадных сбоев
-  - Состояния: Closed/Open/Half-Open
-  - Recovery timeout и failure threshold
-
-#### ⚡ **Rate Limiter** - Защита от спама
-
-- **Статус**: ✅ Активен
-- **Настройки**:
-  - Max 20 сообщений в минуту
-  - Block duration: 2 минуты
-  - Cleanup interval: 10 минут
-- **Функции**:
-  - Защита от злоупотреблений
-  - Пользовательские лимиты
-  - Redis-based хранение счетчиков
+  - Кэширование и оптимизация
 
 #### 🗄️ **PostgreSQL** - База данных
 
 - **Статус**: ✅ Активна
-- **Порт**: 5432
 - **Функции**:
   - Хранение пользовательских данных
   - Профили и настройки
   - Интересы и языки
   - Система отзывов
-  - Batch operations для оптимизации
 
-#### ⚡ **Redis Cache** - Многоуровневое кэширование
+#### ⚡ **Redis** - Кэширование
 
 - **Статус**: ✅ Активен
-- **Порт**: 6379
 - **Функции**:
-  - Primary Redis cache с TTL
-  - In-memory fallback cache
-  - Rate limiting storage
-  - User sessions и interests cache
-  - API responses caching
-  - 3-5x производительность
+  - Высокопроизводительное кэширование
+  - TTL управление
+  - Fallback на in-memory кэш
+  - Batch Loading оптимизация
 
 #### 🌐 **PgAdmin** - Администрирование БД
 
 - **Статус**: ✅ Активен
-- **Порт**: 8081 (отдельный от API)
+- **Порт**: 8080
 - **Функции**: Веб-интерфейс для управления базой данных
 
 ### Отключенные компоненты (Временно)
@@ -758,213 +648,134 @@ graph TB
 
 ## 📊 Потоки данных
 
-### 1. Пользовательский поток (Webhook)
+### 1. Пользовательский поток
 
 ```mermaid
 sequenceDiagram
     participant U as 👤 User
-    participant TG as 📱 Telegram API
-    participant WEBHOOK as 🔔 Webhook Handler
-    participant RATE as ⚡ Rate Limiter
-    participant CIRCUIT as 🛡️ Circuit Breaker
-    participant BOT as 🤖 Bot Core
-    participant CACHE as ⚡ Cache Layer
+    participant TG as 📱 Telegram
+    participant BOT as 🤖 Bot Service
+    participant CACHE as ⚡ Cache
     participant DB as 🗄️ Database
-
-    U->>TG: Send Message/Command
-    TG->>WEBHOOK: POST /webhook (JSON payload)
-    WEBHOOK->>RATE: CheckRateLimit(userID)
-    alt Rate Limit Exceeded
-        RATE-->>WEBHOOK: Block user (2 min)
-        WEBHOOK->>TG: Send rate limit message
-    else Within Limits
-        RATE-->>WEBHOOK: Allow request
-        WEBHOOK->>CIRCUIT: Execute with Circuit Breaker
-        CIRCUIT->>BOT: Process Message
-        BOT->>CACHE: Check Cache (Redis/In-Memory)
-        alt Cache Hit
-            CACHE-->>BOT: Return Cached Data
-        else Cache Miss
-            BOT->>DB: Query Database (with Batch Loading)
-            DB-->>BOT: Return Data
-            BOT->>CACHE: Store in Cache with TTL
-        end
-        BOT-->>CIRCUIT: Return Response
-        CIRCUIT-->>WEBHOOK: Success
-        WEBHOOK->>TG: Send Response
-        TG->>U: Display Message/Keyboard
+    
+    U->>TG: Send Message
+    TG->>BOT: Process Message
+    BOT->>CACHE: Check Cache
+    alt Cache Hit
+        CACHE-->>BOT: Return Cached Data
+    else Cache Miss
+        BOT->>DB: Query Database
+        DB-->>BOT: Return Data
+        BOT->>CACHE: Store in Cache
     end
+    BOT->>TG: Send Response
+    TG->>U: Display Message
 ```
 
-### 2. Административный поток (REST API + Webhook)
+### 2. Административный поток
 
 ```mermaid
 sequenceDiagram
-    participant A as 👨‍💼 Administrator
-    participant NAV as 🗺️ Navigation Dashboard
-    participant SWAGGER as 📋 Swagger UI
-    participant API as 🔌 REST API
-    participant AUTH as 🔐 API Auth (X-Admin-Key)
+    participant A as 👨‍💼 Admin
+    participant TG as 📱 Telegram
     participant BOT as 🤖 Bot Service
-    participant CACHE as ⚡ Cache Stats
+    participant AUTH as 🔐 Auth Check
     participant DB as 🗄️ Database
-
-    rect rgb(240, 248, 255)
-        Note over A,DB: 🌐 Web-based Administration (Primary)
-        A->>NAV: Open http://localhost:8080/
-        NAV-->>A: Display Services Dashboard
-        A->>SWAGGER: Click "API Documentation"
-        SWAGGER-->>A: Interactive API Docs
-        A->>API: GET /api/v1/stats
-        API->>AUTH: Check X-Admin-Key Header
-        alt Authorized
-            AUTH-->>API: Access Granted
-            API->>BOT: Request System Statistics
-            BOT->>CACHE: Get Cache Statistics
-            BOT->>DB: Get Database Statistics
-            CACHE-->>BOT: Cache Stats (Hits/Misses)
-            DB-->>BOT: User/Feedback Stats
-            BOT-->>API: Compiled Statistics
-            API-->>A: JSON Response
-        else Unauthorized
-            AUTH-->>API: 401 Unauthorized
-            API-->>A: Authentication Error
-        end
-    end
-
-    rect rgb(255, 248, 240)
-        Note over A,DB: 📱 Telegram-based Administration (Legacy)
-        A->>A: Send /admin_stats in Telegram
-        A->>BOT: Webhook with admin command
-        BOT->>BOT: Check admin permissions
-        BOT->>DB: Query statistics
-        DB-->>BOT: Return data
-        BOT->>A: Send formatted report
+    
+    A->>TG: /admin command
+    TG->>BOT: Process Command
+    BOT->>AUTH: Check Admin Rights
+    alt Authorized
+        AUTH-->>BOT: Access Granted
+        BOT->>DB: Query Statistics
+        DB-->>BOT: Return Data
+        BOT->>TG: Send Admin Report
+        TG->>A: Display Statistics
+    else Unauthorized
+        AUTH-->>BOT: Access Denied
+        BOT->>TG: Send Error Message
+        TG->>A: Display Error
     end
 ```
 
-### 3. Многоуровневая система кэширования
+### 3. Система кэширования
 
 ```mermaid
 flowchart TD
-    subgraph "Application Layer"
-        BOT[🤖 Bot Service<br/>Webhook Handler]
-        API[🔌 Admin API<br/>REST Endpoints]
-        VALIDATION[✅ Validation Service]
+    REQ[📥 Request] --> CHECK{🔍 Cache Check}
+    CHECK -->|Hit| HIT[✅ Cache Hit<br/>Return Data]
+    CHECK -->|Miss| MISS[❌ Cache Miss]
+    MISS --> DB_QUERY[🗄️ Database Query]
+    DB_QUERY --> STORE[💾 Store in Cache]
+    STORE --> RETURN[📤 Return Data]
+    HIT --> RETURN
+    
+    subgraph "Cache Layers"
+        REDIS_CHECK[⚡ Redis Check]
+        MEMORY_CHECK[💾 Memory Check]
     end
-
-    subgraph "Cache Layer (Multi-Level)"
-        CACHE_INTERFACE[🔄 Cache Interface<br/>Unified API]
-        RATE_LIMIT[⚡ Rate Limiter Cache<br/>User Limits & Blocks]
-        USER_CACHE[👤 User Cache<br/>TTL: 15 min]
-        INTEREST_CACHE[🎯 Interest Cache<br/>TTL: 30 min]
-        LANG_CACHE[🌍 Language Cache<br/>TTL: 30 min]
-        STATS_CACHE[📊 Stats Cache<br/>TTL: 5 min]
-    end
-
-    subgraph "Storage Layer"
-        REDIS[(⚡ Redis Primary<br/>Port: 6379<br/>Persistent<br/>TTL Support<br/>JSON Storage)]
-        MEMORY[(💾 In-Memory Fallback<br/>Fast Access<br/>No Network<br/>Limited Size)]
-        DB[(🗄️ PostgreSQL<br/>Source of Truth<br/>Batch Loading)]
-    end
-
-    BOT --> CACHE_INTERFACE
-    API --> CACHE_INTERFACE
-    VALIDATION --> CACHE_INTERFACE
-
-    CACHE_INTERFACE --> RATE_LIMIT
-    CACHE_INTERFACE --> USER_CACHE
-    CACHE_INTERFACE --> INTEREST_CACHE
-    CACHE_INTERFACE --> LANG_CACHE
-    CACHE_INTERFACE --> STATS_CACHE
-
-    RATE_LIMIT --> REDIS
-    USER_CACHE --> REDIS
-    INTEREST_CACHE --> REDIS
-    LANG_CACHE --> REDIS
-    STATS_CACHE --> REDIS
-
-    REDIS -->|Available| REDIS
-    REDIS -->|Unavailable| MEMORY
-    MEMORY --> DB
-
-    classDef app fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef cache fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef storage fill:#87CEEB,stroke:#333,stroke-width:2px
-    classDef fallback fill:#FFA07A,stroke:#333,stroke-width:2px
-
-    class BOT,API,VALIDATION app
-    class CACHE_INTERFACE,RATE_LIMIT,USER_CACHE,INTEREST_CACHE,LANG_CACHE,STATS_CACHE cache
-    class REDIS storage
-    class MEMORY,DB fallback
+    
+    MISS --> REDIS_CHECK
+    REDIS_CHECK -->|Available| MEMORY_CHECK
+    REDIS_CHECK -->|Unavailable| MEMORY_CHECK
+    
+    classDef process fill:#E6F3FF,stroke:#333,stroke-width:2px
+    classDef decision fill:#FFF2CC,stroke:#333,stroke-width:2px
+    classDef storage fill:#E1F5FE,stroke:#333,stroke-width:2px
+    
+    class REQ,RETURN process
+    class CHECK decision
+    class REDIS_CHECK,MEMORY_CHECK,DB_QUERY,STORE storage
 ```
 
 ## 🛡️ Система обработки ошибок
 
-### Архитектура обработки ошибок (Enterprise-уровень)
+### Архитектура обработки ошибок
 
 ```mermaid
 graph TD
-    subgraph "Error Sources"
-        WEBHOOK_ERR[🔔 Webhook Processing<br/>Rate Limit / Circuit Breaker]
-        API_ERR[🔌 REST API<br/>Authentication / Validation]
-        TG_ERR[📱 Telegram API<br/>Network / API Limits]
-        DB_ERR[🗄️ Database<br/>Connection / Query Errors]
-        CACHE_ERR[⚡ Cache Layer<br/>Redis / In-Memory]
-        VALIDATION_ERR[✅ Business Validation<br/>User Input / Data Integrity]
+    subgraph "Error Types"
+        TG_ERR[📱 Telegram API<br/>ErrorTypeTelegramAPI]
+        DB_ERR[🗄️ Database<br/>ErrorTypeDatabase]
+        VAL_ERR[✅ Validation<br/>ErrorTypeValidation]
+        CACHE_ERR[⚡ Cache<br/>ErrorTypeCache]
+        NET_ERR[🌐 Network<br/>ErrorTypeNetwork]
+        INT_ERR[🔧 Internal<br/>ErrorTypeInternal]
     end
-
-    subgraph "Error Processing Pipeline"
-        ERROR_HANDLER[🛡️ Centralized Error Handler<br/>Error Classification]
-        CIRCUIT_BREAKER[🛡️ Circuit Breaker<br/>Failure Detection<br/>Auto Recovery]
-        RATE_LIMITER[⚡ Rate Limiter<br/>Spam Protection<br/>User Blocking]
-        TRACE_SYSTEM[🔍 Request Tracing<br/>req_1759152914113401600_2914<br/>Context Propagation]
+    
+    subgraph "Error Processing"
+        HANDLER[🛡️ Error Handler<br/>Centralized Processing]
+        TRACE[🔍 RequestID Tracing<br/>req_1759152914113401600_2914]
+        LOG[📝 Structured Logging<br/>JSON Format]
+        ALERT[🚨 Admin Alerts<br/>Critical Errors]
     end
-
-    subgraph "Error Outputs"
-        LOG_SYSTEM[📝 Structured Logging<br/>JSON Format<br/>Multiple Levels]
-        ALERT_SYSTEM[🚨 Admin Notifications<br/>Telegram Alerts<br/>Critical Errors]
-        METRICS[📊 Error Metrics<br/>Failure Rates<br/>Recovery Times]
-        USER_FEEDBACK[💬 User-Friendly Messages<br/>Localized Responses]
-    end
-
+    
     subgraph "Error Context"
-        REQUEST_CTX[📋 Request Context<br/>userID, chatID, operation<br/>timestamp, component]
-        ERROR_TYPES[🏷️ Error Classification<br/>6 Categories<br/>Severity Levels]
-        BUSINESS_LOGIC[🎯 Business Rules<br/>Retry Policies<br/>Fallback Strategies]
+        CTX[📋 Request Context<br/>userID, chatID, operation]
+        SEVERITY[⚠️ Severity Levels<br/>DEBUG, INFO, WARN, ERROR]
     end
-
-    WEBHOOK_ERR --> ERROR_HANDLER
-    API_ERR --> ERROR_HANDLER
-    TG_ERR --> ERROR_HANDLER
-    DB_ERR --> ERROR_HANDLER
-    CACHE_ERR --> ERROR_HANDLER
-    VALIDATION_ERR --> ERROR_HANDLER
-
-    ERROR_HANDLER --> CIRCUIT_BREAKER
-    ERROR_HANDLER --> RATE_LIMITER
-    ERROR_HANDLER --> TRACE_SYSTEM
-
-    CIRCUIT_BREAKER --> ALERT_SYSTEM
-    RATE_LIMITER --> USER_FEEDBACK
-    TRACE_SYSTEM --> LOG_SYSTEM
-    TRACE_SYSTEM --> METRICS
-
-    ERROR_HANDLER --> USER_FEEDBACK
-
-    REQUEST_CTX --> ERROR_HANDLER
-    ERROR_TYPES --> ERROR_HANDLER
-    BUSINESS_LOGIC --> ERROR_HANDLER
-
-    classDef source fill:#FFB6C1,stroke:#333,stroke-width:2px
+    
+    TG_ERR --> HANDLER
+    DB_ERR --> HANDLER
+    VAL_ERR --> HANDLER
+    CACHE_ERR --> HANDLER
+    NET_ERR --> HANDLER
+    INT_ERR --> HANDLER
+    
+    HANDLER --> TRACE
+    HANDLER --> LOG
+    HANDLER --> ALERT
+    
+    CTX --> HANDLER
+    SEVERITY --> LOG
+    
+    classDef error fill:#FFB6C1,stroke:#333,stroke-width:2px
     classDef process fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef output fill:#FFD700,stroke:#333,stroke-width:2px
     classDef context fill:#87CEEB,stroke:#333,stroke-width:2px
-
-    class WEBHOOK_ERR,API_ERR,TG_ERR,DB_ERR,CACHE_ERR,VALIDATION_ERR source
-    class ERROR_HANDLER,CIRCUIT_BREAKER,RATE_LIMITER,TRACE_SYSTEM process
-    class LOG_SYSTEM,ALERT_SYSTEM,METRICS,USER_FEEDBACK output
-    class REQUEST_CTX,ERROR_TYPES,BUSINESS_LOGIC context
+    
+    class TG_ERR,DB_ERR,VAL_ERR,CACHE_ERR,NET_ERR,INT_ERR error
+    class HANDLER,TRACE,LOG,ALERT process
+    class CTX,SEVERITY context
 ```
 
 ### Типизированные ошибки
@@ -1057,141 +868,73 @@ validator.ValidateUserState("idle")
 
 ## 🚀 Развертывание
 
-### Docker Compose архитектура (Enterprise)
+### Docker Compose архитектура
 
 ```mermaid
 graph TB
     subgraph "Docker Network"
-        subgraph "API Layer"
-            BOT_CORE[🤖 Bot Service Core<br/>Webhook Handler<br/>Rate Limiter<br/>Circuit Breaker]
-            ADMIN_API[🔌 Admin REST API<br/>Port: 8080<br/>Swagger + Navigation]
-            NAV_DASH[🗺️ Navigation Dashboard<br/>http://localhost:8080/]
-            SWAGGER_UI[📋 Swagger UI<br/>API Documentation<br/>Interactive Testing]
+        subgraph "Application Layer"
+            BOT[🤖 Bot Service<br/>Port: 8080<br/>Go + Docker]
         end
-
+        
         subgraph "Data Layer"
-            PG[(🗄️ PostgreSQL<br/>Port: 5432<br/>Database<br/>Batch Operations)]
-            REDIS[(⚡ Redis Cache<br/>Port: 6379<br/>Multi-Level Cache<br/>Rate Limit Storage)]
+            PG[(🗄️ PostgreSQL<br/>Port: 5432<br/>Database)]
+            REDIS[(⚡ Redis<br/>Port: 6379<br/>Cache)]
         end
-
+        
         subgraph "Management Layer"
-            PGADMIN[🌐 PgAdmin<br/>Port: 8080*<br/>Database Admin<br/>*Shared with API]
+            PGADMIN[🌐 PgAdmin<br/>Port: 8080<br/>Web Interface]
         end
     end
-
-    subgraph "External Services"
-        TG[📱 Telegram Bot API<br/>Webhook Push<br/>Real-time Messages]
-        TG_WEBHOOK[🔔 Webhook Receiver<br/>JSON Payloads<br/>Update Processing]
+    
+    subgraph "External"
+        TG[📱 Telegram API]
+        USER[👤 Users]
+        ADMIN[👨‍💼 Admins]
     end
-
-    subgraph "Administrators"
-        ADMIN_WEB[🌐 Web Admin<br/>REST API + Dashboard]
-        ADMIN_TG[📱 Telegram Admin<br/>Legacy Commands]
-    end
-
-    TG --> TG_WEBHOOK
-    TG_WEBHOOK --> BOT_CORE
-    BOT_CORE --> ADMIN_API
-
-    ADMIN_WEB --> NAV_DASH
-    ADMIN_WEB --> SWAGGER_UI
-    ADMIN_WEB --> ADMIN_API
-
-    ADMIN_TG --> TG_WEBHOOK
-
-    BOT_CORE --> PG
-    BOT_CORE --> REDIS
-    ADMIN_API --> PG
-    ADMIN_API --> REDIS
-
+    
+    USER --> TG
+    TG --> BOT
+    ADMIN --> PGADMIN
+    BOT --> PG
+    BOT --> REDIS
     PGADMIN --> PG
-
-    classDef api fill:#90EE90,stroke:#333,stroke-width:2px
+    
+    classDef app fill:#90EE90,stroke:#333,stroke-width:2px
     classDef data fill:#87CEEB,stroke:#333,stroke-width:2px
     classDef mgmt fill:#DDA0DD,stroke:#333,stroke-width:2px
     classDef external fill:#FFB6C1,stroke:#333,stroke-width:2px
-    classDef admin fill:#FFD700,stroke:#333,stroke-width:2px
-
-    class BOT_CORE,ADMIN_API,NAV_DASH,SWAGGER_UI api
+    
+    class BOT app
     class PG,REDIS data
     class PGADMIN mgmt
-    class TG,TG_WEBHOOK external
-    class ADMIN_WEB,ADMIN_TG admin
+    class TG,USER,ADMIN external
 ```
 
 ### Docker Compose сервисы
 
 ```yaml
 services:
-  bot:           # 🤖 Bot Service Core + Admin API
-    ports:
-      - "8080:8080"  # REST API + Navigation + Swagger
-    environment:
-      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-      - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgresql://...
-      - ADMIN_API_KEY=${ADMIN_API_KEY}
-
-  postgres:      # 🗄️ PostgreSQL Database
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:         # ⚡ Redis Cache
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-  pgadmin:       # 🌐 PgAdmin (Shared Port)
-    ports:
-      - "8081:80"    # Separate port to avoid conflict
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@example.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
+  bot:          # Основной Telegram бот
+  postgres:     # База данных PostgreSQL
+  redis:        # Кэш-сервер Redis
+  pgadmin:      # Веб-интерфейс для БД
 ```
 
-### Порты и endpoints
+### Порты
 
-| Сервис | Порт | Endpoints | Назначение |
-|--------|------|-----------|------------|
-| **Bot Service** | `8080` | - `/` (Navigation) - `/swagger/` (API Docs) - `/api/v1/*` (REST API) - `/healthz` (Health) - `/readyz` (Readiness) | Основной API сервер |
-| **PostgreSQL** | `5432` | Internal DB access | База данных |
-| **Redis** | `6379` | Internal cache access | Кэширование |
-| **PgAdmin** | `8081` | Web interface | Управление БД |
-| **Telegram** | Webhook | Push to bot service | Сообщения пользователей |
+- **Bot Service**: 8080 (HTTP API)
+- **PostgreSQL**: 5432
+- **Redis**: 6379
+- **PgAdmin**: 8080 (веб-интерфейс)
 
 ### Переменные окружения
 
-| Переменная | Обязательность | Описание |
-|------------|----------------|----------|
-| `TELEGRAM_TOKEN` | ✅ Required | Токен бота от @BotFather |
-| `ADMIN_API_KEY` | ✅ Required | Ключ для доступа к REST API |
-| `ADMIN_CHAT_IDS` | ✅ Required | Chat ID администраторов (через запятую) |
-| `ADMIN_USERNAMES` | ✅ Required | Username администраторов (через запятую) |
-| `REDIS_URL` | ✅ Required | Адрес Redis сервера (redis://host:port) |
-| `REDIS_PASSWORD` | ❌ Optional | Пароль Redis (если требуется) |
-| `DATABASE_URL` | ✅ Required | Строка подключения PostgreSQL |
-| `DEBUG` | ❌ Optional | Режим отладки (true/false) |
-
-### Мониторинг и health checks
-
-```bash
-# Health checks
-curl http://localhost:8080/healthz  # Общее здоровье
-curl http://localhost:8080/readyz   # Готовность к работе
-
-# API endpoints для мониторинга
-curl -H "X-Admin-Key: admin-secret-key" \
-     http://localhost:8080/api/v1/stats
-
-curl -H "X-Admin-Key: admin-secret-key" \
-     http://localhost:8080/api/v1/cache/stats
-
-curl -H "X-Admin-Key: admin-secret-key" \
-     http://localhost:8080/api/v1/rate-limits/stats
-```
+- **TELEGRAM_TOKEN**: Токен бота от @BotFather
+- **ADMIN_CHAT_IDS**: Chat ID администраторов
+- **ADMIN_USERNAMES**: Username администраторов
+- **REDIS_URL**: Адрес Redis сервера
+- **DATABASE_URL**: Строка подключения к БД
 
 ## 🔮 Планы развития
 
@@ -1292,54 +1035,4 @@ graph TB
 
 ---
 
-## 📊 Текущий статус системы
-
-### ✅ **Enterprise-уровень достигнут**
-
-**Language Exchange Bot** теперь представляет собой полнофункциональную enterprise-систему со следующими характеристиками:
-
-#### 🚀 **Производительность**
-
-- **3-5x** ускорение благодаря многоуровневому кэшированию
-- **Batch operations** для оптимизации базы данных
-- **Circuit Breaker** защита от каскадных сбоев
-- **Rate Limiting** (20 msg/min) защита от спама
-
-#### 🛡️ **Надежность**
-
-- **Централизованная обработка ошибок** с 6 типами ошибок
-- **Request tracing** с уникальными ID
-- **Admin alerts** для критических проблем
-- **Graceful shutdown** всех компонентов
-
-#### 🔧 **Управление**
-
-- **REST API** с полной документацией Swagger
-- **Navigation Dashboard** для быстрой навигации
-- **Интерактивное тестирование** API через Swagger UI
-- **Health checks** и метрики в реальном времени
-
-#### 📊 **Мониторинг**
-
-- **Статистика кэширования** (hits/misses)
-- **Rate limiting метрики** (блокировки, лимиты)
-- **Circuit Breaker состояния** (Closed/Open/Half-Open)
-- **Структурированное логирование** JSON формат
-
-#### 🎯 **Архитектура**
-
-- **Микросервисная готовность** (Profile/Matcher services запланированы)
-- **Webhook + REST API** дуальная коммуникация
-- **Многоуровневое кэширование** Redis + In-memory
-- **Docker Compose** развертывание
-
-### 🚀 **Новые возможности (Webhook режим)**
-
-- **Webhook endpoint**: `POST /webhook/telegram/{token}` для прямого приема обновлений от Telegram
-- **API управление webhook**: Полный контроль над настройкой и мониторингом webhook
-- **Переключение режимов**: Легкий переход между polling и webhook без перезапуска
-- **Production готовность**: Полная поддержка HTTPS webhook для продакшена
-
-### 🎉 **Enterprise готовность**
-
-Система полностью готова к промышленной эксплуатации с enterprise-уровнем надежности, производительности и управляемости. Поддержка как polling, так и webhook режимов для максимальной гибкости развертывания.
+**Статус**: Система готова к продакшену с упрощенной архитектурой. Все критические ошибки исправлены, производительность оптимизирована.

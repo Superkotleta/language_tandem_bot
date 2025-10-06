@@ -1,0 +1,186 @@
+// Interest Service API - управление интересами и категориями
+// Этот сервис будет управлять системой интересов, категориями,
+// их локализацией и алгоритмами совместимости.
+
+syntax = "proto3";
+
+package language_exchange.interest.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Опции для генерации кода
+option go_package = "language-exchange-bot/api/proto/interest/v1";
+
+// Категория интересов
+enum InterestCategory {
+  CATEGORY_UNSPECIFIED = 0;
+  CATEGORY_ENTERTAINMENT = 1;  // Развлечения
+  CATEGORY_EDUCATION = 2;      // Образование
+  CATEGORY_ACTIVE = 3;         // Активный образ жизни
+  CATEGORY_CREATIVE = 4;       // Творчество
+  CATEGORY_SOCIAL = 5;         // Социальные
+}
+
+// Приоритет интереса для пользователя
+enum InterestPriority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_ADDITIONAL = 1;  // Дополнительный интерес
+  PRIORITY_PRIMARY = 2;     // Основной интерес
+}
+
+// Категория интересов
+message Category {
+  int32 id = 1;
+  string key_name = 2;
+  int32 display_order = 3;
+  int32 max_primary_per_category = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+
+  // Локализованные названия
+  map<string, string> names = 7; // ключ: код языка, значение: название
+}
+
+// Интерес
+message Interest {
+  int32 id = 1;
+  string key_name = 2;
+  int32 category_id = 3;
+  int32 display_order = 4;
+  bool is_active = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+
+  // Локализованные названия
+  map<string, string> names = 8; // ключ: код языка, значение: название
+
+  // Связанная категория
+  Category category = 9;
+}
+
+// Выбор интереса пользователем
+message UserInterestSelection {
+  int64 user_id = 1;
+  int32 interest_id = 2;
+  InterestPriority priority = 3; // primary или additional
+  google.protobuf.Timestamp selected_at = 4;
+}
+
+// Запросы и ответы
+
+// Получить все интересы
+message GetInterestsRequest {
+  string language_code = 1; // код языка для локализации (опционально)
+}
+
+message GetInterestsResponse {
+  repeated Interest interests = 1;
+}
+
+// Получить интересы по категориям
+message GetInterestsByCategoriesRequest {
+  string language_code = 1;
+}
+
+message GetInterestsByCategoriesResponse {
+  map<int32, CategoryWithInterests> categories = 1; // ключ: category_id
+}
+
+message CategoryWithInterests {
+  Category category = 1;
+  repeated Interest interests = 2;
+}
+
+// Получить интересы пользователя
+message GetUserInterestsRequest {
+  int64 user_id = 1;
+  string language_code = 2;
+}
+
+message GetUserInterestsResponse {
+  repeated UserInterestSelection selections = 1;
+}
+
+// Обновить интересы пользователя
+message UpdateUserInterestsRequest {
+  int64 user_id = 1;
+  repeated InterestSelection interests = 2;
+}
+
+message InterestSelection {
+  int32 interest_id = 1;
+  InterestPriority priority = 2;
+}
+
+message UpdateUserInterestsResponse {
+  repeated UserInterestSelection selections = 1;
+}
+
+// Найти совместимые интересы
+message FindCompatibleInterestsRequest {
+  int64 user_id = 1;
+  repeated int32 partner_interest_ids = 2;
+}
+
+message FindCompatibleInterestsResponse {
+  repeated InterestMatch matches = 1;
+  int32 compatibility_score = 2; // общий балл совместимости
+}
+
+message InterestMatch {
+  int32 interest_id = 1;
+  string match_type = 2; // "primary", "additional", "none"
+  int32 score = 3;       // балл за этот интерес
+}
+
+// Получить статистику интересов
+message GetInterestStatsRequest {
+  // Пустой запрос
+}
+
+message GetInterestStatsResponse {
+  int32 total_interests = 1;
+  int32 total_categories = 2;
+  map<int32, int64> interests_by_category = 3; // category_id -> count
+  map<string, int64> popular_interests = 4;    // interest_key -> usage_count
+}
+
+// Создать новый интерес
+message CreateInterestRequest {
+  Interest interest = 1;
+}
+
+message CreateInterestResponse {
+  Interest interest = 1;
+}
+
+// Обновить интерес
+message UpdateInterestRequest {
+  int32 interest_id = 1;
+  Interest interest = 2;
+}
+
+message UpdateInterestResponse {
+  Interest interest = 1;
+}
+
+// Interest Service - сервис для управления интересами
+service InterestService {
+  // Получение данных
+  rpc GetInterests(GetInterestsRequest) returns (GetInterestsResponse);
+  rpc GetInterestsByCategories(GetInterestsByCategoriesRequest) returns (GetInterestsByCategoriesResponse);
+  rpc GetUserInterests(GetUserInterestsRequest) returns (GetUserInterestsResponse);
+
+  // Управление пользовательскими интересами
+  rpc UpdateUserInterests(UpdateUserInterestsRequest) returns (UpdateUserInterestsResponse);
+
+  // Алгоритмы совместимости
+  rpc FindCompatibleInterests(FindCompatibleInterestsRequest) returns (FindCompatibleInterestsResponse);
+
+  // Статистика и аналитика
+  rpc GetInterestStats(GetInterestStatsRequest) returns (GetInterestStatsResponse);
+
+  // Администрирование (только для администраторов)
+  rpc CreateInterest(CreateInterestRequest) returns (CreateInterestResponse);
+  rpc UpdateInterest(UpdateInterestRequest) returns (UpdateInterestResponse);
+}

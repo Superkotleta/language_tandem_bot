@@ -33,6 +33,7 @@ type TelegramBot struct {
 	adminChatIDs   []int64  // ID администраторов для уведомлений (resolved)
 	adminUsernames []string // Usernames администраторов (дополнительно храним для логов)
 	errorHandler   *errors.ErrorHandler
+	handler        *TelegramHandler // handler для обработки сообщений
 }
 
 // NewTelegramBot creates a new Telegram bot instance with the provided configuration.
@@ -51,6 +52,7 @@ func NewTelegramBot(token string, db *database.DB, debug bool, adminChatIDs []in
 		debug:          debug,
 		adminChatIDs:   adminChatIDs,
 		adminUsernames: make([]string, 0), // инициализируем пустой если нужно
+		handler:        nil,               // будет инициализирован при запуске
 	}, nil
 }
 
@@ -74,6 +76,7 @@ func NewTelegramBotWithUsernames(
 		debug:          debug,
 		adminChatIDs:   make([]int64, 0), // Будет установлен позже через SetAdminChatIDs
 		adminUsernames: make([]string, 0),
+		handler:        nil, // будет инициализирован при запуске
 	}
 
 	// Обрабатываем usernames для проверки прав
@@ -168,7 +171,8 @@ func (tb *TelegramBot) Start(ctx context.Context) error {
 
 	updates := tb.api.GetUpdatesChan(u)
 	// Передаем usernames администраторов в обработчик
-	handler := NewTelegramHandlerWithAdmins(tb.api, tb.service, tb.adminChatIDs, tb.adminUsernames, tb.errorHandler)
+	tb.handler = NewTelegramHandlerWithAdmins(tb.api, tb.service, tb.adminChatIDs, tb.adminUsernames, tb.errorHandler)
+	handler := tb.handler
 
 	for {
 		select {
@@ -196,6 +200,11 @@ func (tb *TelegramBot) Start(ctx context.Context) error {
 
 func (tb *TelegramBot) Stop(ctx context.Context) error {
 	tb.api.StopReceivingUpdates()
+
+	// Останавливаем handler и все его компоненты
+	if tb.handler != nil {
+		tb.handler.Stop()
+	}
 
 	return nil
 }
@@ -244,6 +253,7 @@ func NewTelegramBotWithService(
 		debug:          debug,
 		adminChatIDs:   make([]int64, 0), // Будет установлен позже через SetAdminChatIDs
 		adminUsernames: make([]string, 0),
+		handler:        nil, // будет инициализирован при запуске
 	}
 
 	// Обрабатываем usernames для проверки прав
@@ -268,4 +278,47 @@ func (tb *TelegramBot) SetErrorHandler(errorHandler *errors.ErrorHandler) {
 	tb.errorHandler = errorHandler
 
 	log.Printf("Error handler установлен для TelegramBot")
+}
+
+// GetBotAPI возвращает BotAPI бота
+func (tb *TelegramBot) GetBotAPI() *tgbotapi.BotAPI {
+	return tb.api
+}
+
+// SetupWebhook настраивает webhook для бота в Telegram
+func (tb *TelegramBot) SetupWebhook(webhookURL string) error {
+	if webhookURL == "" {
+		return fmt.Errorf("webhook URL cannot be empty")
+	}
+
+	// Создаем конфигурацию webhook
+	webhookConfig, err := tgbotapi.NewWebhook(webhookURL)
+	if err != nil {
+		return fmt.Errorf("failed to create webhook config: %w", err)
+	}
+
+	// Настраиваем webhook в Telegram
+	_, err = tb.api.Request(webhookConfig)
+	if err != nil {
+		return fmt.Errorf("failed to set webhook: %w", err)
+	}
+
+	log.Printf("Webhook successfully configured: %s", webhookURL)
+	return nil
+}
+
+// RemoveWebhook удаляет webhook для бота
+func (tb *TelegramBot) RemoveWebhook() error {
+	webhookConfig, err := tgbotapi.NewWebhook("")
+	if err != nil {
+		return fmt.Errorf("failed to create webhook config: %w", err)
+	}
+
+	_, err = tb.api.Request(webhookConfig)
+	if err != nil {
+		return fmt.Errorf("failed to remove webhook: %w", err)
+	}
+
+	log.Printf("Webhook successfully removed")
+	return nil
 }

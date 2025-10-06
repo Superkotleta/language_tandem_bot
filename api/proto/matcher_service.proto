@@ -1,0 +1,203 @@
+// Matcher Service API - подбор партнеров для языкового обмена
+// Этот сервис отвечает за поиск подходящих партнеров по языкам,
+// интересам, предпочтениям и доступности пользователей.
+
+syntax = "proto3";
+
+package language_exchange.matcher.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Опции для генерации кода
+option go_package = "language-exchange-bot/api/proto/matcher/v1";
+
+// Статус матчинга
+enum MatchStatus {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_PENDING = 1;     // Ожидает подтверждения
+  STATUS_ACTIVE = 2;      // Активный матч
+  STATUS_COMPLETED = 3;   // Завершен успешно
+  STATUS_DECLINED = 4;    // Отклонен одним из участников
+  STATUS_EXPIRED = 5;     // Истек срок действия
+}
+
+// Критерии поиска партнеров
+message MatchCriteria {
+  int64 user_id = 1;
+
+  // Языковые критерии
+  repeated int32 target_languages = 2;  // языки, которые хочет изучать пользователь
+  repeated int32 native_languages = 3;  // языки, которые знает пользователь
+
+  // Критерии интересов
+  repeated int32 interest_ids = 4;      // интересы пользователя
+  bool require_interest_match = 5;      // требовать совпадение интересов
+
+  // Критерии доступности
+  string preferred_day_type = 6;        // "weekdays", "weekends", "any"
+  string preferred_time_slot = 7;       // "morning", "day", "evening", "late"
+
+  // Критерии общения
+  string communication_style = 8;       // предпочитаемый стиль общения
+  string communication_freq = 9;        // частота общения
+
+  // Фильтры
+  int32 min_age = 10;                   // минимальный возраст
+  int32 max_age = 11;                   // максимальный возраст
+  string country = 12;                  // страна проживания
+  string city = 13;                     // город
+}
+
+// Матч между двумя пользователями
+message Match {
+  int64 id = 1;
+  int64 user1_id = 2;
+  int64 user2_id = 3;
+  MatchStatus status = 4;
+  int32 compatibility_score = 5;        // балл совместимости (0-100)
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  google.protobuf.Timestamp expires_at = 8; // срок действия предложения
+
+  // Детали совместимости
+  MatchDetails compatibility_details = 9;
+}
+
+// Детали совместимости
+message MatchDetails {
+  // Языковая совместимость
+  int32 language_score = 1;
+  string language_match_type = 2; // "perfect", "good", "acceptable"
+
+  // Совместимость интересов
+  int32 interest_score = 3;
+  repeated InterestMatch interest_matches = 4;
+
+  // Совместимость расписания
+  int32 availability_score = 5;
+  string availability_match = 6; // "perfect", "good", "acceptable"
+
+  // Совместимость предпочтений общения
+  int32 communication_score = 7;
+  string communication_match = 8; // "perfect", "good", "acceptable"
+
+  // Дополнительные факторы
+  map<string, int32> additional_scores = 9;
+}
+
+// Совпадение интересов
+message InterestMatch {
+  int32 interest_id = 1;
+  string match_type = 2; // "primary", "additional", "none"
+  int32 score = 3;
+}
+
+// Запросы и ответы
+
+// Найти партнеров для пользователя
+message FindPartnersRequest {
+  MatchCriteria criteria = 1;
+  int32 limit = 2;      // максимальное количество результатов
+  int32 offset = 3;     // смещение для пагинации
+  bool include_details = 4; // включать детали совместимости
+}
+
+message FindPartnersResponse {
+  repeated Match matches = 1;
+  int32 total_count = 2; // общее количество найденных партнеров
+}
+
+// Создать предложение о матче
+message CreateMatchRequest {
+  int64 initiator_id = 1;  // ID пользователя, который предлагает матч
+  int64 partner_id = 2;    // ID предлагаемого партнера
+  string message = 3;      // персональное сообщение
+}
+
+message CreateMatchResponse {
+  Match match = 1;
+}
+
+// Обновить статус матча
+message UpdateMatchStatusRequest {
+  int64 match_id = 1;
+  MatchStatus new_status = 2;
+  int64 user_id = 3;       // ID пользователя, который обновляет статус
+  string reason = 4;       // причина изменения статуса (опционально)
+}
+
+message UpdateMatchStatusResponse {
+  Match match = 1;
+}
+
+// Получить активные матчи пользователя
+message GetUserMatchesRequest {
+  int64 user_id = 1;
+  MatchStatus status_filter = 2; // фильтр по статусу (опционально)
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message GetUserMatchesResponse {
+  repeated Match matches = 1;
+  int32 total_count = 2;
+}
+
+// Получить детали матча
+message GetMatchDetailsRequest {
+  int64 match_id = 1;
+  int64 user_id = 2; // для проверки прав доступа
+}
+
+message GetMatchDetailsResponse {
+  Match match = 1;
+}
+
+// Получить статистику матчинга
+message GetMatchingStatsRequest {
+  int64 user_id = 1; // опционально - статистика для конкретного пользователя
+}
+
+message GetMatchingStatsResponse {
+  // Общая статистика
+  int64 total_matches_created = 1;
+  int64 active_matches = 2;
+  int64 completed_matches = 3;
+  int64 success_rate_percent = 4; // процент успешных матчей
+
+  // Статистика для пользователя (если указан user_id)
+  int64 user_matches_created = 5;
+  int64 user_active_matches = 6;
+  int64 user_completed_matches = 7;
+
+  // Распределение по баллам совместимости
+  map<string, int64> compatibility_distribution = 8; // "90-100" -> count, etc.
+}
+
+// Оценить совместимость двух пользователей
+message CalculateCompatibilityRequest {
+  int64 user1_id = 1;
+  int64 user2_id = 2;
+  bool detailed = 3; // возвращать детальную информацию
+}
+
+message CalculateCompatibilityResponse {
+  int32 score = 1; // балл совместимости (0-100)
+  MatchDetails details = 2; // детальная информация (если detailed=true)
+}
+
+// Matcher Service - сервис для подбора партнеров
+service MatcherService {
+  // Основные операции матчинга
+  rpc FindPartners(FindPartnersRequest) returns (FindPartnersResponse);
+  rpc CreateMatch(CreateMatchRequest) returns (CreateMatchResponse);
+  rpc UpdateMatchStatus(UpdateMatchStatusRequest) returns (UpdateMatchStatusResponse);
+
+  // Получение информации о матчах
+  rpc GetUserMatches(GetUserMatchesRequest) returns (GetUserMatchesResponse);
+  rpc GetMatchDetails(GetMatchDetailsRequest) returns (GetMatchDetailsResponse);
+
+  // Статистика и аналитика
+  rpc GetMatchingStats(GetMatchingStatsRequest) returns (GetMatchingStatsResponse);
+  rpc CalculateCompatibility(CalculateCompatibilityRequest) returns (CalculateCompatibilityResponse);
+}

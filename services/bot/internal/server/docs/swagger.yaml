@@ -1,0 +1,281 @@
+basePath: /api/v1
+definitions:
+  models.FriendshipPreferences:
+    properties:
+      activityType:
+        description: movies, games, educational
+        type: string
+      communicationFrequency:
+        description: spontaneous, weekly, daily
+        type: string
+      communicationStyle:
+        description: text, voice_msg, meet_person
+        type: string
+    type: object
+  models.TimeAvailability:
+    properties:
+      dayType:
+        description: weekdays, weekends, any, specific
+        type: string
+      specificDays:
+        description: массив дней для specific
+        items:
+          type: string
+        type: array
+      timeSlot:
+        description: morning, day, evening, late
+        type: string
+    type: object
+  models.User:
+    properties:
+      createdAt:
+        type: string
+      firstName:
+        type: string
+      friendshipPreferences:
+        allOf:
+        - $ref: '#/definitions/models.FriendshipPreferences'
+        description: Предпочтения общения
+      id:
+        type: integer
+      interests:
+        description: Не храним в БД, загружаем отдельно
+        items:
+          type: integer
+        type: array
+      interfaceLanguageCode:
+        type: string
+      nativeLanguageCode:
+        type: string
+      profileCompletionLevel:
+        type: integer
+      state:
+        type: string
+      status:
+        type: string
+      targetLanguageCode:
+        type: string
+      targetLanguageLevel:
+        type: string
+      telegramId:
+        type: integer
+      timeAvailability:
+        allOf:
+        - $ref: '#/definitions/models.TimeAvailability'
+        description: Дополнительные поля для расширенного профиля
+      updatedAt:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@language-exchange-bot.com
+    name: Language Exchange Bot Team
+    url: https://github.com/your-org/language-exchange-bot
+  description: |-
+    This is the administrative API for the Language Exchange Telegram Bot.
+    It provides endpoints for monitoring, user management, feedback processing, and system statistics.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Language Exchange Bot Admin API
+  version: 3.0.0
+paths:
+  /api/v1/cache/stats:
+    get:
+      description: Retrieve cache performance statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get cache statistics
+      tags:
+      - monitoring
+  /api/v1/feedback/{id}/process:
+    post:
+      consumes:
+      - application/json
+      description: Mark feedback as processed with optional response
+      parameters:
+      - description: Feedback ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Processing request
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Process feedback
+      tags:
+      - feedback
+  /api/v1/feedback/unprocessed:
+    get:
+      description: Retrieve all unprocessed user feedback
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: Get unprocessed feedback
+      tags:
+      - feedback
+  /api/v1/rate-limits/stats:
+    get:
+      description: Retrieve rate limiting statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get rate limit statistics
+      tags:
+      - monitoring
+  /api/v1/stats:
+    get:
+      description: Retrieve general bot statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get general statistics
+      tags:
+      - statistics
+  /api/v1/users:
+    get:
+      description: Retrieve paginated list of users
+      parameters:
+      - default: 50
+        description: Number of users to return
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get users list
+      tags:
+      - users
+  /api/v1/users/{id}:
+    get:
+      description: Retrieve user information by Telegram ID
+      parameters:
+      - description: Telegram User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get user by ID
+      tags:
+      - users
+  /healthz:
+    get:
+      description: Check if the service is healthy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /readyz:
+    get:
+      description: Check if the service is ready to serve requests
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Readiness check
+      tags:
+      - health
+securityDefinitions:
+  ApiKeyAuth:
+    description: Admin API key for authentication
+    in: header
+    name: X-Admin-Key
+    type: apiKey
+swagger: "2.0"

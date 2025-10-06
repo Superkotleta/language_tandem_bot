@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗺️ Language Exchange Bot - Services Navigation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            padding: 40px;
+        }
+
+        .nav-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #e9ecef;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .nav-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .section-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.2rem;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .status-badge {
+            margin-left: auto;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-planned {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-disabled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .links-list {
+            list-style: none;
+        }
+
+        .link-item {
+            margin-bottom: 12px;
+        }
+
+        .link-item a {
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+            color: #007bff;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .link-item a:hover {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+            text-decoration: none;
+        }
+
+        .link-icon {
+            margin-right: 8px;
+            width: 16px;
+            height: 16px;
+        }
+
+        .link-description {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 2px;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .footer p {
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .nav-grid {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        .code-block {
+            background: #f1f3f4;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            color: #333;
+            margin: 8px 0;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ Language Exchange Bot</h1>
+            <p>Навигационная панель сервисов и документации</p>
+        </div>
+
+        <div class="nav-grid">
+            <!-- Bot Service -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #4CAF50;">🤖</div>
+                    <div class="section-title">Bot Service</div>
+                    <div class="status-badge status-active">АКТИВЕН</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <a href="http://localhost:8080/swagger/" target="_blank">
+                            <span class="link-icon">📚</span>
+                            Swagger UI (API Docs)
+                        </a>
+                        <div class="link-description">Интерактивная документация Admin API</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="http://localhost:8080/healthz" target="_blank">
+                            <span class="link-icon">❤️</span>
+                            Health Check
+                        </a>
+                        <div class="link-description">Проверка здоровья сервиса</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="http://localhost:8080/readyz" target="_blank">
+                            <span class="link-icon">✅</span>
+                            Readiness Check
+                        </a>
+                        <div class="link-description">Проверка готовности сервиса</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="SERVICES.md" target="_blank">
+                            <span class="link-icon">📋</span>
+                            Services Documentation
+                        </a>
+                        <div class="link-description">Подробное описание всех сервисов</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Admin API -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #2196F3;">🔧</div>
+                    <div class="section-title">Admin API</div>
+                    <div class="status-badge status-active">АКТИВЕН</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <div class="code-block">
+curl -H "X-Admin-Key: admin-secret-key" \<br>
+&nbsp;&nbsp;http://localhost:8080/api/v1/stats
+                        </div>
+                        <div class="link-description">Получить статистику системы</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="http://localhost:8080/api/v1/rate-limits/stats" target="_blank">
+                            <span class="link-icon">⚡</span>
+                            Rate Limiting Stats
+                        </a>
+                        <div class="link-description">Статистика защиты от спама</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="http://localhost:8080/api/v1/cache/stats" target="_blank">
+                            <span class="link-icon">💾</span>
+                            Cache Statistics
+                        </a>
+                        <div class="link-description">Статистика кеширования</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Database Services -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #FF9800;">🗄️</div>
+                    <div class="section-title">Database Services</div>
+                    <div class="status-badge status-active">АКТИВЕН</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <a href="http://localhost:8081" target="_blank">
+                            <span class="link-icon">🖥️</span>
+                            PgAdmin (Docker)
+                        </a>
+                        <div class="link-description">Веб-интерфейс управления PostgreSQL</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="README.md#database" target="_blank">
+                            <span class="link-icon">📖</span>
+                            Database Schema
+                        </a>
+                        <div class="link-description">Структура базы данных</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+# Подключение к PostgreSQL<br>
+Host: localhost:5432<br>
+Database: language_exchange<br>
+User: postgres
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Redis Cache -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #FF5722;">⚡</div>
+                    <div class="section-title">Redis Cache</div>
+                    <div class="status-badge status-active">АКТИВЕН</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <div class="code-block">
+# Redis CLI<br>
+redis-cli -p 6379<br>
+# Или с паролем<br>
+redis-cli -p 6379 -a yourpassword
+                        </div>
+                        <div class="link-description">Подключение к Redis для мониторинга</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="http://localhost:8080/api/v1/cache/stats" target="_blank">
+                            <span class="link-icon">📊</span>
+                            Cache Statistics
+                        </a>
+                        <div class="link-description">Статистика кеширования через Admin API</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+# Кешируемые данные:<br>
+# - Пользователи (TTL: 15 мин)<br>
+# - Интересы (TTL: 30 мин)<br>
+# - Языки (TTL: 30 мин)<br>
+# - Статистика (TTL: 5 мин)
+                        </div>
+                        <div class="link-description">Типы кешируемых данных</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Circuit Breaker -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #9C27B0;">🛡️</div>
+                    <div class="section-title">Circuit Breaker</div>
+                    <div class="status-badge status-active">АКТИВЕН</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <a href="http://localhost:8080/api/v1/stats" target="_blank">
+                            <span class="link-icon">📊</span>
+                            Circuit Breaker States
+                        </a>
+                        <div class="link-description">Состояния защитных прерывателей через Admin API</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+# Защищаемые компоненты:<br>
+# - Telegram API<br>
+# - PostgreSQL Database<br>
+# - Redis Cache
+                        </div>
+                        <div class="link-description">Компоненты с защитой Circuit Breaker</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+# Состояния:<br>
+# - Closed: нормальная работа<br>
+# - Open: защита активирована<br>
+# - Half-Open: тестирование восстановления
+                        </div>
+                        <div class="link-description">Возможные состояния Circuit Breaker</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Telegram Bot API -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #0088cc;">📱</div>
+                    <div class="section-title">Telegram Bot API</div>
+                    <div class="status-badge status-active">АКТИВЕН</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <a href="http://localhost:8080/api/v1/webhook/status" target="_blank">
+                            <span class="link-icon">📊</span>
+                            Webhook Status
+                        </a>
+                        <div class="link-description">Проверить статус webhook конфигурации</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+# Режимы работы бота:<br>
+# 1. Polling (по умолчанию)<br>
+#    TELEGRAM_MODE=polling<br>
+#    Бот сам запрашивает обновления<br>
+# 2. Webhook (production)<br>
+#    TELEGRAM_MODE=webhook<br>
+#    WEBHOOK_URL=https://domain.com<br>
+#    Telegram отправляет обновления
+                        </div>
+                        <div class="link-description">Переключение между режимами работы</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+# Webhook endpoint:<br>
+POST /webhook/telegram/{token}<br>
+# Пример URL:<br>
+https://your-domain.com/webhook/telegram/123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+                        </div>
+                        <div class="link-description">Webhook endpoint для Telegram</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Documentation -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #9C27B0;">📚</div>
+                    <div class="section-title">Documentation</div>
+                    <div class="status-badge status-active">ГОТОВО</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <a href="README.md" target="_blank">
+                            <span class="link-icon">📖</span>
+                            Main README
+                        </a>
+                        <div class="link-description">Основная документация проекта</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="ARCHITECTURE.md" target="_blank">
+                            <span class="link-icon">🏗️</span>
+                            Architecture
+                        </a>
+                        <div class="link-description">Архитектура системы</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="api/README.md" target="_blank">
+                            <span class="link-icon">🔗</span>
+                            gRPC API Docs
+                        </a>
+                        <div class="link-description">Документация микросервисного API</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="CHANGELOG.md" target="_blank">
+                            <span class="link-icon">📝</span>
+                            Changelog
+                        </a>
+                        <div class="link-description">История изменений</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Development Tools -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #4CAF50;">🛠️</div>
+                    <div class="section-title">Development</div>
+                    <div class="status-badge status-active">ГОТОВО</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <a href="Makefile" target="_blank">
+                            <span class="link-icon">⚙️</span>
+                            Makefile
+                        </a>
+                        <div class="link-description">Команды сборки и развертывания</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+make build    # Сборка сервисов<br>
+make test     # Запуск тестов<br>
+make proto    # Генерация gRPC<br>
+make swagger  # Обновление API docs
+                        </div>
+                        <div class="link-description">Полезные команды</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="services/bot/tests/integration/" target="_blank">
+                            <span class="link-icon">🧪</span>
+                            Integration Tests
+                        </a>
+                        <div class="link-description">Результаты интеграционных тестов</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Future Services -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #607D8B;">🔮</div>
+                    <div class="section-title">Future Services</div>
+                    <div class="status-badge status-planned">ПЛАНИРУЕТСЯ</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <a href="services/profile/" target="_blank">
+                            <span class="link-icon">👤</span>
+                            Profile Service (Port 8081)
+                        </a>
+                        <div class="link-description">Управление профилями пользователей</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="services/matcher/" target="_blank">
+                            <span class="link-icon">🤝</span>
+                            Matcher Service (Port 8082)
+                        </a>
+                        <div class="link-description">Алгоритмы подбора партнеров</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+# Запланированные сервисы<br>
+Prometheus: :9090<br>
+Grafana: :3000<br>
+Service Mesh: Istio
+                        </div>
+                        <div class="link-description">Мониторинг и оркестрация</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Monitoring & Metrics -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #FF5722;">📊</div>
+                    <div class="section-title">Monitoring</div>
+                    <div class="status-badge status-planned">ПЛАНИРУЕТСЯ</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <div class="code-block">
+# Метрики в будущем<br>
+Prometheus: http://localhost:9090<br>
+Grafana: http://localhost:3000
+                        </div>
+                        <div class="link-description">Система мониторинга производительности</div>
+                    </li>
+                    <li class="link-item">
+                        <a href="README.md#monitoring" target="_blank">
+                            <span class="link-icon">📈</span>
+                            Current Metrics
+                        </a>
+                        <div class="link-description">Текущие возможности мониторинга</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+# Логи через Docker<br>
+docker-compose logs -f bot<br>
+# Или systemd<br>
+journalctl -u language-exchange-bot -f
+                        </div>
+                        <div class="link-description">Мониторинг логов</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="nav-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: #00BCD4;">⚡</div>
+                    <div class="section-title">Quick Actions</div>
+                    <div class="status-badge status-active">ГОТОВО</div>
+                </div>
+                <ul class="links-list">
+                    <li class="link-item">
+                        <div class="code-block">
+# Запуск проекта<br>
+docker-compose up -d<br>
+# Или development<br>
+cd services/bot && go run cmd/bot/main.go
+                        </div>
+                        <div class="link-description">Быстрый запуск системы</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+# Тестирование<br>
+make test<br>
+# Сборка<br>
+make build
+                        </div>
+                        <div class="link-description">Разработка и тестирование</div>
+                    </li>
+                    <li class="link-item">
+                        <div class="code-block">
+# Health check<br>
+curl http://localhost:8080/healthz<br>
+# API test<br>
+curl -H "X-Admin-Key: admin-secret-key" \<br>
+&nbsp;&nbsp;http://localhost:8080/api/v1/stats<br>
+# Redis check<br>
+redis-cli -p 6379 ping<br>
+# Circuit Breaker states<br>
+curl -H "X-Admin-Key: admin-secret-key" \<br>
+&nbsp;&nbsp;http://localhost:8080/api/v1/stats | jq '.circuit_breakers'
+                        </div>
+                        <div class="link-description">Быстрая проверка всех компонентов</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>
+                <strong>Language Exchange Bot</strong> v3.0.0 |
+                <a href="https://github.com/your-org/language-exchange-bot" target="_blank">GitHub</a> |
+                <a href="SERVICES.md" target="_blank">Services Docs</a> |
+                Обновлено: 2025-10-06
+            </p>
+            <p style="font-size: 0.9rem; margin-top: 10px; color: #6c757d;">
+                🏗️ Микросервисная архитектура с Telegram Bot API | 🤖 Go + PostgreSQL + Redis | 📊 Enterprise monitoring
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh health status (optional)
+        function checkHealth() {
+            fetch('http://localhost:8080/healthz')
+                .then(response => {
+                    if (response.ok) {
+                        console.log('✅ Bot service is healthy');
+                    } else {
+                        console.log('❌ Bot service health check failed');
+                    }
+                })
+                .catch(error => {
+                    console.log('❌ Cannot reach bot service:', error.message);
+                });
+        }
+
+        // Check health on page load
+        window.addEventListener('load', function() {
+            setTimeout(checkHealth, 1000);
+        });
+    </script>
+</body>
+</html>

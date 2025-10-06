@@ -28,6 +28,8 @@ type Config struct {
 	// Bot Platform Settings
 	EnableTelegram bool
 	EnableDiscord  bool // Для будущего расширения
+	// Telegram Bot Mode: "polling" or "webhook"
+	TelegramMode string
 	// Admin IDs for notifications
 	AdminChatIDs   []int64  // IDs чатов администраторов для уведомлений
 	AdminUsernames []string // Username'ы администраторов (читаются только из .env)
@@ -59,6 +61,7 @@ func Load() *Config {
 		WebhookURL:              getEnv("WEBHOOK_URL", ""),
 		EnableTelegram:          getEnableTelegram(),
 		EnableDiscord:           getEnableDiscord(),
+		TelegramMode:            getTelegramMode(),
 		AdminChatIDs:            parseAdminChatIDs(),
 		AdminUsernames:          parseAdminUsernames(),
 		PrimaryInterestScore:    getPrimaryInterestScore(),
@@ -119,6 +122,20 @@ func getEnableDiscord() bool {
 	enableDiscord, _ := strconv.ParseBool(getEnv("ENABLE_DISCORD", "false"))
 
 	return enableDiscord
+}
+
+// getTelegramMode получает режим работы Telegram бота.
+func getTelegramMode() string {
+	mode := getEnv("TELEGRAM_MODE", "polling")
+	mode = strings.ToLower(mode)
+
+	// Валидация режима
+	if mode != "polling" && mode != "webhook" {
+		log.Printf("Warning: invalid TELEGRAM_MODE '%s', using 'polling' as default", mode)
+		return "polling"
+	}
+
+	return mode
 }
 
 // parseAdminChatIDs парсит ID чатов администраторов.

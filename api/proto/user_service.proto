@@ -1,0 +1,143 @@
+// User Service API - управление пользователями
+// Этот сервис будет отвечать за управление профилями пользователей,
+// их регистрацию, обновление данных и поиск подходящих партнеров.
+
+syntax = "proto3";
+
+package language_exchange.user.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Опции для генерации кода
+option go_package = "language-exchange-bot/api/proto/user/v1";
+
+// Перечисление языков
+enum Language {
+  LANGUAGE_UNSPECIFIED = 0;
+  LANGUAGE_RUSSIAN = 1;
+  LANGUAGE_ENGLISH = 2;
+  LANGUAGE_SPANISH = 3;
+  LANGUAGE_CHINESE = 4;
+}
+
+// Уровень владения языком
+enum LanguageLevel {
+  LEVEL_UNSPECIFIED = 0;
+  LEVEL_BEGINNER = 1;      // A1-A2
+  LEVEL_ELEMENTARY = 2;    // A2-B1
+  LEVEL_INTERMEDIATE = 3;  // B1-B2
+  LEVEL_UPPER_INTERMEDIATE = 4; // B2-C1
+  LEVEL_ADVANCED = 5;      // C1-C2
+}
+
+// Статус пользователя
+enum UserStatus {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_NEW = 1;
+  STATUS_FILLING_PROFILE = 2;
+  STATUS_ACTIVE = 3;
+  STATUS_PAUSED = 4;
+}
+
+// Временная доступность
+message TimeAvailability {
+  string day_type = 1;  // "weekdays", "weekends", "any"
+  string time_slot = 2; // "morning", "day", "evening", "late"
+  repeated string specific_days = 3; // конкретные дни, если day_type = "specific"
+}
+
+// Предпочтения общения
+message FriendshipPreferences {
+  string communication_style = 1; // "text", "voice_msg", "audio_call", "video_call", "meet_person"
+  string communication_freq = 2;  // "spontaneous", "weekly", "daily", "intensive"
+}
+
+// Пользователь
+message User {
+  int64 id = 1;
+  int64 telegram_id = 2;
+  string username = 3;
+  string first_name = 4;
+  Language native_language = 5;
+  Language target_language = 6;
+  LanguageLevel target_language_level = 7;
+  string interface_language_code = 8;
+  UserStatus status = 9;
+  int32 profile_completion_level = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+
+  // Дополнительные поля профиля
+  TimeAvailability time_availability = 13;
+  FriendshipPreferences friendship_preferences = 14;
+  repeated int32 interests = 15; // IDs интересов
+  string bio = 16;
+}
+
+// Запросы и ответы
+
+// Получить пользователя по Telegram ID
+message GetUserRequest {
+  int64 telegram_id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+// Создать или обновить пользователя
+message CreateOrUpdateUserRequest {
+  User user = 1;
+}
+
+message CreateOrUpdateUserResponse {
+  User user = 1;
+}
+
+// Найти подходящих партнеров
+message FindPartnersRequest {
+  int64 user_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message FindPartnersResponse {
+  repeated User partners = 1;
+  int32 total_count = 2;
+}
+
+// Обновить интересы пользователя
+message UpdateUserInterestsRequest {
+  int64 user_id = 1;
+  repeated int32 interest_ids = 2;
+}
+
+message UpdateUserInterestsResponse {
+  User user = 1;
+}
+
+// Получить статистику пользователей
+message GetUserStatsRequest {
+  // Пустой запрос
+}
+
+message GetUserStatsResponse {
+  int64 total_users = 1;
+  int64 active_users = 2;
+  int64 new_users_today = 3;
+  int64 profiles_completed = 4;
+}
+
+// User Service - основной сервис для работы с пользователями
+service UserService {
+  // CRUD операции
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc CreateOrUpdateUser(CreateOrUpdateUserRequest) returns (CreateOrUpdateUserResponse);
+
+  // Бизнес логика
+  rpc FindPartners(FindPartnersRequest) returns (FindPartnersResponse);
+  rpc UpdateUserInterests(UpdateUserInterestsRequest) returns (UpdateUserInterestsResponse);
+
+  // Статистика и аналитика
+  rpc GetUserStats(GetUserStatsRequest) returns (GetUserStatsResponse);
+}

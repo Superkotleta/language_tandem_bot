@@ -6,85 +6,21 @@
 
 ## 🚀 Быстрый старт
 
-🗺️ **[Открыть навигационную панель](http://localhost:8080/)** - все сервисы и документация в одном месте
+🗺️ **[Открыть навигационную панель](index.html)** - все сервисы и документация в одном месте
 
-### Основные команды
-
+### Основные команды:
 ```bash
 # Запуск в production
 docker-compose up -d
 
-# Development запуск (polling mode - default)
+# Development запуск
 cd services/bot && go run cmd/bot/main.go
-
-# Development запуск (webhook mode)
-cd services/bot && TELEGRAM_MODE=webhook WEBHOOK_URL=https://your-domain.com go run cmd/bot/main.go
 
 # Проверка здоровья
 curl http://localhost:8080/healthz
 
 # API документация
 open http://localhost:8080/swagger/
-
-# Статус webhook
-curl -H "X-Admin-Key: admin-secret-key" http://localhost:8080/api/v1/webhook/status
-```
-
-## 🔄 Режимы работы Telegram бота
-
-### 📡 **Polling Mode** (по умолчанию)
-
-```bash
-# Переменные окружения
-TELEGRAM_MODE=polling  # или не указывать
-```
-
-**Как работает:**
-
-- Бот активно запрашивает обновления от Telegram API каждые 60 секунд
-- Подходит для development и небольших нагрузок
-- Не требует HTTPS и публичного IP
-
-### 🪝 **Webhook Mode** (production)
-
-```bash
-# Переменные окружения
-TELEGRAM_MODE=webhook
-WEBHOOK_URL=https://your-domain.com  # Должен быть HTTPS!
-```
-
-**Как работает:**
-
-- Telegram отправляет обновления на ваш endpoint в реальном времени
-- Эффективнее для высоких нагрузок
-- Требует HTTPS и публичного доступа
-- URL: `https://your-domain.com/webhook/telegram/{token}`
-
-### 🔀 **Переключение между режимами**
-
-```bash
-# Измените переменную окружения и перезапустите
-export TELEGRAM_MODE=webhook
-export WEBHOOK_URL=https://your-production-domain.com
-
-# Или для development
-export TELEGRAM_MODE=polling
-```
-
-### 📋 **API для управления webhook**
-
-```bash
-# Проверить статус webhook
-GET /api/v1/webhook/status
-
-# Настроить webhook (через API)
-POST /api/v1/webhook/setup
-{
-  "webhook_url": "https://your-domain.com"
-}
-
-# Удалить webhook
-POST /api/v1/webhook/remove
 ```
 
 ## 📊 Недавние улучшения (v3.0.0 - Enterprise-уровень)

@@ -1,3 +1,27 @@
+// Package main provides the entry point for the Language Exchange Bot service.
+//
+//	@title			Language Exchange Bot Admin API
+//	@version		3.0.0
+//	@description	This is the administrative API for the Language Exchange Telegram Bot.
+//	@description	It provides endpoints for monitoring, user management, feedback processing, and system statistics.
+//
+//	@contact.name	Language Exchange Bot Team
+//	@contact.url	https://github.com/your-org/language-exchange-bot
+//	@contact.email	support@language-exchange-bot.com
+//
+//	@license.name	MIT
+//	@license.url	https://opensource.org/licenses/MIT
+//
+//	@host		localhost:8080
+//	@BasePath	/api/v1
+//
+//	@securityDefinitions.apikey	ApiKeyAuth
+//	@in							header
+//	@name						X-Admin-Key
+//	@description				Admin API key for authentication
+//
+//	@externalDocs.description	OpenAPI
+//	@externalDocs.url			https://swagger.io/resources/open-api/
 package main
 
 import (
@@ -16,6 +40,7 @@ import (
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/database"
 	"language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/server"
 )
 
 // Константы для таймаутов.
@@ -38,8 +63,24 @@ func main() {
 	ctx, cancel := setupGracefulShutdown()
 	defer cancel()
 
-	bots, wg := startBots(ctx, cfg, db, errorHandler)
-	waitForShutdown(bots, wg, cancel)
+	// Initialize Telegram handler for admin server (needed for webhook mode)
+	var telegramHandler *telegram.TelegramHandler
+	if cfg.EnableTelegram && cfg.TelegramToken != "" {
+		// Create handler for admin server (will be reused by bot if needed)
+		telegramHandler = telegram.NewTelegramHandlerWithAdmins(
+			nil,        // bot API not needed for webhook endpoint
+			nil,        // service will be set later
+			[]int64{},  // empty admin chat IDs for webhook
+			[]string{}, // empty admin usernames for webhook
+			errorHandler,
+		)
+	}
+
+	// Start admin API server
+	adminServer := startAdminServer(cfg, db, errorHandler, telegramHandler)
+
+	bots, wg := startBots(ctx, cfg, db, errorHandler, telegramHandler)
+	waitForShutdown(bots, wg, adminServer, cancel)
 }
 
 // initializeTelegramBot инициализирует Telegram бота с сервисом.
@@ -121,6 +162,7 @@ func startBots(
 	cfg *config.Config,
 	db *database.DB,
 	errorHandler *errors.ErrorHandler,
+	telegramHandler *telegram.TelegramHandler,
 ) ([]adapters.BotAdapter, *sync.WaitGroup) {
 	var (
 		wg   sync.WaitGroup
@@ -134,19 +176,38 @@ func startBots(
 			log.Fatalf("Failed to initialize Telegram bot: %v", err)
 		}
 
-		bots = append(bots, telegramBot)
+		// Если webhook режим, устанавливаем handler в admin server и настраиваем webhook
+		if cfg.TelegramMode == "webhook" && telegramHandler != nil {
+			// Обновляем handler в admin server с реальным сервисом
+			telegramHandler.SetService(telegramBot.GetService())
+			telegramHandler.SetBotAPI(telegramBot.GetBotAPI())
 
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
-			if err := telegramBot.Start(ctx); err != nil {
-				log.Printf("Telegram bot error: %v", err)
+			// Настраиваем webhook в Telegram
+			if cfg.WebhookURL != "" {
+				webhookURL := fmt.Sprintf("%s/webhook/telegram/%s", cfg.WebhookURL, cfg.TelegramToken)
+				if err := telegramBot.SetupWebhook(webhookURL); err != nil {
+					log.Fatalf("Failed to setup webhook: %v", err)
+				}
+				log.Printf("Webhook mode: Telegram handler configured for admin server at %s", webhookURL)
+			} else {
+				log.Fatalf("Webhook mode requires WEBHOOK_URL to be set")
 			}
-		}()
+		} else {
+			// Polling режим - запускаем бота обычным образом
+			bots = append(bots, telegramBot)
 
-		log.Printf("Telegram bot started with %d admin users", telegramBot.GetAdminCount())
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				if err := telegramBot.Start(ctx); err != nil {
+					log.Printf("Telegram bot error: %v", err)
+				}
+			}()
+
+			log.Printf("Telegram bot started in polling mode with %d admin users", telegramBot.GetAdminCount())
+		}
 	}
 
 	// Будущие боты (Discord, etc)
@@ -161,8 +222,43 @@ func startBots(
 	return bots, &wg
 }
 
-// waitForShutdown ждет завершения работы ботов.
-func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, cancel context.CancelFunc) {
+// startAdminServer запускает административный API сервер
+func startAdminServer(cfg *config.Config, db *database.DB, errorHandler *errors.ErrorHandler, telegramHandler *telegram.TelegramHandler) *server.AdminServer {
+	// Создаем сервис с Redis кэшем
+	service, err := core.NewBotServiceWithRedis(db, cfg.RedisURL, cfg.RedisPassword, cfg.RedisDB, errorHandler)
+	if err != nil {
+		log.Printf("Failed to create Redis cache, falling back to in-memory cache: %v", err)
+		// Fallback на in-memory кэш если Redis недоступен
+		service = core.NewBotService(db, errorHandler)
+	} else {
+		log.Printf("Redis cache initialized for admin API: %s", service.Cache.String())
+	}
+
+	// Создаем handler для Telegram (нужен для статистики rate limiting)
+	telegramHandler = telegram.NewTelegramHandlerWithAdmins(
+		nil, // bot API не нужен для admin API
+		service,
+		[]int64{},  // пустой список admin chat IDs
+		[]string{}, // пустой список admin usernames
+		errorHandler,
+	)
+
+	// Создаем и запускаем admin server
+	adminPort := "8080" // можно вынести в конфиг
+	webhookMode := cfg.TelegramMode == "webhook"
+	adminServer := server.NewWithWebhook(adminPort, service, telegramHandler, webhookMode)
+
+	go func() {
+		if err := adminServer.Start(); err != nil {
+			log.Printf("Admin server error: %v", err)
+		}
+	}()
+
+	return adminServer
+}
+
+// waitForShutdown ждет завершения работы ботов и admin сервера.
+func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, adminServer *server.AdminServer, cancel context.CancelFunc) {
 	// Ждем завершения всех горутин
 	done := make(chan struct{})
 	go func() {
@@ -177,6 +273,16 @@ func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, cancel cont
 	case <-time.After(ForceShutdownTimeout):
 		log.Println("Force shutdown")
 		cancel()
+	}
+
+	// Останавливаем admin сервер
+	if adminServer != nil {
+		ctx, cancelStop := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := adminServer.Stop(ctx); err != nil {
+			log.Printf("Error stopping admin server: %v", err)
+		}
+		cancelStop()
+		log.Println("Admin server stopped")
 	}
 
 	// Останавливаем все боты

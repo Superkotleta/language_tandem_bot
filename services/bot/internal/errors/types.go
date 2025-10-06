@@ -201,6 +201,10 @@ var (
 	ErrTelegramAPIRateLimit = NewCustomError(
 		ErrorTypeTelegramAPI, "превышен лимит запросов Telegram API", "Превышен лимит запросов", "",
 	)
+	// ErrRateLimitExceeded - превышен лимит запросов пользователя.
+	ErrRateLimitExceeded = NewCustomError(
+		ErrorTypeValidation, "превышен лимит запросов пользователя", "Слишком много запросов. Попробуйте позже", "",
+	)
 	// ErrDatabaseConnectionFailed - ошибка тестов.
 	ErrDatabaseConnectionFailed = NewCustomError(
 		ErrorTypeDatabase, "ошибка подключения к базе данных", "Ошибка подключения к базе данных", "",

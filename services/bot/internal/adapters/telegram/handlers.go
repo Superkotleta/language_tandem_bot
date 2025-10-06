@@ -36,6 +36,7 @@ type TelegramHandler struct {
 	utilityHandler         *handlers.UtilityHandlerImpl
 	errorHandler           *errors.ErrorHandler
 	isolatedRouter         *CallbackRouter // Роутер для изолированных callback'ов
+	rateLimiter            *RateLimiter    // Rate limiter для защиты от спама
 }
 
 // NewTelegramHandler создает новый экземпляр TelegramHandler с базовой конфигурацией.
@@ -77,6 +78,9 @@ func NewTelegramHandler(
 	adminHandler := handlers.NewAdminHandler(service, bot, keyboardBuilder, adminChatIDs, make([]string, 0), errorHandler)
 	utilityHandler := handlers.NewUtilityHandler(service, bot, errorHandler)
 
+	// Создаем rate limiter для защиты от спама
+	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
+
 	// Создаем и настраиваем роутер для изолированных callback'ов
 	isolatedRouter := NewCallbackRouter()
 	handler := &TelegramHandler{
@@ -96,6 +100,7 @@ func NewTelegramHandler(
 		utilityHandler:         utilityHandler,
 		errorHandler:           errorHandler,
 		isolatedRouter:         isolatedRouter,
+		rateLimiter:            rateLimiter,
 	}
 
 	// Настраиваем маршруты для изолированных callback'ов
@@ -168,6 +173,9 @@ func NewTelegramHandlerWithAdmins(
 		errorHandler,
 	)
 
+	// Создаем rate limiter для защиты от спама
+	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
+
 	// Создаем и настраиваем роутер для изолированных callback'ов
 	isolatedRouter := NewCallbackRouter()
 	handler := &TelegramHandler{
@@ -187,6 +195,7 @@ func NewTelegramHandlerWithAdmins(
 		utilityHandler:         utilityHandler,
 		errorHandler:           errorHandler,
 		isolatedRouter:         isolatedRouter,
+		rateLimiter:            rateLimiter,
 	}
 
 	// Настраиваем маршруты для изолированных callback'ов
@@ -199,6 +208,24 @@ func NewTelegramHandlerWithAdmins(
 
 // HandleUpdate обрабатывает входящие обновления от Telegram API.
 func (h *TelegramHandler) HandleUpdate(update tgbotapi.Update) error {
+	// Получаем ID пользователя
+	var userID int64
+	if update.Message != nil {
+		userID = update.Message.From.ID
+	} else if update.CallbackQuery != nil {
+		userID = update.CallbackQuery.From.ID
+	} else {
+		// Неизвестный тип обновления, пропускаем
+		return nil
+	}
+
+	// Проверяем rate limit
+	if err := h.rateLimiter.CheckRateLimit(userID); err != nil {
+		// Отправляем сообщение о превышении лимита
+		h.sendRateLimitMessage(userID, err)
+		return nil // Не возвращаем ошибку, чтобы не логировать её как системную
+	}
+
 	if update.Message != nil {
 		return h.handleMessage(update.Message)
 	}
@@ -896,4 +923,60 @@ func (h *TelegramHandler) handleFeedbackCallbacks(callback *tgbotapi.CallbackQue
 	}
 
 	return nil
+}
+
+// sendRateLimitMessage отправляет сообщение о превышении лимита запросов
+func (h *TelegramHandler) sendRateLimitMessage(userID int64, err error) {
+	// Получаем локализацию (используем английский по умолчанию)
+	message := "Too many requests. Please try again later."
+
+	// Если есть сервис локализации, пытаемся получить сообщение на нужном языке
+	if h.service != nil && h.service.Localizer != nil {
+		// Для упрощения используем английское сообщение
+		// В будущем можно добавить локализацию
+	}
+
+	// Отправляем сообщение пользователю
+	msg := tgbotapi.NewMessage(userID, message)
+	msg.ParseMode = "HTML"
+
+	if _, sendErr := h.bot.Send(msg); sendErr != nil {
+		// Логируем ошибку отправки, но не возвращаем её
+		log.Printf("Failed to send rate limit message to user %d: %v", userID, sendErr)
+	}
+}
+
+// GetRateLimiterStats возвращает статистику rate limiter'а (для администраторов)
+func (h *TelegramHandler) GetRateLimiterStats() map[string]interface{} {
+	if h.rateLimiter != nil {
+		return h.rateLimiter.GetStats()
+	}
+	return map[string]interface{}{"error": "rate limiter not initialized"}
+}
+
+// Stop останавливает все компоненты handler'а
+func (h *TelegramHandler) Stop() {
+	if h.rateLimiter != nil {
+		h.rateLimiter.Stop()
+	}
+}
+
+// SetService устанавливает сервис для handler'а
+func (h *TelegramHandler) SetService(service *core.BotService) {
+	h.service = service
+}
+
+// SetBotAPI устанавливает BotAPI для handler'а
+func (h *TelegramHandler) SetBotAPI(bot *tgbotapi.BotAPI) {
+	h.bot = bot
+}
+
+// GetService возвращает сервис handler'а
+func (h *TelegramHandler) GetService() *core.BotService {
+	return h.service
+}
+
+// GetBotAPI возвращает BotAPI handler'а
+func (h *TelegramHandler) GetBotAPI() *tgbotapi.BotAPI {
+	return h.bot
 }
