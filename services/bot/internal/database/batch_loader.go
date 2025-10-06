@@ -8,6 +8,7 @@ import (
 	"time"
 
 	errorsPkg "language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/logging"
 	"language-exchange-bot/internal/models"
 
@@ -15,12 +16,6 @@ import (
 )
 
 // Константы для BatchLoader.
-const (
-	// DefaultQueryTimeout - таймаут по умолчанию для SQL запросов.
-	DefaultQueryTimeout = 30 * time.Second
-	// MaxBatchSize - максимальный размер батча для загрузки.
-	MaxBatchSize = 1000
-)
 
 // BatchLoader оптимизирует загрузку данных для предотвращения N+1 запросов.
 type BatchLoader struct {
@@ -40,6 +35,10 @@ func NewBatchLoader(db *DB) *BatchLoader {
 
 // handleRowsError обрабатывает ошибки rows с правильным закрытием.
 func (bl *BatchLoader) handleRowsError(rows *sql.Rows, operation string) error {
+	if rows == nil {
+		return nil
+	}
+
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {
 			return fmt.Errorf("failed to close rows after error in %s: %w (original error: %w)", operation, closeErr, err)
@@ -53,6 +52,9 @@ func (bl *BatchLoader) handleRowsError(rows *sql.Rows, operation string) error {
 
 // closeRowsSafely безопасно закрывает rows с логированием ошибок.
 func (bl *BatchLoader) closeRowsSafely(rows *sql.Rows, operation string) {
+	if rows == nil {
+		return
+	}
 	if closeErr := rows.Close(); closeErr != nil {
 		log.Printf("Warning: failed to close rows in %s: %v", operation, closeErr)
 	}
@@ -90,7 +92,7 @@ func (bl *BatchLoader) BatchLoadUsersWithInterests(
 		ctx = context.Background()
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
 	rows, err := bl.db.conn.QueryContext(ctx, query, telegramIDs)
@@ -199,7 +201,7 @@ func (bl *BatchLoader) BatchLoadInterestsWithTranslations(ctx context.Context, l
 		ctx = context.Background()
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
 	rows, err := bl.db.conn.QueryContext(ctx, query, languages)
@@ -260,7 +262,7 @@ func (bl *BatchLoader) BatchLoadLanguagesWithTranslations(ctx context.Context, l
 		ctx = context.Background()
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
 	rows, err := bl.db.conn.QueryContext(ctx, query, languages)
@@ -317,7 +319,7 @@ func (bl *BatchLoader) BatchLoadUserInterests(ctx context.Context, userIDs []int
 		ctx = context.Background()
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
 	rows, err := bl.db.conn.QueryContext(ctx, query, pq.Array(userIDs))
@@ -376,7 +378,7 @@ func (bl *BatchLoader) BatchLoadUsers(ctx context.Context, telegramIDs []int64) 
 		ctx = context.Background()
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
 	rows, err := bl.db.conn.QueryContext(ctx, query, telegramIDs)
@@ -423,7 +425,7 @@ func (bl *BatchLoader) GetUserWithAllData(ctx context.Context, telegramID int64)
 		ctx = context.Background()
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
 	rows, err := bl.db.conn.QueryContext(ctx, query, telegramID)
@@ -692,7 +694,7 @@ func (bl *BatchLoader) BatchUpdateUserInterests(ctx context.Context, userID int,
 		ctx = context.Background()
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
 	// Начинаем транзакцию
@@ -700,7 +702,7 @@ func (bl *BatchLoader) BatchUpdateUserInterests(ctx context.Context, userID int,
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Удаляем старые интересы
 	_, err = tx.ExecContext(ctx, "DELETE FROM user_interest_selections WHERE user_id = $1", userID)
@@ -760,7 +762,7 @@ func (bl *BatchLoader) BatchLoadInterestCategories(ctx context.Context, lang str
 		ctx = context.Background()
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
 	query := `
@@ -811,7 +813,7 @@ func (bl *BatchLoader) BatchLoadUserStatistics(ctx context.Context, userIDs []in
 		ctx = context.Background()
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
 	query := `
@@ -874,7 +876,7 @@ func (bl *BatchLoader) BatchLoadPopularInterests(ctx context.Context, limit int)
 		ctx = context.Background()
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, DefaultQueryTimeout)
+	ctx, cancel := context.WithTimeout(ctx, localization.DefaultQueryTimeout)
 	defer cancel()
 
 	query := `

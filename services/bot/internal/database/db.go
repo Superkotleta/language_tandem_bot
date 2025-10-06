@@ -286,7 +286,7 @@ func (db *DB) GetUserByTelegramID(telegramID int64) (*models.User, error) {
 // UpdateUser обновляет данные пользователя.
 func (db *DB) UpdateUser(user *models.User) error {
 	_, err := db.conn.ExecContext(context.Background(), `
-		UPDATE users 
+		UPDATE users
 		SET username = $1, first_name = $2, native_language_code = $3,
 		    target_language_code = $4, target_language_level = $5,
 		    interface_language_code = $6, state = $7, status = $8,
@@ -297,7 +297,11 @@ func (db *DB) UpdateUser(user *models.User) error {
 		user.InterfaceLanguageCode, user.State, user.Status,
 		user.ProfileCompletionLevel, user.ID)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+
+	return nil
 }
 
 // SaveUserInterests сохраняет интересы пользователя.
@@ -522,11 +526,15 @@ func (db *DB) GetUserSelectedInterests(userID int) ([]int, error) {
 // RemoveUserInterest удаляет интерес пользователя.
 func (db *DB) RemoveUserInterest(userID, interestID int) error {
 	_, err := db.conn.ExecContext(context.Background(), `
-        DELETE FROM user_interests 
+        DELETE FROM user_interests
         WHERE user_id = $1 AND interest_id = $2
     `, userID, interestID)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+
+	return nil
 }
 
 // ClearUserInterests удаляет все интересы пользователя.
@@ -854,11 +862,15 @@ func getStringValue(nullStr sql.NullString) interface{} {
 func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
 	query := `
         UPDATE user_feedback
-        SET is_processed = true, admin_response = $1
+        SET is_processed = true, admin_response = $1, updated_at = NOW()
         WHERE id = $2
     `
 
 	_, err := db.conn.ExecContext(context.Background(), query, adminResponse, feedbackID)
 
-	return fmt.Errorf("operation failed: %w", err)
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
+	}
+
+	return nil
 }

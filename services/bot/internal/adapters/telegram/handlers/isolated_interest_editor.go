@@ -458,11 +458,11 @@ func (e *IsolatedInterestEditor) GetEditSession(userID int) (*EditSession, error
 
 func (e *IsolatedInterestEditor) updateSession(session *EditSession) {
 	session.LastActivity = time.Now()
-	e.cache.Set(context.Background(), fmt.Sprintf("edit_session_%d", session.UserID), session, 30*time.Minute)
+	_ = e.cache.Set(context.Background(), fmt.Sprintf("edit_session_%d", session.UserID), session, 30*time.Minute)
 }
 
 func (e *IsolatedInterestEditor) clearEditSession(userID int) {
-	e.cache.Delete(context.Background(), fmt.Sprintf("edit_session_%d", userID))
+	_ = e.cache.Delete(context.Background(), fmt.Sprintf("edit_session_%d", userID))
 }
 
 func (e *IsolatedInterestEditor) removeSelectionFromSession(session *EditSession, interestID int) {
@@ -519,9 +519,10 @@ func (e *IsolatedInterestEditor) formatChangesPreview(session *EditSession, lang
 	removed := []InterestChange{}
 
 	for _, change := range session.Changes {
-		if change.Action == "add" {
+		switch change.Action {
+		case "add":
 			added = append(added, change)
-		} else if change.Action == "remove" {
+		case "remove":
 			removed = append(removed, change)
 		}
 	}
@@ -552,23 +553,6 @@ func (e *IsolatedInterestEditor) validateSelections(session *EditSession) error 
 
 	// TODO: Добавить дополнительные проверки валидации
 	return nil
-}
-
-func (e *IsolatedInterestEditor) showSaveConfirmation(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
-	text := e.service.Localizer.Get(user.InterfaceLanguageCode, "edit_interests_saved_successfully")
-
-	// Создаем клавиатуру для возврата к профилю
-	keyboard := e.createSaveConfirmationKeyboard(user.InterfaceLanguageCode)
-
-	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
-		callback.Message.Chat.ID,
-		callback.Message.MessageID,
-		text,
-		keyboard,
-	)
-
-	_, err := e.bot.Request(editMsg)
-	return err
 }
 
 // formatChangesSummary форматирует краткое описание изменений

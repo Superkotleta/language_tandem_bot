@@ -9,15 +9,13 @@ import (
 
 	"language-exchange-bot/internal/core"
 	customErrors "language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 // Константы для работы с профилем.
-const (
-	NewInterestProfileCompletionLevelComplete = 100 // Профиль полностью завершен
-)
 
 // NewInterestHandler интерфейс для новой системы интересов.
 type NewInterestHandler interface {
@@ -655,7 +653,7 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 	}
 
 	// Обновляем уровень завершения профиля
-	err = h.updateProfileCompletionLevel(user.ID, NewInterestProfileCompletionLevelComplete)
+	err = h.updateProfileCompletionLevel(user.ID, localization.ProfileCompletionLevelComplete)
 	if err != nil {
 		log.Printf("Error updating profile completion level: %v", err)
 	}

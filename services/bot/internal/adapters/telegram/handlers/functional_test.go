@@ -167,6 +167,10 @@ func TestMassOperations(t *testing.T) {
 		t.Error("Expected empty selections")
 	}
 
+	if len(session.Changes) != 0 {
+		t.Error("Expected empty changes")
+	}
+
 	// Симуляция массового выбора
 	selections := []models.InterestSelection{
 		{UserID: 123, InterestID: 1, IsPrimary: false},
@@ -194,6 +198,14 @@ func TestUndoOperations(t *testing.T) {
 	}
 
 	// Проверяем начальное состояние
+	if session.UserID != 123 {
+		t.Errorf("Expected UserID 123, got %d", session.UserID)
+	}
+
+	if len(session.CurrentSelections) != 1 {
+		t.Errorf("Expected 1 selection initially, got %d", len(session.CurrentSelections))
+	}
+
 	if len(session.Changes) != 1 {
 		t.Errorf("Expected 1 change initially, got %d", len(session.Changes))
 	}
@@ -221,7 +233,11 @@ func TestPerformance(t *testing.T) {
 			Changes:           make([]InterestChange, 5),
 			SessionStart:      time.Now(),
 		}
-		_ = session
+		// Явно игнорируем поля для теста производительности
+		_ = session.UserID
+		_ = session.CurrentSelections
+		_ = session.Changes
+		_ = session.SessionStart
 	}
 
 	elapsed := time.Since(start)
@@ -246,6 +262,14 @@ func TestDataIntegrity(t *testing.T) {
 	// Проверяем, что все поля инициализированы корректно
 	if session.UserID <= 0 {
 		t.Error("UserID should be positive")
+	}
+
+	if len(session.OriginalSelections) != 0 {
+		t.Error("OriginalSelections should be empty initially")
+	}
+
+	if len(session.CurrentSelections) != 0 {
+		t.Error("CurrentSelections should be empty initially")
 	}
 
 	if session.SessionStart.IsZero() {
@@ -304,8 +328,16 @@ func TestEdgeCases(t *testing.T) {
 	}
 
 	// Проверяем, что сессия создана корректно
+	if session.UserID != 123 {
+		t.Errorf("Expected UserID 123, got %d", session.UserID)
+	}
+
 	if len(session.CurrentSelections) != 100 {
 		t.Errorf("Expected 100 selections, got %d", len(session.CurrentSelections))
+	}
+
+	if len(session.Changes) != 0 {
+		t.Errorf("Expected empty changes, got %d", len(session.Changes))
 	}
 
 	// Подсчитываем основные интересы

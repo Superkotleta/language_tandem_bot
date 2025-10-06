@@ -216,22 +216,6 @@ func (e *IsolatedInterestEditor) createChangesPreviewKeyboard(interfaceLang stri
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// createSaveConfirmationKeyboard создает клавиатуру подтверждения сохранения
-func (e *IsolatedInterestEditor) createSaveConfirmationKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
-	var buttonRows [][]tgbotapi.InlineKeyboardButton
-
-	// Кнопка возврата к профилю
-	profileRow := []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData(
-			"👤 "+e.service.Localizer.Get(interfaceLang, "back_to_profile"),
-			"profile_show",
-		),
-	}
-	buttonRows = append(buttonRows, profileRow)
-
-	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
-}
-
 // createEditPrimaryInterestsKeyboard создает клавиатуру для редактирования основных интересов
 func (e *IsolatedInterestEditor) createEditPrimaryInterestsKeyboard(selections []models.InterestSelection, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton

@@ -9,15 +9,13 @@ import (
 
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 // Константы для работы с профилем.
-const (
-	ImprovedInterestProfileCompletionLevelComplete = 100 // Профиль полностью завершен
-)
 
 // Константы для сообщений.
 const (
@@ -270,7 +268,7 @@ func (h *ImprovedInterestHandler) HandleInterestCategorySelection(callback *tgbo
 
 	// Создаем текст сообщения
 	categoryName := h.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
-	messageText := categoryName + " - " + h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
+	messageText := categoryName + " - " + h.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleChooseInterests)
 
 	// Обновляем сообщение
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
@@ -339,7 +337,7 @@ func (h *ImprovedInterestHandler) HandleInterestsContinue(callback *tgbotapi.Cal
 		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
-			warningMsg+"\n\n"+h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests"),
+			warningMsg+"\n\n"+h.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleChooseInterests),
 			keyboard,
 		)
 		_, err := h.bot.Request(editMsg)
@@ -562,7 +560,7 @@ func (h *ImprovedInterestHandler) updateCategoryInterestsKeyboard(callback *tgbo
 
 	// Обновляем сообщение
 	categoryName := h.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
-	messageText := categoryName + " - " + h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
+	messageText := categoryName + " - " + h.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleChooseInterests)
 
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 		callback.Message.Chat.ID,
@@ -725,7 +723,7 @@ func (h *ImprovedInterestHandler) completeProfileSetup(callback *tgbotapi.Callba
 	}
 
 	// Обновляем уровень завершения профиля
-	err = h.updateProfileCompletionLevel(user.ID, ImprovedInterestProfileCompletionLevelComplete)
+	err = h.updateProfileCompletionLevel(user.ID, localization.ProfileCompletionLevelComplete)
 	if err != nil {
 		log.Printf("Error updating profile completion level: %v", err)
 	}

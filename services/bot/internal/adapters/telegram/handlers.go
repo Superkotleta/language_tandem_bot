@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -8,17 +9,13 @@ import (
 	"language-exchange-bot/internal/adapters/telegram/handlers"
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 // Константы для работы с коллбэками и массивами.
-const (
-	MinPartsForFeedbackNav = 2 // Минимальное количество частей для навигации по отзывам
-	MinPartsForNav         = 4 // Минимальное количество частей для навигации
-
-)
 
 // TelegramHandler handles Telegram bot message and callback processing.
 // The name includes "Telegram" prefix for clarity, even though it may cause stuttering with the package name.
@@ -38,6 +35,7 @@ type TelegramHandler struct {
 	adminHandler           *handlers.AdminHandlerImpl
 	utilityHandler         *handlers.UtilityHandlerImpl
 	errorHandler           *errors.ErrorHandler
+	isolatedRouter         *CallbackRouter // Роутер для изолированных callback'ов
 }
 
 // NewTelegramHandler создает новый экземпляр TelegramHandler с базовой конфигурацией.
@@ -79,7 +77,9 @@ func NewTelegramHandler(
 	adminHandler := handlers.NewAdminHandler(service, bot, keyboardBuilder, adminChatIDs, make([]string, 0), errorHandler)
 	utilityHandler := handlers.NewUtilityHandler(service, bot, errorHandler)
 
-	return &TelegramHandler{
+	// Создаем и настраиваем роутер для изолированных callback'ов
+	isolatedRouter := NewCallbackRouter()
+	handler := &TelegramHandler{
 		bot:                    bot,
 		service:                service,
 		adminChatIDs:           adminChatIDs,
@@ -95,7 +95,15 @@ func NewTelegramHandler(
 		adminHandler:           adminHandler,
 		utilityHandler:         utilityHandler,
 		errorHandler:           errorHandler,
+		isolatedRouter:         isolatedRouter,
 	}
+
+	// Настраиваем маршруты для изолированных callback'ов
+	if err := isolatedRouter.SetupIsolatedRoutes(handler); err != nil {
+		panic(fmt.Sprintf("failed to setup isolated routes: %v", err))
+	}
+
+	return handler
 }
 
 // NewTelegramHandlerWithAdmins создает новый экземпляр TelegramHandler с полной конфигурацией администраторов.
@@ -160,7 +168,9 @@ func NewTelegramHandlerWithAdmins(
 		errorHandler,
 	)
 
-	return &TelegramHandler{
+	// Создаем и настраиваем роутер для изолированных callback'ов
+	isolatedRouter := NewCallbackRouter()
+	handler := &TelegramHandler{
 		bot:                    bot,
 		service:                service,
 		adminChatIDs:           adminChatIDs,
@@ -176,7 +186,15 @@ func NewTelegramHandlerWithAdmins(
 		adminHandler:           adminHandler,
 		utilityHandler:         utilityHandler,
 		errorHandler:           errorHandler,
+		isolatedRouter:         isolatedRouter,
 	}
+
+	// Настраиваем маршруты для изолированных callback'ов
+	if err := isolatedRouter.SetupIsolatedRoutes(handler); err != nil {
+		panic(fmt.Sprintf("failed to setup isolated routes: %v", err))
+	}
+
+	return handler
 }
 
 // HandleUpdate обрабатывает входящие обновления от Telegram API.
@@ -360,35 +378,6 @@ func (h *TelegramHandler) isAdmin(userID int64, username string) bool {
 	}
 
 	return false
-}
-
-// handleMainViewProfile делегирует просмотр профиля в menu handler
-// TODO: функция может быть использована в будущем для обработки просмотра профиля
-//
-//nolint:unused
-func (h *TelegramHandler) handleMainViewProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	return h.menuHandler.HandleMainViewProfile(callback, user, h.profileHandler)
-}
-
-// handleMainEditProfile делегирует редактирование профиля в menu handler
-// TODO: функция может быть использована в будущем для обработки редактирования профиля
-//
-//nolint:unused
-func (h *TelegramHandler) handleMainEditProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	return h.menuHandler.HandleMainEditProfile(callback, user, h.profileHandler)
-}
-
-// handleMainFeedback делегирует работу с отзывами в feedback handler
-// TODO: функция может быть использована в будущем для обработки обратной связи
-//
-//nolint:unused
-func (h *TelegramHandler) handleMainFeedback(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	// Создаем message объект для handleFeedbackCommand
-	message := &tgbotapi.Message{
-		Chat: callback.Message.Chat,
-	}
-
-	return h.feedbackHandler.HandleFeedbackCommand(message, user)
 }
 
 // === ОБРАБОТЧИКИ ВИДОВ ОТЗЫВОВ ===
@@ -738,48 +727,12 @@ func (h *TelegramHandler) HandleIsolatedShowStats(callback *tgbotapi.CallbackQue
 	return h.isolatedInterestEditor.ShowEditStatistics(callback, user, session)
 }
 
-// handleIsolatedCallbacks обрабатывает все callback'и изолированной системы
+// handleIsolatedCallbacks обрабатывает все callback'и изолированной системы через роутер
 func (h *TelegramHandler) handleIsolatedCallbacks(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
 	log.Printf("Handling isolated callback: %s for user %d", data, user.ID)
 
-	switch {
-	case data == "isolated_edit_start":
-		return h.HandleIsolatedEditStart(callback, user)
-	case data == "isolated_main_menu":
-		return h.HandleIsolatedMainMenu(callback, user)
-	case data == "isolated_edit_categories":
-		return h.HandleIsolatedEditCategories(callback, user)
-	case data == "isolated_edit_primary":
-		return h.HandleIsolatedEditPrimary(callback, user)
-	case strings.HasPrefix(data, "isolated_edit_category_"):
-		categoryKey := strings.TrimPrefix(data, "isolated_edit_category_")
-		return h.HandleIsolatedEditCategory(callback, user, categoryKey)
-	case strings.HasPrefix(data, "isolated_toggle_interest_"):
-		interestID := strings.TrimPrefix(data, "isolated_toggle_interest_")
-		return h.HandleIsolatedToggleInterest(callback, user, interestID)
-	case strings.HasPrefix(data, "isolated_toggle_primary_"):
-		interestID := strings.TrimPrefix(data, "isolated_toggle_primary_")
-		return h.HandleIsolatedTogglePrimary(callback, user, interestID)
-	case data == "isolated_preview_changes":
-		return h.HandleIsolatedPreviewChanges(callback, user)
-	case data == "isolated_save_changes":
-		return h.HandleIsolatedSaveChanges(callback, user)
-	case data == "isolated_cancel_edit":
-		return h.HandleIsolatedCancelEdit(callback, user)
-	case strings.HasPrefix(data, "isolated_select_all_"):
-		categoryKey := strings.TrimPrefix(data, "isolated_select_all_")
-		return h.HandleIsolatedMassSelect(callback, user, categoryKey)
-	case strings.HasPrefix(data, "isolated_clear_all_"):
-		categoryKey := strings.TrimPrefix(data, "isolated_clear_all_")
-		return h.HandleIsolatedMassClear(callback, user, categoryKey)
-	case data == "isolated_undo_last":
-		return h.HandleIsolatedUndoLast(callback, user)
-	case data == "isolated_show_stats":
-		return h.HandleIsolatedShowStats(callback, user)
-	}
-
-	log.Printf("No handler found for isolated callback: %s", data)
-	return nil
+	// Используем роутер для обработки callback'а
+	return h.isolatedRouter.Handle(callback, user)
 }
 
 func (h *TelegramHandler) handleProfileCommands(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
@@ -881,7 +834,7 @@ func (h *TelegramHandler) handleFeedbackCallbacks(callback *tgbotapi.CallbackQue
 		parts := strings.TrimPrefix(data, "feedback_prev_")
 
 		indexAndType := strings.Split(parts, "_")
-		if len(indexAndType) == MinPartsForFeedbackNav {
+		if len(indexAndType) == localization.MinPartsForFeedbackNav {
 			return h.feedbackHandler.HandleFeedbackPrev(callback, user, indexAndType[0], indexAndType[1])
 		}
 
@@ -890,7 +843,7 @@ func (h *TelegramHandler) handleFeedbackCallbacks(callback *tgbotapi.CallbackQue
 		parts := strings.TrimPrefix(data, "feedback_next_")
 
 		indexAndType := strings.Split(parts, "_")
-		if len(indexAndType) == MinPartsForFeedbackNav {
+		if len(indexAndType) == localization.MinPartsForFeedbackNav {
 			return h.feedbackHandler.HandleFeedbackNext(callback, user, indexAndType[0], indexAndType[1])
 		}
 
@@ -907,7 +860,7 @@ func (h *TelegramHandler) handleFeedbackCallbacks(callback *tgbotapi.CallbackQue
 		return h.feedbackHandler.HandleShowAllFeedbacks(callback, user)
 	case strings.HasPrefix(data, "nav_"):
 		parts := strings.Split(data, "_")
-		if len(parts) >= MinPartsForNav {
+		if len(parts) >= localization.MinPartsForNav {
 			feedbackType := parts[1] // active, archive, all
 			indexStr := parts[3]     // 0, 1, 2, etc.
 
@@ -925,7 +878,7 @@ func (h *TelegramHandler) handleFeedbackCallbacks(callback *tgbotapi.CallbackQue
 		strings.HasPrefix(data, "back_to_all_feedbacks"):
 		// Обработка возврата к списку отзывов: back_to_active_feedbacks, back_to_archive_feedbacks, etc.
 		parts := strings.Split(data, "_")
-		if len(parts) >= MinPartsForNav {
+		if len(parts) >= localization.MinPartsForNav {
 			feedbackType := parts[2] // active, archive, all
 
 			return h.feedbackHandler.HandleBackToFeedbacks(callback, user, feedbackType)

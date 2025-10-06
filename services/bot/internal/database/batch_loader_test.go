@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"language-exchange-bot/internal/localization"
+
+	_ "github.com/mattn/go-sqlite3" // Регистрируем драйвер SQLite
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -150,8 +153,8 @@ func TestBatchLoader_ContextTimeout(t *testing.T) {
 func TestBatchLoader_Constants(t *testing.T) {
 	t.Parallel()
 	// Проверяем, что константы определены
-	assert.Equal(t, 30*time.Second, DefaultQueryTimeout)
-	assert.Equal(t, 1000, MaxBatchSize)
+	assert.Equal(t, 30*time.Second, localization.DefaultQueryTimeout)
+	assert.Equal(t, 1000, localization.MaxBatchSize)
 }
 
 func TestBatchLoader_NewBatchLoader(t *testing.T) {
@@ -184,8 +187,7 @@ func TestBatchLoader_HelperFunctions(t *testing.T) {
 	// Тестируем closeRowsSafely с nil rows
 	batchLoader.closeRowsSafely(nil, "TestOperation")
 
-	// Тестируем handleRowsError с nil rows
+	// Тестируем handleRowsError с nil rows - должен вернуть nil
 	err = batchLoader.handleRowsError(nil, "TestOperation")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "rows error in TestOperation")
+	assert.NoError(t, err)
 }

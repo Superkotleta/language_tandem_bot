@@ -4,8 +4,11 @@ package circuit_breaker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
+
+	"language-exchange-bot/internal/localization"
 )
 
 // State представляет состояние Circuit Breaker.
@@ -20,37 +23,7 @@ const (
 	StateHalfOpen
 )
 
-// Константы для настроек Circuit Breaker.
-const (
-	DefaultMaxRequests         = 3  // Максимальное количество запросов в полуоткрытом состоянии
-	DefaultIntervalSeconds     = 60 // Интервал в секундах между проверками
-	DefaultTimeoutSeconds      = 60 // Таймаут в секундах для возврата в закрытое состояние
-	DefaultConsecutiveFailures = 5  // Количество последовательных неудач для открытия
-
-	// TelegramMaxRequests максимум запросов для Telegram.
-	TelegramMaxRequests = 5
-	// TelegramIntervalSeconds интервал для Telegram.
-	TelegramIntervalSeconds = 30
-	// TelegramTimeoutSeconds таймаут для Telegram.
-	TelegramTimeoutSeconds = 30
-	// TelegramFailureThreshold порог неудач для Telegram.
-	TelegramFailureThreshold = 3
-
-	// DatabaseMaxRequests максимум запросов для БД.
-	DatabaseMaxRequests = 10
-	// DatabaseIntervalSeconds интервал для БД.
-	DatabaseIntervalSeconds = 60
-	// DatabaseTimeoutSeconds таймаут для БД.
-	DatabaseTimeoutSeconds = 30
-	// DatabaseFailureThreshold порог неудач для БД.
-	DatabaseFailureThreshold = 5
-
-	// MatcherMaxRequests максимум запросов для Matcher.
-	MatcherMaxRequests      = 5
-	MatcherIntervalSeconds  = 30 // Интервал для Matcher
-	MatcherTimeoutSeconds   = 20 // Таймаут для Matcher
-	MatcherFailureThreshold = 3  // Порог неудач для Matcher
-)
+// Circuit Breaker константы теперь в localization/constants.go
 
 // String возвращает строковое представление состояния.
 func (s State) String() string {
@@ -128,16 +101,16 @@ func NewCircuitBreaker(config Config) *CircuitBreaker {
 	}
 
 	if cb.interval == 0 {
-		cb.interval = DefaultIntervalSeconds * time.Second
+		cb.interval = localization.DefaultIntervalSeconds * time.Second
 	}
 
 	if cb.timeout == 0 {
-		cb.timeout = DefaultTimeoutSeconds * time.Second
+		cb.timeout = localization.DefaultTimeoutSeconds * time.Second
 	}
 
 	if cb.readyToTrip == nil {
 		cb.readyToTrip = func(counts Counts) bool {
-			return counts.ConsecutiveFailures > DefaultConsecutiveFailures
+			return counts.ConsecutiveFailures > localization.DefaultConsecutiveFailures
 		}
 	}
 
@@ -151,51 +124,79 @@ func (cb *CircuitBreaker) Execute(req func() (interface{}, error)) (interface{},
 		return nil, err
 	}
 
-	defer func() {
-		e := recover()
-		if e != nil {
-			cb.afterRequest(generation, false)
-			panic(e)
-		}
+	// Переменные для результата
+	var result interface{}
+	var execErr error
+	panicOccurred := false
+
+	// Функция для выполнения с перехватом паники
+	func() {
+		defer func() {
+			if e := recover(); e != nil {
+				panicOccurred = true
+				// Любая паника считается recovered
+				execErr = fmt.Errorf("panic recovered: %v", e)
+				result = nil
+			}
+		}()
+
+		result, execErr = req()
 	}()
 
-	result, err := req()
-	cb.afterRequest(generation, err == nil)
+	// Обновляем счетчики на основе результата
+	if panicOccurred || execErr != nil {
+		cb.afterRequest(generation, false)
+	} else {
+		cb.afterRequest(generation, true)
+	}
 
-	return result, err
+	return result, execErr
 }
 
 // ExecuteWithContext выполняет функцию с контекстом и защитой Circuit Breaker.
 func (cb *CircuitBreaker) ExecuteWithContext(
 	ctx context.Context,
 	req func() (interface{}, error),
-) (interface{}, error) {
+) (result interface{}, err error) {
 	generation, err := cb.beforeRequest()
 	if err != nil {
 		return nil, err
 	}
 
-	defer func() {
-		e := recover()
-		if e != nil {
-			cb.afterRequest(generation, false)
-			panic(e)
-		}
-	}()
-
 	// Проверяем контекст
 	select {
 	case <-ctx.Done():
 		cb.afterRequest(generation, false)
-
 		return nil, ctx.Err()
 	default:
 	}
 
-	result, err := req()
-	cb.afterRequest(generation, err == nil)
+	// Переменные для результата
+	var execErr error
+	panicOccurred := false
 
-	return result, err
+	// Функция для выполнения с перехватом паники
+	func() {
+		defer func() {
+			if e := recover(); e != nil {
+				panicOccurred = true
+				// Любая паника считается recovered
+				execErr = fmt.Errorf("panic recovered: %v", e)
+				result = nil
+			}
+		}()
+
+		result, execErr = req()
+	}()
+
+	// Обновляем счетчики на основе результата
+	if panicOccurred || execErr != nil {
+		cb.afterRequest(generation, false)
+	} else {
+		cb.afterRequest(generation, true)
+	}
+
+	return result, execErr
 }
 
 // State возвращает текущее состояние Circuit Breaker.
@@ -260,8 +261,13 @@ func (cb *CircuitBreaker) afterRequest(before uint32, success bool) {
 
 // currentState возвращает текущее состояние и поколение.
 func (cb *CircuitBreaker) currentState(now time.Time) (State, uint32) {
-	if cb.expiry.Before(now) {
+	if cb.expiry.Before(now) && !cb.expiry.IsZero() {
 		cb.toNewGeneration(now)
+
+		// Переход из Open в HalfOpen при истечении timeout
+		if cb.state == StateOpen {
+			cb.state = StateHalfOpen
+		}
 	}
 
 	return cb.state, cb.generation
@@ -330,11 +336,11 @@ func (cb *CircuitBreaker) setState(state State, now time.Time) {
 func DefaultConfig() Config {
 	return Config{
 		Name:        "default",
-		MaxRequests: DefaultMaxRequests,
-		Interval:    DefaultIntervalSeconds * time.Second,
-		Timeout:     DefaultTimeoutSeconds * time.Second,
+		MaxRequests: localization.DefaultMaxRequests,
+		Interval:    localization.DefaultIntervalSeconds * time.Second,
+		Timeout:     localization.DefaultTimeoutSeconds * time.Second,
 		ReadyToTrip: func(counts Counts) bool {
-			return counts.ConsecutiveFailures > DefaultConsecutiveFailures
+			return counts.ConsecutiveFailures > localization.DefaultConsecutiveFailures
 		},
 	}
 }
@@ -343,11 +349,11 @@ func DefaultConfig() Config {
 func TelegramConfig() Config {
 	return Config{
 		Name:        "telegram",
-		MaxRequests: TelegramMaxRequests,
-		Interval:    TelegramIntervalSeconds * time.Second,
-		Timeout:     TelegramTimeoutSeconds * time.Second,
+		MaxRequests: localization.TelegramMaxRequests,
+		Interval:    localization.TelegramIntervalSeconds * time.Second,
+		Timeout:     localization.TelegramTimeoutSeconds * time.Second,
 		ReadyToTrip: func(counts Counts) bool {
-			return counts.ConsecutiveFailures > TelegramFailureThreshold
+			return counts.ConsecutiveFailures > localization.TelegramFailureThreshold
 		},
 	}
 }
@@ -356,11 +362,11 @@ func TelegramConfig() Config {
 func DatabaseConfig() Config {
 	return Config{
 		Name:        "database",
-		MaxRequests: DatabaseMaxRequests,
-		Interval:    DatabaseIntervalSeconds * time.Second,
-		Timeout:     DatabaseTimeoutSeconds * time.Second,
+		MaxRequests: localization.DatabaseMaxRequests,
+		Interval:    localization.DatabaseIntervalSeconds * time.Second,
+		Timeout:     localization.DatabaseTimeoutSeconds * time.Second,
 		ReadyToTrip: func(counts Counts) bool {
-			return counts.ConsecutiveFailures > DatabaseFailureThreshold
+			return counts.ConsecutiveFailures > localization.DatabaseFailureThreshold
 		},
 	}
 }
@@ -369,11 +375,11 @@ func DatabaseConfig() Config {
 func RedisConfig() Config {
 	return Config{
 		Name:        "redis",
-		MaxRequests: MatcherMaxRequests,
-		Interval:    MatcherIntervalSeconds * time.Second,
-		Timeout:     MatcherTimeoutSeconds * time.Second,
+		MaxRequests: localization.MatcherMaxRequests,
+		Interval:    localization.MatcherIntervalSeconds * time.Second,
+		Timeout:     localization.MatcherTimeoutSeconds * time.Second,
 		ReadyToTrip: func(counts Counts) bool {
-			return counts.ConsecutiveFailures > MatcherFailureThreshold
+			return counts.ConsecutiveFailures > localization.MatcherFailureThreshold
 		},
 	}
 }

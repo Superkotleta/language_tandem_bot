@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -20,14 +21,6 @@ const (
 const (
 	CallbackBackToMainMenu     = "back_to_main_menu"
 	CallbackBackToPreviousStep = "back_to_previous_step"
-)
-
-// Константы для ID языков (fallback значения).
-const (
-	LanguageIDEnglish = 1
-	LanguageIDRussian = 2
-	LanguageIDSpanish = 3
-	LanguageIDChinese = 4
 )
 
 // TemporaryInterestSelection представляет временный выбор интереса пользователем.
@@ -61,10 +54,10 @@ func (kb *KeyboardBuilder) CreateLanguageKeyboard(
 	if err != nil {
 		// Fallback на хардкод если кэш не работает
 		languages = []*models.Language{
-			{ID: LanguageIDEnglish, Code: "en", NameNative: "English", NameEn: "English"},
-			{ID: LanguageIDRussian, Code: "ru", NameNative: "Русский", NameEn: "Russian"},
-			{ID: LanguageIDSpanish, Code: "es", NameNative: "Español", NameEn: "Spanish"},
-			{ID: LanguageIDChinese, Code: "zh", NameNative: "中文", NameEn: "Chinese"},
+			{ID: localization.LanguageIDEnglish, Code: "en", NameNative: "English", NameEn: "English"},
+			{ID: localization.LanguageIDRussian, Code: "ru", NameNative: "Русский", NameEn: "Russian"},
+			{ID: localization.LanguageIDSpanish, Code: "es", NameNative: "Español", NameEn: "Spanish"},
+			{ID: localization.LanguageIDChinese, Code: "zh", NameNative: "中文", NameEn: "Chinese"},
 		}
 	}
 

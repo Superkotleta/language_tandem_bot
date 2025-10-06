@@ -26,6 +26,28 @@ func TestEditSession(t *testing.T) {
 	if session.CurrentCategory != "entertainment" {
 		t.Errorf("Expected category 'entertainment', got '%s'", session.CurrentCategory)
 	}
+
+	// Проверяем инициализацию коллекций
+	if len(session.OriginalSelections) != 0 {
+		t.Errorf("Expected empty OriginalSelections, got %d items", len(session.OriginalSelections))
+	}
+
+	if len(session.CurrentSelections) != 0 {
+		t.Errorf("Expected empty CurrentSelections, got %d items", len(session.CurrentSelections))
+	}
+
+	if len(session.Changes) != 0 {
+		t.Errorf("Expected empty Changes, got %d items", len(session.Changes))
+	}
+
+	// Проверяем, что время инициализировано
+	if session.SessionStart.IsZero() {
+		t.Error("SessionStart should not be zero")
+	}
+
+	if session.LastActivity.IsZero() {
+		t.Error("LastActivity should not be zero")
+	}
 }
 
 // TestInterestChange тестирует структуру изменений
@@ -44,6 +66,18 @@ func TestInterestChange(t *testing.T) {
 
 	if change.InterestID != 456 {
 		t.Errorf("Expected InterestID 456, got %d", change.InterestID)
+	}
+
+	if change.InterestName != "Кино" {
+		t.Errorf("Expected InterestName 'Кино', got '%s'", change.InterestName)
+	}
+
+	if change.Category != "entertainment" {
+		t.Errorf("Expected Category 'entertainment', got '%s'", change.Category)
+	}
+
+	if change.Timestamp.IsZero() {
+		t.Error("Timestamp should not be zero")
 	}
 }
 
@@ -67,6 +101,14 @@ func TestEditStats(t *testing.T) {
 
 	if len(stats.CategoryCounts) != 2 {
 		t.Errorf("Expected 2 categories, got %d", len(stats.CategoryCounts))
+	}
+
+	if stats.ChangesCount != 10 {
+		t.Errorf("Expected ChangesCount 10, got %d", stats.ChangesCount)
+	}
+
+	if stats.LastUpdated.IsZero() {
+		t.Error("LastUpdated should not be zero")
 	}
 }
 
@@ -140,7 +182,11 @@ func TestBasicPerformance(t *testing.T) {
 			Changes:           make([]InterestChange, 5),
 			SessionStart:      time.Now(),
 		}
-		_ = session
+		// Явно игнорируем поля для теста производительности
+		_ = session.UserID
+		_ = session.CurrentSelections
+		_ = session.Changes
+		_ = session.SessionStart
 	}
 
 	elapsed := time.Since(start)
@@ -158,7 +204,11 @@ func BenchmarkSessionCreation(b *testing.B) {
 			Changes:           make([]InterestChange, 5),
 			SessionStart:      time.Now(),
 		}
-		_ = session
+		// Явно игнорируем поля для бенчмарка производительности
+		_ = session.UserID
+		_ = session.CurrentSelections
+		_ = session.Changes
+		_ = session.SessionStart
 	}
 }
 
@@ -170,6 +220,9 @@ func BenchmarkStatisticsCalculation(b *testing.B) {
 		CurrentSelections: make([]models.InterestSelection, 100),
 		Changes:           make([]InterestChange, 50),
 	}
+
+	// Явно игнорируем поле Changes для бенчмарка
+	_ = session.Changes
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

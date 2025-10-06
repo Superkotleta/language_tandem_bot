@@ -6,15 +6,13 @@ import (
 
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 // Константы для работы с профилем.
-const (
-	ProfileCompletionLevelComplete = 100 // Профиль полностью завершен
-)
 
 // ProfileHandlerImpl обрабатывает все операции с профилем пользователя.
 type ProfileHandlerImpl struct {
@@ -215,7 +213,7 @@ func (ph *ProfileHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Callbac
 	// Увеличиваем уровень завершения профиля до 100%
 	log.Printf("Updating user %d profile completion level to 100%%", user.ID)
 
-	err = ph.updateProfileCompletionLevel(user.ID, ProfileCompletionLevelComplete)
+	err = ph.updateProfileCompletionLevel(user.ID, localization.ProfileCompletionLevelComplete)
 	if err != nil {
 		log.Printf("Error updating profile completion level: %v", err)
 

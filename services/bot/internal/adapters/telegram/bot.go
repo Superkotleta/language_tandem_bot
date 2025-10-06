@@ -205,32 +205,6 @@ func (tb *TelegramBot) GetPlatformName() string {
 	return "telegram"
 }
 
-// getChatIDByUsername - функция для получения Chat ID по username
-// TODO: функция может быть использована в будущем для получения chat ID по username
-//
-//nolint:unused
-func (tb *TelegramBot) getChatIDByUsername(username string) (int64, error) {
-	log.Printf("Пытаемся получить Chat ID для username: @%s", username)
-
-	// Используем Telegram API для получения информации о чате по username
-	chatConfig := tgbotapi.ChatInfoConfig{
-		ChatConfig: tgbotapi.ChatConfig{
-			SuperGroupUsername: "@" + username,
-		},
-	}
-
-	chat, err := tb.api.GetChat(chatConfig)
-	if err != nil {
-		log.Printf("Ошибка получения Chat ID для @%s: %v", username, err)
-
-		return 0, fmt.Errorf("не удалось получить информацию о чате @%s: %w", username, err)
-	}
-
-	log.Printf("Получен Chat ID %d для username @%s", chat.ID, username)
-
-	return chat.ID, nil
-}
-
 // SetAdminChatIDs устанавливает Chat ID администраторов для уведомлений.
 func (tb *TelegramBot) SetAdminChatIDs(chatIDs []int64) {
 	tb.adminChatIDs = chatIDs

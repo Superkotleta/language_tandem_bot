@@ -151,7 +151,10 @@ func (d *Dashboard) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := d.performanceMonitor.GetPerformanceReport()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(metrics)
+	if err := json.NewEncoder(w).Encode(metrics); err != nil {
+		http.Error(w, "Failed to encode metrics", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleErrors обрабатывает API ошибок.
@@ -159,7 +162,10 @@ func (d *Dashboard) handleErrors(w http.ResponseWriter, r *http.Request) {
 	alerts := d.errorHandler.GetAlerts()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(alerts)
+	if err := json.NewEncoder(w).Encode(alerts); err != nil {
+		http.Error(w, "Failed to encode alerts", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleAlerts обрабатывает API алертов.
@@ -167,7 +173,10 @@ func (d *Dashboard) handleAlerts(w http.ResponseWriter, r *http.Request) {
 	activeAlerts := d.errorHandler.GetActiveAlerts()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(activeAlerts)
+	if err := json.NewEncoder(w).Encode(activeAlerts); err != nil {
+		http.Error(w, "Failed to encode active alerts", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handlePerformance обрабатывает API производительности.
@@ -191,7 +200,10 @@ func (d *Dashboard) handlePerformance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleHealth обрабатывает health check.
@@ -203,7 +215,10 @@ func (d *Dashboard) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleMetricsPage обрабатывает страницу метрик.

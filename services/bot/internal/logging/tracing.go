@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// traceContextKey тип ключа для контекста трейса.
+type traceContextKey string
+
 // RequestTrace представляет трейс запроса.
 type RequestTrace struct {
 	RequestID string                 `json:"request_id"`
@@ -276,11 +279,11 @@ func (ts *TracingService) GetPerformanceSummary() map[string]interface{} {
 
 // ContextWithTrace добавляет трейс в контекст.
 func ContextWithTrace(ctx context.Context, trace *RequestTrace) context.Context {
-	return context.WithValue(ctx, "trace", trace)
+	return context.WithValue(ctx, traceContextKey("trace"), trace)
 }
 
 // TraceFromContext извлекает трейс из контекста.
 func TraceFromContext(ctx context.Context) (*RequestTrace, bool) {
-	trace, ok := ctx.Value("trace").(*RequestTrace)
+	trace, ok := ctx.Value(traceContextKey("trace")).(*RequestTrace)
 	return trace, ok
 }

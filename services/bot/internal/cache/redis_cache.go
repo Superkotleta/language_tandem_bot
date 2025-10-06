@@ -487,7 +487,7 @@ func (r *RedisCacheService) GetInterestCategories(ctx context.Context, lang stri
 // SetInterestCategories сохраняет категории интересов в Redis кэш.
 func (r *RedisCacheService) SetInterestCategories(ctx context.Context, lang string, categories []*models.InterestCategory) {
 	key := fmt.Sprintf("interest_categories:%s", lang)
-	r.Set(ctx, key, categories, r.config.LanguagesTTL)
+	_ = r.Set(ctx, key, categories, r.config.LanguagesTTL)
 }
 
 // GetUserStats получает статистику пользователя из Redis кэша.
@@ -506,7 +506,7 @@ func (r *RedisCacheService) GetUserStats(ctx context.Context, userID int64) (map
 // SetUserStats сохраняет статистику пользователя в Redis кэш.
 func (r *RedisCacheService) SetUserStats(ctx context.Context, userID int64, stats map[string]interface{}) {
 	key := fmt.Sprintf("user_stats:%d", userID)
-	r.Set(ctx, key, stats, r.config.UsersTTL)
+	_ = r.Set(ctx, key, stats, r.config.UsersTTL)
 }
 
 // GetConfig получает конфигурацию из Redis кэша.
@@ -525,7 +525,7 @@ func (r *RedisCacheService) GetConfig(ctx context.Context, configKey string) (in
 // SetConfig сохраняет конфигурацию в Redis кэш.
 func (r *RedisCacheService) SetConfig(ctx context.Context, configKey string, value interface{}) {
 	key := fmt.Sprintf("config:%s", configKey)
-	r.Set(ctx, key, value, r.config.LanguagesTTL)
+	_ = r.Set(ctx, key, value, r.config.LanguagesTTL)
 }
 
 // InvalidateInterestCategories инвалидирует кэш категорий интересов.

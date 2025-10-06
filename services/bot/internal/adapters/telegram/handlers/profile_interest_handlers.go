@@ -7,6 +7,7 @@ import (
 
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -62,8 +63,8 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 	log.Printf("DEBUG: Created keyboard for user %d", user.ID)
 
 	// Создаем текст с инструкциями
-	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, "edit_interests_from_profile") + "\n\n" +
-		pih.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interest_category")
+	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleEditInterestsFromProfile) + "\n\n" +
+		pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleChooseInterestCategory)
 	log.Printf("DEBUG: Created text for user %d: %s", user.ID, text)
 
 	// Обновляем сообщение
@@ -137,7 +138,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestCategoryFromProfile(callbac
 
 	// Создаем текст
 	categoryName := pih.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
-	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, "edit_interests_in_category") + " " + categoryName
+	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleEditInterestsInCategory) + " " + categoryName
 
 	// Обновляем сообщение
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
@@ -210,8 +211,8 @@ func (pih *ProfileInterestHandler) HandleEditPrimaryInterestsFromProfile(callbac
 	keyboard := pih.keyboardBuilder.CreateEditPrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode)
 
 	// Создаем текст
-	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, "edit_primary_interests") + "\n\n" +
-		pih.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests")
+	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleEditPrimaryInterests) + "\n\n" +
+		pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleChoosePrimaryInterests)
 
 	// Обновляем сообщение
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
@@ -288,13 +289,13 @@ func (pih *ProfileInterestHandler) HandleSaveInterestEditsFromProfile(callback *
 	}
 
 	// Создаем текст с обновленными интересами
-	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, "interests_updated_successfully") + "\n\n" +
+	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleInterestsUpdatedSuccessfully) + "\n\n" +
 		fmt.Sprintf("%s: %d\n%s: %d\n%s: %d",
-			pih.service.Localizer.Get(user.InterfaceLanguageCode, "total_interests"),
+			pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleTotalInterests),
 			summary.TotalInterests,
-			pih.service.Localizer.Get(user.InterfaceLanguageCode, "primary_interests_label"),
+			pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocalePrimaryInterestsLabel),
 			len(summary.PrimaryInterests),
-			pih.service.Localizer.Get(user.InterfaceLanguageCode, "additional_interests_label"),
+			pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleAdditionalInterestsLabel),
 			len(summary.AdditionalInterests))
 
 	// Создаем клавиатуру для возврата к профилю

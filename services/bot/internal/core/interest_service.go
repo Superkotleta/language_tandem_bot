@@ -620,7 +620,7 @@ func (s *InterestService) BatchUpdateUserInterests(userID int, selections []mode
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Удаляем все текущие выборы пользователя
 	_, err = tx.ExecContext(context.Background(), "DELETE FROM user_interest_selections WHERE user_id = $1", userID)
