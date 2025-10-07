@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [1.24.x]
+        go-version: [1.24.4]
 
     services:
       postgres:
@@ -44,15 +44,20 @@ jobs:
     - name: Cache Go modules
       uses: actions/cache@v3
       with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum', 'go.work.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
 
     - name: Install dependencies
       run: |
-        go mod download
-        go mod tidy
+        # Работаем с Go workspace
+        go work sync
+        go mod download -C services/bot
+        go mod download -C services/matcher  
+        go mod download -C services/profile
 
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v3
@@ -62,7 +67,17 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        go test -race -coverprofile=coverage.out -covermode=atomic ./...
+        # Запускаем тесты для каждого сервиса отдельно
+        cd services/bot && go test -race -coverprofile=coverage-bot.out -covermode=atomic ./...
+        cd ../matcher && go test -race -coverprofile=coverage-matcher.out -covermode=atomic ./...
+        cd ../profile && go test -race -coverprofile=coverage-profile.out -covermode=atomic ./...
+        
+        # Объединяем coverage отчеты
+        cd ../../
+        echo "mode: atomic" > coverage.out
+        cat services/bot/coverage-bot.out | grep -v "mode:" >> coverage.out
+        cat services/matcher/coverage-matcher.out | grep -v "mode:" >> coverage.out  
+        cat services/profile/coverage-profile.out | grep -v "mode:" >> coverage.out
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
@@ -133,11 +148,12 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.24.x
+        go-version: 1.24.4
 
     - name: Run integration tests
       run: |
-        go test -race -v ./tests/integration/...
+        # Запускаем integration тесты для bot сервиса
+        cd services/bot && go test -race -v ./tests/integration/...
       env:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/language_exchange_integration?sslmode=disable
         REDIS_URL: redis://localhost:6379
@@ -177,7 +193,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.24.x
+        go-version: 1.24.4
 
     - name: Install security tools
       run: |
@@ -186,8 +202,9 @@ jobs:
 
     - name: Run Gosec Security Scanner
       run: |
-        gosec -fmt=json -out=gosec-report.json ./...
-        gosec -fmt=text ./...
+        # Сканируем все сервисы
+        gosec -fmt=json -out=gosec-report.json ./services/...
+        gosec -fmt=text ./services/...
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master

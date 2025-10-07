@@ -5,12 +5,14 @@
 ## 🎯 API Overview
 
 ### REST API (Admin)
+
 - **Base URL:** `http://localhost:8080`
 - **Version:** v1/v2
 - **Authentication:** `X-Admin-Key` header
 - **Documentation:** [Swagger UI](http://localhost:8080/swagger/)
 
 ### gRPC API (Services)
+
 - **Protocol:** gRPC with Protocol Buffers
 - **Services:** User, Interest, Matcher
 - **Authentication:** mTLS for internal communication
