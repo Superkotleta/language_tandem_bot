@@ -25,7 +25,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}
-	defer logger.Sync()
+	defer func() {
+		_ = logger.Sync() // Игнорируем ошибку при закрытии логгера
+	}()
 
 	// Load configuration
 	cfg := config.Load()

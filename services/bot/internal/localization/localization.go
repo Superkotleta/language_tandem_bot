@@ -37,7 +37,7 @@ func (l *Localizer) loadTranslations() {
 		return
 	}
 
-	filepath.WalkDir(localesPath, func(path string, d os.DirEntry, err error) error {
+	if err := filepath.WalkDir(localesPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -61,7 +61,9 @@ func (l *Localizer) loadTranslations() {
 		l.translations[lang] = dict
 		fmt.Printf("Loaded %d keys for language: %s\n", len(dict), lang)
 		return nil
-	})
+	}); err != nil {
+		fmt.Printf("Error walking through locales directory: %v\n", err)
+	}
 }
 
 func (l *Localizer) Get(lang, key string) string {

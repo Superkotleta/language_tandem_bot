@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"database/sql"
+	"fmt"
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/database"
 	"language-exchange-bot/internal/localization"
@@ -183,7 +184,10 @@ func CleanupTestData(db *sql.DB) {
 	}
 
 	for _, table := range tables {
-		_, err := db.Exec("DELETE FROM " + table + " WHERE telegram_id >= 12345 AND telegram_id <= 99999")
+		// Используем fmt.Sprintf для формирования запроса, так как имя таблицы не может быть параметром
+		// #nosec G202 - это тестовый код с фиксированным списком таблиц
+		query := fmt.Sprintf("DELETE FROM %s WHERE telegram_id >= $1 AND telegram_id <= $2", table)
+		_, err := db.Exec(query, 12345, 99999)
 		if err != nil {
 			// Игнорируем ошибки очистки в тестах
 			continue

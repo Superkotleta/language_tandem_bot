@@ -133,7 +133,9 @@ func (lh *LanguageHandlerImpl) HandleNativeLanguageCallback(callback *tgbotapi.C
 	user.NativeLanguageCode = langCode
 
 	// Обновляем статус пользователя
-	lh.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguage)
+	if err := lh.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguage); err != nil {
+		return err
+	}
 
 	// Переход к следующему шагу онбординга
 	return lh.proceedToNextOnboardingStep(callback, user, langCode)
@@ -154,46 +156,43 @@ func (lh *LanguageHandlerImpl) proceedToNextOnboardingStep(callback *tgbotapi.Ca
 		}
 
 		// Обновляем статус для ожидания выбора изучаемого языка
-		lh.service.DB.UpdateUserState(user.ID, models.StateWaitingTargetLanguage)
-		return nil
-	} else {
+		return lh.service.DB.UpdateUserState(user.ID, models.StateWaitingTargetLanguage)
+	}
 		// Для всех других языков как родных автоматически устанавливаем русский как изучаемый
 		err := lh.service.DB.UpdateUserTargetLanguage(user.ID, "ru")
 		if err != nil {
 			return err
 		}
-		user.TargetLanguageCode = "ru"
+	user.TargetLanguageCode = "ru"
 
-		// Получаем название выбранного языка для сообщения
-		nativeLangName := lh.service.Localizer.GetLanguageName(nativeLangCode, user.InterfaceLanguageCode)
+	// Получаем название выбранного языка для сообщения
+	nativeLangName := lh.service.Localizer.GetLanguageName(nativeLangCode, user.InterfaceLanguageCode)
 
-		// Показываем сообщение о том, что русский язык установлен автоматически
-		targetExplanation := lh.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "target_language_explanation", map[string]string{
-			"native_lang": nativeLangName,
-		})
+	// Показываем сообщение о том, что русский язык установлен автоматически
+	targetExplanation := lh.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "target_language_explanation", map[string]string{
+		"native_lang": nativeLangName,
+	})
 
-		// Предлагаем выбрать уровень владения русским языком
-		langName := lh.service.Localizer.GetLanguageName(user.TargetLanguageCode, user.InterfaceLanguageCode)
-		levelTitle := targetExplanation + "\n\n" + lh.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
-			"language": langName,
-		})
+	// Предлагаем выбрать уровень владения русским языком
+	langName := lh.service.Localizer.GetLanguageName(user.TargetLanguageCode, user.InterfaceLanguageCode)
+	levelTitle := targetExplanation + "\n\n" + lh.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
+		"language": langName,
+	})
 
-		keyboard := lh.keyboardBuilder.CreateLanguageLevelKeyboard(user.InterfaceLanguageCode, user.TargetLanguageCode)
-		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
-			callback.Message.Chat.ID,
-			callback.Message.MessageID,
-			levelTitle,
-			keyboard,
-		)
-		_, err = lh.bot.Request(editMsg)
-		if err != nil {
-			return err
-		}
-
-		// Обновляем статус для ожидания выбора уровня
-		lh.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguageLevel)
-		return nil
+	keyboard := lh.keyboardBuilder.CreateLanguageLevelKeyboard(user.InterfaceLanguageCode, user.TargetLanguageCode)
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		levelTitle,
+		keyboard,
+	)
+	_, err = lh.bot.Request(editMsg)
+	if err != nil {
+		return err
 	}
+
+	// Обновляем статус для ожидания выбора уровня
+	return lh.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguageLevel)
 }
 
 // HandleTargetLanguageCallback обрабатывает выбор изучаемого языка.

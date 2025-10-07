@@ -13,6 +13,13 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+// Константы типов обратной связи (должны совпадать с admin_handlers.go).
+const (
+	feedbackTypeActive  = "active"
+	feedbackTypeArchive = "archive"
+	feedbackTypeAll     = "all"
+)
+
 // min возвращает минимальное из двух чисел.
 func min(a, b int) int {
 	if a < b {
@@ -328,7 +335,7 @@ func (fh *FeedbackHandlerImpl) createNavigationKeyboard(currentIndex, totalCount
 	}
 
 	// Кнопка "В обработанные" (только для активных отзывов)
-	if feedbackType == "active" {
+	if feedbackType == feedbackTypeActive {
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
 			"📦 В обработанные",
 			fmt.Sprintf("archive_feedback_%d", currentIndex),
@@ -336,7 +343,7 @@ func (fh *FeedbackHandlerImpl) createNavigationKeyboard(currentIndex, totalCount
 	}
 
 	// Кнопки для архивных отзывов
-	if feedbackType == "archive" {
+	if feedbackType == feedbackTypeArchive {
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
 			"🔄 Вернуть в активные",
 			fmt.Sprintf("unarchive_feedback_%d", currentIndex),
@@ -609,7 +616,10 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackContactMessage(message *tgbotapi.Me
 
 	// Подтверждаем получение контактов
 	confirmedText := fh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_provided")
-	fh.sendMessage(message.Chat.ID, confirmedText)
+	if err := fh.sendMessage(message.Chat.ID, confirmedText); err != nil {
+		// Логируем ошибку, но продолжаем обработку
+		log.Printf("Failed to send feedback contact confirmation: %v", err)
+	}
 
 	return fh.handleFeedbackComplete(message, user, feedbackText, &contactInfo)
 }
@@ -715,7 +725,7 @@ func (fh *FeedbackHandlerImpl) HandleShowActiveFeedbacks(callback *tgbotapi.Call
 	}
 
 	// Показываем первый отзыв с навигацией (редактируем существующее сообщение)
-	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, activeFeedbacks, 0, "active")
+	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, activeFeedbacks, 0, feedbackTypeActive)
 }
 
 // HandleShowArchiveFeedbacks показывает архивные отзывы.
@@ -744,7 +754,7 @@ func (fh *FeedbackHandlerImpl) HandleShowArchiveFeedbacks(callback *tgbotapi.Cal
 	}
 
 	// Показываем первый отзыв с навигацией (редактируем существующее сообщение)
-	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, archivedFeedbacks, 0, "archive")
+	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, archivedFeedbacks, 0, feedbackTypeArchive)
 }
 
 // HandleShowAllFeedbacks показывает все отзывы.
@@ -761,22 +771,22 @@ func (fh *FeedbackHandlerImpl) HandleShowAllFeedbacks(callback *tgbotapi.Callbac
 	}
 
 	// Показываем первый отзыв с навигацией (редактируем существующее сообщение)
-	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, feedbacks, 0, "all")
+	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, feedbacks, 0, feedbackTypeAll)
 }
 
 // HandleBrowseActiveFeedbacks просматривает активные отзывы.
 func (fh *FeedbackHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
-	return fh.handleBrowseFeedbacks(callback, user, indexStr, "active")
+	return fh.handleBrowseFeedbacks(callback, user, indexStr, feedbackTypeActive)
 }
 
 // HandleBrowseArchiveFeedbacks просматривает архивные отзывы.
 func (fh *FeedbackHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
-	return fh.handleBrowseFeedbacks(callback, user, indexStr, "archive")
+	return fh.handleBrowseFeedbacks(callback, user, indexStr, feedbackTypeArchive)
 }
 
 // HandleBrowseAllFeedbacks просматривает все отзывы.
 func (fh *FeedbackHandlerImpl) HandleBrowseAllFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
-	return fh.handleBrowseFeedbacks(callback, user, indexStr, "all")
+	return fh.handleBrowseFeedbacks(callback, user, indexStr, feedbackTypeAll)
 }
 
 // handleBrowseFeedbacks общая функция для навигации по отзывам.
@@ -797,19 +807,19 @@ func (fh *FeedbackHandlerImpl) handleBrowseFeedbacks(callback *tgbotapi.Callback
 	// Фильтруем отзывы по типу
 	var feedbacks []map[string]interface{}
 	switch feedbackType {
-	case "active":
+	case feedbackTypeActive:
 		for _, fb := range allFeedbacks {
 			if isArchived, ok := fb["is_processed"].(bool); !ok || !isArchived {
 				feedbacks = append(feedbacks, fb)
 			}
 		}
-	case "archive":
+	case feedbackTypeArchive:
 		for _, fb := range allFeedbacks {
 			if isArchived, ok := fb["is_processed"].(bool); ok && isArchived {
 				feedbacks = append(feedbacks, fb)
 			}
 		}
-	case "all":
+	case feedbackTypeAll:
 		feedbacks = allFeedbacks
 	}
 
@@ -889,17 +899,17 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 		nextIndex = len(activeFeedbacks) - 1
 	}
 
-	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, activeFeedbacks, nextIndex, "active")
+	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, activeFeedbacks, nextIndex, feedbackTypeActive)
 }
 
 // HandleBackToFeedbacks возвращает к списку отзывов.
 func (fh *FeedbackHandlerImpl) HandleBackToFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, feedbackType string) error {
 	switch feedbackType {
-	case "active":
+	case feedbackTypeActive:
 		return fh.editActiveFeedbacksList(callback.Message.Chat.ID, callback.Message.MessageID, user)
-	case "archive":
+	case feedbackTypeArchive:
 		return fh.editArchiveFeedbacksList(callback.Message.Chat.ID, callback.Message.MessageID, user)
-	case "all":
+	case feedbackTypeAll:
 		return fh.editAllFeedbacksList(callback.Message.Chat.ID, callback.Message.MessageID, user)
 	default:
 		return fh.editFeedbackStatistics(callback.Message.Chat.ID, callback.Message.MessageID, user)
@@ -944,7 +954,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacks(chatID int64, messageID int, 
 	}
 
 	// Показываем первый отзыв с навигацией
-	return fh.editFeedbackWithNavigation(chatID, messageID, activeFeedbacks, 0, "active")
+	return fh.editFeedbackWithNavigation(chatID, messageID, activeFeedbacks, 0, feedbackTypeActive)
 }
 
 // editArchiveFeedbacks редактирует сообщение со списком обработанных отзывов.
@@ -980,7 +990,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacks(chatID int64, messageID int,
 	}
 
 	// Показываем первый отзыв с навигацией
-	return fh.editFeedbackWithNavigation(chatID, messageID, archiveFeedbacks, 0, "archive")
+	return fh.editFeedbackWithNavigation(chatID, messageID, archiveFeedbacks, 0, feedbackTypeArchive)
 }
 
 // editAllFeedbacks редактирует сообщение со списком всех отзывов.
@@ -1008,7 +1018,7 @@ func (fh *FeedbackHandlerImpl) editAllFeedbacks(chatID int64, messageID int, use
 	}
 
 	// Показываем первый отзыв с навигацией
-	return fh.editFeedbackWithNavigation(chatID, messageID, allFeedbacks, 0, "all")
+	return fh.editFeedbackWithNavigation(chatID, messageID, allFeedbacks, 0, feedbackTypeAll)
 }
 
 // editActiveFeedbacksList редактирует сообщение со списком активных отзывов (заголовок).
@@ -1263,7 +1273,7 @@ func (fh *FeedbackHandlerImpl) HandleDeleteCurrentFeedback(callback *tgbotapi.Ca
 		nextIndex = len(archiveFeedbacks) - 1
 	}
 
-	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, archiveFeedbacks, nextIndex, "archive")
+	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, archiveFeedbacks, nextIndex, feedbackTypeArchive)
 }
 
 // HandleDeleteAllArchiveFeedbacks показывает подтверждение удаления всех обработанных отзывов.
@@ -1383,7 +1393,7 @@ func (fh *FeedbackHandlerImpl) HandleUnarchiveFeedback(callback *tgbotapi.Callba
 		nextIndex = len(archiveFeedbacks) - 1
 	}
 
-	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, archiveFeedbacks, nextIndex, "archive")
+	return fh.editFeedbackWithNavigation(callback.Message.Chat.ID, callback.Message.MessageID, archiveFeedbacks, nextIndex, feedbackTypeArchive)
 }
 
 // HandleFeedbackPrev переходит к предыдущему отзыву.

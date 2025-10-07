@@ -173,10 +173,10 @@ func (s *LocalizationSuite) TestLocalizedProfileSummary() {
 	assert.NoError(s.T(), err)
 
 	// Заполняем профиль
-	s.service.DB.UpdateUserNativeLanguage(user.ID, "ru")
-	s.service.DB.UpdateUserTargetLanguage(user.ID, "en")
-	s.service.DB.SaveUserInterest(user.ID, 1, false)
-	s.service.DB.SaveUserInterest(user.ID, 2, false)
+	_ = s.service.DB.UpdateUserNativeLanguage(user.ID, "ru")
+	_ = s.service.DB.UpdateUserTargetLanguage(user.ID, "en")
+	_ = s.service.DB.SaveUserInterest(user.ID, 1, false)
+	_ = s.service.DB.SaveUserInterest(user.ID, 2, false)
 
 	// Act - Получаем резюме профиля
 	summary, err := s.service.BuildProfileSummary(user)

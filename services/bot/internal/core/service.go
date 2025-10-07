@@ -49,10 +49,13 @@ func (a *databaseAdapter) GetUserByTelegramID(telegramID int64) (*models.User, e
 
 func (a *databaseAdapter) UpdateUser(user *models.User) error {
 	// Заглушка - обновляем основные поля
-	a.db.UpdateUserState(user.ID, user.State)
-	a.db.UpdateUserStatus(user.ID, user.Status)
-	a.db.UpdateUserInterfaceLanguage(user.ID, user.InterfaceLanguageCode)
-	return nil
+	if err := a.db.UpdateUserState(user.ID, user.State); err != nil {
+		return err
+	}
+	if err := a.db.UpdateUserStatus(user.ID, user.Status); err != nil {
+		return err
+	}
+	return a.db.UpdateUserInterfaceLanguage(user.ID, user.InterfaceLanguageCode)
 }
 
 func (a *databaseAdapter) UpdateUserInterfaceLanguage(userID int, language string) error {

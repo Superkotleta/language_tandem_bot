@@ -12,6 +12,12 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+const (
+	feedbackTypeActive  = "active"
+	feedbackTypeArchive = "archive"
+	feedbackTypeAll     = "all"
+)
+
 // AdminHandler интерфейс для обработки административных функций.
 type AdminHandler interface {
 	ShowFeedbackStatisticsEdit(callback *tgbotapi.CallbackQuery, user *models.User) error
@@ -176,7 +182,7 @@ func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.Callba
 	}
 
 	// Показываем текущий отзыв с редактированием текущего сообщения
-	return h.ShowFeedbackItemWithNavigationEdit(callback, activeFeedbacks[index], index, len(activeFeedbacks), "active")
+	return h.ShowFeedbackItemWithNavigationEdit(callback, activeFeedbacks[index], index, len(activeFeedbacks), feedbackTypeActive)
 }
 
 // HandleBrowseArchiveFeedbacks показывает обработанные отзывы в интерактивном режиме.
@@ -234,7 +240,7 @@ func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.Callb
 	}
 
 	// Показываем текущий отзыв с редактированием текущего сообщения
-	return h.ShowFeedbackItemWithNavigationEdit(callback, archivedFeedbacks[index], index, len(archivedFeedbacks), "archive")
+	return h.ShowFeedbackItemWithNavigationEdit(callback, archivedFeedbacks[index], index, len(archivedFeedbacks), feedbackTypeArchive)
 }
 
 // ShowFeedbackItemWithNavigation показывает отзыв с навигацией (отправляет новое сообщение).
@@ -293,9 +299,9 @@ func (h *AdminHandlerImpl) formatFeedbackText(fb map[string]interface{}, current
 	}
 
 	typeText := "📝 Активные отзывы"
-	if feedbackType == "archive" {
+	if feedbackType == feedbackTypeArchive {
 		typeText = "📁 Архив отзывов"
-	} else if feedbackType == "all" {
+	} else if feedbackType == feedbackTypeAll {
 		typeText = "📊 Все отзывы"
 	}
 
@@ -342,7 +348,7 @@ func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(fb map[string]interf
 	}
 
 	// Кнопки действий для необработанных отзывов
-	if feedbackType == "active" && !fb["is_processed"].(bool) {
+	if feedbackType == feedbackTypeActive && !fb["is_processed"].(bool) {
 		actionRow := []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("✅ Обработать", fmt.Sprintf("fb_process_%v", fb["id"])),
 		}
@@ -350,7 +356,7 @@ func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(fb map[string]interf
 	}
 
 	// Кнопки действий для обработанных отзывов
-	if feedbackType == "archive" && fb["is_processed"].(bool) {
+	if feedbackType == feedbackTypeArchive && fb["is_processed"].(bool) {
 		actionRow := []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("❌ Снять обработку", fmt.Sprintf("fb_unprocess_%v", fb["id"])),
 		}

@@ -97,10 +97,10 @@ func (s *ProfileCompletionSuite) TestProfileReset() {
 	assert.NoError(s.T(), err)
 
 	// Заполняем профиль
-	s.service.DB.UpdateUserNativeLanguage(user.ID, "en")
-	s.service.DB.UpdateUserTargetLanguage(user.ID, "ru")
-	s.service.DB.SaveUserInterest(user.ID, 1, false)
-	s.service.DB.SaveUserInterest(user.ID, 2, false)
+	_ = s.service.DB.UpdateUserNativeLanguage(user.ID, "en")
+	_ = s.service.DB.UpdateUserTargetLanguage(user.ID, "ru")
+	_ = s.service.DB.SaveUserInterest(user.ID, 1, false)
+	_ = s.service.DB.SaveUserInterest(user.ID, 2, false)
 
 	// Act - Сбрасываем профиль
 	err = s.service.DB.ResetUserProfile(user.ID)
