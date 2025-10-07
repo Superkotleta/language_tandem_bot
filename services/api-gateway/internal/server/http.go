@@ -8,6 +8,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	// DefaultIdleTimeout is the default idle timeout for HTTP connections in seconds.
+	DefaultIdleTimeout = 60
+)
+
 // Server represents the HTTP server.
 type Server struct {
 	port   string
@@ -31,7 +36,7 @@ func (s *Server) Start() error {
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		IdleTimeout:       DefaultIdleTimeout * time.Second,
 	}
 	return s.srv.ListenAndServe()
 }

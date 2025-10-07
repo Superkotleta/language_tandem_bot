@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"profile/internal/models"
@@ -57,7 +58,7 @@ func (r *UserTimeAvailabilityRepository) GetByID(ctx context.Context, id int64) 
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user time availability not found")
 		}
 		return nil, fmt.Errorf("failed to get user time availability: %w", err)
@@ -149,7 +150,7 @@ func (r *UserTimeAvailabilityRepository) Update(ctx context.Context, id int64, r
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user time availability not found")
 		}
 		return nil, fmt.Errorf("failed to update user time availability: %w", err)

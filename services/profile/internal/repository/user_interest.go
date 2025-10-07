@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"profile/internal/models"
@@ -57,7 +58,7 @@ func (r *UserInterestRepository) GetByID(ctx context.Context, id int64) (*models
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user interest not found")
 		}
 		return nil, fmt.Errorf("failed to get user interest: %w", err)
@@ -122,7 +123,7 @@ func (r *UserInterestRepository) GetByUserIDAndInterestID(ctx context.Context, u
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user interest not found")
 		}
 		return nil, fmt.Errorf("failed to get user interest: %w", err)

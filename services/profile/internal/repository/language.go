@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -54,7 +55,7 @@ func (r *LanguageRepository) GetByID(ctx context.Context, id int64) (*models.Lan
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("language not found")
 		}
 		return nil, fmt.Errorf("failed to get language: %w", err)
@@ -75,7 +76,7 @@ func (r *LanguageRepository) GetByCode(ctx context.Context, code string) (*model
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("language not found")
 		}
 		return nil, fmt.Errorf("failed to get language by code: %w", err)
@@ -184,7 +185,7 @@ func (r *LanguageRepository) Update(ctx context.Context, id int64, name, nativeN
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("language not found")
 		}
 		return nil, fmt.Errorf("failed to update language: %w", err)

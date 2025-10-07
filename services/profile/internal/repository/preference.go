@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -74,7 +75,7 @@ func (r *UserPreferenceRepository) GetByUserID(ctx context.Context, userID int64
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user preference not found")
 		}
 		return nil, fmt.Errorf("failed to get user preference: %w", err)
@@ -170,7 +171,7 @@ func (r *UserPreferenceRepository) Update(ctx context.Context, userID int64, req
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user preference not found")
 		}
 		return nil, fmt.Errorf("failed to update user preference: %w", err)

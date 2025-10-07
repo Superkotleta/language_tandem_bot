@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"profile/internal/models"
@@ -59,7 +60,7 @@ func (r *UserLanguageRepository) GetByID(ctx context.Context, id int64) (*models
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user language not found")
 		}
 		return nil, fmt.Errorf("failed to get user language: %w", err)
@@ -124,7 +125,7 @@ func (r *UserLanguageRepository) GetByUserIDAndLanguageID(ctx context.Context, u
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user language not found")
 		}
 		return nil, fmt.Errorf("failed to get user language: %w", err)
@@ -147,7 +148,7 @@ func (r *UserLanguageRepository) Update(ctx context.Context, id int64, req *mode
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user language not found")
 		}
 		return nil, fmt.Errorf("failed to update user language: %w", err)

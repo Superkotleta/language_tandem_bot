@@ -86,7 +86,7 @@ func (p *Proxy) ForwardResponse(w http.ResponseWriter, resp *http.Response) erro
 
 // HealthCheck checks if the backend service is healthy.
 func (p *Proxy) HealthCheck(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, "GET", p.config.URL+"/healthz", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", p.config.URL+"/healthz", http.NoBody)
 	if err != nil {
 		return fmt.Errorf("failed to create health check request: %w", err)
 	}

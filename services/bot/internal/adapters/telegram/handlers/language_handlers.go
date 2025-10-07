@@ -133,7 +133,9 @@ func (lh *LanguageHandlerImpl) HandleNativeLanguageCallback(callback *tgbotapi.C
 	user.NativeLanguageCode = langCode
 
 	// Обновляем статус пользователя
-	lh.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguage)
+	if err := lh.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguage); err != nil {
+		return err
+	}
 
 	// Переход к следующему шагу онбординга
 	return lh.proceedToNextOnboardingStep(callback, user, langCode)
@@ -154,7 +156,9 @@ func (lh *LanguageHandlerImpl) proceedToNextOnboardingStep(callback *tgbotapi.Ca
 		}
 
 		// Обновляем статус для ожидания выбора изучаемого языка
-		lh.service.DB.UpdateUserState(user.ID, models.StateWaitingTargetLanguage)
+		if err := lh.service.DB.UpdateUserState(user.ID, models.StateWaitingTargetLanguage); err != nil {
+			return err
+		}
 		return nil
 	} else {
 		// Для всех других языков как родных автоматически устанавливаем русский как изучаемый
@@ -191,7 +195,9 @@ func (lh *LanguageHandlerImpl) proceedToNextOnboardingStep(callback *tgbotapi.Ca
 		}
 
 		// Обновляем статус для ожидания выбора уровня
-		lh.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguageLevel)
+		if err := lh.service.DB.UpdateUserState(user.ID, models.StateWaitingLanguageLevel); err != nil {
+			return err
+		}
 		return nil
 	}
 }

@@ -73,7 +73,8 @@ func (s *TelegramBotSuite) TestStartCommand_ExistingUser() {
 	assert.NoError(s.T(), err)
 	existingUser.Status = "active"
 	existingUser.ProfileCompletionLevel = 80
-	s.mockDB.UpdateUser(existingUser)
+	err = s.mockDB.UpdateUser(existingUser)
+	assert.NoError(s.T(), err)
 
 	message := helpers.CreateTestCommand("start", userID, username)
 	update := helpers.CreateUpdateWithMessage(message)
@@ -132,7 +133,8 @@ func (s *TelegramBotSuite) TestProfileCallback() {
 	user.NativeLanguageCode = "en"
 	user.TargetLanguageCode = "ru"
 	user.ProfileCompletionLevel = 60
-	s.mockDB.UpdateUser(user)
+	err = s.mockDB.UpdateUser(user)
+	assert.NoError(s.T(), err)
 
 	callback := helpers.CreateTestCallback("profile_show", userID)
 	update := helpers.CreateUpdateWithCallback(callback)

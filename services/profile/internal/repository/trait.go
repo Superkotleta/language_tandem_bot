@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"profile/internal/models"
@@ -53,7 +54,7 @@ func (r *UserTraitRepository) GetByID(ctx context.Context, id int64) (*models.Us
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user trait not found")
 		}
 		return nil, fmt.Errorf("failed to get user trait: %w", err)
@@ -106,7 +107,7 @@ func (r *UserTraitRepository) GetByUserIDAndTraitType(ctx context.Context, userI
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user trait not found")
 		}
 		return nil, fmt.Errorf("failed to get user trait: %w", err)
@@ -128,7 +129,7 @@ func (r *UserTraitRepository) Update(ctx context.Context, id int64, req *models.
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user trait not found")
 		}
 		return nil, fmt.Errorf("failed to update user trait: %w", err)

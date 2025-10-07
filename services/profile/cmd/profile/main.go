@@ -26,7 +26,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}
-	defer logger.Sync()
+	defer func() {
+		_ = logger.Sync()
+	}()
 
 	cfg := config.LoadProfile()
 
@@ -95,7 +97,8 @@ func main() {
 }
 
 func ctxWithTimeout(d time.Duration) context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), d)
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	defer cancel()
 	return ctx
 }
 
@@ -106,19 +109,15 @@ func setupRoutes(router *gin.Engine, profileHandler *handlers.ProfileHandler, he
 
 	// API routes
 	api := router.Group("/api/v1")
-	{
-		// User routes
-		users := api.Group("/users")
-		{
-			users.POST("", profileHandler.CreateUser)
-			users.GET("", profileHandler.ListUsers)
-			users.GET("/:id", profileHandler.GetUser)
-			users.PUT("/:id", profileHandler.UpdateUser)
-			users.DELETE("/:id", profileHandler.DeleteUser)
-			users.PUT("/:id/last-seen", profileHandler.UpdateLastSeen)
-			users.GET("/:id/completion", profileHandler.GetUserProfileCompletion)
-			users.GET("/telegram/:telegram_id", profileHandler.GetUserByTelegramID)
-			users.GET("/discord/:discord_id", profileHandler.GetUserByDiscordID)
-		}
-	}
+	// User routes
+	users := api.Group("/users")
+	users.POST("", profileHandler.CreateUser)
+	users.GET("", profileHandler.ListUsers)
+	users.GET("/:id", profileHandler.GetUser)
+	users.PUT("/:id", profileHandler.UpdateUser)
+	users.DELETE("/:id", profileHandler.DeleteUser)
+	users.PUT("/:id/last-seen", profileHandler.UpdateLastSeen)
+	users.GET("/:id/completion", profileHandler.GetUserProfileCompletion)
+	users.GET("/telegram/:telegram_id", profileHandler.GetUserByTelegramID)
+	users.GET("/discord/:discord_id", profileHandler.GetUserByDiscordID)
 }

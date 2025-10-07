@@ -20,12 +20,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("db connect error: %v", err)
 	}
-	defer pool.Close()
 
 	// Run migrations (matching schema: match_queue, tasks)
 	if err := db.RunMigrations(cfg); err != nil {
+		pool.Close()
 		log.Fatalf("migrations error: %v", err)
 	}
+	defer pool.Close()
 
 	// HTTP server
 	srv := server.New(cfg.HTTPPort, pool)
@@ -48,6 +49,7 @@ func main() {
 }
 
 func ctxWithTimeout(d time.Duration) context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), d)
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	defer cancel()
 	return ctx
 }

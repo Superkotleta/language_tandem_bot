@@ -131,7 +131,6 @@ func (s *AdminFunctionsSuite) TestAdminBulkOperations() {
 		{12367, "bulkuser3", "BulkUser3", "Third processed feedback message with sufficient length."},
 	}
 
-	var feedbackIDs []int
 	for _, userData := range users {
 		user, err := s.service.HandleUserRegistration(userData.telegramID, userData.username, userData.firstName, "en")
 		assert.NoError(s.T(), err)
@@ -143,7 +142,7 @@ func (s *AdminFunctionsSuite) TestAdminBulkOperations() {
 		feedbacks, err := s.service.DB.GetUserFeedbackByUserID(user.ID)
 		assert.NoError(s.T(), err)
 		feedbackID := feedbacks[0]["id"].(int)
-		feedbackIDs = append(feedbackIDs, feedbackID)
+		_ = feedbackID // используется позже для проверки удаления
 
 		err = s.service.MarkFeedbackProcessed(feedbackID, "Processed by admin")
 		assert.NoError(s.T(), err)

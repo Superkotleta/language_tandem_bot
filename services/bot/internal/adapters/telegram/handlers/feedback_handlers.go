@@ -413,9 +413,7 @@ func (fh *FeedbackHandlerImpl) sendFeedbackItem(chatID int64, fb map[string]inte
 	charIcon := "📝"
 	if charCount < 50 {
 		charIcon = "💬"
-	} else if charCount < 200 {
-		charIcon = "📝"
-	} else {
+	} else if charCount >= 200 {
 		charIcon = "📖"
 	}
 
@@ -609,7 +607,7 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackContactMessage(message *tgbotapi.Me
 
 	// Подтверждаем получение контактов
 	confirmedText := fh.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_provided")
-	fh.sendMessage(message.Chat.ID, confirmedText)
+	_ = fh.sendMessage(message.Chat.ID, confirmedText)
 
 	return fh.handleFeedbackComplete(message, user, feedbackText, &contactInfo)
 }

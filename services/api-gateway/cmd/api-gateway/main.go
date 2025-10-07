@@ -24,7 +24,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}
-	defer logger.Sync()
+	defer func() {
+		_ = logger.Sync()
+	}()
 
 	// Load configuration
 	cfg := config.LoadAPIGateway()
@@ -72,29 +74,27 @@ func main() {
 
 	// API routes
 	api := router.Group("/api/v1")
-	{
-		// Profile service routes
-		api.Any("/users", profileHandler.Forward)
-		api.Any("/users/*path", profileHandler.Forward)
-		api.Any("/languages", profileHandler.Forward)
-		api.Any("/languages/*path", profileHandler.Forward)
-		api.Any("/interests", profileHandler.Forward)
-		api.Any("/interests/*path", profileHandler.Forward)
-		api.Any("/preferences", profileHandler.Forward)
-		api.Any("/preferences/*path", profileHandler.Forward)
-		api.Any("/traits", profileHandler.Forward)
-		api.Any("/traits/*path", profileHandler.Forward)
-		api.Any("/availability", profileHandler.Forward)
-		api.Any("/availability/*path", profileHandler.Forward)
+	// Profile service routes
+	api.Any("/users", profileHandler.Forward)
+	api.Any("/users/*path", profileHandler.Forward)
+	api.Any("/languages", profileHandler.Forward)
+	api.Any("/languages/*path", profileHandler.Forward)
+	api.Any("/interests", profileHandler.Forward)
+	api.Any("/interests/*path", profileHandler.Forward)
+	api.Any("/preferences", profileHandler.Forward)
+	api.Any("/preferences/*path", profileHandler.Forward)
+	api.Any("/traits", profileHandler.Forward)
+	api.Any("/traits/*path", profileHandler.Forward)
+	api.Any("/availability", profileHandler.Forward)
+	api.Any("/availability/*path", profileHandler.Forward)
 
-		// Bot service routes
-		api.Any("/bot", botHandler.Forward)
-		api.Any("/bot/*path", botHandler.Forward)
-		api.Any("/telegram", botHandler.Forward)
-		api.Any("/telegram/*path", botHandler.Forward)
-		api.Any("/discord", botHandler.Forward)
-		api.Any("/discord/*path", botHandler.Forward)
-	}
+	// Bot service routes
+	api.Any("/bot", botHandler.Forward)
+	api.Any("/bot/*path", botHandler.Forward)
+	api.Any("/telegram", botHandler.Forward)
+	api.Any("/telegram/*path", botHandler.Forward)
+	api.Any("/discord", botHandler.Forward)
+	api.Any("/discord/*path", botHandler.Forward)
 
 	// Start server
 	srv := server.New(cfg.HTTPPort, router)

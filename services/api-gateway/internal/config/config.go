@@ -5,6 +5,13 @@ import (
 	"strconv"
 )
 
+const (
+	// DefaultServiceTimeout is the default timeout for backend services in seconds.
+	DefaultServiceTimeout = 30
+	// DefaultRateLimitBurst is the default burst size for rate limiting.
+	DefaultRateLimitBurst = 20
+)
+
 // Config represents the API Gateway configuration.
 type Config struct {
 	HTTPPort        string
@@ -59,16 +66,16 @@ func LoadAPIGateway() *Config {
 		Debug:    getEnvBool("DEBUG", false),
 		ProfileService: ServiceConfig{
 			URL:     getEnv("PROFILE_SERVICE_URL", "http://localhost:8081"),
-			Timeout: getEnvInt("PROFILE_SERVICE_TIMEOUT", 30),
+			Timeout: getEnvInt("PROFILE_SERVICE_TIMEOUT", DefaultServiceTimeout),
 		},
 		BotService: ServiceConfig{
 			URL:     getEnv("BOT_SERVICE_URL", "http://localhost:8082"),
-			Timeout: getEnvInt("BOT_SERVICE_TIMEOUT", 30),
+			Timeout: getEnvInt("BOT_SERVICE_TIMEOUT", DefaultServiceTimeout),
 		},
 		RateLimitConfig: RateLimitConfig{
 			Enabled:           getEnvBool("RATE_LIMIT_ENABLED", true),
 			RequestsPerMinute: getEnvInt("RATE_LIMIT_RPM", 100),
-			BurstSize:         getEnvInt("RATE_LIMIT_BURST", 20),
+			BurstSize:         getEnvInt("RATE_LIMIT_BURST", DefaultRateLimitBurst),
 		},
 	}
 }

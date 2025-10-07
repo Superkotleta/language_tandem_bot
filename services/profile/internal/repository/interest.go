@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -54,7 +55,7 @@ func (r *InterestRepository) GetByID(ctx context.Context, id int64) (*models.Int
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("interest not found")
 		}
 		return nil, fmt.Errorf("failed to get interest: %w", err)
@@ -75,7 +76,7 @@ func (r *InterestRepository) GetByName(ctx context.Context, name string) (*model
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("interest not found")
 		}
 		return nil, fmt.Errorf("failed to get interest by name: %w", err)
@@ -189,7 +190,7 @@ func (r *InterestRepository) Update(ctx context.Context, id int64, name, categor
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("interest not found")
 		}
 		return nil, fmt.Errorf("failed to update interest: %w", err)

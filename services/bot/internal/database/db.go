@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"language-exchange-bot/internal/models"
 
+	// PostgreSQL driver
 	_ "github.com/lib/pq"
 )
 

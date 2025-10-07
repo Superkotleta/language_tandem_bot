@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -78,7 +79,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (*models.User, e
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, fmt.Errorf("failed to get user: %w", err)
@@ -103,7 +104,7 @@ func (r *UserRepository) GetByTelegramID(ctx context.Context, telegramID int64) 
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, fmt.Errorf("failed to get user by telegram ID: %w", err)
@@ -128,7 +129,7 @@ func (r *UserRepository) GetByDiscordID(ctx context.Context, discordID int64) (*
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, fmt.Errorf("failed to get user by discord ID: %w", err)
@@ -238,7 +239,7 @@ func (r *UserRepository) Update(ctx context.Context, id int64, req *models.Updat
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, fmt.Errorf("failed to update user: %w", err)
