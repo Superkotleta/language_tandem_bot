@@ -26,7 +26,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}
-	defer logger.Sync()
+	defer func() {
+		_ = logger.Sync() // Игнорируем ошибку при закрытии логгера
+	}()
 
 	cfg := config.LoadProfile()
 
@@ -95,7 +97,8 @@ func main() {
 }
 
 func ctxWithTimeout(d time.Duration) context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), d)
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	defer cancel()
 	return ctx
 }
 

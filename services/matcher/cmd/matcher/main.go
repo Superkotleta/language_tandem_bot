@@ -24,6 +24,7 @@ func main() {
 
 	// Run migrations (matching schema: match_queue, tasks)
 	if err := db.RunMigrations(cfg); err != nil {
+		pool.Close() // Close pool before fatal exit
 		log.Fatalf("migrations error: %v", err)
 	}
 
@@ -48,6 +49,7 @@ func main() {
 }
 
 func ctxWithTimeout(d time.Duration) context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), d)
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	defer cancel()
 	return ctx
 }

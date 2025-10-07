@@ -12,12 +12,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-const (
-	feedbackTypeActive  = "active"
-	feedbackTypeArchive = "archive"
-	feedbackTypeAll     = "all"
-)
-
 // AdminHandler интерфейс для обработки административных функций.
 type AdminHandler interface {
 	ShowFeedbackStatisticsEdit(callback *tgbotapi.CallbackQuery, user *models.User) error

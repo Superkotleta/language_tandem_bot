@@ -20,8 +20,9 @@ func getEnv(key, def string) string {
 }
 
 func LoadMatcher() *Config {
+	defaultDBURL := "postgres://matching_rw:matching_pwd@postgres:5432/languagebot?sslmode=disable"
 	return &Config{
-		DatabaseURL:   getEnv("DATABASE_URL", "postgres://matching_rw:matching_pwd@postgres:5432/languagebot?sslmode=disable"),
+		DatabaseURL:   getEnv("DATABASE_URL", defaultDBURL),
 		DBSchema:      getEnv("DB_SCHEMA", "matching"),
 		MigrationsDir: getEnv("MIGRATIONS_DIR", "/migrations/matching"),
 		HTTPPort:      getEnv("HTTP_PORT", "8082"),

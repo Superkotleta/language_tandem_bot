@@ -70,7 +70,7 @@ func (h *ProfileHandler) GetUser(c *gin.Context) {
 
 	user, err := h.profileService.GetUser(c.Request.Context(), id)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if err.Error() == errUserNotFound {
 			c.JSON(http.StatusNotFound, ErrorResponse{
 				Error:   "User not found",
 				Message: err.Error(),
@@ -101,7 +101,7 @@ func (h *ProfileHandler) GetUserByTelegramID(c *gin.Context) {
 
 	user, err := h.profileService.GetUserByTelegramID(c.Request.Context(), telegramID)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if err.Error() == errUserNotFound {
 			c.JSON(http.StatusNotFound, ErrorResponse{
 				Error:   "User not found",
 				Message: err.Error(),
@@ -132,7 +132,7 @@ func (h *ProfileHandler) GetUserByDiscordID(c *gin.Context) {
 
 	user, err := h.profileService.GetUserByDiscordID(c.Request.Context(), discordID)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if err.Error() == errUserNotFound {
 			c.JSON(http.StatusNotFound, ErrorResponse{
 				Error:   "User not found",
 				Message: err.Error(),
@@ -181,7 +181,7 @@ func (h *ProfileHandler) UpdateUser(c *gin.Context) {
 
 	user, err := h.profileService.UpdateUser(c.Request.Context(), id, &req)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if err.Error() == errUserNotFound {
 			c.JSON(http.StatusNotFound, ErrorResponse{
 				Error:   "User not found",
 				Message: err.Error(),
@@ -212,7 +212,7 @@ func (h *ProfileHandler) DeleteUser(c *gin.Context) {
 
 	err = h.profileService.DeleteUser(c.Request.Context(), id)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if err.Error() == errUserNotFound {
 			c.JSON(http.StatusNotFound, ErrorResponse{
 				Error:   "User not found",
 				Message: err.Error(),
@@ -275,7 +275,7 @@ func (h *ProfileHandler) UpdateLastSeen(c *gin.Context) {
 
 	err = h.profileService.UpdateLastSeen(c.Request.Context(), id)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if err.Error() == errUserNotFound {
 			c.JSON(http.StatusNotFound, ErrorResponse{
 				Error:   "User not found",
 				Message: err.Error(),
@@ -306,7 +306,7 @@ func (h *ProfileHandler) GetUserProfileCompletion(c *gin.Context) {
 
 	score, err := h.profileService.GetUserProfileCompletion(c.Request.Context(), id)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if err.Error() == errUserNotFound {
 			c.JSON(http.StatusNotFound, ErrorResponse{
 				Error:   "User not found",
 				Message: err.Error(),

@@ -8,6 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	defaultIdleTimeout = 60 // seconds
+)
+
 // Server represents the HTTP server for Bot API.
 type Server struct {
 	port   string
@@ -31,7 +35,7 @@ func (s *Server) Start() error {
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		IdleTimeout:       defaultIdleTimeout * time.Second,
 	}
 	return s.srv.ListenAndServe()
 }

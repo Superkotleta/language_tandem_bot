@@ -185,7 +185,7 @@ func CleanupTestData(db *sql.DB) {
 
 	for _, table := range tables {
 		// Используем fmt.Sprintf для формирования запроса, так как имя таблицы не может быть параметром
-		// #nosec G202 - это тестовый код с фиксированным списком таблиц
+		// nolint:gosec // G201 - это тестовый код с фиксированным списком таблиц
 		query := fmt.Sprintf("DELETE FROM %s WHERE telegram_id >= $1 AND telegram_id <= $2", table)
 		_, err := db.Exec(query, 12345, 99999)
 		if err != nil {

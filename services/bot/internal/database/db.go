@@ -352,7 +352,10 @@ func (db *DB) GetAllFeedback() ([]map[string]interface{}, error) {
 			firstName     string
 		)
 
-		err := rows.Scan(&id, &feedbackText, &contactInfo, &createdAt, &isProcessed, &adminResponse, &username, &telegramID, &firstName)
+		err := rows.Scan(
+			&id, &feedbackText, &contactInfo, &createdAt, &isProcessed,
+			&adminResponse, &username, &telegramID, &firstName,
+		)
 		if err != nil {
 			continue // Пропускаем ошибочные записи
 		}

@@ -390,34 +390,33 @@ func (ph *ProfileHandlerImpl) HandleEditNativeLanguage(callback *tgbotapi.Callba
 		)
 		_, err := ph.bot.Request(editMsg)
 		return err
-	} else {
-		// Если выбран не русский, автоматически устанавливаем русский как изучаемый
-		err := ph.service.DB.UpdateUserTargetLanguage(user.ID, "ru")
-		if err != nil {
-			return err
-		}
-		user.TargetLanguageCode = "ru"
-
-		// Показываем подтверждение и предлагаем выбрать уровень
-		nativeLangName := ph.service.Localizer.GetLanguageName(langCode, user.InterfaceLanguageCode)
-		text := fmt.Sprintf("Родной язык: %s\nИзучаемый язык: Русский\n\nВыберите уровень владения русским языком:",
-			nativeLangName)
-
-		keyboard := ph.keyboardBuilder.CreateLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, "ru", "edit_level", false)
-
-		// Добавляем кнопки сохранить/отменить
-		saveRow := ph.keyboardBuilder.CreateSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
-		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
-
-		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
-			callback.Message.Chat.ID,
-			callback.Message.MessageID,
-			text,
-			keyboard,
-		)
-		_, err = ph.bot.Request(editMsg)
+	}
+	// Если выбран не русский, автоматически устанавливаем русский как изучаемый
+	err = ph.service.DB.UpdateUserTargetLanguage(user.ID, "ru")
+	if err != nil {
 		return err
 	}
+	user.TargetLanguageCode = "ru"
+
+	// Показываем подтверждение и предлагаем выбрать уровень
+	nativeLangName := ph.service.Localizer.GetLanguageName(langCode, user.InterfaceLanguageCode)
+	text := fmt.Sprintf("Родной язык: %s\nИзучаемый язык: Русский\n\nВыберите уровень владения русским языком:",
+		nativeLangName)
+
+	keyboard := ph.keyboardBuilder.CreateLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, "ru", "edit_level", false)
+
+	// Добавляем кнопки сохранить/отменить
+	saveRow := ph.keyboardBuilder.CreateSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		text,
+		keyboard,
+	)
+	_, err = ph.bot.Request(editMsg)
+	return err
 }
 
 // HandleEditTargetLanguage сохраняет выбор изучаемого языка.

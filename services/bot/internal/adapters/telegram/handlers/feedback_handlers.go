@@ -13,13 +13,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// Константы типов обратной связи (должны совпадать с admin_handlers.go).
-const (
-	feedbackTypeActive  = "active"
-	feedbackTypeArchive = "archive"
-	feedbackTypeAll     = "all"
-)
-
 // min возвращает минимальное из двух чисел.
 func min(a, b int) int {
 	if a < b {

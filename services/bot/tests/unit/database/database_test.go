@@ -210,7 +210,7 @@ func (t *TestDatabase) UpdateUserStatus(userID int, status string) error        
 func (t *TestDatabase) UpdateUserNativeLanguage(userID int, langCode string) error    { return nil }
 func (t *TestDatabase) UpdateUserTargetLanguage(userID int, langCode string) error    { return nil }
 func (t *TestDatabase) UpdateUserTargetLanguageLevel(userID int, level string) error  { return nil }
-func (t *TestDatabase) UpdateUserProfileCompletionLevel(userID int, level int) error  { return nil }
+func (t *TestDatabase) UpdateUserProfileCompletionLevel(userID, level int) error { return nil }
 func (t *TestDatabase) ResetUserProfile(userID int) error                             { return nil }
 func (t *TestDatabase) GetLanguages() ([]*models.Language, error)                     { return nil, nil }
 func (t *TestDatabase) GetLanguageByCode(code string) (*models.Language, error)       { return nil, nil }

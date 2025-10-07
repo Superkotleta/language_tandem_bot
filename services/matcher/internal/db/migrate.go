@@ -1,13 +1,14 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 
 	"matcher/internal/config"
 
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres" // PostgreSQL driver for migrations
+	_ "github.com/golang-migrate/migrate/v4/source/file"       // File source driver for migrations
 )
 
 func RunMigrations(cfg *config.Config) error {
@@ -17,7 +18,7 @@ func RunMigrations(cfg *config.Config) error {
 		return fmt.Errorf("migrate.New: %w", err)
 	}
 	defer m.Close()
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("m.Up: %w", err)
 	}
 	return nil
