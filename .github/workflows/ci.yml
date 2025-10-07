@@ -9,9 +9,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Ограничение времени
     strategy:
       matrix:
         go-version: [1.24.4]
+        service: [bot, matcher, profile]  # Параллельная сборка сервисов
 
     services:
       postgres:
@@ -67,25 +69,45 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        # Запускаем тесты для каждого сервиса отдельно
-        cd services/bot && go test -race -coverprofile=coverage-bot.out -covermode=atomic ./...
-        cd ../matcher && go test -race -coverprofile=coverage-matcher.out -covermode=atomic ./...
-        cd ../profile && go test -race -coverprofile=coverage-profile.out -covermode=atomic ./...
-        
-        # Объединяем coverage отчеты
-        cd ../../
-        echo "mode: atomic" > coverage.out
-        cat services/bot/coverage-bot.out | grep -v "mode:" >> coverage.out
-        cat services/matcher/coverage-matcher.out | grep -v "mode:" >> coverage.out  
-        cat services/profile/coverage-profile.out | grep -v "mode:" >> coverage.out
+        # Тестируем только текущий сервис из matrix
+        cd services/${{ matrix.service }}
+        go test -race -coverprofile=coverage-${{ matrix.service }}.out -covermode=atomic ./...
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
-        file: ./coverage.out
+        file: ./services/${{ matrix.service }}/coverage-${{ matrix.service }}.out
         flags: unittests
-        name: codecov-umbrella
+        name: codecov-${{ matrix.service }}
         fail_ci_if_error: false
+    
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const coverage = fs.readFileSync('coverage.out', 'utf8');
+          const lines = coverage.split('\n');
+          const totalLine = lines.find(line => line.includes('total:'));
+          const coveragePercent = totalLine ? totalLine.split(/\s+/)[2] : 'Unknown';
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## 📊 Test Coverage Report
+            
+            **Total Coverage: ${coveragePercent}**
+            
+            <details>
+            <summary>📋 Detailed Coverage</summary>
+            
+            \`\`\`
+            ${coverage}
+            \`\`\`
+            </details>`
+          });
 
     - name: Generate coverage report
       run: |
@@ -112,12 +134,49 @@ jobs:
 
     - name: Build application
       run: |
-        cd services/bot
-        go build -v ./cmd/bot
+        cd services/${{ matrix.service }}
+        if [ -d "cmd" ]; then
+          go build -v ./cmd/*
+        else
+          go build -v .
+        fi
+
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports
+        path: services/${{ matrix.service }}/coverage-${{ matrix.service }}.out
+        retention-days: 7
 
     - name: Build Docker image
+      if: matrix.service == 'bot'  # Собираем Docker только для bot сервиса
       run: |
         docker build -t language-exchange-bot:test ./services/bot
+
+  coverage-report:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download coverage artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: coverage-reports
+        path: ./coverage-reports
+    
+    - name: Combine coverage reports
+      run: |
+        echo "mode: atomic" > combined-coverage.out
+        find ./coverage-reports -name "coverage-*.out" -exec cat {} \; | grep -v "mode:" >> combined-coverage.out
+    
+    - name: Upload combined coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./combined-coverage.out
+        flags: unittests
+        name: codecov-combined
+        fail_ci_if_error: false
 
   integration-test:
     runs-on: ubuntu-latest

@@ -1,0 +1,73 @@
+name: Monitoring & Alerts
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Каждые 5 минут
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check production health
+      run: |
+        # Проверяем health endpoints
+        HEALTH_URL="${{ secrets.SERVER_URL }}/healthz"
+        READY_URL="${{ secrets.SERVER_URL }}/readyz"
+        
+        echo "🔍 Checking production health..."
+        
+        # Health check
+        if curl -f -s --max-time 10 "$HEALTH_URL" > /dev/null; then
+          echo "✅ Health check passed"
+        else
+          echo "❌ Health check failed"
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"🚨 Language Exchange Bot Health Check Failed!"}' \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+          exit 1
+        fi
+        
+        # Readiness check
+        if curl -f -s --max-time 10 "$READY_URL" > /dev/null; then
+          echo "✅ Readiness check passed"
+        else
+          echo "❌ Readiness check failed"
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"🚨 Language Exchange Bot Readiness Check Failed!"}' \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+          exit 1
+        fi
+    
+    - name: Performance metrics
+      run: |
+        # Собираем метрики производительности
+        API_URL="${{ secrets.SERVER_URL }}/api/v1/stats"
+        
+        echo "📊 Collecting performance metrics..."
+        
+        RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' "$API_URL")
+        echo "Response time: ${RESPONSE_TIME}s"
+        
+        # Если ответ медленнее 2 секунд - алерт
+        if (( $(echo "$RESPONSE_TIME > 2.0" | bc -l) )); then
+          echo "⚠️ Slow response detected: ${RESPONSE_TIME}s"
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"⚠️ Language Exchange Bot Slow Response: ${RESPONSE_TIME}s\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+        fi
+    
+    - name: Database connectivity
+      run: |
+        # Проверяем подключение к БД через API
+        DB_URL="${{ secrets.SERVER_URL }}/api/v1/stats"
+        
+        if curl -f -s --max-time 10 "$DB_URL" > /dev/null; then
+          echo "✅ Database connectivity OK"
+        else
+          echo "❌ Database connectivity failed"
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"🚨 Language Exchange Bot Database Connection Failed!"}' \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+        fi

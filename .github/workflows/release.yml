@@ -1,0 +1,70 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # v1.0.0, v1.2.3, etc.
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Полная история для генерации changelog
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.24.4
+    
+    - name: Build binaries
+      run: |
+        # Собираем для разных платформ
+        GOOS=linux GOARCH=amd64 go build -o bin/language-exchange-bot-linux-amd64 ./services/bot/cmd/bot
+        GOOS=windows GOARCH=amd64 go build -o bin/language-exchange-bot-windows-amd64.exe ./services/bot/cmd/bot
+        GOOS=darwin GOARCH=amd64 go build -o bin/language-exchange-bot-darwin-amd64 ./services/bot/cmd/bot
+        GOOS=darwin GOARCH=arm64 go build -o bin/language-exchange-bot-darwin-arm64 ./services/bot/cmd/bot
+    
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Генерируем changelog из git log
+        git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD > CHANGELOG.md
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        cat CHANGELOG.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        body: |
+          ## 🚀 Language Exchange Bot ${{ github.ref_name }}
+          
+          ### 📋 Changes
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ### 📦 Downloads
+          - **Linux AMD64**: `language-exchange-bot-linux-amd64`
+          - **Windows AMD64**: `language-exchange-bot-windows-amd64.exe`
+          - **macOS AMD64**: `language-exchange-bot-darwin-amd64`
+          - **macOS ARM64**: `language-exchange-bot-darwin-arm64`
+          
+          ### 🐳 Docker
+          ```bash
+          docker pull your-username/language-exchange-bot:${{ github.ref_name }}
+          ```
+          
+          ### 📚 Documentation
+          - [API Documentation](https://github.com/${{ github.repository }}/blob/main/api/README.md)
+          - [Architecture Guide](https://github.com/${{ github.repository }}/blob/main/ARCHITECTURE.md)
+        files: |
+          bin/language-exchange-bot-linux-amd64
+          bin/language-exchange-bot-windows-amd64.exe
+          bin/language-exchange-bot-darwin-amd64
+          bin/language-exchange-bot-darwin-arm64
+        draft: false
+        prerelease: false

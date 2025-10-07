@@ -1,0 +1,76 @@
+name: Performance Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Каждый понедельник в 2:00
+  workflow_dispatch:
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: language_exchange_test
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.24.4
+    
+    - name: Install performance tools
+      run: |
+        go install github.com/tsenart/vegeta@latest
+        go install github.com/rakyll/hey@latest
+    
+    - name: Build application
+      run: |
+        cd services/bot
+        go build -o bot ./cmd/bot
+    
+    - name: Start application
+      run: |
+        cd services/bot
+        ./bot &
+        sleep 10  # Wait for startup
+    
+    - name: Load test with Vegeta
+      run: |
+        echo "GET http://localhost:8080/healthz" | vegeta attack -duration=30s -rate=100 | vegeta report
+    
+    - name: Load test with Hey
+      run: |
+        hey -n 1000 -c 10 http://localhost:8080/healthz
+    
+    - name: Memory profiling
+      run: |
+        cd services/bot
+        go test -bench=. -benchmem -memprofile=mem.prof ./...
+        go tool pprof -text -alloc_space mem.prof > memory-report.txt
+    
+    - name: CPU profiling
+      run: |
+        cd services/bot
+        go test -bench=. -cpuprofile=cpu.prof ./...
+        go tool pprof -text cpu.prof > cpu-report.txt
+    
+    - name: Upload performance reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-reports
+        path: |
+          services/bot/memory-report.txt
+          services/bot/cpu-report.txt
