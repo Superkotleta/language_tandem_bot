@@ -28,8 +28,8 @@ jobs:
         context: ./services/bot
         push: true
         tags: |
-          your-username/language-exchange-bot:latest
-          your-username/language-exchange-bot:${{ github.sha }}
+          ${{ secrets.DOCKER_USERNAME }}/language-exchange-bot:latest
+          ${{ secrets.DOCKER_USERNAME }}/language-exchange-bot:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
@@ -40,12 +40,17 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
-          cd /opt/language-exchange-bot
-          docker-compose pull
-          docker-compose up -d
+          cd /opt/language-exchange-bot/services/deploy
+          # Обновляем образ bot сервиса
+          docker pull ${{ secrets.DOCKER_USERNAME }}/language-exchange-bot:latest
+          # Перезапускаем только bot сервис
+          docker-compose up -d --no-deps bot
+          # Очищаем неиспользуемые образы
           docker system prune -f
     
     - name: Health check
       run: |
         sleep 30
-        curl -f ${{ secrets.SERVER_URL }}/healthz || exit 1
+        # Проверяем health endpoint bot сервиса
+        curl -f http://${{ secrets.SERVER_HOST }}:8080/healthz || exit 1
+        echo "✅ Bot service is healthy and ready!"

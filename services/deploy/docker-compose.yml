@@ -38,9 +38,7 @@ services:
       - app-network
 
   bot:
-    build:
-      context: ../bot
-      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME:-your-username}/language-exchange-bot:latest
     env_file:
       - ./.env
     environment:
@@ -52,6 +50,8 @@ services:
       ADMIN_CHAT_IDS: ${ADMIN_CHAT_IDS}
       ADMIN_USERNAMES: ${ADMIN_USERNAMES}
       LOCALES_DIR: ${LOCALES_DIR:-./locales}
+    ports:
+      - "8080:8080"  # Для health check endpoints
     depends_on:
       postgres:
         condition: service_healthy
