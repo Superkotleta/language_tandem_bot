@@ -75,7 +75,7 @@ func main() {
 	// Start bots с общим сервисом
 	bots, wg, _ := startBotsWithService(ctx, cfg, service, errorHandler)
 
-	waitForShutdown(bots, wg, adminServer, cancel)
+	waitForShutdown(bots, wg, adminServer, ctx, cancel)
 }
 
 // initializeService создает общий сервис для всех компонентов
@@ -188,7 +188,14 @@ func startAdminServerWithService(cfg *config.Config, service *core.BotService, e
 }
 
 // waitForShutdown ждет завершения работы ботов и admin сервера.
-func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, adminServer *server.AdminServer, cancel context.CancelFunc) {
+func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, adminServer *server.AdminServer, ctx context.Context, cancel context.CancelFunc) {
+	// Если нет запущенных ботов, но есть admin API, ждем сигнала shutdown
+	if len(bots) == 0 {
+		log.Println("No bots running, waiting for shutdown signal...")
+		<-ctx.Done()
+		return
+	}
+
 	// Ждем завершения всех горутин
 	done := make(chan struct{})
 	go func() {
@@ -255,31 +262,32 @@ func startBotsWithService(
 	if cfg.EnableTelegram && cfg.TelegramToken != "" {
 		telegramBot, err := initializeTelegramBotWithService(service, cfg, errorHandler)
 		if err != nil {
-			log.Fatalf("Failed to initialize Telegram bot: %v", err)
+			log.Printf("Failed to initialize Telegram bot, continuing with Admin API only: %v", err)
+		} else {
+
+			// Создаем handler для Telegram для admin server
+			telegramHandler := telegram.NewTelegramHandlerWithAdmins(
+				telegramBot.GetBotAPI(),
+				service,
+				cfg.AdminChatIDs,
+				cfg.AdminUsernames,
+				errorHandler,
+			)
+
+			// Запускаем бота
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				log.Printf("Starting Telegram bot...")
+				if err := telegramBot.Start(ctx); err != nil {
+					log.Printf("Telegram bot error: %v", err)
+				}
+				log.Printf("Telegram bot stopped")
+			}()
+
+			bots = append(bots, telegramBot)
+			return bots, &wg, telegramHandler
 		}
-
-		// Создаем handler для Telegram для admin server
-		telegramHandler := telegram.NewTelegramHandlerWithAdmins(
-			telegramBot.GetBotAPI(),
-			service,
-			cfg.AdminChatIDs,
-			cfg.AdminUsernames,
-			errorHandler,
-		)
-
-		// Запускаем бота
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			log.Printf("Starting Telegram bot...")
-			if err := telegramBot.Start(ctx); err != nil {
-				log.Printf("Telegram bot error: %v", err)
-			}
-			log.Printf("Telegram bot stopped")
-		}()
-
-		bots = append(bots, telegramBot)
-		return bots, &wg, telegramHandler
 	}
 
 	return bots, &wg, nil

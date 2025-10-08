@@ -34,7 +34,10 @@ services:
       - app-network
 
   bot:
-    image: ${DOCKER_USERNAME:-your-username}/language-exchange-bot:latest
+    build:
+      context: ../bot
+      dockerfile: Dockerfile
+    image: language-exchange-bot:optimized
     environment:
       # Без хардкодов в compose — берём из .env или из окружения рантайма
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
@@ -45,7 +48,7 @@ services:
       ADMIN_USERNAMES: ${ADMIN_USERNAMES}
       LOCALES_DIR: ${LOCALES_DIR:-./locales}
     ports:
-      - "8080:8080"  # Для health check endpoints
+      - "8081:8080"  # Для health check endpoints
     depends_on:
       postgres:
         condition: service_healthy
