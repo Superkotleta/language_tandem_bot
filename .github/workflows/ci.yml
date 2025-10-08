@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main, develop, handlers-refactoring ]
 
+permissions:
+  security-events: write
+  actions: read
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -239,29 +244,26 @@ jobs:
         if command -v docker &> /dev/null && docker compose version &> /dev/null; then
           cd services/deploy
 
-          # Create basic .env file for CI testing
-          echo "POSTGRES_DB=language_exchange_test" > .env.ci
-          echo "POSTGRES_USER=postgres" >> .env.ci
-          echo "POSTGRES_PASSWORD=test_password" >> .env.ci
-          echo "PGADMIN_EMAIL=admin@local.test" >> .env.ci
-          echo "PGADMIN_PASSWORD=test_password" >> .env.ci
-          echo "TELEGRAM_TOKEN=test_token" >> .env.ci
-          echo "DATABASE_URL=postgres://postgres:test_password@localhost:5432/language_exchange_test?sslmode=disable" >> .env.ci
-          echo "REDIS_URL=redis://redis:6379" >> .env.ci
-          echo "DEBUG=false" >> .env.ci
-          echo "ADMIN_CHAT_IDS=123456789" >> .env.ci
-          echo "ADMIN_USERNAMES=admin" >> .env.ci
-          echo "DOCKER_USERNAME=testuser" >> .env.ci
+          # Set environment variables for CI testing
+          export POSTGRES_DB=language_exchange_test
+          export POSTGRES_USER=postgres
+          export POSTGRES_PASSWORD=test_password
+          export PGADMIN_EMAIL=admin@local.test
+          export PGADMIN_PASSWORD=test_password
+          export TELEGRAM_TOKEN=test_token
+          export DATABASE_URL=postgres://postgres:test_password@localhost:5432/language_exchange_test?sslmode=disable
+          export REDIS_URL=redis://redis:6379
+          export DEBUG=false
+          export ADMIN_CHAT_IDS=123456789
+          export ADMIN_USERNAMES=admin
+          export DOCKER_USERNAME=testuser
 
-          # Use CI env file instead of missing .env
-          docker compose --env-file .env.ci up -d --build
+          # Start services with environment variables
+          docker compose up -d --build
           sleep 30  # Wait for services to start
 
           # Test health endpoints (pgAdmin)
           curl -f http://localhost:8080/ || (docker compose logs && exit 1)
-
-          # Clean up CI env file
-          rm .env.ci
         else
           echo "Docker Compose not available, skipping integration test"
         fi

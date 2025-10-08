@@ -2,6 +2,8 @@ package cache //nolint:testpackage
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -291,27 +293,29 @@ func TestService_ConcurrentAccess(t *testing.T) {
 	config := DefaultConfig()
 	service := NewService(config)
 
-	// Запускаем горутины для конкурентного доступа
-	done := make(chan bool, 10)
+	// Используем sync.WaitGroup для корректной синхронизации
+	var wg sync.WaitGroup
 
 	for i := 0; i < 10; i++ {
+		wg.Add(1)
 		go func(id int) {
-			defer func() { done <- true }()
+			defer wg.Done()
+
+			// Используем уникальный ключ для каждого горутина
+			langKey := fmt.Sprintf("ru_%d", id)
 
 			// Добавляем данные
-			languages := []*models.Language{{ID: id, Code: "ru"}}
-			service.SetLanguages(context.Background(), "ru", languages)
+			languages := []*models.Language{{ID: id, Code: langKey}}
+			service.SetLanguages(context.Background(), langKey, languages)
 
 			// Читаем данные
-			_, found := service.GetLanguages(context.Background(), "ru")
+			_, found := service.GetLanguages(context.Background(), langKey)
 			require.True(t, found)
 		}(i)
 	}
 
 	// Ждем завершения всех горутин
-	for i := 0; i < 10; i++ {
-		<-done
-	}
+	wg.Wait()
 
 	// Проверяем, что сервис не упал
 	stats := service.GetCacheStats(context.Background())

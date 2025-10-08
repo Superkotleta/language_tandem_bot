@@ -43,7 +43,6 @@ func TestRedisCacheServiceLanguages(t *testing.T) {
 }
 
 func TestRedisCacheServiceInterests(t *testing.T) {
-	t.Parallel()
 
 	redisCache := createRedisCacheService(t)
 	defer redisCache.Stop()
@@ -76,7 +75,6 @@ func TestRedisCacheServiceInterests(t *testing.T) {
 }
 
 func TestRedisCacheServiceUsers(t *testing.T) {
-	t.Parallel()
 
 	redisCache := createRedisCacheService(t)
 	defer redisCache.Stop()
@@ -123,7 +121,6 @@ func TestRedisCacheServiceUsers(t *testing.T) {
 }
 
 func TestRedisCacheServiceInvalidation(t *testing.T) {
-	t.Parallel()
 
 	redisCache := createRedisCacheService(t)
 	defer redisCache.Stop()
