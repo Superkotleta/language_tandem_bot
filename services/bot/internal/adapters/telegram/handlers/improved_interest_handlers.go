@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -293,7 +292,14 @@ func (h *ImprovedInterestHandler) HandleInterestSelection(callback *tgbotapi.Cal
 	// Переключаем выбор во временном хранилище
 	isSelected := h.tempStorage.ToggleInterest(user.ID, interestID)
 
-	log.Printf("User %d toggled interest %d: %v", user.ID, interestID, isSelected)
+	h.service.LoggingService.Telegram().InfoWithContext(
+		"User toggled interest",
+		generateRequestID("HandleInterestSelection"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"HandleInterestSelection",
+		map[string]interface{}{"userID": user.ID, "interestID": interestID, "isSelected": isSelected},
+	)
 
 	// Обновляем клавиатуру (получаем categoryKey из callback data)
 	// В реальной реализации нужно извлекать categoryKey из контекста
@@ -314,7 +320,14 @@ func (h *ImprovedInterestHandler) HandlePrimaryInterestSelection(callback *tgbot
 	// Переключаем статус основного во временном хранилище
 	isPrimary := h.tempStorage.TogglePrimary(user.ID, interestID)
 
-	log.Printf("User %d toggled primary status for interest %d: %v", user.ID, interestID, isPrimary)
+	h.service.LoggingService.Telegram().InfoWithContext(
+		"User toggled primary status for interest",
+		generateRequestID("HandlePrimaryInterestSelection"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"HandlePrimaryInterestSelection",
+		map[string]interface{}{"userID": user.ID, "interestID": interestID, "isPrimary": isPrimary},
+	)
 
 	// Обновляем клавиатуру выбора основных интересов
 	return h.updatePrimaryInterestsKeyboard(callback, user)
@@ -714,18 +727,39 @@ func (h *ImprovedInterestHandler) completeProfileSetup(callback *tgbotapi.Callba
 	// Обновляем состояние пользователя
 	err = h.service.DB.UpdateUserState(user.ID, models.StateActive)
 	if err != nil {
-		log.Printf("Error updating user state: %v", err)
+		h.service.LoggingService.Database().ErrorWithContext(
+			"Error updating user state",
+			generateRequestID("completeProfileSetup"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"completeProfileSetup",
+			map[string]interface{}{"userID": user.ID, "error": err.Error()},
+		)
 	}
 
 	err = h.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
 	if err != nil {
-		log.Printf("Error updating user status: %v", err)
+		h.service.LoggingService.Database().ErrorWithContext(
+			"Error updating user status",
+			generateRequestID("completeProfileSetup"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"completeProfileSetup",
+			map[string]interface{}{"userID": user.ID, "error": err.Error()},
+		)
 	}
 
 	// Обновляем уровень завершения профиля
 	err = h.updateProfileCompletionLevel(user.ID, localization.ProfileCompletionLevelComplete)
 	if err != nil {
-		log.Printf("Error updating profile completion level: %v", err)
+		h.service.LoggingService.Database().ErrorWithContext(
+			"Error updating profile completion level",
+			generateRequestID("completeProfileSetup"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"completeProfileSetup",
+			map[string]interface{}{"userID": user.ID, "error": err.Error()},
+		)
 	}
 
 	return nil

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 )
 
 // RateLimitConfig конфигурация rate limiter'а
@@ -21,10 +22,10 @@ type RateLimitConfig struct {
 // но обычно гораздо медленнее. При превышении - короткая блокировка для коррекции поведения.
 func DefaultRateLimitConfig() RateLimitConfig {
 	return RateLimitConfig{
-		MaxRequests:     20,               // 20 запросов (мягкий лимит для пиковых нагрузок)
-		WindowDuration:  time.Minute,      // в минуту
-		BlockDuration:   2 * time.Minute,  // блокировка на 2 минуты (короткая для мягкого режима)
-		CleanupInterval: 10 * time.Minute, // очистка каждые 10 минут
+		MaxRequests:     20,                                                 // 20 запросов (мягкий лимит для пиковых нагрузок)
+		WindowDuration:  localization.RateLimitWindowMinutes * time.Minute,  // в минуту
+		BlockDuration:   localization.RateLimitBlockMinutes * time.Minute,   // блокировка на 2 минуты (короткая для мягкого режима)
+		CleanupInterval: localization.RateLimitCleanupMinutes * time.Minute, // очистка каждые 10 минут
 	}
 }
 

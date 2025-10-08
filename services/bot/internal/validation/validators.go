@@ -5,41 +5,11 @@ import (
 	"regexp"
 	"strings"
 	"unicode/utf8"
+
+	"language-exchange-bot/internal/localization"
 )
 
-// Константы для валидации.
-const (
-	// minTelegramID - минимальный ID пользователя Telegram (обычно больше 100000000).
-	minTelegramID = 100000000
-
-	// maxUsernameLength - максимальная длина имени пользователя.
-	maxUsernameLength = 50
-
-	// maxBioLength - максимальная длина биографии пользователя.
-	maxBioLength = 500
-
-	// maxContactInfoLength - максимальная длина контактной информации.
-	maxContactInfoLength = 64
-
-	// maxCommandLength - максимальная длина команды.
-	maxCommandLength = 32
-
-	// maxStringLength - максимальная длина строки для валидации.
-	maxStringLength = 100
-
-	// maxInterestCount - максимальное количество интересов.
-	maxInterestCount = 10
-
-	// minTextLength - минимальная длина текста.
-	minTextLength = 10
-
-	// maxTextLength - максимальная длина текста.
-	maxTextLength = 1000
-
-	// Константы для валидации.
-	minStringLength    = 3
-	languageCodeLength = 2
-)
+// Validation constants are now centralized in localization/constants.go
 
 // Rule представляет правило валидации.
 type Rule struct {
@@ -106,13 +76,13 @@ func (v *Validator) validateStringRule(value, rule string) string {
 	case "required":
 		return v.validateRequired(value)
 	case "min:3":
-		return v.validateMinLength(value, minStringLength)
+		return v.validateMinLength(value, localization.MinStringLength)
 	case "max:50":
-		return v.validateMaxLength(value, maxUsernameLength, "50 символов")
+		return v.validateMaxLength(value, localization.MaxUsernameLength, "50 символов")
 	case "max:100":
-		return v.validateMaxLength(value, maxStringLength, "100 символов")
+		return v.validateMaxLength(value, localization.MaxStringLength, "100 символов")
 	case "max:500":
-		return v.validateMaxLength(value, maxBioLength, "500 символов")
+		return v.validateMaxLength(value, localization.MaxBioLength, "500 символов")
 	case "alphanumeric":
 		return v.validatePattern(value, `^[a-zA-Z0-9]+$`, "Только буквы и цифры")
 	case "username":
@@ -175,7 +145,7 @@ func (v *Validator) ValidateInt(value int, rules []string) []string {
 				errors = append(errors, "Минимум 1")
 			}
 		case "max:100":
-			if value > maxStringLength {
+			if value > localization.MaxStringLength {
 				errors = append(errors, "Максимум 100")
 			}
 		case "positive":
@@ -199,7 +169,7 @@ func (v *Validator) ValidateLanguageCode(code string) []string {
 	}
 
 	// Проверяем формат кода языка (2 символа)
-	if len(code) != languageCodeLength {
+	if len(code) != localization.LanguageCodeLength {
 		errors = append(errors, "Код языка должен содержать 2 символа")
 	}
 
@@ -219,8 +189,8 @@ func (v *Validator) ValidateTelegramID(telegramID int64) []string {
 		errors = append(errors, "Telegram ID должен быть положительным")
 	}
 
-	// Telegram ID обычно больше minTelegramID
-	if telegramID < minTelegramID {
+	// Telegram ID обычно больше MinTelegramID
+	if telegramID < localization.MinTelegramID {
 		errors = append(errors, "Некорректный Telegram ID")
 	}
 
@@ -305,11 +275,11 @@ func (v *Validator) ValidateFeedbackText(text string) []string {
 	}
 
 	textLength := utf8.RuneCountInString(strings.TrimSpace(text))
-	if textLength < minTextLength {
+	if textLength < localization.MinTextLength {
 		errors = append(errors, "Минимум 10 символов")
 	}
 
-	if textLength > maxTextLength {
+	if textLength > localization.MaxTextLength {
 		errors = append(errors, "Максимум 1000 символов")
 	}
 
@@ -326,7 +296,7 @@ func (v *Validator) ValidateCallbackData(data string) []string {
 		return errors
 	}
 
-	if len(data) > maxContactInfoLength {
+	if len(data) > localization.MaxContactInfoLength {
 		errors = append(errors, "Максимум 64 символа")
 	}
 

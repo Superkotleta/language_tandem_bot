@@ -2,12 +2,9 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
-	"language-exchange-bot/internal/core"
-	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -37,30 +34,21 @@ type AdminHandler interface {
 
 // AdminHandlerImpl реализация административного обработчика.
 type AdminHandlerImpl struct {
-	service         *core.BotService
-	bot             *tgbotapi.BotAPI
-	keyboardBuilder *KeyboardBuilder
-	adminChatIDs    []int64
-	adminUsernames  []string
-	errorHandler    *errors.ErrorHandler
+	base           *BaseHandler
+	adminChatIDs   []int64
+	adminUsernames []string
 }
 
 // NewAdminHandler создает новый административный обработчик.
 func NewAdminHandler(
-	service *core.BotService,
-	bot *tgbotapi.BotAPI,
-	keyboardBuilder *KeyboardBuilder,
+	base *BaseHandler,
 	adminChatIDs []int64,
 	adminUsernames []string,
-	errorHandler *errors.ErrorHandler,
 ) *AdminHandlerImpl {
 	return &AdminHandlerImpl{
-		service:         service,
-		bot:             bot,
-		keyboardBuilder: keyboardBuilder,
-		adminChatIDs:    adminChatIDs,
-		adminUsernames:  adminUsernames,
-		errorHandler:    errorHandler,
+		base:           base,
+		adminChatIDs:   adminChatIDs,
+		adminUsernames: adminUsernames,
 	}
 }
 
@@ -90,30 +78,24 @@ func (h *AdminHandlerImpl) IsAdmin(chatID int64, username string) bool {
 func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Проверяем права администратора
 	if !h.IsAdmin(callback.Message.Chat.ID, user.Username) {
-		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Данная команда доступна только администраторам бота.")
-		_, err := h.bot.Send(msg)
-
-		return err
+		// Используем MessageFactory для отправки сообщения об отказе доступа
+		return h.base.messageFactory.SendText(callback.Message.Chat.ID, "❌ Данная команда доступна только администраторам бота.")
 	}
 
 	// Получаем все отзывы
-	feedbacks, err := h.service.GetAllFeedback()
+	feedbacks, err := h.base.service.GetAllFeedback()
 	if err != nil {
-		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
-		_, sendErr := h.bot.Send(msg)
-
-		return sendErr
+		// Используем MessageFactory для отправки сообщения об ошибке
+		return h.base.messageFactory.SendText(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
 	if len(feedbacks) == 0 {
-		editMsg := tgbotapi.NewEditMessageText(
+		err = h.base.messageFactory.EditText(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
 			"📝 Отзывов пока нет",
 		)
-		_, editErr := h.bot.Request(editMsg)
-
-		return editErr
+		return err
 	}
 
 	// Подсчитываем статистику
@@ -136,16 +118,14 @@ func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.Callbac
 		totalCount, processedCount, pendingCount)
 
 	// Создаем клавиатуру для управления отзывами
-	keyboard := h.keyboardBuilder.CreateFeedbackAdminKeyboard(user.InterfaceLanguageCode)
+	keyboard := h.base.keyboardBuilder.CreateFeedbackAdminKeyboard(user.InterfaceLanguageCode)
 
-	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+	err = h.base.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		statsText,
-		keyboard,
+		&keyboard,
 	)
-	_, err = h.bot.Request(editMsg)
-
 	return err
 }
 
@@ -153,23 +133,33 @@ func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.Callbac
 func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	index, err := strconv.Atoi(indexStr)
 	if err != nil {
-		log.Printf("Ошибка парсинга индекса: %v", err)
+		h.base.service.LoggingService.Telegram().ErrorWithContext(
+			"Parse index error",
+			generateRequestID("HandleBrowseActiveFeedbacks"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"HandleBrowseActiveFeedbacks",
+			map[string]interface{}{"error": err.Error()},
+		)
 
-		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Ошибка индекса")
-		_, sendErr := h.bot.Send(msg)
-
-		return sendErr
+		// Используем MessageFactory для отправки сообщения об ошибке индекса
+		return h.base.messageFactory.SendText(callback.Message.Chat.ID, "❌ Ошибка индекса")
 	}
 
 	// Получаем активные отзывы
-	feedbacks, err := h.service.GetAllFeedback()
+	feedbacks, err := h.base.service.GetAllFeedback()
 	if err != nil {
-		log.Printf("Ошибка получения отзывов: %v", err)
+		h.base.service.LoggingService.Database().ErrorWithContext(
+			"Failed to get feedbacks",
+			generateRequestID("HandleBrowseActiveFeedbacks"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"HandleBrowseActiveFeedbacks",
+			map[string]interface{}{"error": err.Error()},
+		)
 
-		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
-		_, err := h.bot.Send(msg)
-
-		return err
+		// Используем MessageFactory для отправки сообщения об ошибке
+		return h.base.messageFactory.SendText(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
 	// Фильтруем только необработанные отзывы
@@ -201,10 +191,8 @@ func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.Callba
 	}
 
 	if len(activeFeedbacks) == 0 {
-		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "🎉 Все отзывы обработаны!")
-		_, err := h.bot.Send(msg)
-
-		return err
+		// Используем MessageFactory для отправки сообщения
+		return h.base.messageFactory.SendText(callback.Message.Chat.ID, "🎉 Все отзывы обработаны!")
 	}
 
 	// Проверяем границы
@@ -226,23 +214,33 @@ func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.Callba
 func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	index, err := strconv.Atoi(indexStr)
 	if err != nil {
-		log.Printf("Ошибка парсинга индекса: %v", err)
+		h.base.service.LoggingService.Telegram().ErrorWithContext(
+			"Parse index error",
+			generateRequestID("HandleBrowseActiveFeedbacks"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"HandleBrowseActiveFeedbacks",
+			map[string]interface{}{"error": err.Error()},
+		)
 
-		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Ошибка индекса")
-		_, sendErr := h.bot.Send(msg)
-
-		return sendErr
+		// Используем MessageFactory для отправки сообщения об ошибке индекса
+		return h.base.messageFactory.SendText(callback.Message.Chat.ID, "❌ Ошибка индекса")
 	}
 
 	// Получаем обработанные отзывы
-	feedbacks, err := h.service.GetAllFeedback()
+	feedbacks, err := h.base.service.GetAllFeedback()
 	if err != nil {
-		log.Printf("Ошибка получения отзывов: %v", err)
+		h.base.service.LoggingService.Database().ErrorWithContext(
+			"Failed to get feedbacks",
+			generateRequestID("HandleBrowseActiveFeedbacks"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"HandleBrowseActiveFeedbacks",
+			map[string]interface{}{"error": err.Error()},
+		)
 
-		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
-		_, err := h.bot.Send(msg)
-
-		return err
+		// Используем MessageFactory для отправки сообщения об ошибке
+		return h.base.messageFactory.SendText(callback.Message.Chat.ID, "❌ Ошибка получения отзывов")
 	}
 
 	// Фильтруем только обработанные отзывы
@@ -274,10 +272,8 @@ func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.Callb
 	}
 
 	if len(archivedFeedbacks) == 0 {
-		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "📝 Обработанных отзывов пока нет")
-		_, err := h.bot.Send(msg)
-
-		return err
+		// Используем MessageFactory для отправки сообщения
+		return h.base.messageFactory.SendText(callback.Message.Chat.ID, "📝 Обработанных отзывов пока нет")
 	}
 
 	// Проверяем границы
@@ -309,14 +305,12 @@ func (h *AdminHandlerImpl) ShowFeedbackItemWithNavigationEdit(
 	// Создаем клавиатуру навигации
 	keyboard := h.createFeedbackNavigationKeyboard(fb, currentIndex, totalCount, feedbackType)
 
-	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+	err := h.base.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		feedbackText,
-		keyboard,
+		&keyboard,
 	)
-	_, err := h.bot.Request(editMsg)
-
 	return err
 }
 

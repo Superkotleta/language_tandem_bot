@@ -25,6 +25,12 @@ const (
 	MaxBioLength         = 500
 	MaxContactInfoLength = 64
 	MaxCommandLength     = 32
+	MaxStringLength      = 100
+	MaxInterestCount     = 10
+	MinTextLength        = 10
+	MaxTextLength        = 1000
+	MinStringLength      = 3
+	LanguageCodeLength   = 2
 )
 
 // Bot Service Constants
@@ -34,12 +40,43 @@ const (
 	MaxFeedbackLength = 1000
 )
 
+// =============================================================================
+// TIME CONSTANTS (centralized time configuration)
+// =============================================================================
+// Future Enhancement: Consider moving these to a configurable file (YAML/JSON)
+// to allow runtime configuration without recompilation for different environments.
+// This would require a config loader and env var support.
+//
+// Current approach: Compile-time constants for maximum performance (zero allocation)
+// =============================================================================
+
 // Cache TTL Constants (in minutes)
-// Used in: services/bot/internal/cache/types.go
+// Used in: services/bot/internal/cache/types.go, services/bot/internal/cache/cache.go
 const (
-	TranslationsTTLMinutes = 30
-	UsersTTLMinutes        = 15
-	StatsTTLMinutes        = 5
+	TranslationsTTLMinutes = 30 // How long translations are cached (30 minutes)
+	UsersTTLMinutes        = 15 // How long user data is cached (15 minutes)
+	StatsTTLMinutes        = 5  // How long statistics are cached (5 minutes)
+	CacheCleanupMinutes    = 5  // Interval between cache cleanup operations (5 minutes)
+)
+
+// Rate Limiter Constants (in minutes and seconds)
+// Used in: services/bot/internal/adapters/telegram/rate_limiter.go
+const (
+	RateLimitWindowMinutes  = 1  // Time window for rate limiting (1 minute)
+	RateLimitBlockMinutes   = 2  // How long to block after exceeding limits (2 minutes)
+	RateLimitCleanupMinutes = 10 // Interval for cleaning up expired rate limit entries (10 minutes)
+)
+
+// Redis Connection Constants (in seconds)
+// Used in: services/bot/internal/cache/redis_cache.go
+const (
+	RedisDialTimeoutSeconds  = 5   // Timeout for establishing Redis connection (5 seconds)
+	RedisReadTimeoutSeconds  = 3   // Timeout for Redis read operations (3 seconds)
+	RedisWriteTimeoutSeconds = 3   // Timeout for Redis write operations (3 seconds)
+	RedisPoolSize            = 10  // Number of Redis connections in pool (10 connections)
+	RedisMaxRetries          = 3   // Maximum number of retry attempts (3 retries)
+	RedisMinRetryBackoffMs   = 8   // Minimum backoff between retries (8 milliseconds)
+	RedisMaxRetryBackoffMs   = 512 // Maximum backoff between retries (512 milliseconds)
 )
 
 // Circuit Breaker Constants

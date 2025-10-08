@@ -2,6 +2,8 @@ package validation
 
 import (
 	"strings"
+
+	"language-exchange-bot/internal/localization"
 )
 
 // MessageValidator валидирует сообщения и callback'и.
@@ -133,7 +135,7 @@ func (mv *MessageValidator) ValidateCommand(chatID, userID int64, command string
 	}
 
 	// Проверяем длину команды
-	if len(command) > maxCommandLength {
+	if len(command) > localization.MaxCommandLength {
 		result.AddError("command", "Команда слишком длинная")
 	}
 

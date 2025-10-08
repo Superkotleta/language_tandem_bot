@@ -2,6 +2,7 @@ package validation
 
 import (
 	"fmt"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 )
 
@@ -161,8 +162,8 @@ func (uv *UserValidator) ValidateUserInterests(interestIDs []int) *Result {
 		return result
 	}
 
-	if len(interestIDs) > maxInterestCount {
-		result.AddError("interests", fmt.Sprintf("Максимум %d интересов", maxInterestCount))
+	if len(interestIDs) > localization.MaxInterestCount {
+		result.AddError("interests", fmt.Sprintf("Максимум %d интересов", localization.MaxInterestCount))
 
 		return result
 	}

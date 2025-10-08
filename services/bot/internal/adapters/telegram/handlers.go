@@ -38,6 +38,7 @@ type TelegramHandler struct {
 	errorHandler           *errors.ErrorHandler
 	isolatedRouter         *CallbackRouter // Роутер для изолированных callback'ов
 	rateLimiter            *RateLimiter    // Rate limiter для защиты от спама
+	messageFactory         *handlers.MessageFactory
 }
 
 // NewTelegramHandler создает новый экземпляр TelegramHandler с базовой конфигурацией.
@@ -48,17 +49,25 @@ func NewTelegramHandler(
 	errorHandler *errors.ErrorHandler,
 ) *TelegramHandler {
 	keyboardBuilder := handlers.NewKeyboardBuilder(service)
-	menuHandler := handlers.NewMenuHandler(bot, service, keyboardBuilder, errorHandler)
-	profileHandler := handlers.NewProfileHandler(bot, service, keyboardBuilder, errorHandler)
-	feedbackHandler := handlers.NewFeedbackHandler(
+	messageFactory := handlers.NewMessageFactory(bot, errorHandler, service.LoggingService)
+
+	// Создаем общий BaseHandler
+	baseHandler := handlers.NewBaseHandler(
 		bot,
 		service,
 		keyboardBuilder,
+		errorHandler,
+		messageFactory,
+	)
+
+	menuHandler := handlers.NewMenuHandler(baseHandler)
+	profileHandler := handlers.NewProfileHandler(baseHandler)
+	feedbackHandler := handlers.NewFeedbackHandler(
+		baseHandler,
 		adminChatIDs,
 		make([]string, 0),
-		errorHandler,
 	)
-	languageHandler := handlers.NewLanguageHandler(service, bot, keyboardBuilder, errorHandler)
+	languageHandler := handlers.NewLanguageHandler(baseHandler)
 
 	var interestService *core.InterestService
 	if service.DB != nil {
@@ -67,7 +76,7 @@ func NewTelegramHandler(
 		interestService = nil // Для тестов без DB
 	}
 
-	interestHandler := handlers.NewNewInterestHandler(service, interestService, bot, keyboardBuilder, errorHandler)
+	interestHandler := handlers.NewNewInterestHandler(baseHandler, interestService)
 	profileInterestHandler := handlers.NewProfileInterestHandler(
 		service,
 		interestService,
@@ -83,9 +92,9 @@ func NewTelegramHandler(
 		errorHandler,
 		service.Cache,
 	)
-	adminHandler := handlers.NewAdminHandler(service, bot, keyboardBuilder, adminChatIDs, make([]string, 0), errorHandler)
-	utilityHandler := handlers.NewUtilityHandler(service, bot, errorHandler)
-	availabilityHandler := handlers.NewAvailabilityHandler(service, bot)
+	adminHandler := handlers.NewAdminHandler(baseHandler, adminChatIDs, make([]string, 0))
+	utilityHandler := handlers.NewUtilityHandler(baseHandler)
+	availabilityHandler := handlers.NewAvailabilityHandler(baseHandler)
 
 	// Создаем rate limiter для защиты от спама
 	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
@@ -111,6 +120,7 @@ func NewTelegramHandler(
 		errorHandler:           errorHandler,
 		isolatedRouter:         isolatedRouter,
 		rateLimiter:            rateLimiter,
+		messageFactory:         messageFactory,
 	}
 
 	// Настраиваем маршруты для изолированных callback'ов
@@ -130,30 +140,27 @@ func NewTelegramHandlerWithAdmins(
 	errorHandler *errors.ErrorHandler,
 ) *TelegramHandler {
 	keyboardBuilder := handlers.NewKeyboardBuilder(service)
-	menuHandler := handlers.NewMenuHandler(
+	messageFactory := handlers.NewMessageFactory(bot, errorHandler, service.LoggingService)
+
+	// Создаем общий BaseHandler
+	baseHandler := handlers.NewBaseHandler(
 		bot,
 		service,
 		keyboardBuilder,
 		errorHandler,
+		messageFactory,
 	)
-	profileHandler := handlers.NewProfileHandler(bot, service, keyboardBuilder, errorHandler)
+
+	menuHandler := handlers.NewMenuHandler(baseHandler)
+	profileHandler := handlers.NewProfileHandler(baseHandler)
 	feedbackHandler := handlers.NewFeedbackHandler(
-		bot,
-		service,
-		keyboardBuilder,
+		baseHandler,
 		adminChatIDs,
 		adminUsernames,
-		errorHandler,
 	)
-	languageHandler := handlers.NewLanguageHandler(service, bot, keyboardBuilder, errorHandler)
+	languageHandler := handlers.NewLanguageHandler(baseHandler)
 	interestService := core.NewInterestService(service.DB.GetConnection())
-	interestHandler := handlers.NewNewInterestHandler(
-		service,
-		interestService,
-		bot,
-		keyboardBuilder,
-		errorHandler,
-	)
+	interestHandler := handlers.NewNewInterestHandler(baseHandler, interestService)
 	profileInterestHandler := handlers.NewProfileInterestHandler(
 		service,
 		interestService,
@@ -169,20 +176,9 @@ func NewTelegramHandlerWithAdmins(
 		errorHandler,
 		service.Cache,
 	)
-	adminHandler := handlers.NewAdminHandler(
-		service,
-		bot,
-		keyboardBuilder,
-		adminChatIDs,
-		adminUsernames,
-		errorHandler,
-	)
-	utilityHandler := handlers.NewUtilityHandler(
-		service,
-		bot,
-		errorHandler,
-	)
-	availabilityHandler := handlers.NewAvailabilityHandler(service, bot)
+	adminHandler := handlers.NewAdminHandler(baseHandler, adminChatIDs, adminUsernames)
+	utilityHandler := handlers.NewUtilityHandler(baseHandler)
+	availabilityHandler := handlers.NewAvailabilityHandler(baseHandler)
 
 	// Создаем rate limiter для защиты от спама
 	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
@@ -208,6 +204,7 @@ func NewTelegramHandlerWithAdmins(
 		errorHandler:           errorHandler,
 		isolatedRouter:         isolatedRouter,
 		rateLimiter:            rateLimiter,
+		messageFactory:         messageFactory,
 	}
 
 	// Настраиваем маршруты для изолированных callback'ов

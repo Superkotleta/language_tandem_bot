@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"language-exchange-bot/internal/core"
-	customErrors "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -28,27 +27,18 @@ type NewInterestHandler interface {
 
 // NewInterestHandlerImpl реализация нового обработчика интересов.
 type NewInterestHandlerImpl struct {
-	service         *core.BotService
+	base            *BaseHandler
 	interestService *core.InterestService
-	bot             *tgbotapi.BotAPI
-	keyboardBuilder *KeyboardBuilder
-	errorHandler    *customErrors.ErrorHandler
 }
 
 // NewNewInterestHandler создает новый обработчик интересов.
 func NewNewInterestHandler(
-	service *core.BotService,
+	base *BaseHandler,
 	interestService *core.InterestService,
-	bot *tgbotapi.BotAPI,
-	keyboardBuilder *KeyboardBuilder,
-	errorHandler *customErrors.ErrorHandler,
 ) *NewInterestHandlerImpl {
 	return &NewInterestHandlerImpl{
-		service:         service,
+		base:            base,
 		interestService: interestService,
-		bot:             bot,
-		keyboardBuilder: keyboardBuilder,
-		errorHandler:    errorHandler,
 	}
 }
 
@@ -57,7 +47,7 @@ func (h *NewInterestHandlerImpl) HandleInterestCategorySelection(callback *tgbot
 	// Получаем категории
 	categories, err := h.interestService.GetInterestCategories()
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestCategories")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestCategories")
 	}
 
 	// Находим выбранную категорию
@@ -72,19 +62,19 @@ func (h *NewInterestHandlerImpl) HandleInterestCategorySelection(callback *tgbot
 	}
 
 	if selectedCategory == nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "CategoryNotFound")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "CategoryNotFound")
 	}
 
 	// Получаем интересы в категории
 	interests, err := h.interestService.GetInterestsByCategory(selectedCategory.ID)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestsByCategory")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestsByCategory")
 	}
 
 	// Получаем уже выбранные интересы пользователя
 	userSelections, err := h.interestService.GetUserInterestSelections(user.ID)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
 
 	// Создаем карту выбранных интересов
@@ -94,7 +84,7 @@ func (h *NewInterestHandlerImpl) HandleInterestCategorySelection(callback *tgbot
 	}
 
 	// Создаем клавиатуру для интересов в категории
-	keyboard := h.keyboardBuilder.CreateCategoryInterestsKeyboard(
+	keyboard := h.base.keyboardBuilder.CreateCategoryInterestsKeyboard(
 		interests,
 		selectedMap,
 		selectedCategory.KeyName,
@@ -102,8 +92,8 @@ func (h *NewInterestHandlerImpl) HandleInterestCategorySelection(callback *tgbot
 	)
 
 	// Создаем текст сообщения
-	categoryName := h.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
-	messageText := categoryName + " - " + h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
+	categoryName := h.base.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
+	messageText := categoryName + " - " + h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
 
 	// Обновляем сообщение
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
@@ -113,9 +103,9 @@ func (h *NewInterestHandlerImpl) HandleInterestCategorySelection(callback *tgbot
 		keyboard,
 	)
 
-	_, err = h.bot.Request(editMsg)
+	_, err = h.base.bot.Request(editMsg)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "EditMessage")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "EditMessage")
 	}
 
 	return nil
@@ -125,13 +115,13 @@ func (h *NewInterestHandlerImpl) HandleInterestCategorySelection(callback *tgbot
 func (h *NewInterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ParseInterestID")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ParseInterestID")
 	}
 
 	// Получаем текущие выборы пользователя
 	userSelections, err := h.interestService.GetUserInterestSelections(user.ID)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
 
 	// Проверяем, выбран ли уже этот интерес
@@ -155,19 +145,19 @@ func (h *NewInterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.Call
 	}
 
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ToggleInterestSelection")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ToggleInterestSelection")
 	}
 
 	// Получаем интерес и его категорию для обновления клавиатуры
 	interest, err := h.interestService.GetInterestByID(interestID)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestByID")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestByID")
 	}
 
 	// Получаем категорию по ID
 	category, err := h.interestService.GetInterestCategoryByID(interest.CategoryID)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestCategoryByID")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestCategoryByID")
 	}
 
 	// Обновляем клавиатуру
@@ -178,13 +168,13 @@ func (h *NewInterestHandlerImpl) HandleInterestSelection(callback *tgbotapi.Call
 func (h *NewInterestHandlerImpl) HandlePrimaryInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestIDStr string) error {
 	interestID, err := strconv.Atoi(interestIDStr)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ParseInterestID")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ParseInterestID")
 	}
 
 	// Получаем текущие выборы пользователя
 	userSelections, err := h.interestService.GetUserInterestSelections(user.ID)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
 
 	// Находим выбор для этого интереса
@@ -207,7 +197,7 @@ func (h *NewInterestHandlerImpl) HandlePrimaryInterestSelection(callback *tgbota
 	}
 
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "TogglePrimaryInterest")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "TogglePrimaryInterest")
 	}
 
 	// Обновляем клавиатуру выбора основных интересов
@@ -219,25 +209,25 @@ func (h *NewInterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Call
 	// Получаем выбранные интересы
 	userSelections, err := h.interestService.GetUserInterestSelections(user.ID)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
 
 	// Проверяем, выбраны ли интересы
 	if len(userSelections) == 0 {
-		warningMsg := "❗ " + h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_at_least_one_interest")
+		warningMsg := "❗ " + h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_at_least_one_interest")
 		if warningMsg == "choose_at_least_one_interest" {
 			warningMsg = "❗ Пожалуйста, выберите хотя бы один интерес"
 		}
 
 		// Показываем предупреждение и возвращаем к категориям
-		keyboard := h.keyboardBuilder.CreateInterestCategoriesKeyboard(user.InterfaceLanguageCode)
+		keyboard := h.base.keyboardBuilder.CreateInterestCategoriesKeyboard(user.InterfaceLanguageCode)
 		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
-			warningMsg+"\n\n"+h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests"),
+			warningMsg+"\n\n"+h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests"),
 			keyboard,
 		)
-		_, err = h.bot.Request(editMsg)
+		_, err = h.base.bot.Request(editMsg)
 
 		return err
 	}
@@ -245,13 +235,13 @@ func (h *NewInterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Call
 	// Получаем конфигурацию лимитов
 	limits, err := h.interestService.GetInterestLimitsConfig()
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestLimitsConfig")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestLimitsConfig")
 	}
 
 	// Получаем общее количество интересов в системе
 	allInterests, err := h.interestService.GetAllInterests()
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetAllInterests")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetAllInterests")
 	}
 
 	// Вычисляем рекомендуемое количество основных интересов
@@ -275,7 +265,7 @@ func (h *NewInterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Call
 			if !selection.IsPrimary {
 				err = h.interestService.SetPrimaryInterest(user.ID, selection.InterestID, true)
 				if err != nil {
-					return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "SetPrimaryInterest")
+					return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "SetPrimaryInterest")
 				}
 			}
 		}
@@ -293,7 +283,7 @@ func (h *NewInterestHandlerImpl) HandlePrimaryInterestsContinue(callback *tgbota
 	// Получаем выборы пользователя
 	userSelections, err := h.interestService.GetUserInterestSelections(user.ID)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
 
 	// Подсчитываем основные интересы
@@ -308,12 +298,12 @@ func (h *NewInterestHandlerImpl) HandlePrimaryInterestsContinue(callback *tgbota
 	// Получаем конфигурацию лимитов
 	limits, err := h.interestService.GetInterestLimitsConfig()
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestLimitsConfig")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestLimitsConfig")
 	}
 
 	// Проверяем минимальное количество основных интересов
 	if primaryCount < limits.MinPrimaryInterests {
-		warningMsg := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_at_least_primary_interests")
+		warningMsg := h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_at_least_primary_interests")
 		if warningMsg == "choose_at_least_primary_interests" {
 			warningMsg = "❗ Пожалуйста, выберите минимум " + strconv.Itoa(limits.MinPrimaryInterests) + " основных интереса"
 		}
@@ -322,10 +312,10 @@ func (h *NewInterestHandlerImpl) HandlePrimaryInterestsContinue(callback *tgbota
 		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
-			warningMsg+"\n\n"+h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests"),
-			h.keyboardBuilder.CreatePrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode),
+			warningMsg+"\n\n"+h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests"),
+			h.base.keyboardBuilder.CreatePrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode),
 		)
-		_, err = h.bot.Request(editMsg)
+		_, err = h.base.bot.Request(editMsg)
 
 		return err
 	}
@@ -336,8 +326,8 @@ func (h *NewInterestHandlerImpl) HandlePrimaryInterestsContinue(callback *tgbota
 
 // HandleBackToCategories возвращает к выбору категорий.
 func (h *NewInterestHandlerImpl) HandleBackToCategories(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	keyboard := h.keyboardBuilder.CreateInterestCategoriesKeyboard(user.InterfaceLanguageCode)
-	messageText := h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
+	keyboard := h.base.keyboardBuilder.CreateInterestCategoriesKeyboard(user.InterfaceLanguageCode)
+	messageText := h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
 
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 		callback.Message.Chat.ID,
@@ -346,7 +336,7 @@ func (h *NewInterestHandlerImpl) HandleBackToCategories(callback *tgbotapi.Callb
 		keyboard,
 	)
 
-	_, err := h.bot.Request(editMsg)
+	_, err := h.base.bot.Request(editMsg)
 
 	return err
 }
@@ -362,22 +352,22 @@ func (h *NewInterestHandlerImpl) showPrimaryInterestsSelection(callback *tgbotap
 	// Получаем выборы пользователя
 	userSelections, err := h.interestService.GetUserInterestSelections(user.ID)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
 
 	// Создаем клавиатуру для выбора основных интересов
-	keyboard := h.keyboardBuilder.CreatePrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode)
+	keyboard := h.base.keyboardBuilder.CreatePrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode)
 
 	// Получаем рекомендуемое количество основных интересов
 	limits, err := h.interestService.GetInterestLimitsConfig()
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestLimitsConfig")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestLimitsConfig")
 	}
 
 	// Получаем общее количество интересов в системе
 	allInterests, err := h.interestService.GetAllInterests()
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetAllInterests")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetAllInterests")
 	}
 
 	// Вычисляем рекомендуемое количество основных интересов от общего количества интересов в системе
@@ -404,16 +394,16 @@ func (h *NewInterestHandlerImpl) showPrimaryInterestsSelection(callback *tgbotap
 	// Создаем текст сообщения с динамическим количеством
 	var messageText string
 	if selectedPrimaryCount == 0 {
-		messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_dynamic")
+		messageText = h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_dynamic")
 		messageText = strings.ReplaceAll(messageText, "{max}", strconv.Itoa(recommendedPrimary))
 	} else {
 		remaining := recommendedPrimary - selectedPrimaryCount
 		if remaining > 0 {
-			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_remaining")
+			messageText = h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_remaining")
 			messageText = strings.ReplaceAll(messageText, "{remaining}", strconv.Itoa(remaining))
 			messageText = strings.ReplaceAll(messageText, "{max}", strconv.Itoa(recommendedPrimary))
 		} else {
-			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "max_primary_interests_reached")
+			messageText = h.base.service.Localizer.Get(user.InterfaceLanguageCode, "max_primary_interests_reached")
 			if messageText == "max_primary_interests_reached" {
 				messageText = "✅ Максимальное количество основных интересов выбрано!"
 			}
@@ -428,7 +418,7 @@ func (h *NewInterestHandlerImpl) showPrimaryInterestsSelection(callback *tgbotap
 		keyboard,
 	)
 
-	_, err = h.bot.Request(editMsg)
+	_, err = h.base.bot.Request(editMsg)
 
 	return err
 }
@@ -475,11 +465,11 @@ func (h *NewInterestHandlerImpl) updateCategoryInterestsKeyboard(callback *tgbot
 	}
 
 	// Создаем клавиатуру
-	keyboard := h.keyboardBuilder.CreateCategoryInterestsKeyboard(interests, selectedMap, categoryKey, user.InterfaceLanguageCode)
+	keyboard := h.base.keyboardBuilder.CreateCategoryInterestsKeyboard(interests, selectedMap, categoryKey, user.InterfaceLanguageCode)
 
 	// Обновляем сообщение
-	categoryName := h.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
-	messageText := categoryName + " - " + h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
+	categoryName := h.base.service.Localizer.Get(user.InterfaceLanguageCode, "category_"+categoryKey)
+	messageText := categoryName + " - " + h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_interests")
 
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 		callback.Message.Chat.ID,
@@ -488,7 +478,7 @@ func (h *NewInterestHandlerImpl) updateCategoryInterestsKeyboard(callback *tgbot
 		keyboard,
 	)
 
-	_, err = h.bot.Request(editMsg)
+	_, err = h.base.bot.Request(editMsg)
 
 	return err
 }
@@ -502,7 +492,7 @@ func (h *NewInterestHandlerImpl) updatePrimaryInterestsKeyboard(callback *tgbota
 	}
 
 	// Создаем клавиатуру
-	keyboard := h.keyboardBuilder.CreatePrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode)
+	keyboard := h.base.keyboardBuilder.CreatePrimaryInterestsKeyboard(userSelections, user.InterfaceLanguageCode)
 
 	// Получаем рекомендуемое количество основных интересов
 	limits, err := h.interestService.GetInterestLimitsConfig()
@@ -540,16 +530,16 @@ func (h *NewInterestHandlerImpl) updatePrimaryInterestsKeyboard(callback *tgbota
 	// Создаем текст сообщения с динамическим количеством
 	var messageText string
 	if selectedPrimaryCount == 0 {
-		messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_dynamic")
+		messageText = h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_dynamic")
 		messageText = strings.ReplaceAll(messageText, "{max}", strconv.Itoa(recommendedPrimary))
 	} else {
 		remaining := recommendedPrimary - selectedPrimaryCount
 		if remaining > 0 {
-			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_remaining")
+			messageText = h.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_primary_interests_remaining")
 			messageText = strings.ReplaceAll(messageText, "{remaining}", strconv.Itoa(remaining))
 			messageText = strings.ReplaceAll(messageText, "{max}", strconv.Itoa(recommendedPrimary))
 		} else {
-			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "max_primary_interests_reached")
+			messageText = h.base.service.Localizer.Get(user.InterfaceLanguageCode, "max_primary_interests_reached")
 			if messageText == "max_primary_interests_reached" {
 				messageText = "✅ Максимальное количество основных интересов выбрано!"
 			}
@@ -563,7 +553,7 @@ func (h *NewInterestHandlerImpl) updatePrimaryInterestsKeyboard(callback *tgbota
 		keyboard,
 	)
 
-	_, err = h.bot.Request(editMsg)
+	_, err = h.base.bot.Request(editMsg)
 
 	return err
 }
@@ -581,21 +571,21 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 	// Получаем сводку интересов пользователя
 	summary, err := h.interestService.GetUserInterestSummary(user.ID)
 	if err != nil {
-		return h.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSummary")
+		return h.base.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSummary")
 	}
 
 	// Создаем текст с основными и дополнительными интересами
 	var primaryText, additionalText strings.Builder
 
 	if len(summary.PrimaryInterests) > 0 {
-		primaryText.WriteString(h.service.Localizer.Get(user.InterfaceLanguageCode, "primary_interests_label") + " ")
+		primaryText.WriteString(h.base.service.Localizer.Get(user.InterfaceLanguageCode, "primary_interests_label") + " ")
 
 		for i, interest := range summary.PrimaryInterests {
 			if i > 0 {
 				primaryText.WriteString(", ")
 			}
 
-			interestName := h.service.Localizer.Get(user.InterfaceLanguageCode, "interest_"+interest.KeyName)
+			interestName := h.base.service.Localizer.Get(user.InterfaceLanguageCode, "interest_"+interest.KeyName)
 			primaryText.WriteString(interestName)
 		}
 
@@ -603,14 +593,14 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 	}
 
 	if len(summary.AdditionalInterests) > 0 {
-		additionalText.WriteString(h.service.Localizer.Get(user.InterfaceLanguageCode, "additional_interests_label") + " ")
+		additionalText.WriteString(h.base.service.Localizer.Get(user.InterfaceLanguageCode, "additional_interests_label") + " ")
 
 		for i, interest := range summary.AdditionalInterests {
 			if i > 0 {
 				additionalText.WriteString(", ")
 			}
 
-			interestName := h.service.Localizer.Get(user.InterfaceLanguageCode, "interest_"+interest.KeyName)
+			interestName := h.base.service.Localizer.Get(user.InterfaceLanguageCode, "interest_"+interest.KeyName)
 			additionalText.WriteString(interestName)
 		}
 
@@ -618,8 +608,8 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 	}
 
 	// Создаем итоговое сообщение
-	completionMsg := h.service.Localizer.Get(user.InterfaceLanguageCode, "interests_selection_complete")
-	feedbackSuggestion := h.service.Localizer.Get(user.InterfaceLanguageCode, "interests_feedback_suggestion")
+	completionMsg := h.base.service.Localizer.Get(user.InterfaceLanguageCode, "interests_selection_complete")
+	feedbackSuggestion := h.base.service.Localizer.Get(user.InterfaceLanguageCode, "interests_feedback_suggestion")
 
 	fullMessage := completionMsg + "\n\n" + primaryText.String() + additionalText.String() + "\n" + feedbackSuggestion
 
@@ -627,7 +617,7 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 	completionKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(
-				"✅ "+h.service.Localizer.Get(user.InterfaceLanguageCode, "continue_button"),
+				"✅ "+h.base.service.Localizer.Get(user.InterfaceLanguageCode, "continue_button"),
 				"continue_to_availability",
 			),
 		),
@@ -640,7 +630,7 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 		completionKeyboard,
 	)
 
-	_, err = h.bot.Request(editMsg)
+	_, err = h.base.bot.Request(editMsg)
 	if err != nil {
 		return err
 	}
@@ -652,7 +642,7 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 
 // updateProfileCompletionLevel обновляет уровень завершения профиля.
 func (h *NewInterestHandlerImpl) updateProfileCompletionLevel(userID int, completionLevel int) error {
-	_, err := h.service.DB.GetConnection().Exec(`
+	_, err := h.base.service.DB.GetConnection().Exec(`
 		UPDATE users
 		SET profile_completion_level = $1, updated_at = NOW()
 		WHERE id = $2

@@ -3,19 +3,8 @@ package cache
 import (
 	"time"
 
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
-)
-
-// Константы для TTL кэша.
-const (
-	// translationsTTLMinutes - время жизни переводов в кэше (30 минут).
-	translationsTTLMinutes = 30
-
-	// usersTTLMinutes - время жизни пользователей в кэше (15 минут).
-	usersTTLMinutes = 15
-
-	// statsTTLMinutes - время жизни статистики в кэше (5 минут).
-	statsTTLMinutes = 5
 )
 
 // Entry представляет запись в кэше с TTL.
@@ -41,11 +30,11 @@ type Config struct {
 // DefaultConfig возвращает конфигурацию по умолчанию.
 func DefaultConfig() *Config {
 	return &Config{
-		LanguagesTTL:    time.Hour,                            // 1 час - языки редко изменяются
-		InterestsTTL:    time.Hour,                            // 1 час - интересы редко изменяются
-		TranslationsTTL: translationsTTLMinutes * time.Minute, // 30 минут - переводы статичны
-		UsersTTL:        usersTTLMinutes * time.Minute,        // 15 минут - пользователи могут изменяться
-		StatsTTL:        statsTTLMinutes * time.Minute,        // 5 минут - статистика часто обновляется
+		LanguagesTTL:    time.Hour,                                         // 1 час - языки редко изменяются
+		InterestsTTL:    time.Hour,                                         // 1 час - интересы редко изменяются
+		TranslationsTTL: localization.TranslationsTTLMinutes * time.Minute, // 30 минут - переводы статичны
+		UsersTTL:        localization.UsersTTLMinutes * time.Minute,        // 15 минут - пользователи могут изменяться
+		StatsTTL:        localization.StatsTTLMinutes * time.Minute,        // 5 минут - статистика часто обновляется
 	}
 }
 

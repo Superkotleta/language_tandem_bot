@@ -8,21 +8,26 @@ import (
 	"log"
 	"time"
 
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	"github.com/redis/go-redis/v9"
 )
 
-// Константы для Redis конфигурации.
+// Redis connection constants (using centralized constants for consistency)
+var (
+	DefaultDialTimeout     = localization.RedisDialTimeoutSeconds * time.Second
+	DefaultReadTimeout     = localization.RedisReadTimeoutSeconds * time.Second
+	DefaultWriteTimeout    = localization.RedisWriteTimeoutSeconds * time.Second
+	DefaultMinRetryBackoff = localization.RedisMinRetryBackoffMs * time.Millisecond
+	DefaultMaxRetryBackoff = localization.RedisMaxRetryBackoffMs * time.Millisecond
+)
+
+// Redis configuration constants
 const (
-	DefaultRedisProtocol   = 3
-	DefaultMaxRetries      = 3
-	DefaultMinRetryBackoff = 8 * time.Millisecond
-	DefaultMaxRetryBackoff = 512 * time.Millisecond
-	DefaultDialTimeout     = 5 * time.Second
-	DefaultReadTimeout     = 3 * time.Second
-	DefaultWriteTimeout    = 3 * time.Second
-	DefaultPoolSize        = 10
+	DefaultRedisProtocol = 3
+	DefaultMaxRetries    = 3
+	DefaultPoolSize      = 10
 )
 
 // RedisCacheService реализация кэша на основе Redis.

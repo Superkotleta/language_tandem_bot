@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 
 	"language-exchange-bot/internal/core"
@@ -46,26 +45,61 @@ func NewProfileInterestHandler(
 
 // HandleEditInterestsFromProfile обрабатывает редактирование интересов из профиля.
 func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	log.Printf("DEBUG: HandleEditInterestsFromProfile called for user %d", user.ID)
+	pih.service.LoggingService.Telegram().DebugWithContext(
+		"HandleEditInterestsFromProfile called",
+		generateRequestID("HandleEditInterestsFromProfile"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"HandleEditInterestsFromProfile",
+		map[string]interface{}{"userID": user.ID},
+	)
 
 	// Получаем категории интересов через кэш
 	categories, err := pih.interestService.GetInterestCategories()
 	if err != nil {
-		log.Printf("ERROR: Failed to get interest categories for user %d: %v", user.ID, err)
+		pih.service.LoggingService.Database().ErrorWithContext(
+			"Failed to get interest categories",
+			generateRequestID("HandleEditInterestsFromProfile"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"HandleEditInterestsFromProfile",
+			map[string]interface{}{"userID": user.ID, "error": err.Error()},
+		)
 		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestCategories")
 	}
 
 	// Логируем получение категорий
-	log.Printf("DEBUG: Retrieved %d interest categories for user %d", len(categories), user.ID)
+	pih.service.LoggingService.Database().DebugWithContext(
+		"Retrieved interest categories",
+		generateRequestID("HandleEditInterestsFromProfile"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"HandleEditInterestsFromProfile",
+		map[string]interface{}{"userID": user.ID, "categoriesCount": len(categories)},
+	)
 
 	// Создаем клавиатуру с категориями для редактирования
 	keyboard := pih.keyboardBuilder.CreateEditInterestCategoriesKeyboard(user.InterfaceLanguageCode)
-	log.Printf("DEBUG: Created keyboard for user %d", user.ID)
+	pih.service.LoggingService.Telegram().DebugWithContext(
+		"Created keyboard for editing interests",
+		generateRequestID("HandleEditInterestsFromProfile"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"HandleEditInterestsFromProfile",
+		map[string]interface{}{"userID": user.ID, "keyboardType": "edit_interest_categories"},
+	)
 
 	// Создаем текст с инструкциями
 	text := pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleEditInterestsFromProfile) + "\n\n" +
 		pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleChooseInterestCategory)
-	log.Printf("DEBUG: Created text for user %d: %s", user.ID, text)
+	pih.service.LoggingService.Telegram().DebugWithContext(
+		"Created text for editing interests",
+		generateRequestID("HandleEditInterestsFromProfile"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"HandleEditInterestsFromProfile",
+		map[string]interface{}{"userID": user.ID, "textLength": len(text)},
+	)
 
 	// Обновляем сообщение
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
@@ -77,17 +111,38 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 
 	_, err = pih.bot.Request(editMsg)
 	if err != nil {
-		log.Printf("ERROR: Failed to send edit message for user %d: %v", user.ID, err)
+		pih.service.LoggingService.Telegram().ErrorWithContext(
+			"Failed to send edit message",
+			generateRequestID("HandleEditInterestsFromProfile"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"HandleEditInterestsFromProfile",
+			map[string]interface{}{"userID": user.ID, "error": err.Error()},
+		)
 		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "EditMessage")
 	}
 
-	log.Printf("DEBUG: Successfully sent edit message for user %d", user.ID)
+	pih.service.LoggingService.Telegram().DebugWithContext(
+		"Successfully sent edit message",
+		generateRequestID("HandleEditInterestsFromProfile"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"HandleEditInterestsFromProfile",
+		map[string]interface{}{"userID": user.ID, "result": "message_sent"},
+	)
 	return nil
 }
 
 // HandleEditInterestCategoryFromProfile обрабатывает выбор категории для редактирования.
 func (pih *ProfileInterestHandler) HandleEditInterestCategoryFromProfile(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error {
-	log.Printf("ProfileInterestHandler: User %d selected category '%s' for editing", user.ID, categoryKey)
+	pih.service.LoggingService.Telegram().InfoWithContext(
+		"User selected category for editing",
+		generateRequestID("HandleEditInterestCategoryFromProfile"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"HandleEditInterestCategoryFromProfile",
+		map[string]interface{}{"userID": user.ID, "categoryKey": categoryKey},
+	)
 
 	// Получаем категории
 	categories, err := pih.interestService.GetInterestCategories()
@@ -163,7 +218,14 @@ func (pih *ProfileInterestHandler) HandleEditInterestSelectionFromProfile(callba
 		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ParseInterestID")
 	}
 
-	log.Printf("ProfileInterestHandler: User %d toggling interest %d", user.ID, interestID)
+	pih.service.LoggingService.Telegram().InfoWithContext(
+		"User toggling interest",
+		generateRequestID("HandleEditInterestSelectionFromProfile"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"HandleEditInterestSelectionFromProfile",
+		map[string]interface{}{"userID": user.ID, "interestID": interestID},
+	)
 
 	// Получаем текущие выборы пользователя
 	userSelections, err := pih.interestService.GetUserInterestSelections(user.ID)
@@ -280,7 +342,14 @@ func (pih *ProfileInterestHandler) HandleEditPrimaryInterestSelectionFromProfile
 
 // HandleSaveInterestEditsFromProfile сохраняет изменения интересов и возвращается к профилю.
 func (pih *ProfileInterestHandler) HandleSaveInterestEditsFromProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	log.Printf("ProfileInterestHandler: User %d saving interest edits", user.ID)
+	pih.service.LoggingService.Telegram().InfoWithContext(
+		"User saving interest edits",
+		generateRequestID("HandleSaveInterestEditsFromProfile"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"HandleSaveInterestEditsFromProfile",
+		map[string]interface{}{"userID": user.ID},
+	)
 
 	// Получаем сводку интересов пользователя
 	summary, err := pih.interestService.GetUserInterestSummary(user.ID)

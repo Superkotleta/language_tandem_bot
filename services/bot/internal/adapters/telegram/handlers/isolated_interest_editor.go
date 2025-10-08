@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -75,7 +74,14 @@ func NewIsolatedInterestEditor(
 
 // StartEditSession начинает новую сессию редактирования
 func (e *IsolatedInterestEditor) StartEditSession(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	log.Printf("Starting isolated edit session for user %d", user.ID)
+	e.service.LoggingService.Telegram().InfoWithContext(
+		"Starting isolated edit session",
+		generateRequestID("StartEditSession"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"StartEditSession",
+		map[string]interface{}{"userID": user.ID},
+	)
 
 	// Получаем оригинальные выборы пользователя
 	originalSelections, err := e.interestService.GetUserInterestSelections(user.ID)
@@ -99,12 +105,33 @@ func (e *IsolatedInterestEditor) StartEditSession(callback *tgbotapi.CallbackQue
 
 	// Сохраняем сессию в кеше
 	cacheKey := fmt.Sprintf("edit_session_%d", user.ID)
-	log.Printf("Saving session to cache with key: %s", cacheKey)
+	e.service.LoggingService.Cache().InfoWithContext(
+		"Saving session to cache",
+		generateRequestID("StartEditSession"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"StartEditSession",
+		map[string]interface{}{"userID": user.ID, "cacheKey": cacheKey},
+	)
 	err = e.cache.Set(context.Background(), cacheKey, session, 30*time.Minute)
 	if err != nil {
-		log.Printf("Warning: failed to cache edit session for user %d: %v", user.ID, err)
+		e.service.LoggingService.Cache().WarnWithContext(
+			"Failed to cache edit session",
+			generateRequestID("StartEditSession"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"StartEditSession",
+			map[string]interface{}{"userID": user.ID, "cacheKey": cacheKey, "error": err.Error()},
+		)
 	} else {
-		log.Printf("Successfully cached session for user %d", user.ID)
+		e.service.LoggingService.Cache().InfoWithContext(
+			"Successfully cached session",
+			generateRequestID("StartEditSession"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"StartEditSession",
+			map[string]interface{}{"userID": user.ID, "cacheKey": cacheKey},
+		)
 	}
 
 	// Показываем главное меню редактирования
@@ -211,16 +238,37 @@ func (e *IsolatedInterestEditor) ShowEditCategoryInterests(callback *tgbotapi.Ca
 
 // ShowEditPrimaryInterests показывает основные интересы для редактирования
 func (e *IsolatedInterestEditor) ShowEditPrimaryInterests(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
-	log.Printf("DEBUG: ShowEditPrimaryInterests called for user %d", user.ID)
+	e.service.LoggingService.Telegram().DebugWithContext(
+		"ShowEditPrimaryInterests called",
+		generateRequestID("ShowEditPrimaryInterests"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"ShowEditPrimaryInterests",
+		map[string]interface{}{"userID": user.ID},
+	)
 
 	// Получаем текущие выборы пользователя
 	selections, err := e.interestService.GetUserInterestSelections(user.ID)
 	if err != nil {
-		log.Printf("DEBUG: ShowEditPrimaryInterests GetUserInterestSelections error: %v", err)
+		e.service.LoggingService.Database().DebugWithContext(
+			"ShowEditPrimaryInterests GetUserInterestSelections error",
+			generateRequestID("ShowEditPrimaryInterests"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"ShowEditPrimaryInterests",
+			map[string]interface{}{"userID": user.ID, "error": err.Error()},
+		)
 		return e.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
 
-	log.Printf("DEBUG: ShowEditPrimaryInterests found %d selections for user %d", len(selections), user.ID)
+	e.service.LoggingService.Database().DebugWithContext(
+		"ShowEditPrimaryInterests found selections",
+		generateRequestID("ShowEditPrimaryInterests"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"ShowEditPrimaryInterests",
+		map[string]interface{}{"userID": user.ID, "selectionsCount": len(selections)},
+	)
 
 	// Получаем общее количество интересов в системе
 	allInterests, err := e.interestService.GetAllInterests()
@@ -353,21 +401,51 @@ func (e *IsolatedInterestEditor) ShowChangesPreview(callback *tgbotapi.CallbackQ
 
 // saveChanges сохраняет изменения
 func (e *IsolatedInterestEditor) SaveChanges(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
-	log.Printf("Saving changes for user %d", user.ID)
-	log.Printf("Session has %d current selections", len(session.CurrentSelections))
-	log.Printf("Session has %d changes", len(session.Changes))
+	e.service.LoggingService.Database().InfoWithContext(
+		"Saving changes for user",
+		generateRequestID("SaveChanges"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"SaveChanges",
+		map[string]interface{}{
+			"userID":                 user.ID,
+			"currentSelectionsCount": len(session.CurrentSelections),
+			"changesCount":           len(session.Changes),
+		},
+	)
 
 	// Валидируем выборы
 	if err := e.validateSelections(session); err != nil {
-		log.Printf("Validation failed: %v", err)
+		e.service.LoggingService.Database().ErrorWithContext(
+			"Validation failed",
+			generateRequestID("SaveChanges"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"SaveChanges",
+			map[string]interface{}{"userID": user.ID, "error": err.Error()},
+		)
 		return e.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ValidateSelections")
 	}
 
 	// Сохраняем изменения в базу данных
-	log.Printf("Calling BatchUpdateUserInterests for user %d with %d selections", user.ID, len(session.CurrentSelections))
+	e.service.LoggingService.Database().InfoWithContext(
+		"Calling BatchUpdateUserInterests",
+		generateRequestID("SaveChanges"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"SaveChanges",
+		map[string]interface{}{"userID": user.ID, "selectionsCount": len(session.CurrentSelections)},
+	)
 	err := e.interestService.BatchUpdateUserInterests(user.ID, session.CurrentSelections)
 	if err != nil {
-		log.Printf("BatchUpdateUserInterests failed: %v", err)
+		e.service.LoggingService.Database().ErrorWithContext(
+			"BatchUpdateUserInterests failed",
+			generateRequestID("SaveChanges"),
+			int64(user.ID),
+			callback.Message.Chat.ID,
+			"SaveChanges",
+			map[string]interface{}{"userID": user.ID, "selectionsCount": len(session.CurrentSelections), "error": err.Error()},
+		)
 		return e.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "BatchUpdateUserInterests")
 	}
 
@@ -404,7 +482,14 @@ func (e *IsolatedInterestEditor) SaveChanges(callback *tgbotapi.CallbackQuery, u
 
 // cancelEdit отменяет редактирование
 func (e *IsolatedInterestEditor) CancelEdit(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	log.Printf("Canceling edit for user %d", user.ID)
+	e.service.LoggingService.Telegram().InfoWithContext(
+		"Canceling edit for user",
+		generateRequestID("CancelEdit"),
+		int64(user.ID),
+		callback.Message.Chat.ID,
+		"CancelEdit",
+		map[string]interface{}{"userID": user.ID},
+	)
 
 	// Получаем сессию для подсчета изменений
 	session, err := e.GetEditSession(user.ID)
@@ -446,18 +531,46 @@ func (e *IsolatedInterestEditor) CancelEdit(callback *tgbotapi.CallbackQuery, us
 // Вспомогательные методы
 
 func (e *IsolatedInterestEditor) GetEditSession(userID int) (*EditSession, error) {
-	log.Printf("Getting edit session for user %d", userID)
+	e.service.LoggingService.Cache().DebugWithContext(
+		"Getting edit session for user",
+		generateRequestID("GetEditSession"),
+		int64(userID),
+		0, // нет chatID в этой функции
+		"GetEditSession",
+		map[string]interface{}{"userID": userID},
+	)
 	var session EditSession
 	cacheKey := fmt.Sprintf("edit_session_%d", userID)
-	log.Printf("Cache key: %s", cacheKey)
+	e.service.LoggingService.Cache().DebugWithContext(
+		"Cache key generated",
+		generateRequestID("GetEditSession"),
+		int64(userID),
+		0, // нет chatID в этой функции
+		"GetEditSession",
+		map[string]interface{}{"userID": userID, "cacheKey": cacheKey},
+	)
 
 	err := e.cache.Get(context.Background(), cacheKey, &session)
 	if err != nil {
-		log.Printf("Failed to get session from cache for user %d: %v", userID, err)
+		e.service.LoggingService.Cache().ErrorWithContext(
+			"Failed to get session from cache",
+			generateRequestID("GetEditSession"),
+			int64(userID),
+			0, // нет chatID в этой функции
+			"GetEditSession",
+			map[string]interface{}{"userID": userID, "cacheKey": cacheKey, "error": err.Error()},
+		)
 		return nil, fmt.Errorf("session not found: %w", err)
 	}
 
-	log.Printf("Successfully retrieved session for user %d with %d selections", userID, len(session.CurrentSelections))
+	e.service.LoggingService.Cache().DebugWithContext(
+		"Successfully retrieved session",
+		generateRequestID("GetEditSession"),
+		int64(userID),
+		0, // нет chatID в этой функции
+		"GetEditSession",
+		map[string]interface{}{"userID": userID, "selectionsCount": len(session.CurrentSelections)},
+	)
 	return &session, nil
 }
 
@@ -554,7 +667,18 @@ func (e *IsolatedInterestEditor) formatChangesPreview(session *EditSession, lang
 func (e *IsolatedInterestEditor) validateSelections(session *EditSession) error {
 	// Разрешаем сохранение даже если нет выбранных интересов
 	// Это позволяет пользователю очистить все свои интересы
-	log.Printf("Validating %d selections", len(session.CurrentSelections))
+
+	// Логируем только если service инициализирован (для совместимости с тестами)
+	if e.service != nil && e.service.LoggingService != nil {
+		e.service.LoggingService.Database().DebugWithContext(
+			"Validating selections",
+			generateRequestID("validateSelections"),
+			int64(session.UserID),
+			0, // нет chatID в этой функции
+			"validateSelections",
+			map[string]interface{}{"userID": session.UserID, "selectionsCount": len(session.CurrentSelections)},
+		)
+	}
 
 	// TODO: Добавить дополнительные проверки валидации
 	return nil

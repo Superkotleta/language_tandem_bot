@@ -8,41 +8,10 @@ import (
 	"strings"
 
 	errorsPkg "language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 )
 
-// Константы для конфигурации интересов.
-const (
-	// defaultPrimaryPercentage - процент основных интересов от общего количества (30%).
-	defaultPrimaryPercentage = 0.3
-
-	// defaultDirectoryPermissions - права доступа для создания директорий (0755).
-	defaultDirectoryPermissions = 0755
-
-	// defaultFilePermissions - права доступа для файлов конфигурации (0600).
-	defaultFilePermissions = 0600
-
-	// defaultMaxMatchesPerUser - максимальное количество совпадений на пользователя.
-	defaultMaxMatchesPerUser = 10
-
-	// Константы для алгоритма сопоставления.
-	defaultPrimaryInterestScore    = 3
-	defaultAdditionalInterestScore = 1
-	defaultMinCompatibilityScore   = 5
-
-	// Константы для лимитов интересов.
-	defaultMinPrimaryInterests = 1
-	defaultMaxPrimaryInterests = 5
-
-	// Константы для категорий.
-	defaultMaxPrimaryPerCategory = 2
-
-	// Константы для порядка отображения категорий.
-	entertainmentDisplayOrder = 1
-	educationDisplayOrder     = 2
-	activeDisplayOrder        = 3
-	creativeDisplayOrder      = 4
-	socialDisplayOrder        = 5
-)
+// Interest configuration constants are now centralized in localization/constants.go
 
 // InterestsConfig представляет конфигурацию системы интересов.
 type InterestsConfig struct {
@@ -96,22 +65,22 @@ func LoadInterestsConfig() (*InterestsConfig, error) {
 		// Если файл не найден, создаем с дефолтными значениями
 		config := &InterestsConfig{
 			Matching: MatchingConfig{
-				PrimaryInterestScore:    defaultPrimaryInterestScore,
-				AdditionalInterestScore: defaultAdditionalInterestScore,
-				MinCompatibilityScore:   defaultMinCompatibilityScore,
-				MaxMatchesPerUser:       defaultMaxMatchesPerUser,
+				PrimaryInterestScore:    localization.DefaultPrimaryInterestScore,
+				AdditionalInterestScore: localization.DefaultAdditionalInterestScore,
+				MinCompatibilityScore:   localization.DefaultMinCompatibilityScore,
+				MaxMatchesPerUser:       localization.DefaultMaxMatchesPerUser,
 			},
 			InterestLimits: InterestLimitsConfig{
-				MinPrimaryInterests: defaultMinPrimaryInterests,
-				MaxPrimaryInterests: defaultMaxPrimaryInterests,
-				PrimaryPercentage:   defaultPrimaryPercentage, // 30% от общего количества интересов
+				MinPrimaryInterests: localization.DefaultMinPrimaryInterests,
+				MaxPrimaryInterests: localization.DefaultMaxPrimaryInterests,
+				PrimaryPercentage:   localization.DefaultPrimaryPercentage, // 30% от общего количества интересов
 			},
 			Categories: map[string]CategoryConfig{
-				"entertainment": {DisplayOrder: entertainmentDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
-				"education":     {DisplayOrder: educationDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
-				"active":        {DisplayOrder: activeDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
-				"creative":      {DisplayOrder: creativeDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
-				"social":        {DisplayOrder: socialDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
+				"entertainment": {DisplayOrder: localization.EntertainmentDisplayOrder, MaxPrimaryPerCategory: localization.DefaultMaxPrimaryPerCategory},
+				"education":     {DisplayOrder: localization.EducationDisplayOrder, MaxPrimaryPerCategory: localization.DefaultMaxPrimaryPerCategory},
+				"active":        {DisplayOrder: localization.ActiveDisplayOrder, MaxPrimaryPerCategory: localization.DefaultMaxPrimaryPerCategory},
+				"creative":      {DisplayOrder: localization.CreativeDisplayOrder, MaxPrimaryPerCategory: localization.DefaultMaxPrimaryPerCategory},
+				"social":        {DisplayOrder: localization.SocialDisplayOrder, MaxPrimaryPerCategory: localization.DefaultMaxPrimaryPerCategory},
 			},
 		}
 
@@ -158,7 +127,7 @@ func SaveInterestsConfig(config *InterestsConfig) error {
 	configPath := "config/interests.json"
 
 	// Создаем директорию если не существует
-	if err := os.MkdirAll(filepath.Dir(configPath), defaultDirectoryPermissions); err != nil {
+	if err := os.MkdirAll(filepath.Dir(configPath), localization.DefaultDirectoryPermissions); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -169,7 +138,7 @@ func SaveInterestsConfig(config *InterestsConfig) error {
 	}
 
 	// Записываем в файл
-	if err := os.WriteFile(configPath, data, defaultFilePermissions); err != nil {
+	if err := os.WriteFile(configPath, data, localization.DefaultFilePermissions); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 

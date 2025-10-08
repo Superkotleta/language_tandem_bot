@@ -8,15 +8,17 @@ import (
 	"sync"
 	"time"
 
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 )
+
+// CacheCleanupInterval - интервал очистки кэша (используется из centralized constants).
+var CacheCleanupInterval = localization.CacheCleanupMinutes * time.Minute
 
 // Константы для вычислений.
 const (
 	// PercentageMultiplier - множитель для преобразования в проценты.
 	PercentageMultiplier = 100.0
-	// CacheCleanupInterval - интервал очистки кэша.
-	CacheCleanupInterval = 5 * time.Minute
 )
 
 // Service основной сервис кэширования.

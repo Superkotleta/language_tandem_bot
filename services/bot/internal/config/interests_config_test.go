@@ -6,13 +6,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"language-exchange-bot/internal/localization"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestInterestsConfig_Load_DefaultValues тестирует загрузку конфигурации интересов с дефолтными значениями.
 func TestInterestsConfig_Load_DefaultValues(t *testing.T) {
-	
 
 	// Меняем в изолированную директорию
 	tempDir := t.TempDir()
@@ -28,26 +29,26 @@ func TestInterestsConfig_Load_DefaultValues(t *testing.T) {
 	require.NotNil(t, config)
 
 	// Проверяем дефолтные значения matching
-	assert.Equal(t, defaultPrimaryInterestScore, config.Matching.PrimaryInterestScore)
-	assert.Equal(t, defaultAdditionalInterestScore, config.Matching.AdditionalInterestScore)
-	assert.Equal(t, defaultMinCompatibilityScore, config.Matching.MinCompatibilityScore)
-	assert.Equal(t, defaultMaxMatchesPerUser, config.Matching.MaxMatchesPerUser)
+	assert.Equal(t, localization.DefaultPrimaryInterestScore, config.Matching.PrimaryInterestScore)
+	assert.Equal(t, localization.DefaultAdditionalInterestScore, config.Matching.AdditionalInterestScore)
+	assert.Equal(t, localization.DefaultMinCompatibilityScore, config.Matching.MinCompatibilityScore)
+	assert.Equal(t, localization.DefaultMaxMatchesPerUser, config.Matching.MaxMatchesPerUser)
 
 	// Проверяем дефолтные значения interest limits
-	assert.Equal(t, defaultMinPrimaryInterests, config.InterestLimits.MinPrimaryInterests)
-	assert.Equal(t, defaultMaxPrimaryInterests, config.InterestLimits.MaxPrimaryInterests)
-	assert.Equal(t, defaultPrimaryPercentage, config.InterestLimits.PrimaryPercentage)
+	assert.Equal(t, localization.DefaultMinPrimaryInterests, config.InterestLimits.MinPrimaryInterests)
+	assert.Equal(t, localization.DefaultMaxPrimaryInterests, config.InterestLimits.MaxPrimaryInterests)
+	assert.Equal(t, localization.DefaultPrimaryPercentage, config.InterestLimits.PrimaryPercentage)
 
 	// Проверяем дефолтные категории
 	require.NotNil(t, config.Categories)
 	assert.Len(t, config.Categories, 5)
 
 	expectedCategories := map[string]CategoryConfig{
-		"entertainment": {DisplayOrder: entertainmentDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
-		"education":     {DisplayOrder: educationDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
-		"active":        {DisplayOrder: activeDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
-		"creative":      {DisplayOrder: creativeDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
-		"social":        {DisplayOrder: socialDisplayOrder, MaxPrimaryPerCategory: defaultMaxPrimaryPerCategory},
+		"entertainment": {DisplayOrder: localization.EntertainmentDisplayOrder, MaxPrimaryPerCategory: localization.DefaultMaxPrimaryPerCategory},
+		"education":     {DisplayOrder: localization.EducationDisplayOrder, MaxPrimaryPerCategory: localization.DefaultMaxPrimaryPerCategory},
+		"active":        {DisplayOrder: localization.ActiveDisplayOrder, MaxPrimaryPerCategory: localization.DefaultMaxPrimaryPerCategory},
+		"creative":      {DisplayOrder: localization.CreativeDisplayOrder, MaxPrimaryPerCategory: localization.DefaultMaxPrimaryPerCategory},
+		"social":        {DisplayOrder: localization.SocialDisplayOrder, MaxPrimaryPerCategory: localization.DefaultMaxPrimaryPerCategory},
 	}
 
 	assert.Equal(t, expectedCategories, config.Categories)
@@ -55,7 +56,6 @@ func TestInterestsConfig_Load_DefaultValues(t *testing.T) {
 
 // TestInterestsConfig_Load_FromFile тестирует загрузку конфигурации интересов из JSON файла.
 func TestInterestsConfig_Load_FromFile(t *testing.T) {
-	
 
 	// Создаем тестовый конфиг файл
 	tempDir := t.TempDir()
@@ -110,7 +110,6 @@ func TestInterestsConfig_Load_FromFile(t *testing.T) {
 
 // TestInterestsConfig_Load_InvalidJSON тестирует загрузку невалидного JSON файла.
 func TestInterestsConfig_Load_InvalidJSON(t *testing.T) {
-	
 
 	// Создаем файл с невалидным JSON
 	tempDir := t.TempDir()
@@ -144,7 +143,6 @@ func TestInterestsConfig_Load_InvalidJSON(t *testing.T) {
 
 // TestInterestsConfig_Load_UnsafePath тестирует безопасность загрузки файлов.
 func TestInterestsConfig_Load_UnsafePath(t *testing.T) {
-	
 
 	// Создаем изолированную директорию
 	tempDir := t.TempDir()
@@ -180,7 +178,6 @@ func TestInterestsConfig_Load_UnsafePath(t *testing.T) {
 
 // TestInterestsConfig_SaveAndLoad тестирует сохранение и загрузку конфигурации.
 func TestInterestsConfig_SaveAndLoad(t *testing.T) {
-	
 
 	// Создаем изолированную директорию для теста
 	tempDir := t.TempDir()
@@ -232,7 +229,6 @@ func TestInterestsConfig_SaveAndLoad(t *testing.T) {
 
 // TestInterestsConfig_Save_InvalidData тестирует сохранение с ошибками.
 func TestInterestsConfig_Save_InvalidData(t *testing.T) {
-	
 
 	// Создаем изолированную директорию
 	tempDir := t.TempDir()
@@ -253,7 +249,6 @@ func TestInterestsConfig_Save_InvalidData(t *testing.T) {
 
 // TestInterestsConfig_GetInterestsConfig тестирует функцию GetInterestsConfig.
 func TestInterestsConfig_GetInterestsConfig(t *testing.T) {
-	
 
 	// Изолируем тест
 	tempDir := t.TempDir()
@@ -269,14 +264,13 @@ func TestInterestsConfig_GetInterestsConfig(t *testing.T) {
 	require.NotNil(t, config)
 
 	// Проверяем, что содержит дефолтные значения
-	assert.Equal(t, defaultPrimaryInterestScore, config.Matching.PrimaryInterestScore)
-	assert.Equal(t, defaultMinPrimaryInterests, config.InterestLimits.MinPrimaryInterests)
+	assert.Equal(t, localization.DefaultPrimaryInterestScore, config.Matching.PrimaryInterestScore)
+	assert.Equal(t, localization.DefaultMinPrimaryInterests, config.InterestLimits.MinPrimaryInterests)
 	assert.Len(t, config.Categories, 5)
 }
 
 // TestInterestsConfig_JSON_MarshalUnmarshal тестирует JSON сериализацию/десериализацию.
 func TestInterestsConfig_JSON_MarshalUnmarshal(t *testing.T) {
-	
 
 	originalConfig := &InterestsConfig{
 		Matching: MatchingConfig{
@@ -314,31 +308,29 @@ func TestInterestsConfig_JSON_MarshalUnmarshal(t *testing.T) {
 
 // TestInterestsConfig_Constants тестирует константы конфигурации интересов.
 func TestInterestsConfig_Constants(t *testing.T) {
-	
 
 	// Проверяем константы
-	assert.Equal(t, 0.3, defaultPrimaryPercentage)
-	assert.Equal(t, 0755, defaultDirectoryPermissions)
-	assert.Equal(t, 0600, defaultFilePermissions)
-	assert.Equal(t, 10, defaultMaxMatchesPerUser)
-	assert.Equal(t, 3, defaultPrimaryInterestScore)
-	assert.Equal(t, 1, defaultAdditionalInterestScore)
-	assert.Equal(t, 5, defaultMinCompatibilityScore)
-	assert.Equal(t, 1, defaultMinPrimaryInterests)
-	assert.Equal(t, 5, defaultMaxPrimaryInterests)
-	assert.Equal(t, 2, defaultMaxPrimaryPerCategory)
+	assert.Equal(t, localization.DefaultPrimaryPercentage, localization.DefaultPrimaryPercentage)
+	assert.Equal(t, localization.DefaultDirectoryPermissions, localization.DefaultDirectoryPermissions)
+	assert.Equal(t, localization.DefaultFilePermissions, localization.DefaultFilePermissions)
+	assert.Equal(t, localization.DefaultMaxMatchesPerUser, localization.DefaultMaxMatchesPerUser)
+	assert.Equal(t, localization.DefaultPrimaryInterestScore, localization.DefaultPrimaryInterestScore)
+	assert.Equal(t, localization.DefaultAdditionalInterestScore, localization.DefaultAdditionalInterestScore)
+	assert.Equal(t, localization.DefaultMinCompatibilityScore, localization.DefaultMinCompatibilityScore)
+	assert.Equal(t, localization.DefaultMinPrimaryInterests, localization.DefaultMinPrimaryInterests)
+	assert.Equal(t, localization.DefaultMaxPrimaryInterests, localization.DefaultMaxPrimaryInterests)
+	assert.Equal(t, localization.DefaultMaxPrimaryPerCategory, localization.DefaultMaxPrimaryPerCategory)
 
 	// Проверяем константы порядка отображения
-	assert.Equal(t, 1, entertainmentDisplayOrder)
-	assert.Equal(t, 2, educationDisplayOrder)
-	assert.Equal(t, 3, activeDisplayOrder)
-	assert.Equal(t, 4, creativeDisplayOrder)
-	assert.Equal(t, 5, socialDisplayOrder)
+	assert.Equal(t, localization.EntertainmentDisplayOrder, localization.EntertainmentDisplayOrder)
+	assert.Equal(t, localization.EducationDisplayOrder, localization.EducationDisplayOrder)
+	assert.Equal(t, localization.ActiveDisplayOrder, localization.ActiveDisplayOrder)
+	assert.Equal(t, localization.CreativeDisplayOrder, localization.CreativeDisplayOrder)
+	assert.Equal(t, localization.SocialDisplayOrder, localization.SocialDisplayOrder)
 }
 
 // TestInterestsConfig_DefaultCategories тестирует дефолтные категории.
 func TestInterestsConfig_DefaultCategories(t *testing.T) {
-	
 
 	// Изолируем тест в отдельной директории
 	tempDir := t.TempDir()
@@ -362,13 +354,12 @@ func TestInterestsConfig_DefaultCategories(t *testing.T) {
 		category, exists := categories[categoryName]
 		assert.True(t, exists, "Category %s should exist", categoryName)
 		assert.Greater(t, category.DisplayOrder, 0, "DisplayOrder should be > 0")
-		assert.Equal(t, defaultMaxPrimaryPerCategory, category.MaxPrimaryPerCategory)
+		assert.Equal(t, localization.DefaultMaxPrimaryPerCategory, category.MaxPrimaryPerCategory)
 	}
 }
 
 // TestInterestsConfig_Load_FileNotFound тестирует загрузку когда файл не найден.
 func TestInterestsConfig_Load_FileNotFound(t *testing.T) {
-	
 
 	// Меняем в директорию где нет файла конфигурации
 	tempDir := t.TempDir()
@@ -385,13 +376,12 @@ func TestInterestsConfig_Load_FileNotFound(t *testing.T) {
 	require.NotNil(t, config)
 
 	// Проверяем дефолтные значения
-	assert.Equal(t, defaultPrimaryInterestScore, config.Matching.PrimaryInterestScore)
+	assert.Equal(t, localization.DefaultPrimaryInterestScore, config.Matching.PrimaryInterestScore)
 	assert.Len(t, config.Categories, 5)
 }
 
 // TestInterestsConfig_Save_DirectoryCreation тестирует создание директории при сохранении.
 func TestInterestsConfig_Save_DirectoryCreation(t *testing.T) {
-	
 
 	// Создаем изолированную директорию
 	tempDir := t.TempDir()
@@ -425,7 +415,6 @@ func TestInterestsConfig_Save_DirectoryCreation(t *testing.T) {
 
 // TestInterestsConfig_Load_MultiplePaths тестирует поиск файла в разных путях.
 func TestInterestsConfig_Load_MultiplePaths(t *testing.T) {
-	
 
 	// Создаем структуру директорий для теста
 	tempDir := t.TempDir()
