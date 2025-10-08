@@ -220,7 +220,11 @@ func TestInterestsConfig_SaveAndLoad(t *testing.T) {
 	// Меняем текущую директорию
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)
@@ -250,7 +254,11 @@ func TestInterestsConfig_Save_InvalidData(t *testing.T) {
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)
@@ -270,7 +278,11 @@ func TestInterestsConfig_GetInterestsConfig(t *testing.T) {
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)
@@ -352,7 +364,11 @@ func TestInterestsConfig_DefaultCategories(t *testing.T) {
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)
@@ -381,7 +397,11 @@ func TestInterestsConfig_Load_FileNotFound(t *testing.T) {
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)
@@ -413,7 +433,11 @@ func TestInterestsConfig_Save_DirectoryCreation(t *testing.T) {
 	// Меняем текущую директорию
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)
@@ -457,7 +481,11 @@ func TestInterestsConfig_Load_MultiplePaths(t *testing.T) {
 	// Меняем текущую директорию
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)

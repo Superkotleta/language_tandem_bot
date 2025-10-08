@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -332,7 +333,9 @@ func TestConfig_Load_FileSecurity(t *testing.T) {
 
 	for _, dangerousPath := range dangerousPaths {
 		t.Run("dangerous_"+dangerousPath, func(t *testing.T) {
-			os.Setenv("TELEGRAM_TOKEN_FILE", dangerousPath)
+			if err := os.Setenv("TELEGRAM_TOKEN_FILE", dangerousPath); err != nil {
+				t.Logf("Failed to set TELEGRAM_TOKEN_FILE: %v", err)
+			}
 			defer clearEnvironment()
 
 			config := Load()
@@ -363,7 +366,9 @@ func TestConfig_Load_NumericParsing(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.envKey+"_"+tc.envValue, func(t *testing.T) {
 			clearEnvironment()
-			os.Setenv(tc.envKey, tc.envValue)
+			if err := os.Setenv(tc.envKey, tc.envValue); err != nil {
+				t.Logf("Failed to set %s: %v", tc.envKey, err)
+			}
 			defer clearEnvironment()
 
 			config := Load()
@@ -406,7 +411,9 @@ func TestConfig_Load_BooleanParsing(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.envKey+"_"+tc.envValue, func(t *testing.T) {
 			clearEnvironment()
-			os.Setenv(tc.envKey, tc.envValue)
+			if err := os.Setenv(tc.envKey, tc.envValue); err != nil {
+				t.Logf("Failed to set %s: %v", tc.envKey, err)
+			}
 			defer clearEnvironment()
 
 			config := Load()
@@ -481,6 +488,8 @@ func clearEnvironment() {
 	}
 
 	for _, key := range envKeys {
-		os.Unsetenv(key)
+		if err := os.Unsetenv(key); err != nil {
+			log.Printf("Failed to unset %s: %v", key, err)
+		}
 	}
 }

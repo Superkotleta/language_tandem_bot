@@ -191,7 +191,9 @@ func TestAdminServer_authMiddleware_InvalidToken(t *testing.T) {
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("should not reach here"))
+		if _, err := w.Write([]byte("should not reach here")); err != nil {
+			t.Logf("Failed to write response: %v", err)
+		}
 	})
 
 	// Wrap with auth middleware
@@ -215,7 +217,9 @@ func TestAdminServer_authMiddleware_NoToken(t *testing.T) {
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("should not reach here"))
+		if _, err := w.Write([]byte("should not reach here")); err != nil {
+			t.Logf("Failed to write response: %v", err)
+		}
 	})
 
 	// Wrap with auth middleware

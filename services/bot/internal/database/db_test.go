@@ -173,7 +173,11 @@ func TestDB_SaveUserInterests(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			t.Logf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 
 	// Создаем таблицы
 	setupTestUsersTable(t, db)
@@ -200,7 +204,11 @@ func TestDB_FindOrCreateUser_NewUser(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			t.Logf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 
 	// Создаем таблицы
 	setupTestUsersTable(t, db)
@@ -231,7 +239,11 @@ func TestDB_FindOrCreateUser_ExistingUser(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			t.Logf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 
 	// Создаем таблицы и пользователя
 	setupTestUsersTable(t, db)
