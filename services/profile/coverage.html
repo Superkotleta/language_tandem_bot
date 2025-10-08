@@ -1,0 +1,344 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>profile: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">profile/cmd/profile/main.go (0.0%)</option>
+				
+				<option value="file1">profile/internal/config/config.go (0.0%)</option>
+				
+				<option value="file2">profile/internal/db/conn.go (0.0%)</option>
+				
+				<option value="file3">profile/internal/db/migrate.go (0.0%)</option>
+				
+				<option value="file4">profile/internal/server/http.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Package main provides the entry point for the profile service.
+package main
+
+import (
+        "context"
+        "log"
+        "os"
+        "os/signal"
+        "syscall"
+        "time"
+
+        "profile/internal/config"
+        "profile/internal/db"
+        "profile/internal/server"
+)
+
+func main() <span class="cov0" title="0">{
+        cfg := config.LoadProfile()
+
+        pool, err := db.Connect(ctxWithTimeout(10*time.Second), cfg)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("db connect error: %v", err)
+        }</span>
+        <span class="cov0" title="0">defer pool.Close()
+
+        // Run migrations
+        if err := db.RunMigrations(cfg); err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("migrations error: %v", err)
+        }</span>
+
+        // HTTP server
+        <span class="cov0" title="0">srv := server.New(cfg.HTTPPort, pool)
+        go func() </span><span class="cov0" title="0">{
+                if err := srv.Start(); err != nil </span><span class="cov0" title="0">{
+                        log.Fatalf("http server error: %v", err)
+                }</span>
+        }()
+        <span class="cov0" title="0">log.Printf("profile service is up on :%s", cfg.HTTPPort)
+
+        // Graceful shutdown
+        stop := make(chan os.Signal, 1)
+        signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+        &lt;-stop
+
+        ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+        defer cancel()
+        _ = srv.Shutdown(ctx)
+        log.Printf("profile service stopped")</span>
+}
+
+func ctxWithTimeout(d time.Duration) context.Context <span class="cov0" title="0">{
+        ctx, cancel := context.WithTimeout(context.Background(), d)
+        defer cancel()
+        return ctx
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Package config provides configuration management for the profile service.
+package config
+
+import (
+        "os"
+)
+
+// Config holds the configuration for the profile service.
+type Config struct {
+        DatabaseURL   string
+        DBSchema      string
+        MigrationsDir string
+        HTTPPort      string
+        Debug         bool
+}
+
+func getEnv(key, def string) string <span class="cov0" title="0">{
+        if v := os.Getenv(key); v != "" </span><span class="cov0" title="0">{
+                return v
+        }</span>
+        <span class="cov0" title="0">return def</span>
+}
+
+// LoadProfile loads configuration from environment variables for the profile service.
+func LoadProfile() *Config <span class="cov0" title="0">{
+        return &amp;Config{
+                DatabaseURL:   getEnv("DATABASE_URL", "postgres://profile_rw:profile_pwd@postgres:5432/languagebot?sslmode=disable"),
+                DBSchema:      getEnv("DB_SCHEMA", "profile"),
+                MigrationsDir: getEnv("MIGRATIONS_DIR", "/migrations/profile"),
+                HTTPPort:      getEnv("HTTP_PORT", "8081"),
+                Debug:         getEnv("DEBUG", "false") == "true",
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">// Package db provides database connection and migration functionality for the profile service.
+package db
+
+import (
+        "context"
+        "fmt"
+
+        "profile/internal/config"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Connect establishes a database connection pool for the profile service.
+func Connect(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) <span class="cov0" title="0">{
+        pcfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">pool, err := pgxpool.NewWithConfig(ctx, pcfg)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        // search_path = &lt;schema&gt;,public
+        <span class="cov0" title="0">if _, err := pool.Exec(ctx, fmt.Sprintf("SET search_path = %s, public", cfg.DBSchema)); err != nil </span><span class="cov0" title="0">{
+                pool.Close()
+                return nil, err
+        }</span>
+        // ping
+        <span class="cov0" title="0">if err := pool.Ping(ctx); err != nil </span><span class="cov0" title="0">{
+                pool.Close()
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return pool, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package db
+
+import (
+        "fmt"
+        "log"
+
+        "profile/internal/config"
+
+        "github.com/golang-migrate/migrate/v4"
+        _ "github.com/golang-migrate/migrate/v4/database/postgres" // postgres driver for migrations
+        _ "github.com/golang-migrate/migrate/v4/source/file"       // file source for migrations
+)
+
+// RunMigrations applies database migrations for the profile service.
+func RunMigrations(cfg *config.Config) error <span class="cov0" title="0">{
+        src := "file://" + cfg.MigrationsDir
+        m, err := migrate.New(src, cfg.DatabaseURL)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("migrate.New: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{
+                sourceErr, dbErr := m.Close()
+                if sourceErr != nil </span><span class="cov0" title="0">{
+                        log.Printf("Error closing migration source: %v", sourceErr)
+                }</span>
+                <span class="cov0" title="0">if dbErr != nil </span><span class="cov0" title="0">{
+                        log.Printf("Error closing migration database: %v", dbErr)
+                }</span>
+        }()
+        <span class="cov0" title="0">if err := m.Up(); err != nil &amp;&amp; err != migrate.ErrNoChange </span><span class="cov0" title="0">{
+                return fmt.Errorf("m.Up: %w", err)
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">// Package server provides HTTP server implementation for the profile service.
+package server
+
+import (
+        "context"
+        "fmt"
+        "net/http"
+        "time"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Server represents the HTTP server for the profile service.
+type Server struct {
+        port string
+        db   *pgxpool.Pool
+        srv  *http.Server
+}
+
+// New creates a new HTTP server instance for the profile service.
+func New(port string, db *pgxpool.Pool) *Server <span class="cov0" title="0">{
+        mux := http.NewServeMux()
+
+        s := &amp;Server{port: port, db: db}
+        mux.HandleFunc("/healthz", s.handleHealth)
+        mux.HandleFunc("/readyz", s.handleReady)
+
+        s.srv = &amp;http.Server{
+                Addr:              ":" + port,
+                Handler:           mux,
+                ReadHeaderTimeout: 5 * time.Second,
+        }
+        return s
+}</span>
+
+// Start begins serving HTTP requests for the profile service.
+func (s *Server) Start() error <span class="cov0" title="0">{
+        return s.srv.ListenAndServe()
+}</span>
+
+// Shutdown gracefully shuts down the HTTP server.
+func (s *Server) Shutdown(ctx context.Context) error <span class="cov0" title="0">{
+        return s.srv.Shutdown(ctx)
+}</span>
+
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        w.WriteHeader(http.StatusOK)
+        _, _ = w.Write([]byte("ok"))
+}</span>
+
+func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+        defer cancel()
+        if err := s.db.Ping(ctx); err != nil </span><span class="cov0" title="0">{
+                http.Error(w, fmt.Sprintf("db not ready: %v", err), http.StatusServiceUnavailable)
+                return
+        }</span>
+        <span class="cov0" title="0">w.WriteHeader(http.StatusOK)
+        _, _ = w.Write([]byte("ready"))</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
