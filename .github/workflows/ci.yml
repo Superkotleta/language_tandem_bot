@@ -112,11 +112,13 @@ jobs:
 
     - name: Generate coverage report
       run: |
+        cd services/${{ matrix.service }}
         go tool cover -html=coverage-${{ matrix.service }}.out -o coverage.html
         echo "Coverage report generated: coverage.html"
 
     - name: Check test coverage threshold
       run: |
+        cd services/${{ matrix.service }}
         # Calculate total coverage percentage
         COVERAGE=$(go tool cover -func=coverage-${{ matrix.service }}.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
 
