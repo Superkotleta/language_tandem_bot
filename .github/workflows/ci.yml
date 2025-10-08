@@ -44,7 +44,7 @@ jobs:
         go-version: ${{ matrix.go-version }}
 
     - name: Cache Go modules
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/go/pkg/mod
@@ -62,7 +62,7 @@ jobs:
         go mod download -C services/profile
 
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v3
+      uses: golangci/golangci-lint-action@v4
       with:
         version: latest
         args: --timeout=5m
@@ -74,7 +74,7 @@ jobs:
         go test -race -coverprofile=coverage-${{ matrix.service }}.out -covermode=atomic ./...
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./services/${{ matrix.service }}/coverage-${{ matrix.service }}.out
         flags: unittests
@@ -142,7 +142,7 @@ jobs:
         fi
 
     - name: Upload coverage artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-reports
         path: services/${{ matrix.service }}/coverage-${{ matrix.service }}.out
@@ -160,7 +160,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Download coverage artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: coverage-reports
         path: ./coverage-reports
@@ -171,7 +171,7 @@ jobs:
         find ./coverage-reports -name "coverage-*.out" -exec cat {} \; | grep -v "mode:" >> combined-coverage.out
     
     - name: Upload combined coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./combined-coverage.out
         flags: unittests
@@ -273,19 +273,25 @@ jobs:
         format: 'sarif'
         output: 'trivy-results.sarif'
 
-    - name: Run CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
       with:
         languages: go
 
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
 
     - name: Upload Gosec results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: gosec-report
