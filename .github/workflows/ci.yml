@@ -256,7 +256,10 @@ jobs:
           export DEBUG=false
           export ADMIN_CHAT_IDS=123456789
           export ADMIN_USERNAMES=admin
-          export DOCKER_USERNAME=testuser
+          export DOCKER_USERNAME=ci-test
+
+          # Build bot image locally for CI testing
+          docker build -t ci-test/language-exchange-bot:latest ../bot
 
           # Start services with environment variables
           docker compose up -d --build
