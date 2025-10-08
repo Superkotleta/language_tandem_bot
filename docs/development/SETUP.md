@@ -5,18 +5,21 @@
 ## 📋 Предварительные требования
 
 ### Системные требования
+
 - **OS**: Linux/macOS/Windows (рекомендуется Linux)
 - **RAM**: Минимум 4GB, рекомендуется 8GB+
 - **Disk**: 10GB свободного места
 - **CPU**: 2+ ядра
 
 ### Обязательное ПО
+
 - **Go 1.25+** - [Установка](https://golang.org/doc/install)
 - **Docker 20.10+** - [Установка](https://docs.docker.com/get-docker/)
 - **Docker Compose 2.0+** - [Установка](https://docs.docker.com/compose/install/)
 - **Git 2.30+** - [Установка](https://git-scm.com/downloads)
 
 ### Опциональное ПО
+
 - **PostgreSQL 14+** - для локальной разработки
 - **Redis 6+** - для локального кэширования
 - **VS Code** - рекомендуемый редактор
@@ -62,7 +65,8 @@ cp .env.example .env
 nano .env
 ```
 
-#### Основные переменные (.env):
+#### Основные переменные (.env)
+
 ```bash
 # Telegram Bot
 TELEGRAM_TOKEN=your_bot_token_here
@@ -91,6 +95,7 @@ ADMIN_USERNAMES=admin1,admin2
 ### 4. Настройка базы данных
 
 #### Вариант A: Docker Compose (рекомендуется)
+
 ```bash
 # Запускаем только базу данных
 docker-compose up -d postgres redis
@@ -100,6 +105,7 @@ docker-compose ps
 ```
 
 #### Вариант B: Локальная установка
+
 ```bash
 # Ubuntu/Debian
 sudo apt-get install postgresql postgresql-contrib redis-server
@@ -162,7 +168,8 @@ curl http://localhost:8080/api/v1/stats
 
 ### VS Code
 
-#### Установка расширений:
+#### Установка расширений
+
 ```bash
 code --install-extension golang.go
 code --install-extension ms-vscode.vscode-json
@@ -170,7 +177,8 @@ code --install-extension bradlc.vscode-tailwindcss
 code --install-extension ms-vscode.vscode-docker
 ```
 
-#### Настройка Go:
+#### Настройка Go
+
 ```json
 // .vscode/settings.json
 {
@@ -183,7 +191,8 @@ code --install-extension ms-vscode.vscode-docker
 }
 ```
 
-#### Конфигурация отладки:
+#### Конфигурация отладки
+
 ```json
 // .vscode/launch.json
 {
@@ -255,7 +264,8 @@ volumes:
   redis_data:
 ```
 
-### Запуск с Docker:
+### Запуск с Docker
+
 ```bash
 # Development режим
 docker-compose -f docker-compose.dev.yml up
@@ -267,6 +277,7 @@ docker-compose -f docker-compose.dev.yml up --build
 ## 🧪 Настройка тестирования
 
 ### Unit тесты
+
 ```bash
 # Запуск всех тестов
 go test ./...
@@ -280,6 +291,7 @@ go test ./internal/cache/... -v
 ```
 
 ### Integration тесты
+
 ```bash
 # Запуск integration тестов
 go test ./tests/integration/... -v
@@ -289,6 +301,7 @@ docker-compose -f docker-compose.test.yml up --abort-on-container-exit
 ```
 
 ### Настройка тестовой базы данных
+
 ```bash
 # Создаем тестовую базу
 createdb language_exchange_test
@@ -300,6 +313,7 @@ psql -d language_exchange_test -f services/deploy/db-init/01-init-schemas.sql
 ## 🔍 Отладка и профилирование
 
 ### Логирование
+
 ```bash
 # Включить debug логи
 export DEBUG=true
@@ -309,6 +323,7 @@ export LOG_LEVEL=debug
 ```
 
 ### Профилирование
+
 ```bash
 # CPU профилирование
 go run cmd/bot/main.go &
@@ -322,6 +337,7 @@ go tool pprof http://localhost:8080/debug/pprof/goroutine
 ```
 
 ### Отладка с Delve
+
 ```bash
 # Установка Delve
 go install github.com/go-delve/delve/cmd/dlv@latest
@@ -333,12 +349,14 @@ dlv debug ./cmd/bot/main.go
 ## 🌐 Настройка Telegram Bot
 
 ### 1. Создание бота
+
 1. Напишите [@BotFather](https://t.me/botfather) в Telegram
 2. Используйте команду `/newbot`
 3. Следуйте инструкциям
 4. Сохраните полученный токен
 
 ### 2. Настройка webhook (опционально)
+
 ```bash
 # Установите ngrok
 ngrok http 8080
@@ -350,6 +368,7 @@ TELEGRAM_MODE=webhook
 ```
 
 ### 3. Тестирование бота
+
 ```bash
 # Запустите бота
 go run cmd/bot/main.go
@@ -361,6 +380,7 @@ go run cmd/bot/main.go
 ## 📊 Мониторинг и метрики
 
 ### Prometheus метрики
+
 ```bash
 # Просмотр метрик
 curl http://localhost:8080/metrics
@@ -370,6 +390,7 @@ open http://localhost:3000
 ```
 
 ### Health checks
+
 ```bash
 # Readiness probe
 curl http://localhost:8080/readyz
@@ -386,6 +407,7 @@ curl http://localhost:8080/api/v1/stats
 ### Частые проблемы
 
 #### 1. Ошибка подключения к базе данных
+
 ```bash
 # Проверьте статус PostgreSQL
 docker-compose ps postgres
@@ -398,6 +420,7 @@ psql -h localhost -U postgres -d language_exchange
 ```
 
 #### 2. Ошибка подключения к Redis
+
 ```bash
 # Проверьте статус Redis
 docker-compose ps redis
@@ -407,6 +430,7 @@ redis-cli ping
 ```
 
 #### 3. Проблемы с Telegram API
+
 ```bash
 # Проверьте токен
 curl "https://api.telegram.org/bot<YOUR_TOKEN>/getMe"
@@ -416,6 +440,7 @@ curl "https://api.telegram.org/bot<YOUR_TOKEN>/getWebhookInfo"
 ```
 
 #### 4. Проблемы с портами
+
 ```bash
 # Проверьте занятые порты
 netstat -tulpn | grep :8080
@@ -427,6 +452,7 @@ sudo fuser -k 8080/tcp
 ```
 
 ### Логи и отладка
+
 ```bash
 # Просмотр логов
 docker-compose logs -f bot

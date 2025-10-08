@@ -65,6 +65,7 @@ jobs:
       uses: golangci/golangci-lint-action@v8
       with:
         version: latest
+        working-directory: services/${{ matrix.service }}
         args: --timeout=5m
 
     - name: Run tests with coverage

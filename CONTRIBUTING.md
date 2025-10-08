@@ -114,7 +114,8 @@ test(cache): add unit tests for cache service
 refactor(database): simplify user queries
 ```
 
-#### Типы коммитов:
+#### Типы коммитов
+
 - `feat`: новая функция
 - `fix`: исправление ошибки
 - `docs`: изменения в документации
@@ -126,6 +127,7 @@ refactor(database): simplify user queries
 ### Go Code Style
 
 #### 1. Форматирование
+
 ```bash
 # Автоматическое форматирование
 go fmt ./...
@@ -135,6 +137,7 @@ goimports -w .
 ```
 
 #### 2. Naming Conventions
+
 ```go
 // Хорошо
 func GetUserByTelegramID(id int64) (*User, error) {}
@@ -146,6 +149,7 @@ func (s *Service) handleMsg(msg string) error {}
 ```
 
 #### 3. Комментарии
+
 ```go
 // Package cache provides caching functionality.
 package cache
@@ -164,6 +168,7 @@ func (s *Service) Get(key string) (interface{}, bool) {
 ```
 
 #### 4. Error Handling
+
 ```go
 // Хорошо
 func ProcessUser(user *User) error {
