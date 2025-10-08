@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0  # Полная история для генерации changelog
     
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v6
       with:
         go-version: 1.25.1
     
@@ -37,7 +37,7 @@ jobs:
         echo "EOF" >> $GITHUB_OUTPUT
     
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2.4.0
       with:
         tag_name: ${{ github.ref_name }}
         name: Release ${{ github.ref_name }}
