@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -45,7 +46,7 @@ func TestCentralizedErrorHandler_HandleError(t *testing.T) {
 
 	// Test method exists and doesn't panic
 	assert.NotPanics(t, func() {
-		err := handler.HandleError(nil, originalErr, "req123", 123, 456, "test_op")
+		err := handler.HandleError(context.TODO(), originalErr, "req123", 123, 456, "test_op")
 		// May return error, but shouldn't panic
 		_ = err
 	})
@@ -69,6 +70,8 @@ func TestCentralizedErrorHandler_ResolveAlert(t *testing.T) {
 
 	// Test method exists and doesn't panic
 	assert.NotPanics(t, func() {
-		handler.ResolveAlert(alertID)
+		err := handler.ResolveAlert(alertID)
+		// May return error, but shouldn't panic
+		_ = err
 	})
 }
