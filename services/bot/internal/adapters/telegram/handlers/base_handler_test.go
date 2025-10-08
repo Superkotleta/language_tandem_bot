@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"testing"
+
+	"language-exchange-bot/internal/errors"
 )
 
 // TestNewBaseHandler_NilInputs тестирует создание BaseHandler с nil значениями
@@ -68,5 +70,38 @@ func TestNewBaseHandler_NotNil(t *testing.T) {
 
 	if baseHandler == nil {
 		t.Fatal("NewBaseHandler should not return nil")
+	}
+}
+
+// TestBaseHandler_GetKeyboardBuilder тестирует getter для KeyboardBuilder
+func TestBaseHandler_GetKeyboardBuilder(t *testing.T) {
+	kb := &KeyboardBuilder{}
+	baseHandler := NewBaseHandler(nil, nil, kb, nil, nil)
+
+	result := baseHandler.GetKeyboardBuilder()
+	if result != kb {
+		t.Errorf("GetKeyboardBuilder() = %v, want %v", result, kb)
+	}
+}
+
+// TestBaseHandler_GetErrorHandler тестирует getter для ErrorHandler
+func TestBaseHandler_GetErrorHandler(t *testing.T) {
+	eh := &errors.ErrorHandler{}
+	baseHandler := NewBaseHandler(nil, nil, nil, eh, nil)
+
+	result := baseHandler.GetErrorHandler()
+	if result != eh {
+		t.Errorf("GetErrorHandler() = %v, want %v", result, eh)
+	}
+}
+
+// TestBaseHandler_GetMessageFactory тестирует getter для MessageFactory
+func TestBaseHandler_GetMessageFactory(t *testing.T) {
+	mf := &MessageFactory{}
+	baseHandler := NewBaseHandler(nil, nil, nil, nil, mf)
+
+	result := baseHandler.GetMessageFactory()
+	if result != mf {
+		t.Errorf("GetMessageFactory() = %v, want %v", result, mf)
 	}
 }

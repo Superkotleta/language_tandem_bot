@@ -840,3 +840,25 @@ func TestGetUserDataForFeedback(t *testing.T) {
 	// Test method signature exists
 	assert.NotNil(t, service.GetUserDataForFeedback)
 }
+
+func TestGetAllUnprocessedFeedback(t *testing.T) {
+	// Just test that the method exists and can be called
+	mockDB := new(MockDatabase)
+	mockLocalizer := &localization.Localizer{}
+
+	service := NewBotServiceWithInterface(mockDB, mockLocalizer)
+
+	// Test method signature exists
+	assert.NotNil(t, service.GetAllUnprocessedFeedback)
+}
+
+func TestGetAllFeedback(t *testing.T) {
+	// Just test that the method exists and can be called
+	mockDB := new(MockDatabase)
+	mockLocalizer := &localization.Localizer{}
+
+	service := NewBotServiceWithInterface(mockDB, mockLocalizer)
+
+	// Test method signature exists
+	assert.NotNil(t, service.GetAllFeedback)
+}

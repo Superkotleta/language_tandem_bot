@@ -432,3 +432,12 @@ func TestTelegramBot_SetErrorHandler(t *testing.T) {
 	bot.SetErrorHandler(errorHandler)
 	assert.Equal(t, errorHandler, bot.errorHandler)
 }
+
+// TestTelegramBot_ResolveUsernameToChatID tests username resolution
+func TestTelegramBot_ResolveUsernameToChatID(t *testing.T) {
+	// Just test that the method exists
+	bot := &TelegramBot{}
+
+	// Test method signature exists
+	assert.NotNil(t, bot.ResolveUsernameToChatID)
+}

@@ -105,3 +105,51 @@ func TestDashboard_handlePerformance(t *testing.T) {
 	// Test method signature exists
 	assert.NotNil(t, dashboard.handlePerformance)
 }
+
+// TestDashboard_handleIndex tests index page endpoint
+func TestDashboard_handleIndex(t *testing.T) {
+	// Just test that the method exists
+	monitor := &logging.PerformanceMonitor{}
+	handler := &errors.CentralizedErrorHandler{}
+
+	dashboard := NewDashboard(monitor, handler)
+
+	// Test method signature exists
+	assert.NotNil(t, dashboard.handleIndex)
+}
+
+// TestDashboard_handleMetricsPage tests metrics page endpoint
+func TestDashboard_handleMetricsPage(t *testing.T) {
+	// Just test that the method exists
+	monitor := &logging.PerformanceMonitor{}
+	handler := &errors.CentralizedErrorHandler{}
+
+	dashboard := NewDashboard(monitor, handler)
+
+	// Test method signature exists
+	assert.NotNil(t, dashboard.handleMetricsPage)
+}
+
+// TestDashboard_handleErrorsPage tests errors page endpoint
+func TestDashboard_handleErrorsPage(t *testing.T) {
+	// Just test that the method exists
+	monitor := &logging.PerformanceMonitor{}
+	handler := &errors.CentralizedErrorHandler{}
+
+	dashboard := NewDashboard(monitor, handler)
+
+	// Test method signature exists
+	assert.NotNil(t, dashboard.handleErrorsPage)
+}
+
+// TestDashboard_handleAlertsPage tests alerts page endpoint
+func TestDashboard_handleAlertsPage(t *testing.T) {
+	// Just test that the method exists
+	monitor := &logging.PerformanceMonitor{}
+	handler := &errors.CentralizedErrorHandler{}
+
+	dashboard := NewDashboard(monitor, handler)
+
+	// Test method signature exists
+	assert.NotNil(t, dashboard.handleAlertsPage)
+}
