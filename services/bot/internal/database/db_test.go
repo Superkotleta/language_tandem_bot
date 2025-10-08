@@ -900,7 +900,11 @@ func TestDB_ClearUserInterests(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close database: %v", err)
+		}
+	}()
 
 	// Создаем таблицы
 	setupTestSchema(t, db)
@@ -942,7 +946,11 @@ func TestDB_UpdateUserProfileCompletionLevel(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close database: %v", err)
+		}
+	}()
 
 	// Создаем таблицы
 	setupTestSchema(t, db)
