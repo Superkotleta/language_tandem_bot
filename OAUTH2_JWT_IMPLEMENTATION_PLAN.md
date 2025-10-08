@@ -85,18 +85,21 @@ services/bot/internal/auth/
 ### Phase 1: JWT Infrastructure (1 неделя)
 
 #### 1.1 JWT Manager
+
 - [ ] Создание и валидация JWT токенов
 - [ ] Настройка секретного ключа
 - [ ] Управление временем жизни токенов
 - [ ] Refresh token механизм
 
 #### 1.2 User Store
+
 - [ ] Модель администратора
 - [ ] Хранение в PostgreSQL
 - [ ] CRUD операции
 - [ ] Хеширование паролей
 
 #### 1.3 Basic Auth Endpoints
+
 - [ ] `POST /auth/login` - логин с username/password
 - [ ] `POST /auth/refresh` - обновление токена
 - [ ] `POST /auth/logout` - выход из системы
@@ -104,18 +107,21 @@ services/bot/internal/auth/
 ### Phase 2: OAuth2 Integration (1 неделя)
 
 #### 2.1 Google OAuth2
+
 - [ ] Настройка Google OAuth2 credentials
 - [ ] Реализация Google OAuth2 provider
 - [ ] Автоматическое создание пользователей
 - [ ] Связывание с существующими аккаунтами
 
 #### 2.2 GitHub OAuth2
+
 - [ ] Настройка GitHub OAuth2 app
 - [ ] Реализация GitHub OAuth2 provider
 - [ ] Получение информации о пользователе
 - [ ] Авторизация по GitHub организации
 
 #### 2.3 OAuth2 Endpoints
+
 - [ ] `GET /auth/oauth/{provider}` - начало OAuth2 flow
 - [ ] `GET /auth/oauth/{provider}/callback` - обработка callback
 - [ ] `POST /auth/oauth/link` - связывание аккаунтов
@@ -123,6 +129,7 @@ services/bot/internal/auth/
 ### Phase 3: Authorization System (1 неделя)
 
 #### 3.1 Role-Based Access Control (RBAC)
+
 ```go
 type Role struct {
     ID          int      `json:"id"`
@@ -140,12 +147,14 @@ type Permission struct {
 ```
 
 #### 3.2 Permission System
+
 - [ ] Определение ролей (admin, moderator, viewer)
 - [ ] Система разрешений по ресурсам
 - [ ] Middleware для проверки разрешений
 - [ ] Динамическое управление правами
 
 #### 3.3 Protected Endpoints
+
 - [ ] Защита всех Admin API endpoints
 - [ ] Различные уровни доступа
 - [ ] Аудит доступа к endpoints
@@ -153,12 +162,14 @@ type Permission struct {
 ### Phase 4: Advanced Features (1 неделя)
 
 #### 4.1 Session Management
+
 - [ ] Управление активными сессиями
 - [ ] Принудительный logout
 - [ ] Отзыв токенов
 - [ ] Мониторинг сессий
 
 #### 4.2 Security Enhancements
+
 - [ ] Rate limiting для auth endpoints
 - [ ] IP whitelist для администраторов
 - [ ] 2FA поддержка (TOTP)
@@ -167,6 +178,7 @@ type Permission struct {
 ## 🗄️ Database Schema
 
 ### Таблица администраторов
+
 ```sql
 CREATE TABLE admin_users (
     id SERIAL PRIMARY KEY,
@@ -183,6 +195,7 @@ CREATE TABLE admin_users (
 ```
 
 ### Таблица ролей
+
 ```sql
 CREATE TABLE admin_roles (
     id SERIAL PRIMARY KEY,
@@ -193,6 +206,7 @@ CREATE TABLE admin_roles (
 ```
 
 ### Таблица разрешений
+
 ```sql
 CREATE TABLE admin_permissions (
     id SERIAL PRIMARY KEY,
@@ -205,6 +219,7 @@ CREATE TABLE admin_permissions (
 ```
 
 ### Связующие таблицы
+
 ```sql
 CREATE TABLE admin_user_roles (
     user_id INTEGER REFERENCES admin_users(id),
@@ -222,6 +237,7 @@ CREATE TABLE admin_role_permissions (
 ## 🔧 Конфигурация
 
 ### Environment Variables
+
 ```bash
 # JWT Configuration
 JWT_SECRET_KEY=your-secret-key-here
@@ -241,6 +257,7 @@ SESSION_TIMEOUT=30m
 ```
 
 ### Config Structure
+
 ```go
 type AuthConfig struct {
     JWT JWTConfig `json:"jwt"`
@@ -269,18 +286,21 @@ type SecurityConfig struct {
 ## 🧪 Тестирование
 
 ### Unit Tests
+
 - [ ] JWT token creation/validation
 - [ ] OAuth2 provider integration
 - [ ] Permission checking
 - [ ] User authentication
 
 ### Integration Tests
+
 - [ ] Full OAuth2 flow
 - [ ] API endpoint protection
 - [ ] Role-based access control
 - [ ] Session management
 
 ### Security Tests
+
 - [ ] Token tampering protection
 - [ ] CSRF protection
 - [ ] Rate limiting
@@ -289,12 +309,14 @@ type SecurityConfig struct {
 ## 📊 Мониторинг и метрики
 
 ### Auth Metrics
+
 - [ ] Количество успешных/неуспешных логинов
 - [ ] Время жизни сессий
 - [ ] Использование OAuth2 провайдеров
 - [ ] Попытки несанкционированного доступа
 
 ### Security Alerts
+
 - [ ] Множественные неудачные попытки входа
 - [ ] Подозрительная активность
 - [ ] Попытки доступа с неавторизованных IP
@@ -303,12 +325,14 @@ type SecurityConfig struct {
 ## 🚀 Deployment
 
 ### Production Considerations
+
 - [ ] Использование внешнего Key Management Service
 - [ ] Настройка HTTPS для всех auth endpoints
 - [ ] Конфигурация CORS для OAuth2 callbacks
 - [ ] Backup и восстановление auth данных
 
 ### Migration Strategy
+
 - [ ] Постепенное внедрение без нарушения работы
 - [ ] Fallback на старую систему аутентификации
 - [ ] Миграция существующих администраторов

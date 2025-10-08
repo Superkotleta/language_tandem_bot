@@ -356,14 +356,24 @@ func (cacheService *Service) String() string {
 		hitRate = float64(stats.Hits) / float64(stats.Hits+stats.Misses) * PercentageMultiplier
 	}
 
-	return fmt.Sprintf("Cache Stats: Hits=%d, Misses=%d, HitRate=%.2f%%, Size=%d",
-		stats.Hits, stats.Misses, hitRate, stats.Size)
+	return fmt.Sprintf("Cache Stats: Hits=%d, Misses=%d, HitRate=%.2f%%, Size=%d, Evictions=%d, Memory=%dKB",
+		stats.Hits, stats.Misses, hitRate, stats.Size, stats.Evictions, stats.MemoryUsage/1024)
 }
 
-// updateSize обновляет размер кэша.
+// updateSize обновляет размер кэша и метрики.
 func (cacheService *Service) updateSize() {
 	cacheService.cacheStats.Size = len(cacheService.languages) + len(cacheService.interests) +
-		len(cacheService.translations) + len(cacheService.users) + len(cacheService.stats)
+		len(cacheService.translations) + len(cacheService.users) + len(cacheService.stats) +
+		len(cacheService.interestCategories) + len(cacheService.userStats) + len(cacheService.configCache)
+
+	// Обновляем hit ratio
+	total := cacheService.cacheStats.Hits + cacheService.cacheStats.Misses
+	if total > 0 {
+		cacheService.cacheStats.HitRatio = float64(cacheService.cacheStats.Hits) / float64(total)
+	}
+
+	// Обновляем использование памяти (приблизительная оценка)
+	cacheService.cacheStats.MemoryUsage = int64(cacheService.cacheStats.Size * 1024) // 1KB на запись
 }
 
 // startCleanup запускает фоновую очистку истекших записей.
@@ -387,7 +397,11 @@ func (cacheService *Service) cleanupExpired() {
 	defer cacheService.mutex.Unlock()
 
 	cleaned := cacheService.cleanupLanguages() + cacheService.cleanupInterests() + cacheService.cleanupTranslations() +
-		cacheService.cleanupUsers() + cacheService.cleanupStats()
+		cacheService.cleanupUsers() + cacheService.cleanupStats() + cacheService.cleanupInterestCategories() +
+		cacheService.cleanupUserStats() + cacheService.cleanupConfigCache()
+
+	// Обновляем счетчик evictions
+	cacheService.cacheStats.Evictions += int64(cleaned)
 
 	cacheService.updateSize()
 
@@ -463,6 +477,51 @@ func (cacheService *Service) cleanupStats() int {
 	for key, entry := range cacheService.stats {
 		if entry.IsExpired() {
 			delete(cacheService.stats, key)
+
+			cleaned++
+		}
+	}
+
+	return cleaned
+}
+
+// cleanupInterestCategories очищает истекшие категории интересов.
+func (cacheService *Service) cleanupInterestCategories() int {
+	cleaned := 0
+
+	for key, entry := range cacheService.interestCategories {
+		if entry.IsExpired() {
+			delete(cacheService.interestCategories, key)
+
+			cleaned++
+		}
+	}
+
+	return cleaned
+}
+
+// cleanupUserStats очищает истекшую статистику пользователей.
+func (cacheService *Service) cleanupUserStats() int {
+	cleaned := 0
+
+	for key, entry := range cacheService.userStats {
+		if entry.IsExpired() {
+			delete(cacheService.userStats, key)
+
+			cleaned++
+		}
+	}
+
+	return cleaned
+}
+
+// cleanupConfigCache очищает истекшую конфигурацию.
+func (cacheService *Service) cleanupConfigCache() int {
+	cleaned := 0
+
+	for key, entry := range cacheService.configCache {
+		if entry.IsExpired() {
+			delete(cacheService.configCache, key)
 
 			cleaned++
 		}
@@ -615,4 +674,145 @@ func (cacheService *Service) InvalidateUserStats(ctx context.Context, userID int
 
 	delete(cacheService.userStats, userID)
 	cacheService.updateSize()
+}
+
+// WarmUp предзагружает критичные данные в кэш при старте приложения.
+func (cacheService *Service) WarmUp(ctx context.Context, dataLoader DataLoader) error {
+	log.Println("Starting cache warming...")
+	start := time.Now()
+
+	// Список языков для предзагрузки
+	languages := []string{"ru", "en", "es", "zh"}
+
+	// Предзагружаем языки для всех поддерживаемых языков интерфейса
+	for _, lang := range languages {
+		if err := cacheService.warmUpLanguages(ctx, dataLoader, lang); err != nil {
+			log.Printf("Failed to warm up languages for %s: %v", lang, err)
+			// Продолжаем с другими языками даже если один не удался
+		}
+	}
+
+	// Предзагружаем интересы для всех языков
+	for _, lang := range languages {
+		if err := cacheService.warmUpInterests(ctx, dataLoader, lang); err != nil {
+			log.Printf("Failed to warm up interests for %s: %v", lang, err)
+		}
+	}
+
+	// Предзагружаем категории интересов
+	for _, lang := range languages {
+		if err := cacheService.warmUpInterestCategories(ctx, dataLoader, lang); err != nil {
+			log.Printf("Failed to warm up interest categories for %s: %v", lang, err)
+		}
+	}
+
+	// Предзагружаем переводы
+	for _, lang := range languages {
+		if err := cacheService.warmUpTranslations(ctx, dataLoader, lang); err != nil {
+			log.Printf("Failed to warm up translations for %s: %v", lang, err)
+		}
+	}
+
+	duration := time.Since(start)
+	log.Printf("Cache warming completed in %v", duration)
+	return nil
+}
+
+// DataLoader интерфейс для загрузки данных из внешних источников.
+type DataLoader interface {
+	LoadLanguages(ctx context.Context, lang string) ([]*models.Language, error)
+	LoadInterests(ctx context.Context, lang string) (map[int]string, error)
+	LoadInterestCategories(ctx context.Context, lang string) (map[int]string, error)
+	LoadTranslations(ctx context.Context, lang string) (map[string]string, error)
+}
+
+// warmUpLanguages предзагружает языки для указанного языка интерфейса.
+func (cacheService *Service) warmUpLanguages(ctx context.Context, dataLoader DataLoader, lang string) error {
+	languages, err := dataLoader.LoadLanguages(ctx, lang)
+	if err != nil {
+		return fmt.Errorf("failed to load languages for %s: %w", lang, err)
+	}
+
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	cachedData := &CachedLanguages{
+		Languages: languages,
+		Lang:      lang,
+	}
+
+	cacheService.languages[lang] = &Entry{
+		Data:      cachedData,
+		ExpiresAt: time.Now().Add(cacheService.config.LanguagesTTL),
+	}
+
+	cacheService.updateSize()
+	return nil
+}
+
+// warmUpInterests предзагружает интересы для указанного языка интерфейса.
+func (cacheService *Service) warmUpInterests(ctx context.Context, dataLoader DataLoader, lang string) error {
+	interests, err := dataLoader.LoadInterests(ctx, lang)
+	if err != nil {
+		return fmt.Errorf("failed to load interests for %s: %w", lang, err)
+	}
+
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	cachedData := &CachedInterests{
+		Interests: interests,
+		Lang:      lang,
+	}
+
+	cacheService.interests[lang] = &Entry{
+		Data:      cachedData,
+		ExpiresAt: time.Now().Add(cacheService.config.InterestsTTL),
+	}
+
+	cacheService.updateSize()
+	return nil
+}
+
+// warmUpInterestCategories предзагружает категории интересов для указанного языка интерфейса.
+func (cacheService *Service) warmUpInterestCategories(ctx context.Context, dataLoader DataLoader, lang string) error {
+	categories, err := dataLoader.LoadInterestCategories(ctx, lang)
+	if err != nil {
+		return fmt.Errorf("failed to load interest categories for %s: %w", lang, err)
+	}
+
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	cachedData := &CachedInterests{
+		Interests: categories,
+		Lang:      lang,
+	}
+
+	cacheService.interestCategories[lang] = &Entry{
+		Data:      cachedData,
+		ExpiresAt: time.Now().Add(cacheService.config.InterestCategoriesTTL),
+	}
+
+	cacheService.updateSize()
+	return nil
+}
+
+// warmUpTranslations предзагружает переводы для указанного языка интерфейса.
+func (cacheService *Service) warmUpTranslations(ctx context.Context, dataLoader DataLoader, lang string) error {
+	translations, err := dataLoader.LoadTranslations(ctx, lang)
+	if err != nil {
+		return fmt.Errorf("failed to load translations for %s: %w", lang, err)
+	}
+
+	cacheService.mutex.Lock()
+	defer cacheService.mutex.Unlock()
+
+	cacheService.translations[lang] = &Entry{
+		Data:      translations,
+		ExpiresAt: time.Now().Add(cacheService.config.TranslationsTTL),
+	}
+
+	cacheService.updateSize()
+	return nil
 }

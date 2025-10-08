@@ -31,6 +31,7 @@ type DB struct {
 	conn         *sql.DB
 	logger       *logging.DatabaseLogger
 	errorHandler *errors.ErrorHandler
+	batchOps     *BatchOperations
 }
 
 // NewDB создает новое подключение к базе данных.
@@ -39,6 +40,12 @@ func NewDB(databaseURL string) (*DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
+
+	// Настройка connection pool для оптимизации производительности
+	conn.SetMaxOpenConns(25)                  // Максимум 25 открытых соединений
+	conn.SetMaxIdleConns(10)                  // Максимум 10 idle соединений
+	conn.SetConnMaxLifetime(5 * time.Minute)  // Максимальное время жизни соединения
+	conn.SetConnMaxIdleTime(10 * time.Minute) // Максимальное время idle соединения
 
 	if err := conn.PingContext(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
@@ -50,6 +57,36 @@ func NewDB(databaseURL string) (*DB, error) {
 		errorHandler: errors.NewErrorHandler(nil),
 	}
 
+	db.batchOps = NewBatchOperations(db)
+	db.logger.LogConnectionEstablished("")
+
+	return db, nil
+}
+
+// NewDBWithConfig создает новое подключение к базе данных с конфигурацией.
+func NewDBWithConfig(databaseURL string, maxOpenConns, maxIdleConns int) (*DB, error) {
+	conn, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	// Настройка connection pool с переданными параметрами
+	conn.SetMaxOpenConns(maxOpenConns)
+	conn.SetMaxIdleConns(maxIdleConns)
+	conn.SetConnMaxLifetime(5 * time.Minute)  // Максимальное время жизни соединения
+	conn.SetConnMaxIdleTime(10 * time.Minute) // Максимальное время idle соединения
+
+	if err := conn.PingContext(context.Background()); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	db := &DB{
+		conn:         conn,
+		logger:       logging.NewDatabaseLogger(),
+		errorHandler: errors.NewErrorHandler(nil),
+	}
+
+	db.batchOps = NewBatchOperations(db)
 	db.logger.LogConnectionEstablished("")
 
 	return db, nil
@@ -1001,4 +1038,51 @@ func (db *DB) GetFriendshipPreferences(userID int) (*models.FriendshipPreference
 	}
 
 	return &preferences, nil
+}
+
+// ===== BATCH OPERATIONS METHODS =====
+
+// GetBatchOperations возвращает экземпляр BatchOperations для массовых операций.
+func (db *DB) GetBatchOperations() *BatchOperations {
+	return db.batchOps
+}
+
+// BatchInsertUsers выполняет массовую вставку пользователей.
+func (db *DB) BatchInsertUsers(ctx context.Context, users []*models.User) error {
+	return db.batchOps.BatchInsertUsers(ctx, users)
+}
+
+// BatchUpdateUsers выполняет массовое обновление пользователей.
+func (db *DB) BatchUpdateUsers(ctx context.Context, users []*models.User) error {
+	return db.batchOps.BatchUpdateUsers(ctx, users)
+}
+
+// BatchInsertInterests выполняет массовую вставку интересов.
+func (db *DB) BatchInsertInterests(ctx context.Context, interests []*models.Interest) error {
+	return db.batchOps.BatchInsertInterests(ctx, interests)
+}
+
+// BatchInsertUserInterests выполняет массовую вставку связей пользователь-интерес.
+func (db *DB) BatchInsertUserInterests(ctx context.Context, userID int, interestIDs []int) error {
+	return db.batchOps.BatchInsertUserInterests(ctx, userID, interestIDs)
+}
+
+// BatchDeleteUserInterests выполняет массовое удаление связей пользователь-интерес.
+func (db *DB) BatchDeleteUserInterests(ctx context.Context, userID int, interestIDs []int) error {
+	return db.batchOps.BatchDeleteUserInterests(ctx, userID, interestIDs)
+}
+
+// BatchInsertLanguages выполняет массовую вставку языков.
+func (db *DB) BatchInsertLanguages(ctx context.Context, languages []*models.Language) error {
+	return db.batchOps.BatchInsertLanguages(ctx, languages)
+}
+
+// BatchUpdateUserStats выполняет массовое обновление статистики пользователей.
+func (db *DB) BatchUpdateUserStats(ctx context.Context, userStats []UserStats) error {
+	return db.batchOps.BatchUpdateUserStats(ctx, userStats)
+}
+
+// BatchGetUsers выполняет массовое получение пользователей по ID.
+func (db *DB) BatchGetUsers(ctx context.Context, userIDs []int) ([]*models.User, error) {
+	return db.batchOps.BatchGetUsers(ctx, userIDs)
 }

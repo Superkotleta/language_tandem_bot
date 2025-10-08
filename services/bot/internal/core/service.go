@@ -29,25 +29,70 @@ const (
 )
 
 // BotService provides the main business logic for the language exchange bot.
+// It coordinates between different services like database, cache, localization,
+// and handles the core business logic for user management, matching, and feedback.
+//
+// BotService is the central component that:
+// - Manages user registration and profile completion
+// - Handles language and interest selection
+// - Processes user feedback and notifications
+// - Provides caching and performance optimization
+// - Implements circuit breaker patterns for resilience
 type BotService struct {
-	DB                       database.Database
-	Localizer                *localization.Localizer
-	Cache                    cache.ServiceInterface
-	InvalidationService      *cache.InvalidationService
-	MetricsService           *cache.MetricsService
-	BatchLoader              *database.BatchLoader
-	Service                  *validation.Service
-	LoggingService           *logging.LoggingService
-	FeedbackNotificationFunc func(data map[string]interface{}) error // функция для отправки уведомлений
-	Config                   *config.Config                          // конфигурация приложения
+	// DB provides database operations interface
+	DB database.Database
 
-	// Circuit Breakers для защиты от сбоев внешних сервисов
-	TelegramCircuitBreaker *circuit_breaker.CircuitBreaker
-	DatabaseCircuitBreaker *circuit_breaker.CircuitBreaker
-	RedisCircuitBreaker    *circuit_breaker.CircuitBreaker
+	// Localizer handles internationalization and translations
+	Localizer *localization.Localizer
+
+	// Cache provides caching operations for performance optimization
+	Cache cache.ServiceInterface
+
+	// InvalidationService manages cache invalidation strategies
+	InvalidationService *cache.InvalidationService
+
+	// MetricsService collects and provides cache performance metrics
+	MetricsService *cache.MetricsService
+
+	// BatchLoader handles batch database operations for efficiency
+	BatchLoader *database.BatchLoader
+
+	// Service provides validation services for user input
+	Service *validation.Service
+
+	// LoggingService handles application logging
+	LoggingService *logging.LoggingService
+
+	// FeedbackNotificationFunc is called when new feedback is received
+	// It should handle sending notifications to administrators
+	FeedbackNotificationFunc func(data map[string]interface{}) error
+
+	// Config contains application configuration
+	Config *config.Config
+
+	// Circuit Breakers provide resilience against external service failures
+	TelegramCircuitBreaker *circuit_breaker.CircuitBreaker // Protects against Telegram API failures
+	DatabaseCircuitBreaker *circuit_breaker.CircuitBreaker // Protects against database failures
+	RedisCircuitBreaker    *circuit_breaker.CircuitBreaker // Protects against Redis failures
 }
 
-// NewBotService creates a new BotService instance.
+// NewBotService creates a new BotService instance with in-memory caching.
+// This constructor is used when Redis is not available or for development.
+//
+// Parameters:
+//   - db: Database connection instance
+//   - errorHandler: Error handling interface (can be nil)
+//
+// Returns:
+//   - *BotService: Initialized service instance
+//
+// Example:
+//
+//	db, err := database.NewDB(databaseURL)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	service := core.NewBotService(db, nil)
 func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 	// Создаем конфигурацию
 	cfg := config.Load()
@@ -79,7 +124,7 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 		}
 	}
 
-	return &BotService{
+	service := &BotService{
 		DB:                       &databaseAdapter{db: db}, // Оборачиваем в адаптер
 		Localizer:                localization.NewLocalizer(db.GetConnection()),
 		Cache:                    cacheService,
@@ -94,9 +139,45 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 		DatabaseCircuitBreaker:   databaseCB,
 		RedisCircuitBreaker:      redisCB,
 	}
+
+	// Запускаем cache warming в фоне
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := cacheService.WarmUp(ctx, service); err != nil {
+			log.Printf("Cache warming failed: %v", err)
+		}
+	}()
+
+	return service
 }
 
 // NewBotServiceWithRedis создает BotService с Redis кэшем.
+// NewBotServiceWithRedis creates a new BotService instance with Redis caching.
+// This constructor is used in production environments for better performance.
+//
+// Parameters:
+//   - db: Database connection instance
+//   - redisURL: Redis server URL (e.g., "localhost:6379")
+//   - redisPassword: Redis password (empty string if no password)
+//   - redisDB: Redis database number (0-15)
+//   - errorHandler: Error handling interface (can be nil)
+//
+// Returns:
+//   - *BotService: Initialized service instance with Redis caching
+//   - error: Any error that occurred during initialization
+//
+// Example:
+//
+//	db, err := database.NewDB(databaseURL)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	service, err := core.NewBotServiceWithRedis(db, "localhost:6379", "", 0, nil)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
 func NewBotServiceWithRedis(
 	db *database.DB,
 	redisURL, redisPassword string,
@@ -1323,6 +1404,27 @@ func (s *BotService) StopCache() {
 // ===== BATCH LOADING МЕТОДЫ =====
 
 // GetUserWithAllData получает пользователя со всеми связанными данными одним запросом.
+// GetUserWithAllData retrieves a user with all associated data including interests,
+// time availability, and friendship preferences.
+//
+// This method first checks the cache for the user data, and if not found or incomplete,
+// loads the data from the database and caches it for future requests.
+//
+// Parameters:
+//   - telegramID: Telegram user ID to retrieve data for
+//
+// Returns:
+//   - *database.UserWithAllData: Complete user data including all relationships
+//   - error: Any error that occurred during retrieval
+//
+// Example:
+//
+//	userData, err := service.GetUserWithAllData(123456789)
+//	if err != nil {
+//	    log.Printf("Failed to get user data: %v", err)
+//	    return
+//	}
+//	fmt.Printf("User: %s, Interests: %v", userData.User.FirstName, userData.Interests)
 func (s *BotService) GetUserWithAllData(telegramID int64) (*database.UserWithAllData, error) {
 	start := time.Now()
 
@@ -1630,4 +1732,77 @@ func (a *databaseAdapter) SaveFriendshipPreferences(userID int, preferences *mod
 // GetFriendshipPreferences получает предпочтения общения пользователя
 func (a *databaseAdapter) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
 	return a.db.GetFriendshipPreferences(userID)
+}
+
+// DataLoader implementation для cache warming
+
+// LoadLanguages loads all available languages from the database.
+// This method is used by the cache warming process to pre-load language data.
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeout
+//   - lang: Interface language code (currently not used, but kept for interface compatibility)
+//
+// Returns:
+//   - []*models.Language: Slice of all available languages
+//   - error: Any error that occurred during loading
+//
+// Example:
+//
+//	languages, err := service.LoadLanguages(ctx, "en")
+//	if err != nil {
+//	    return fmt.Errorf("failed to load languages: %w", err)
+//	}
+//	for _, lang := range languages {
+//	    fmt.Printf("Language: %s (%s)", lang.NameEn, lang.Code)
+//	}
+func (s *BotService) LoadLanguages(ctx context.Context, lang string) ([]*models.Language, error) {
+	return s.DB.GetLanguages()
+}
+
+// LoadInterests loads all available interests from the database.
+// This method is used by the cache warming process to pre-load interest data.
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeout
+//   - lang: Interface language code (currently not used, but kept for interface compatibility)
+//
+// Returns:
+//   - map[int]string: Map of interest ID to interest name
+//   - error: Any error that occurred during loading
+//
+// Example:
+//
+//	interests, err := service.LoadInterests(ctx, "en")
+//	if err != nil {
+//	    return fmt.Errorf("failed to load interests: %w", err)
+//	}
+//	for id, name := range interests {
+//	    fmt.Printf("Interest %d: %s", id, name)
+//	}
+func (s *BotService) LoadInterests(ctx context.Context, lang string) (map[int]string, error) {
+	interests, err := s.DB.GetInterests()
+	if err != nil {
+		return nil, err
+	}
+
+	// Преобразуем в map[int]string
+	result := make(map[int]string)
+	for _, interest := range interests {
+		result[interest.ID] = interest.KeyName
+	}
+
+	return result, nil
+}
+
+// LoadInterestCategories загружает категории интересов для указанного языка интерфейса.
+func (s *BotService) LoadInterestCategories(ctx context.Context, lang string) (map[int]string, error) {
+	// Пока возвращаем пустую карту, так как категории интересов еще не реализованы
+	return make(map[int]string), nil
+}
+
+// LoadTranslations загружает переводы для указанного языка интерфейса.
+func (s *BotService) LoadTranslations(ctx context.Context, lang string) (map[string]string, error) {
+	// Пока возвращаем пустую карту, так как система переводов еще не реализована
+	return make(map[string]string), nil
 }

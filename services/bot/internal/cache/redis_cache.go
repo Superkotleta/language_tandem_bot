@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"language-exchange-bot/internal/localization"
@@ -25,9 +26,14 @@ var (
 
 // Redis configuration constants
 const (
-	DefaultRedisProtocol = 3
-	DefaultMaxRetries    = 3
-	DefaultPoolSize      = 10
+	DefaultRedisProtocol   = 3
+	DefaultMaxRetries      = 3
+	DefaultPoolSize        = 20               // Увеличено для лучшей производительности
+	DefaultMinIdleConns    = 5                // Минимум idle соединений
+	DefaultMaxIdleConns    = 10               // Максимум idle соединений
+	DefaultPoolTimeout     = 5 * time.Second  // Таймаут для получения соединения
+	DefaultConnMaxLifetime = 30 * time.Minute // Максимальное время жизни соединения
+	DefaultConnMaxIdleTime = 5 * time.Minute  // Максимальное время idle соединения
 )
 
 // RedisCacheService реализация кэша на основе Redis.
@@ -47,7 +53,7 @@ func NewRedisCacheService(redisURL, password string, database int, config *Confi
 		Password:                     password,
 		DB:                           database,
 		Network:                      "tcp",
-		ClientName:                   "",
+		ClientName:                   "language-exchange-bot",
 		Dialer:                       nil,
 		OnConnect:                    nil,
 		Protocol:                     DefaultRedisProtocol,
@@ -61,17 +67,17 @@ func NewRedisCacheService(redisURL, password string, database int, config *Confi
 		DialTimeout:                  DefaultDialTimeout,
 		ReadTimeout:                  DefaultReadTimeout,
 		WriteTimeout:                 DefaultWriteTimeout,
-		ContextTimeoutEnabled:        false,
-		ReadBufferSize:               0,
-		WriteBufferSize:              0,
-		PoolFIFO:                     false,
+		ContextTimeoutEnabled:        true,  // Включаем context timeout для лучшего контроля
+		ReadBufferSize:               16384, // 16KB буфер для чтения
+		WriteBufferSize:              16384, // 16KB буфер для записи
+		PoolFIFO:                     true,  // FIFO для более предсказуемого поведения
 		PoolSize:                     DefaultPoolSize,
-		PoolTimeout:                  0,
-		MinIdleConns:                 0,
-		MaxIdleConns:                 0,
+		PoolTimeout:                  DefaultPoolTimeout,
+		MinIdleConns:                 DefaultMinIdleConns,
+		MaxIdleConns:                 DefaultMaxIdleConns,
 		MaxActiveConns:               0,
-		ConnMaxIdleTime:              0,
-		ConnMaxLifetime:              0,
+		ConnMaxIdleTime:              DefaultConnMaxIdleTime,
+		ConnMaxLifetime:              DefaultConnMaxLifetime,
 		TLSConfig:                    nil,
 		Limiter:                      nil,
 		DisableIndentity:             false,
@@ -550,4 +556,281 @@ func (r *RedisCacheService) InvalidateInterestCategories(ctx context.Context) {
 func (r *RedisCacheService) InvalidateUserStats(ctx context.Context, userID int64) {
 	key := fmt.Sprintf("user_stats:%d", userID)
 	r.client.Del(ctx, key)
+}
+
+// ===== ОПТИМИЗИРОВАННЫЕ МЕТОДЫ =====
+
+// BatchSet выполняет множественные операции SET через pipeline для лучшей производительности.
+func (r *RedisCacheService) BatchSet(ctx context.Context, items map[string]interface{}, ttl time.Duration) error {
+	if len(items) == 0 {
+		return nil
+	}
+
+	pipe := r.client.Pipeline()
+
+	for key, value := range items {
+		data, err := json.Marshal(value)
+		if err != nil {
+			log.Printf("Redis error marshaling value for key %s: %v", key, err)
+			continue
+		}
+		pipe.Set(ctx, key, data, ttl)
+	}
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to execute batch set: %w", err)
+	}
+
+	return nil
+}
+
+// BatchGet выполняет множественные операции GET через pipeline.
+func (r *RedisCacheService) BatchGet(ctx context.Context, keys []string) (map[string]interface{}, error) {
+	if len(keys) == 0 {
+		return make(map[string]interface{}), nil
+	}
+
+	pipe := r.client.Pipeline()
+	cmds := make([]*redis.StringCmd, len(keys))
+
+	for i, key := range keys {
+		cmds[i] = pipe.Get(ctx, key)
+	}
+
+	_, err := pipe.Exec(ctx)
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, fmt.Errorf("failed to execute batch get: %w", err)
+	}
+
+	result := make(map[string]interface{})
+	for i, cmd := range cmds {
+		val, err := cmd.Result()
+		if err != nil {
+			if errors.Is(err, redis.Nil) {
+				continue // Ключ не найден, пропускаем
+			}
+			log.Printf("Redis error getting key %s: %v", keys[i], err)
+			continue
+		}
+
+		var data interface{}
+		if err := json.Unmarshal([]byte(val), &data); err != nil {
+			log.Printf("Redis error unmarshaling key %s: %v", keys[i], err)
+			continue
+		}
+
+		result[keys[i]] = data
+	}
+
+	return result, nil
+}
+
+// BatchDelete выполняет множественные операции DEL через pipeline.
+func (r *RedisCacheService) BatchDelete(ctx context.Context, keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	pipe := r.client.Pipeline()
+
+	for _, key := range keys {
+		pipe.Del(ctx, key)
+	}
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to execute batch delete: %w", err)
+	}
+
+	return nil
+}
+
+// BatchSetUsers сохраняет множественных пользователей через pipeline.
+func (r *RedisCacheService) BatchSetUsers(ctx context.Context, users []*models.User) error {
+	if len(users) == 0 {
+		return nil
+	}
+
+	items := make(map[string]interface{})
+	for _, user := range users {
+		key := fmt.Sprintf("user:%d", user.ID)
+		items[key] = user
+	}
+
+	return r.BatchSet(ctx, items, r.config.UsersTTL)
+}
+
+// BatchGetUsers получает множественных пользователей через pipeline.
+func (r *RedisCacheService) BatchGetUsers(ctx context.Context, userIDs []int64) ([]*models.User, error) {
+	if len(userIDs) == 0 {
+		return nil, nil
+	}
+
+	keys := make([]string, len(userIDs))
+	for i, userID := range userIDs {
+		keys[i] = fmt.Sprintf("user:%d", userID)
+	}
+
+	data, err := r.BatchGet(ctx, keys)
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]*models.User, 0, len(data))
+	for _, value := range data {
+		if userData, ok := value.(map[string]interface{}); ok {
+			// Конвертируем map в User struct
+			user := &models.User{}
+			if id, ok := userData["id"].(float64); ok {
+				user.ID = int(id)
+			}
+			if telegramID, ok := userData["telegram_id"].(float64); ok {
+				user.TelegramID = int64(telegramID)
+			}
+			if username, ok := userData["username"].(string); ok {
+				user.Username = username
+			}
+			if firstName, ok := userData["first_name"].(string); ok {
+				user.FirstName = firstName
+			}
+			if nativeLang, ok := userData["native_language_code"].(string); ok {
+				user.NativeLanguageCode = nativeLang
+			}
+			if targetLang, ok := userData["target_language_code"].(string); ok {
+				user.TargetLanguageCode = targetLang
+			}
+			if targetLevel, ok := userData["target_language_level"].(string); ok {
+				user.TargetLanguageLevel = targetLevel
+			}
+			if interfaceLang, ok := userData["interface_language_code"].(string); ok {
+				user.InterfaceLanguageCode = interfaceLang
+			}
+			if state, ok := userData["state"].(string); ok {
+				user.State = state
+			}
+			if status, ok := userData["status"].(string); ok {
+				user.Status = status
+			}
+			if profileLevel, ok := userData["profile_completion_level"].(float64); ok {
+				user.ProfileCompletionLevel = int(profileLevel)
+			}
+			if createdAt, ok := userData["created_at"].(string); ok {
+				if parsed, err := time.Parse(time.RFC3339, createdAt); err == nil {
+					user.CreatedAt = parsed
+				}
+			}
+			if updatedAt, ok := userData["updated_at"].(string); ok {
+				if parsed, err := time.Parse(time.RFC3339, updatedAt); err == nil {
+					user.UpdatedAt = parsed
+				}
+			}
+
+			users = append(users, user)
+		}
+	}
+
+	return users, nil
+}
+
+// WarmUpBatch предзагружает критичные данные в Redis через batch операции.
+func (r *RedisCacheService) WarmUpBatch(ctx context.Context, dataLoader DataLoader) error {
+	log.Println("Starting Redis cache warming...")
+	start := time.Now()
+
+	// Загружаем языки для всех поддерживаемых языков
+	languages, err := dataLoader.LoadLanguages(ctx, "en")
+	if err != nil {
+		return fmt.Errorf("failed to load languages: %w", err)
+	}
+
+	// Сохраняем языки через batch операцию
+	items := make(map[string]interface{})
+	items["languages:en"] = languages
+	if err := r.BatchSet(ctx, items, r.config.LanguagesTTL); err != nil {
+		log.Printf("Failed to warm up languages: %v", err)
+	}
+
+	// Загружаем интересы
+	interests, err := dataLoader.LoadInterests(ctx, "en")
+	if err != nil {
+		return fmt.Errorf("failed to load interests: %w", err)
+	}
+
+	// Сохраняем интересы через batch операцию
+	items = make(map[string]interface{})
+	items["interests:en"] = interests
+	if err := r.BatchSet(ctx, items, r.config.InterestsTTL); err != nil {
+		log.Printf("Failed to warm up interests: %v", err)
+	}
+
+	// Загружаем категории интересов
+	categories, err := dataLoader.LoadInterestCategories(ctx, "en")
+	if err != nil {
+		return fmt.Errorf("failed to load interest categories: %w", err)
+	}
+
+	// Сохраняем категории через batch операцию
+	items = make(map[string]interface{})
+	items["interest_categories:en"] = categories
+	if err := r.BatchSet(ctx, items, r.config.InterestCategoriesTTL); err != nil {
+		log.Printf("Failed to warm up interest categories: %v", err)
+	}
+
+	// Загружаем переводы
+	translations, err := dataLoader.LoadTranslations(ctx, "en")
+	if err != nil {
+		return fmt.Errorf("failed to load translations: %w", err)
+	}
+
+	// Сохраняем переводы через batch операцию
+	items = make(map[string]interface{})
+	items["translations:en"] = translations
+	if err := r.BatchSet(ctx, items, r.config.TranslationsTTL); err != nil {
+		log.Printf("Failed to warm up translations: %v", err)
+	}
+
+	duration := time.Since(start)
+	log.Printf("Redis cache warming completed in %v", duration)
+	return nil
+}
+
+// GetConnectionStats возвращает статистику соединений Redis.
+func (r *RedisCacheService) GetConnectionStats(ctx context.Context) map[string]interface{} {
+	info, err := r.client.Info(ctx, "stats").Result()
+	if err != nil {
+		log.Printf("Redis error getting connection stats: %v", err)
+		return map[string]interface{}{
+			"error": "failed to get connection stats",
+		}
+	}
+
+	// Парсим информацию о соединениях
+	stats := make(map[string]interface{})
+	lines := strings.Split(info, "\r\n")
+	for _, line := range lines {
+		if strings.Contains(line, ":") && !strings.HasPrefix(line, "#") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				key := strings.TrimSpace(parts[0])
+				value := strings.TrimSpace(parts[1])
+				stats[key] = value
+			}
+		}
+	}
+
+	return stats
+}
+
+// HealthCheck проверяет здоровье Redis соединения.
+func (r *RedisCacheService) HealthCheck(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := r.client.Ping(ctx).Result()
+	if err != nil {
+		return fmt.Errorf("Redis health check failed: %w", err)
+	}
+
+	return nil
 }

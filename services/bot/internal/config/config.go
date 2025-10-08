@@ -16,7 +16,9 @@ type Config struct {
 	// Telegram Bot
 	TelegramToken string
 	// Database
-	DatabaseURL string
+	DatabaseURL          string
+	DatabaseMaxOpenConns int // Максимум открытых соединений
+	DatabaseMaxIdleConns int // Максимум idle соединений
 	// Redis
 	RedisURL      string
 	RedisPassword string
@@ -53,6 +55,8 @@ func Load() *Config {
 	config := &Config{
 		TelegramToken:           getTelegramToken(getFromFile),
 		DatabaseURL:             getDatabaseURL(getFromFile),
+		DatabaseMaxOpenConns:    getDatabaseMaxOpenConns(),
+		DatabaseMaxIdleConns:    getDatabaseMaxIdleConns(),
 		RedisURL:                getEnv("REDIS_URL", "localhost:6379"),
 		RedisPassword:           getEnv("REDIS_PASSWORD", ""),
 		RedisDB:                 getRedisDB(),
@@ -334,4 +338,22 @@ func createFileReader() func(string) string {
 
 		return ""
 	}
+}
+
+// getDatabaseMaxOpenConns получает максимальное количество открытых соединений.
+func getDatabaseMaxOpenConns() int {
+	value := getEnv("DATABASE_MAX_OPEN_CONNS", "25")
+	if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
+		return parsed
+	}
+	return 25 // значение по умолчанию
+}
+
+// getDatabaseMaxIdleConns получает максимальное количество idle соединений.
+func getDatabaseMaxIdleConns() int {
+	value := getEnv("DATABASE_MAX_IDLE_CONNS", "10")
+	if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
+		return parsed
+	}
+	return 10 // значение по умолчанию
 }
