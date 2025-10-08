@@ -42,6 +42,7 @@ func (m *mockBotService) GetCircuitBreakerCounts() map[string]map[string]int {
 	}
 }
 
+// nolint:unused
 func (m *mockBotService) GetConfig() interface{} {
 	return map[string]interface{}{
 		"version": "1.0.0",
@@ -49,10 +50,12 @@ func (m *mockBotService) GetConfig() interface{} {
 	}
 }
 
+// nolint:unused
 func (m *mockBotService) StopCache() {
 	// mock implementation
 }
 
+// nolint:unused
 func (m *mockBotService) GetCacheStats() map[string]interface{} {
 	return map[string]interface{}{
 		"total_entries": 100,
@@ -63,8 +66,10 @@ func (m *mockBotService) GetCacheStats() map[string]interface{} {
 }
 
 // mockTelegramHandler - mock для TelegramHandler
+// nolint:unused
 type mockTelegramHandler struct{}
 
+// nolint:unused
 func (m *mockTelegramHandler) GetRateLimiterStats() map[string]interface{} {
 	return map[string]interface{}{
 		"total_requests":   1000,
