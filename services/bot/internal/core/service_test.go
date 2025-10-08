@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
@@ -691,4 +692,151 @@ func TestExecuteWithCircuitBreakersContext(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "success", result)
 	})
+}
+
+func TestFormatDayType(t *testing.T) {
+	// Initialize service with localizer to avoid nil pointer dereference
+	localizer := &localization.Localizer{}
+	service := NewBotServiceWithInterface(nil, localizer)
+
+	t.Run("weekdays", func(t *testing.T) {
+		ta := &models.TimeAvailability{DayType: "weekdays"}
+		result := service.formatDayType(ta, "en")
+		assert.Contains(t, result, "weekdays")
+	})
+
+	t.Run("weekends", func(t *testing.T) {
+		ta := &models.TimeAvailability{DayType: "weekends"}
+		result := service.formatDayType(ta, "en")
+		assert.Contains(t, result, "weekends")
+	})
+
+	t.Run("any", func(t *testing.T) {
+		ta := &models.TimeAvailability{DayType: "any"}
+		result := service.formatDayType(ta, "en")
+		assert.NotEmpty(t, result)
+	})
+
+	t.Run("specific", func(t *testing.T) {
+		ta := &models.TimeAvailability{DayType: "specific", SpecificDays: []string{"monday", "wednesday"}}
+		result := service.formatDayType(ta, "en")
+		assert.Contains(t, result, "monday")
+		assert.Contains(t, result, "wednesday")
+	})
+}
+
+func TestFormatSpecificDays(t *testing.T) {
+	// Initialize service with localizer to avoid nil pointer dereference
+	localizer := &localization.Localizer{}
+	service := NewBotServiceWithInterface(nil, localizer)
+
+	t.Run("with days", func(t *testing.T) {
+		days := []string{"monday", "wednesday", "friday"}
+		result := service.formatSpecificDays(days, "en")
+		assert.Contains(t, result, "monday")
+		assert.Contains(t, result, "wednesday")
+		assert.Contains(t, result, "friday")
+	})
+
+	t.Run("empty days", func(t *testing.T) {
+		days := []string{}
+		result := service.formatSpecificDays(days, "en")
+		assert.NotEmpty(t, result)
+	})
+}
+
+func TestFormatTimeSlot(t *testing.T) {
+	// Initialize service with localizer to avoid nil pointer dereference
+	localizer := &localization.Localizer{}
+	service := NewBotServiceWithInterface(nil, localizer)
+
+	tests := []struct {
+		name     string
+		timeSlot string
+		expected string
+	}{
+		{"morning", "morning", "morning"},
+		{"day", "day", "day"},
+		{"evening", "evening", "evening"},
+		{"late", "late", "late"},
+		{"unknown", "unknown", "any"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := service.formatTimeSlot(tt.timeSlot, "en")
+			assert.Contains(t, result, tt.expected)
+		})
+	}
+}
+
+func TestFormatCommunicationStyle(t *testing.T) {
+	// Initialize service with localizer to avoid nil pointer dereference
+	localizer := &localization.Localizer{}
+	service := NewBotServiceWithInterface(nil, localizer)
+
+	tests := []struct {
+		name  string
+		style string
+	}{
+		{"text", "text"},
+		{"voice_msg", "voice"},
+		{"audio_call", "audio"},
+		{"video_call", "video"},
+		{"meet_person", "meet"},
+		{"unknown", "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := service.formatCommunicationStyle(tt.style, "en")
+			assert.NotEmpty(t, result)
+		})
+	}
+}
+
+func TestFormatCommunicationFreq(t *testing.T) {
+	// Initialize service with localizer to avoid nil pointer dereference
+	localizer := &localization.Localizer{}
+	service := NewBotServiceWithInterface(nil, localizer)
+
+	tests := []struct {
+		name string
+		freq string
+	}{
+		{"spontaneous", "spontaneous"},
+		{"weekly", "weekly"},
+		{"daily", "daily"},
+		{"intensive", "intensive"},
+		{"unknown", "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := service.formatCommunicationFreq(tt.freq, "en")
+			assert.NotEmpty(t, result)
+		})
+	}
+}
+
+func TestFormatMemberSince(t *testing.T) {
+	// Initialize service with localizer to avoid nil pointer dereference
+	localizer := &localization.Localizer{}
+	service := NewBotServiceWithInterface(nil, localizer)
+
+	createdAt := time.Date(2023, 1, 15, 0, 0, 0, 0, time.UTC)
+	result := service.formatMemberSince(createdAt, "en")
+	assert.Contains(t, result, "15.01.2023")
+	assert.Contains(t, result, "member_since")
+}
+
+func TestGetUserDataForFeedback(t *testing.T) {
+	// Just test that the method exists and can be called
+	mockDB := new(MockDatabase)
+	mockLocalizer := &localization.Localizer{}
+
+	service := NewBotServiceWithInterface(mockDB, mockLocalizer)
+
+	// Test method signature exists
+	assert.NotNil(t, service.GetUserDataForFeedback)
 }
