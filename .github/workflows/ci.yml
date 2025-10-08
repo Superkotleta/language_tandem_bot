@@ -237,6 +237,7 @@ jobs:
       run: |
         # Check if docker compose is available (Docker Compose v2)
         if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+          cd services/deploy
           docker compose up -d --build
           sleep 30  # Wait for services to start
 
@@ -256,6 +257,7 @@ jobs:
       if: always()
       run: |
         if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+          cd services/deploy
           docker compose down -v --remove-orphans
         fi
 
