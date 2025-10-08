@@ -450,7 +450,9 @@ func TestConfig_Load_FloatParsing(t *testing.T) {
 		t.Run("PRIMARY_PERCENTAGE_"+tc.envValue, func(t *testing.T) {
 			clearEnvironment()
 			if tc.envValue != "" {
-				os.Setenv("PRIMARY_PERCENTAGE", tc.envValue)
+				if err := os.Setenv("PRIMARY_PERCENTAGE", tc.envValue); err != nil {
+					t.Logf("Failed to set environment variable PRIMARY_PERCENTAGE: %v", err)
+				}
 			}
 			defer clearEnvironment()
 
