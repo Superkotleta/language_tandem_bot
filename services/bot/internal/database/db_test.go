@@ -351,7 +351,7 @@ func TestDB_UpdateUserNativeLanguage(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя
 	setupTestUsersTable(t, db)
@@ -375,7 +375,7 @@ func TestDB_UpdateUserTargetLanguage(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя
 	setupTestUsersTable(t, db)
@@ -399,7 +399,7 @@ func TestDB_UpdateUserTargetLanguageLevel(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя
 	setupTestUsersTable(t, db)
@@ -423,7 +423,7 @@ func TestDB_RemoveUserInterest(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы
 	setupTestUsersTable(t, db)
@@ -458,7 +458,7 @@ func TestDB_GetInterestByID(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и интересы
 	setupTestInterestsTable(t, db)
@@ -480,7 +480,7 @@ func TestDB_SaveNativeLanguage(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя
 	setupTestUsersTable(t, db)
@@ -504,7 +504,7 @@ func TestDB_SaveTargetLanguage(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя
 	setupTestUsersTable(t, db)
@@ -528,7 +528,7 @@ func TestDB_ResetUserProfile(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя с заполненным профилем
 	setupTestUsersTable(t, db)
@@ -581,7 +581,7 @@ func TestDB_SaveUserFeedback(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы
 	setupTestUsersTable(t, db)
@@ -618,7 +618,7 @@ func TestDB_GetUserFeedbackByUserID(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы
 	setupTestUsersTable(t, db)
@@ -655,7 +655,7 @@ func TestDB_GetUnprocessedFeedback(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы
 	setupTestUsersTable(t, db)
@@ -702,7 +702,7 @@ func TestDB_MarkFeedbackProcessed(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы
 	setupTestUsersTable(t, db)
