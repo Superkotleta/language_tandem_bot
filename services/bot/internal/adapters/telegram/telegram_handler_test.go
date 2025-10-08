@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/database"
+	errorsPkg "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -335,4 +337,98 @@ func TestTelegramHandler_HandleState(t *testing.T) {
 	err := handler.handleState(message, user)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "service not initialized")
+}
+
+// TestNewTelegramBot_InvalidToken tests bot creation with invalid token
+func TestNewTelegramBot_InvalidToken(t *testing.T) {
+	db := &database.DB{} // mock DB
+	adminChatIDs := []int64{123}
+
+	// Test with invalid token
+	bot, err := NewTelegramBot("invalid_token", db, false, adminChatIDs)
+	assert.Error(t, err)
+	assert.Nil(t, bot)
+	assert.Contains(t, err.Error(), "failed to create telegram bot")
+}
+
+// TestNewTelegramBotWithUsernames_EmptyUsernames tests bot creation with empty usernames
+func TestNewTelegramBotWithUsernames_EmptyUsernames(t *testing.T) {
+	db := &database.DB{} // mock DB
+	adminUsernames := []string{"", "   ", ""}
+
+	// Test with empty usernames - should create bot but with empty admin list
+	bot, err := NewTelegramBotWithUsernames("invalid_token", db, false, adminUsernames)
+	assert.Error(t, err) // Will fail due to invalid token, but admin processing should work
+	assert.Nil(t, bot)
+}
+
+// TestResolveUsernameToChatID tests username resolution
+func TestResolveUsernameToChatID(t *testing.T) {
+	bot := &TelegramBot{}
+
+	// Test method always returns 0, nil for compatibility
+	chatID, err := bot.ResolveUsernameToChatID("testuser")
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), chatID)
+
+	// Test with @ prefix
+	chatID, err = bot.ResolveUsernameToChatID("@testuser")
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), chatID)
+}
+
+// TestTelegramBot_GetService tests service getter
+func TestTelegramBot_GetService(t *testing.T) {
+	// Create bot with mock service
+	service := &core.BotService{}
+	bot := &TelegramBot{
+		service: service,
+	}
+
+	// Test service getter
+	assert.Equal(t, service, bot.GetService())
+}
+
+// TestTelegramBot_GetAdminCount tests admin count getter
+func TestTelegramBot_GetAdminCount(t *testing.T) {
+	bot := &TelegramBot{
+		adminChatIDs: []int64{123, 456},
+	}
+
+	assert.Equal(t, 2, bot.GetAdminCount())
+}
+
+// TestTelegramBot_SetAdminChatIDs tests setting admin chat IDs
+func TestTelegramBot_SetAdminChatIDs(t *testing.T) {
+	bot := &TelegramBot{}
+	newAdminChatIDs := []int64{789, 101112}
+
+	bot.SetAdminChatIDs(newAdminChatIDs)
+	assert.Equal(t, newAdminChatIDs, bot.adminChatIDs)
+}
+
+// TestTelegramBot_GetPlatformName tests platform name getter
+func TestTelegramBot_GetPlatformName(t *testing.T) {
+	bot := &TelegramBot{}
+
+	assert.Equal(t, "telegram", bot.GetPlatformName())
+}
+
+// TestTelegramBot_GetBotAPI tests API getter
+func TestTelegramBot_GetBotAPI(t *testing.T) {
+	api := &tgbotapi.BotAPI{}
+	bot := &TelegramBot{
+		api: api,
+	}
+
+	assert.Equal(t, api, bot.GetBotAPI())
+}
+
+// TestTelegramBot_SetErrorHandler tests error handler setter
+func TestTelegramBot_SetErrorHandler(t *testing.T) {
+	bot := &TelegramBot{}
+	errorHandler := &errorsPkg.ErrorHandler{}
+
+	bot.SetErrorHandler(errorHandler)
+	assert.Equal(t, errorHandler, bot.errorHandler)
 }

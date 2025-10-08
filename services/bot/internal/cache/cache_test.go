@@ -317,3 +317,314 @@ func TestService_ConcurrentAccess(t *testing.T) {
 	stats := service.GetCacheStats(context.Background())
 	assert.GreaterOrEqual(t, stats.Size, 0)
 }
+
+func TestService_GetInterests_CacheMiss(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Получаем из кэша (должен быть промах)
+	result, found := service.GetInterests(context.Background(), "ru")
+
+	// Проверяем результаты
+	assert.False(t, found)
+	assert.Nil(t, result)
+}
+
+func TestService_SetInterests(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	interests := map[int]string{
+		1: "Music",
+		2: "Sports",
+		3: "Books",
+	}
+
+	// Сохраняем в кэш
+	service.SetInterests(context.Background(), "ru", interests)
+
+	// Получаем из кэша
+	result, found := service.GetInterests(context.Background(), "ru")
+
+	// Проверяем результаты
+	assert.True(t, found)
+	assert.NotNil(t, result)
+	assert.Len(t, result, 3)
+	assert.Equal(t, "Music", result[1])
+	assert.Equal(t, "Sports", result[2])
+	assert.Equal(t, "Books", result[3])
+}
+
+func TestService_GetTranslations_CacheHit(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	translations := map[string]string{
+		"hello": "привет",
+		"world": "мир",
+	}
+
+	// Сохраняем в кэш
+	service.SetTranslations(context.Background(), "ru", translations)
+
+	// Получаем из кэша
+	result, found := service.GetTranslations(context.Background(), "ru")
+
+	// Проверяем результаты
+	assert.True(t, found)
+	assert.NotNil(t, result)
+	assert.Len(t, result, 2)
+	assert.Equal(t, "привет", result["hello"])
+	assert.Equal(t, "мир", result["world"])
+}
+
+func TestService_GetTranslations_CacheMiss(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Получаем из кэша (должен быть промах)
+	result, found := service.GetTranslations(context.Background(), "ru")
+
+	// Проверяем результаты
+	assert.False(t, found)
+	assert.Nil(t, result)
+}
+
+func TestService_GetStats_CacheHit(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	stats := map[string]interface{}{
+		"total_users":  1000,
+		"active_users": 500,
+	}
+
+	// Сохраняем в кэш
+	service.SetStats(context.Background(), "user_stats", stats)
+
+	// Получаем из кэша
+	result, found := service.GetStats(context.Background(), "user_stats")
+
+	// Проверяем результаты
+	assert.True(t, found)
+	assert.NotNil(t, result)
+	assert.Equal(t, 1000, result["total_users"])
+	assert.Equal(t, 500, result["active_users"])
+}
+
+func TestService_GetInterestCategories_CacheHit(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	categories := []*models.InterestCategory{
+		{ID: 1, Name: "Sports", Description: "Sports activities"},
+		{ID: 2, Name: "Music", Description: "Music related activities"},
+	}
+
+	// Сохраняем в кэш
+	service.SetInterestCategories(context.Background(), "ru", categories)
+
+	// Получаем из кэша
+	result, found := service.GetInterestCategories(context.Background(), "ru")
+
+	// Проверяем результаты
+	assert.True(t, found)
+	assert.NotNil(t, result)
+	assert.Len(t, result, 2)
+	assert.Equal(t, "Sports", result[0].Name)
+	assert.Equal(t, "Music", result[1].Name)
+}
+
+func TestService_GetUserStats_CacheHit(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	userStats := map[string]interface{}{
+		"messages_sent": 100,
+		"last_active":   time.Now(),
+	}
+
+	// Сохраняем в кэш
+	service.SetUserStats(context.Background(), 12345, userStats)
+
+	// Получаем из кэша
+	result, found := service.GetUserStats(context.Background(), 12345)
+
+	// Проверяем результаты
+	assert.True(t, found)
+	assert.NotNil(t, result)
+	assert.Equal(t, 100, result["messages_sent"])
+}
+
+func TestService_GetConfig_CacheHit(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	configValue := map[string]interface{}{
+		"max_connections": 100,
+		"timeout":         30,
+	}
+
+	// Сохраняем в кэш
+	service.SetConfig(context.Background(), "db_config", configValue)
+
+	// Получаем из кэша
+	result, found := service.GetConfig(context.Background(), "db_config")
+
+	// Проверяем результаты
+	assert.True(t, found)
+	assert.NotNil(t, result)
+	assert.Equal(t, configValue, result)
+}
+
+func TestService_InvalidateLanguages(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	languages := []*models.Language{
+		{ID: 1, Code: "ru", NameNative: "Русский"},
+	}
+
+	// Сохраняем в кэш
+	service.SetLanguages(context.Background(), "ru", languages)
+
+	// Проверяем, что данные есть
+	_, found := service.GetLanguages(context.Background(), "ru")
+	assert.True(t, found)
+
+	// Инвалидируем
+	service.InvalidateLanguages(context.Background())
+
+	// Проверяем, что данных нет
+	_, found = service.GetLanguages(context.Background(), "ru")
+	assert.False(t, found)
+}
+
+func TestService_InvalidateInterests(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	interests := map[int]string{
+		1: "Music",
+	}
+
+	// Сохраняем в кэш
+	service.SetInterests(context.Background(), "ru", interests)
+
+	// Проверяем, что данные есть
+	_, found := service.GetInterests(context.Background(), "ru")
+	assert.True(t, found)
+
+	// Инвалидируем
+	service.InvalidateInterests(context.Background())
+
+	// Проверяем, что данных нет
+	_, found = service.GetInterests(context.Background(), "ru")
+	assert.False(t, found)
+}
+
+func TestService_InvalidateTranslations(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	translations := map[string]string{
+		"hello": "привет",
+	}
+
+	// Сохраняем в кэш
+	service.SetTranslations(context.Background(), "ru", translations)
+
+	// Проверяем, что данные есть
+	_, found := service.GetTranslations(context.Background(), "ru")
+	assert.True(t, found)
+
+	// Инвалидируем
+	service.InvalidateTranslations(context.Background())
+
+	// Проверяем, что данных нет
+	_, found = service.GetTranslations(context.Background(), "ru")
+	assert.False(t, found)
+}
+
+func TestService_InvalidateInterestCategories(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	categories := []*models.InterestCategory{
+		{ID: 1, Name: "Sports"},
+	}
+
+	// Сохраняем в кэш
+	service.SetInterestCategories(context.Background(), "ru", categories)
+
+	// Проверяем, что данные есть
+	_, found := service.GetInterestCategories(context.Background(), "ru")
+	assert.True(t, found)
+
+	// Инвалидируем
+	service.InvalidateInterestCategories(context.Background())
+
+	// Проверяем, что данных нет
+	_, found = service.GetInterestCategories(context.Background(), "ru")
+	assert.False(t, found)
+}
+
+func TestService_InvalidateUserStats(t *testing.T) {
+	t.Parallel()
+	// Создаем сервис кэша
+	config := DefaultConfig()
+	service := NewService(config)
+
+	// Подготавливаем тестовые данные
+	userStats := map[string]interface{}{
+		"messages_sent": 100,
+	}
+
+	// Сохраняем в кэш
+	service.SetUserStats(context.Background(), 12345, userStats)
+
+	// Проверяем, что данные есть
+	_, found := service.GetUserStats(context.Background(), 12345)
+	assert.True(t, found)
+
+	// Инвалидируем
+	service.InvalidateUserStats(context.Background(), 12345)
+
+	// Проверяем, что данных нет
+	_, found = service.GetUserStats(context.Background(), 12345)
+	assert.False(t, found)
+}

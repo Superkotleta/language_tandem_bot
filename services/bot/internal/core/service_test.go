@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 
@@ -519,5 +520,175 @@ func TestGetConfig(t *testing.T) {
 	// Test that GetConfig doesn't panic (may return nil for empty service)
 	assert.NotPanics(t, func() {
 		_ = service.GetConfig()
+	})
+}
+
+func TestGetLocalizedInterests(t *testing.T) {
+	mockLocalizer := &localization.Localizer{}
+
+	service := &BotService{
+		Localizer: mockLocalizer,
+	}
+
+	// Test method exists and doesn't panic
+	result, err := service.GetLocalizedInterests("en")
+	assert.NotNil(t, result)
+	assert.NoError(t, err)
+}
+
+func TestGetLanguageFlag(t *testing.T) {
+	service := &BotService{}
+
+	tests := []struct {
+		name     string
+		langCode string
+		expected string
+	}{
+		{"Russian", "ru", "🇷🇺"},
+		{"English", "en", "🇺🇸"},
+		{"Spanish", "es", "🇪🇸"},
+		{"Chinese", "zh", "🇨🇳"},
+		{"Unknown", "fr", "🌍"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := service.getLanguageFlag(tt.langCode)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFormatTimeAvailability(t *testing.T) {
+	mockLocalizer := &localization.Localizer{}
+
+	service := &BotService{
+		Localizer: mockLocalizer,
+	}
+
+	t.Run("Valid time availability", func(t *testing.T) {
+		ta := &models.TimeAvailability{
+			DayType:  "weekdays",
+			TimeSlot: "morning",
+		}
+
+		// Test method exists and doesn't panic
+		assert.NotPanics(t, func() {
+			result := service.formatTimeAvailability(ta, "en")
+			assert.NotEmpty(t, result)
+		})
+	})
+
+	t.Run("Nil time availability", func(t *testing.T) {
+		result := service.formatTimeAvailability(nil, "en")
+		assert.Equal(t, "Не указано", result)
+	})
+}
+
+func TestFormatCommunicationPreferences(t *testing.T) {
+	mockLocalizer := &localization.Localizer{}
+
+	service := &BotService{
+		Localizer: mockLocalizer,
+	}
+
+	t.Run("Valid preferences", func(t *testing.T) {
+		fp := &models.FriendshipPreferences{
+			CommunicationStyle: "text",
+			CommunicationFreq:  "daily",
+		}
+
+		// Test method exists and doesn't panic
+		assert.NotPanics(t, func() {
+			result := service.formatCommunicationPreferences(fp, "en")
+			assert.NotEmpty(t, result)
+		})
+	})
+
+	t.Run("Nil preferences", func(t *testing.T) {
+		result := service.formatCommunicationPreferences(nil, "en")
+		assert.Equal(t, "Не указано", result)
+	})
+}
+
+func TestFormatUserStatus(t *testing.T) {
+	mockLocalizer := &localization.Localizer{}
+
+	service := &BotService{
+		Localizer: mockLocalizer,
+	}
+
+	user := &models.User{
+		Status:                "active",
+		InterfaceLanguageCode: "en",
+	}
+
+	// Test method exists and doesn't panic
+	assert.NotPanics(t, func() {
+		result := service.formatUserStatus(user, "en")
+		assert.NotEmpty(t, result)
+	})
+}
+
+func TestSendFeedbackNotification(t *testing.T) {
+	service := &BotService{}
+
+	t.Run("With notification function", func(t *testing.T) {
+		called := false
+		service.SetFeedbackNotificationFunc(func(data map[string]interface{}) error {
+			called = true
+			return nil
+		})
+
+		err := service.SendFeedbackNotification(map[string]interface{}{
+			"first_name":    "Test",
+			"telegram_id":   int64(12345),
+			"feedback_text": "Test feedback",
+		}, []int64{1, 2, 3})
+
+		assert.NoError(t, err)
+		assert.True(t, called)
+	})
+
+	t.Run("Without notification function", func(t *testing.T) {
+		service.FeedbackNotificationFunc = nil
+
+		err := service.SendFeedbackNotification(map[string]interface{}{
+			"first_name":    "Test",
+			"telegram_id":   int64(12345),
+			"feedback_text": "Test feedback",
+		}, []int64{1, 2, 3})
+
+		assert.NoError(t, err)
+	})
+}
+
+func TestExecuteWithCircuitBreakersContext(t *testing.T) {
+	service := &BotService{}
+
+	ctx := context.Background()
+
+	t.Run("ExecuteWithTelegramCircuitBreakerContext - no circuit breaker", func(t *testing.T) {
+		result, err := service.ExecuteWithTelegramCircuitBreakerContext(ctx, func() (interface{}, error) {
+			return "success", nil
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "success", result)
+	})
+
+	t.Run("ExecuteWithDatabaseCircuitBreakerContext - no circuit breaker", func(t *testing.T) {
+		result, err := service.ExecuteWithDatabaseCircuitBreakerContext(ctx, func() (interface{}, error) {
+			return "success", nil
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "success", result)
+	})
+
+	t.Run("ExecuteWithRedisCircuitBreakerContext - no circuit breaker", func(t *testing.T) {
+		result, err := service.ExecuteWithRedisCircuitBreakerContext(ctx, func() (interface{}, error) {
+			return "success", nil
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "success", result)
 	})
 }

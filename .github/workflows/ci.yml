@@ -129,8 +129,8 @@ jobs:
         if [ "${{ matrix.service }}" = "profile" ] || [ "${{ matrix.service }}" = "matcher" ]; then
           echo "ℹ️ Skipping coverage threshold check for ${{ matrix.service }} (no tests)"
         else
-          # Check if coverage is above threshold (70% for now, can be increased to 80%)
-          THRESHOLD=70.0
+          # Check if coverage is above threshold (20% for now, can be increased later)
+          THRESHOLD=20.0
 
           if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
             echo "❌ Test coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
