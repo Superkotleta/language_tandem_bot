@@ -829,7 +829,7 @@ func (r *RedisCacheService) HealthCheck(ctx context.Context) error {
 
 	_, err := r.client.Ping(ctx).Result()
 	if err != nil {
-		return fmt.Errorf("Redis health check failed: %w", err)
+		return fmt.Errorf("redis health check failed: %w", err)
 	}
 
 	return nil

@@ -611,7 +611,9 @@ func (db *DB) GetUserInterestSelections(userID int) ([]models.InterestSelection,
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var selections []models.InterestSelection
 	for rows.Next() {

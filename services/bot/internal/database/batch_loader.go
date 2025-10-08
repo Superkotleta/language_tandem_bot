@@ -725,7 +725,9 @@ func (bl *BatchLoader) BatchUpdateUserInterests(ctx context.Context, userID int,
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
 
 	// Вставляем новые интересы
 	for _, interestID := range interests {

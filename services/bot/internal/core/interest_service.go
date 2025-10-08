@@ -569,7 +569,9 @@ func (s *InterestService) GetAllInterests() ([]models.Interest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var interests []models.Interest
 	for rows.Next() {
@@ -639,7 +641,9 @@ func (s *InterestService) BatchUpdateUserInterests(userID int, selections []mode
 		if err != nil {
 			return fmt.Errorf("failed to prepare statement: %w", err)
 		}
-		defer stmt.Close()
+		defer func() {
+			_ = stmt.Close()
+		}()
 
 		for _, selection := range selections {
 			_, err = stmt.ExecContext(context.Background(), userID, selection.InterestID, selection.IsPrimary)

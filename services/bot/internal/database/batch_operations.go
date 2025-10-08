@@ -36,13 +36,17 @@ func (bo *BatchOperations) BatchInsertUsers(ctx context.Context, users []*models
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
 
 	// Подготавливаем данные для COPY
 	var rows []string
@@ -324,7 +328,9 @@ func (bo *BatchOperations) BatchGetUsers(ctx context.Context, userIDs []int) ([]
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute batch get users: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var users []*models.User
 	for rows.Next() {
