@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
@@ -144,7 +145,9 @@ func (mh *MenuHandler) HandleMainEditProfile(callback *tgbotapi.CallbackQuery, u
 // HandleMainFeedback обрабатывает переход к отзывам.
 func (mh *MenuHandler) HandleMainFeedback(callback *tgbotapi.CallbackQuery, user *models.User, feedbackHandler FeedbackHandler) error {
 	// Переводим пользователя в состояние ожидания отзыва
-	_ = mh.base.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedback)
+	if err := mh.base.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedback); err != nil {
+		log.Printf("Failed to update user state to waiting feedback for user %d: %v", user.ID, err)
+	}
 
 	// Получаем текст обратной связи
 	text := mh.base.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleFeedbackText)

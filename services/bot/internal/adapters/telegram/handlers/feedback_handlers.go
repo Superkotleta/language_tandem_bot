@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -86,7 +87,9 @@ func NewFeedbackHandler(
 // HandleFeedbackCommand обрабатывает команду /feedback.
 func (fh *FeedbackHandlerImpl) HandleFeedbackCommand(message *tgbotapi.Message, user *models.User) error {
 	text := fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_text")
-	_ = fh.base.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedback)
+	if err := fh.base.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedback); err != nil {
+		log.Printf("Failed to update user state to waiting feedback for user %d: %v", user.ID, err)
+	}
 
 	return fh.sendMessage(message.Chat.ID, text)
 }

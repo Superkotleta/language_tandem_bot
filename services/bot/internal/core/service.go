@@ -520,7 +520,9 @@ func (s *BotService) HandleUserRegistration(
 			user.InterfaceLanguageCode = detected
 		}
 
-		_ = s.DB.UpdateUserInterfaceLanguage(user.ID, user.InterfaceLanguageCode)
+		if err := s.DB.UpdateUserInterfaceLanguage(user.ID, user.InterfaceLanguageCode); err != nil {
+			log.Printf("Failed to update interface language for new user %d to %s: %v", user.ID, user.InterfaceLanguageCode, err)
+		}
 	}
 
 	return user, nil

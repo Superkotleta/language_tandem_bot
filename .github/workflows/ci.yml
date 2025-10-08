@@ -153,7 +153,7 @@ jobs:
     - name: Upload coverage artifact
       uses: actions/upload-artifact@v4.6.2
       with:
-        name: coverage-reports
+        name: coverage-reports-${{ matrix.service }}
         path: services/${{ matrix.service }}/coverage-${{ matrix.service }}.out
         retention-days: 7
 

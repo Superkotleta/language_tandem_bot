@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 
 	"language-exchange-bot/internal/models"
 
@@ -72,9 +73,15 @@ func (lh *LanguageHandlerImpl) HandleLanguagesReselect(callback *tgbotapi.Callba
 	user.TargetLanguageLevel = ""
 
 	// Обновляем статус пользователя
-	_ = lh.base.service.DB.UpdateUserNativeLanguage(user.ID, "")
-	_ = lh.base.service.DB.UpdateUserTargetLanguage(user.ID, "")
-	_ = lh.base.service.DB.UpdateUserTargetLanguageLevel(user.ID, "")
+	if err := lh.base.service.DB.UpdateUserNativeLanguage(user.ID, ""); err != nil {
+		log.Printf("Failed to reset native language for user %d: %v", user.ID, err)
+	}
+	if err := lh.base.service.DB.UpdateUserTargetLanguage(user.ID, ""); err != nil {
+		log.Printf("Failed to reset target language for user %d: %v", user.ID, err)
+	}
+	if err := lh.base.service.DB.UpdateUserTargetLanguageLevel(user.ID, ""); err != nil {
+		log.Printf("Failed to reset target language level for user %d: %v", user.ID, err)
+	}
 
 	// Предлагаем выбрать родной язык снова
 	text := lh.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
