@@ -143,7 +143,10 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
 `
 
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(w, tmpl)
+	if _, err := fmt.Fprint(w, tmpl); err != nil {
+		log.Printf("Failed to write dashboard template: %v", err)
+		return
+	}
 }
 
 // handleMetrics обрабатывает API метрик.
@@ -310,7 +313,10 @@ func (d *Dashboard) handleMetricsPage(w http.ResponseWriter, r *http.Request) {
 `
 
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(w, tmpl)
+	if _, err := fmt.Fprint(w, tmpl); err != nil {
+		log.Printf("Failed to write dashboard template: %v", err)
+		return
+	}
 }
 
 // handleErrorsPage обрабатывает страницу ошибок.
@@ -408,7 +414,10 @@ func (d *Dashboard) handleErrorsPage(w http.ResponseWriter, r *http.Request) {
 `
 
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(w, tmpl)
+	if _, err := fmt.Fprint(w, tmpl); err != nil {
+		log.Printf("Failed to write dashboard template: %v", err)
+		return
+	}
 }
 
 // handleAlertsPage обрабатывает страницу алертов.
@@ -518,5 +527,8 @@ func (d *Dashboard) handleAlertsPage(w http.ResponseWriter, r *http.Request) {
 `
 
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(w, tmpl)
+	if _, err := fmt.Fprint(w, tmpl); err != nil {
+		log.Printf("Failed to write dashboard template: %v", err)
+		return
+	}
 }

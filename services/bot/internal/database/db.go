@@ -612,7 +612,12 @@ func (db *DB) GetUserInterestSelections(userID int) ([]models.InterestSelection,
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 	defer func() {
-		_ = rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			db.logger.Error("Failed to close database rows", map[string]interface{}{
+				"error":     closeErr.Error(),
+				"operation": "GetUserInterestSelections",
+			})
+		}
 	}()
 
 	var selections []models.InterestSelection

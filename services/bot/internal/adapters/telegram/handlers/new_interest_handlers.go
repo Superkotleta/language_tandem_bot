@@ -641,6 +641,7 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 }
 
 // updateProfileCompletionLevel обновляет уровень завершения профиля.
+// nolint:unused
 func (h *NewInterestHandlerImpl) updateProfileCompletionLevel(userID int, completionLevel int) error {
 	_, err := h.base.service.DB.GetConnection().Exec(`
 		UPDATE users

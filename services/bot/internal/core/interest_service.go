@@ -570,7 +570,15 @@ func (s *InterestService) GetAllInterests() ([]models.Interest, error) {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
 	defer func() {
-		_ = rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			s.logger.ErrorWithContext(
+				"Failed to close database rows",
+				"", 0, 0, "GetInterestCategories",
+				map[string]interface{}{
+					"error": closeErr.Error(),
+				},
+			)
+		}
 	}()
 
 	var interests []models.Interest
@@ -642,7 +650,15 @@ func (s *InterestService) BatchUpdateUserInterests(userID int, selections []mode
 			return fmt.Errorf("failed to prepare statement: %w", err)
 		}
 		defer func() {
-			_ = stmt.Close()
+			if closeErr := stmt.Close(); closeErr != nil {
+				s.logger.ErrorWithContext(
+					"Failed to close prepared statement",
+					"", 0, 0, "UpdateUserInterests",
+					map[string]interface{}{
+						"error": closeErr.Error(),
+					},
+				)
+			}
 		}()
 
 		for _, selection := range selections {

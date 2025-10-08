@@ -726,7 +726,12 @@ func (bl *BatchLoader) BatchUpdateUserInterests(ctx context.Context, userID int,
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer func() {
-		_ = stmt.Close()
+		if closeErr := stmt.Close(); closeErr != nil {
+			bl.logger.Error("Failed to close prepared statement in batch loader", map[string]interface{}{
+				"error":     closeErr.Error(),
+				"operation": "BatchUpdateUserInterests",
+			})
+		}
 	}()
 
 	// Вставляем новые интересы

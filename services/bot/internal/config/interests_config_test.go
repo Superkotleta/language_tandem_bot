@@ -19,7 +19,11 @@ func TestInterestsConfig_Load_DefaultValues(t *testing.T) {
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)
@@ -92,7 +96,11 @@ func TestInterestsConfig_Load_FromFile(t *testing.T) {
 	// Меняем текущую директорию для теста
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)
@@ -127,7 +135,11 @@ func TestInterestsConfig_Load_InvalidJSON(t *testing.T) {
 	// Меняем текущую директорию для теста
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)
@@ -148,7 +160,11 @@ func TestInterestsConfig_Load_UnsafePath(t *testing.T) {
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldWd)
+	defer func() {
+		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
+			t.Logf("Failed to restore working directory: %v", chdirErr)
+		}
+	}()
 
 	err = os.Chdir(tempDir)
 	require.NoError(t, err)
@@ -450,13 +466,4 @@ func TestInterestsConfig_Load_MultiplePaths(t *testing.T) {
 	config, err := LoadInterestsConfig()
 	require.NoError(t, err)
 	assert.Equal(t, 99, config.Matching.PrimaryInterestScore)
-}
-
-// cleanupTestFiles очищает тестовые файлы.
-func cleanupTestFiles(t *testing.T) {
-	// Удаляем config директорию если существует
-	os.RemoveAll("config")
-
-	// Удаляем тестовые файлы в текущей директории
-	os.Remove("interests.json")
 }

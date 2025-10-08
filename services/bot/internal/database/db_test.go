@@ -52,7 +52,11 @@ func TestDB_GetLanguages(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			t.Logf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 
 	// Создаем таблицы и языки
 	setupTestLanguagesTable(t, db)
@@ -76,7 +80,11 @@ func TestDB_GetLanguageByCode(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			t.Logf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 
 	// Создаем таблицы и языки
 	setupTestLanguagesTable(t, db)
@@ -104,7 +112,11 @@ func TestDB_GetInterests(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			t.Logf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 
 	// Создаем таблицы и интересы
 	setupTestInterestsTable(t, db)
@@ -127,7 +139,11 @@ func TestDB_GetUserByTelegramID(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			t.Logf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 
 	// Создаем таблицы и пользователя
 	setupTestUsersTable(t, db)

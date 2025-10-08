@@ -21,8 +21,10 @@ type BotServiceInterface interface {
 }
 
 // mockBotService - mock для BotService в тестах server
+// nolint:unused
 type mockBotService struct{}
 
+// nolint:unused
 func (m *mockBotService) GetCircuitBreakerStates() map[string]string {
 	return map[string]string{
 		"telegram": "closed",
@@ -31,6 +33,7 @@ func (m *mockBotService) GetCircuitBreakerStates() map[string]string {
 	}
 }
 
+// nolint:unused
 func (m *mockBotService) GetCircuitBreakerCounts() map[string]map[string]int {
 	return map[string]map[string]int{
 		"telegram": {"requests": 100, "successes": 95, "failures": 5},
@@ -129,7 +132,9 @@ func TestAdminServer_corsMiddleware(t *testing.T) {
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("test response"))
+		if _, err := w.Write([]byte("test response")); err != nil {
+			t.Logf("Failed to write response: %v", err)
+		}
 	})
 
 	// Wrap with CORS middleware
@@ -155,7 +160,9 @@ func TestAdminServer_authMiddleware_ValidToken(t *testing.T) {
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("authenticated"))
+		if _, err := w.Write([]byte("authenticated")); err != nil {
+			t.Logf("Failed to write response: %v", err)
+		}
 	})
 
 	// Wrap with auth middleware

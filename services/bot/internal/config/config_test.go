@@ -72,7 +72,9 @@ func TestConfig_Load_FromEnvironment(t *testing.T) {
 	}
 
 	for key, value := range envValues {
-		os.Setenv(key, value)
+		if err := os.Setenv(key, value); err != nil {
+			t.Logf("Failed to set environment variable %s: %v", key, err)
+		}
 	}
 	defer clearEnvironment()
 
@@ -120,7 +122,9 @@ func TestConfig_Load_InvalidValues(t *testing.T) {
 	}
 
 	for key, value := range envValues {
-		os.Setenv(key, value)
+		if err := os.Setenv(key, value); err != nil {
+			t.Logf("Failed to set environment variable %s: %v", key, err)
+		}
 	}
 	defer clearEnvironment()
 
@@ -156,7 +160,9 @@ func TestConfig_Load_AdminChatIDs(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			clearEnvironment()
-			os.Setenv("ADMIN_CHAT_IDS", tc.input)
+			if err := os.Setenv("ADMIN_CHAT_IDS", tc.input); err != nil {
+				t.Logf("Failed to set ADMIN_CHAT_IDS: %v", err)
+			}
 			defer clearEnvironment()
 
 			config := Load()
@@ -184,7 +190,9 @@ func TestConfig_Load_AdminUsernames(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			clearEnvironment()
-			os.Setenv("ADMIN_USERNAMES", tc.input)
+			if err := os.Setenv("ADMIN_USERNAMES", tc.input); err != nil {
+				t.Logf("Failed to set ADMIN_USERNAMES: %v", err)
+			}
 			defer clearEnvironment()
 
 			config := Load()
@@ -212,7 +220,9 @@ func TestConfig_Load_TelegramMode(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			clearEnvironment()
-			os.Setenv("TELEGRAM_MODE", tc.input)
+			if err := os.Setenv("TELEGRAM_MODE", tc.input); err != nil {
+				t.Logf("Failed to set TELEGRAM_MODE: %v", err)
+			}
 			defer clearEnvironment()
 
 			config := Load()
@@ -228,12 +238,22 @@ func TestConfig_Load_TokenFromFile(t *testing.T) {
 	clearEnvironment()
 
 	// Убеждаемся что переменные пустые
-	os.Unsetenv("TELEGRAM_TOKEN")
-	os.Unsetenv("TELEGRAM_TOKEN_FILE")
+	if err := os.Unsetenv("TELEGRAM_TOKEN"); err != nil {
+		t.Logf("Failed to unset TELEGRAM_TOKEN: %v", err)
+	}
+	if err := os.Unsetenv("TELEGRAM_TOKEN_FILE"); err != nil {
+		t.Logf("Failed to unset TELEGRAM_TOKEN_FILE: %v", err)
+	}
 
 	// Устанавливаем флаг теста для отключения проверки безопасности файлов
-	os.Setenv("GO_TEST", "1")
-	defer os.Unsetenv("GO_TEST")
+	if err := os.Setenv("GO_TEST", "1"); err != nil {
+		t.Logf("Failed to set GO_TEST: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("GO_TEST"); err != nil {
+			t.Logf("Failed to unset GO_TEST: %v", err)
+		}
+	}()
 
 	// Создаем временный файл с токеном
 	tempDir := t.TempDir()
@@ -244,7 +264,9 @@ func TestConfig_Load_TokenFromFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Устанавливаем переменную окружения с путем к файлу
-	os.Setenv("TELEGRAM_TOKEN_FILE", tokenFile)
+	if err := os.Setenv("TELEGRAM_TOKEN_FILE", tokenFile); err != nil {
+		t.Logf("Failed to set TELEGRAM_TOKEN_FILE: %v", err)
+	}
 	defer clearEnvironment()
 
 	config := Load()
@@ -259,12 +281,22 @@ func TestConfig_Load_DatabaseURLFromFile(t *testing.T) {
 	clearEnvironment()
 
 	// Убеждаемся что переменные пустые
-	os.Unsetenv("DATABASE_URL")
-	os.Unsetenv("DATABASE_URL_FILE")
+	if err := os.Unsetenv("DATABASE_URL"); err != nil {
+		t.Logf("Failed to unset DATABASE_URL: %v", err)
+	}
+	if err := os.Unsetenv("DATABASE_URL_FILE"); err != nil {
+		t.Logf("Failed to unset DATABASE_URL_FILE: %v", err)
+	}
 
 	// Устанавливаем флаг теста для отключения проверки безопасности файлов
-	os.Setenv("GO_TEST", "1")
-	defer os.Unsetenv("GO_TEST")
+	if err := os.Setenv("GO_TEST", "1"); err != nil {
+		t.Logf("Failed to set GO_TEST: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("GO_TEST"); err != nil {
+			t.Logf("Failed to unset GO_TEST: %v", err)
+		}
+	}()
 
 	// Создаем временный файл с URL базы данных
 	tempDir := t.TempDir()
@@ -275,7 +307,9 @@ func TestConfig_Load_DatabaseURLFromFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Устанавливаем переменную окружения с путем к файлу
-	os.Setenv("DATABASE_URL_FILE", dbFile)
+	if err := os.Setenv("DATABASE_URL_FILE", dbFile); err != nil {
+		t.Logf("Failed to set DATABASE_URL_FILE: %v", err)
+	}
 	defer clearEnvironment()
 
 	config := Load()
