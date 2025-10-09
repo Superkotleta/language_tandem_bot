@@ -9,7 +9,7 @@ import "time"
 // =============================================================================
 
 // Telegram Handler Constants
-// Used in: services/bot/internal/adapters/telegram/handlers.go
+// Used in: services/bot/internal/adapters/telegram/handlers.go.
 const (
 	MinPartsForFeedbackNav = 2 // Минимальное количество частей для навигации по отзывам
 	MinPartsForNav         = 4 // Минимальное количество частей для навигации
@@ -18,7 +18,7 @@ const (
 // Note: User states and statuses are kept in models/user.go to avoid circular dependencies
 
 // Validation Constants
-// Used in: services/bot/internal/validation/validators.go
+// Used in: services/bot/internal/validation/validators.go.
 const (
 	MinTelegramID        = 100000000
 	MaxUsernameLength    = 50
@@ -34,7 +34,7 @@ const (
 )
 
 // Bot Service Constants
-// Used in: services/bot/internal/core/service.go
+// Used in: services/bot/internal/core/service.go.
 const (
 	MinFeedbackLength = 10
 	MaxFeedbackLength = 1000
@@ -51,7 +51,7 @@ const (
 // =============================================================================
 
 // Cache TTL Constants (in minutes)
-// Used in: services/bot/internal/cache/types.go, services/bot/internal/cache/cache.go
+// Used in: services/bot/internal/cache/types.go, services/bot/internal/cache/cache.go.
 const (
 	TranslationsTTLMinutes = 30 // How long translations are cached (30 minutes)
 	UsersTTLMinutes        = 15 // How long user data is cached (15 minutes)
@@ -60,7 +60,7 @@ const (
 )
 
 // Rate Limiter Constants (in minutes and seconds)
-// Used in: services/bot/internal/adapters/telegram/rate_limiter.go
+// Used in: services/bot/internal/adapters/telegram/rate_limiter.go.
 const (
 	RateLimitWindowMinutes  = 1  // Time window for rate limiting (1 minute)
 	RateLimitBlockMinutes   = 2  // How long to block after exceeding limits (2 minutes)
@@ -68,7 +68,7 @@ const (
 )
 
 // Redis Connection Constants (in seconds)
-// Used in: services/bot/internal/cache/redis_cache.go
+// Used in: services/bot/internal/cache/redis_cache.go.
 const (
 	RedisDialTimeoutSeconds  = 5   // Timeout for establishing Redis connection (5 seconds)
 	RedisReadTimeoutSeconds  = 3   // Timeout for Redis read operations (3 seconds)
@@ -80,14 +80,14 @@ const (
 )
 
 // Circuit Breaker Constants
-// Used in: services/bot/internal/circuit_breaker/circuit_breaker.go
+// Used in: services/bot/internal/circuit_breaker/circuit_breaker.go.
 const (
 	DefaultMaxRequests         = 3  // Максимальное количество запросов в полуоткрытом состоянии
 	DefaultIntervalSeconds     = 60 // Интервал в секундах между проверками
 	DefaultTimeoutSeconds      = 60 // Таймаут в секундах для возврата в закрытое состояние
 	DefaultConsecutiveFailures = 5  // Количество последовательных неудач для открытия
 
-	// Service-specific Circuit Breaker configurations
+	// Service-specific Circuit Breaker configurations.
 	TelegramMaxRequests      = 5  // Максимум запросов для Telegram
 	TelegramIntervalSeconds  = 30 // Интервал для Telegram
 	TelegramTimeoutSeconds   = 30 // Таймаут для Telegram
@@ -103,7 +103,7 @@ const (
 )
 
 // Database Fallback Constants
-// Used in: services/bot/internal/database/db.go
+// Used in: services/bot/internal/database/db.go.
 const (
 	FallbackLanguageID1 = 1
 	FallbackLanguageID2 = 2
@@ -117,26 +117,26 @@ const (
 )
 
 // Keyboard Symbols
-// Used in: services/bot/internal/adapters/telegram/keyboard_helpers.go
+// Used in: services/bot/internal/adapters/telegram/keyboard_helpers.go.
 const (
 	SymbolUnchecked = "☐ "
 )
 
 // Interest Profile Completion
-// Used in: services/bot/internal/adapters/telegram/handlers/improved_interest_handlers.go
+// Used in: services/bot/internal/adapters/telegram/handlers/improved_interest_handlers.go.
 const (
 	ImprovedInterestProfileCompletionLevelComplete = 100 // Профиль полностью завершен
 )
 
 // Callback Data Constants
-// Used in: services/bot/internal/adapters/telegram/keyboards.go
+// Used in: services/bot/internal/adapters/telegram/keyboards.go.
 const (
 	CallbackBackToMainMenu     = "back_to_main_menu"
 	CallbackBackToPreviousStep = "back_to_previous_step"
 )
 
 // Handler Limits
-// Used in: services/bot/internal/adapters/telegram/handlers/profile_interest_handlers.go
+// Used in: services/bot/internal/adapters/telegram/handlers/profile_interest_handlers.go.
 const (
 	MinPartsForInterestCallback = 4 // Минимальное количество частей в callback data для интересов
 )
@@ -151,7 +151,7 @@ const (
 )
 
 // Language Fallback IDs
-// Used in: services/bot/internal/adapters/telegram/handlers/keyboard_helpers.go
+// Used in: services/bot/internal/adapters/telegram/handlers/keyboard_helpers.go.
 const (
 	LanguageIDEnglish = 1
 	LanguageIDRussian = 2
@@ -160,31 +160,31 @@ const (
 )
 
 // Batch Loader Performance Constants
-// Used in: services/bot/internal/database/batch_loader.go
+// Used in: services/bot/internal/database/batch_loader.go.
 const (
 	DefaultQueryTimeout = 30 * time.Second // Default timeout for SQL queries
 	MaxBatchSize        = 1000             // Maximum batch size for data loading
 )
 
 // Interests Configuration Constants
-// Used in: services/bot/internal/config/interests_config.go
+// Used in: services/bot/internal/config/interests_config.go.
 const (
 	DefaultPrimaryPercentage    = 0.3  // 30% основных интересов от общего количества
 	DefaultDirectoryPermissions = 0755 // Права доступа для директорий
 	DefaultFilePermissions      = 0600 // Права доступа для файлов конфигурации
 	DefaultMaxMatchesPerUser    = 10   // Максимальное количество совпадений на пользователя
 
-	// Matching algorithm scores
+	// Matching algorithm scores.
 	DefaultPrimaryInterestScore    = 3 // Балл за основной интерес
 	DefaultAdditionalInterestScore = 1 // Балл за дополнительный интерес
 	DefaultMinCompatibilityScore   = 5 // Минимальный балл совместимости
 
-	// Interest limits
+	// Interest limits.
 	DefaultMinPrimaryInterests   = 1 // Минимальное количество основных интересов
 	DefaultMaxPrimaryInterests   = 5 // Максимальное количество основных интересов
 	DefaultMaxPrimaryPerCategory = 2 // Максимум основных интересов на категорию
 
-	// Category display orders
+	// Category display orders.
 	EntertainmentDisplayOrder = 1
 	EducationDisplayOrder     = 2
 	ActiveDisplayOrder        = 3
@@ -193,7 +193,7 @@ const (
 )
 
 // Main Application Constants
-// Used in: services/bot/cmd/bot/main.go
+// Used in: services/bot/cmd/bot/main.go.
 const (
 	ForceShutdownTimeoutSeconds = 10 // in seconds
 )
@@ -202,7 +202,7 @@ const (
 // LOCALIZATION KEYS (text message identifiers)
 // =============================================================================
 
-// Locale keys for menu and navigation
+// Locale keys for menu and navigation.
 const (
 	LocaleMainMenuTitle           = "main_menu_title"
 	LocaleEmptyProfileMessage     = "empty_profile_message"
@@ -217,7 +217,7 @@ const (
 	LocaleChooseInterfaceLanguage = "choose_interface_language"
 )
 
-// Locale keys for profile management
+// Locale keys for profile management.
 const (
 	LocaleProfileFieldName          = "profile_field_name"
 	LocaleProfileFieldUsername      = "profile_field_username"
@@ -238,7 +238,7 @@ const (
 	LocaleEditLevel                 = "edit_level"
 )
 
-// Locale keys for interests management
+// Locale keys for interests management.
 const (
 	LocaleEditInterestsFromProfile        = "edit_interests_from_profile"
 	LocaleChooseInterestCategory          = "choose_interest_category"
@@ -265,7 +265,7 @@ const (
 	LocaleUndoLastChange                  = "undo_last_change"
 )
 
-// Locale keys for language management
+// Locale keys for language management.
 const (
 	LocaleChooseNativeLanguage     = "choose_native_language"
 	LocaleChooseTargetLanguage     = "choose_target_language"
@@ -274,7 +274,7 @@ const (
 	LocaleBackToLanguageLevel      = "back_to_language_level"
 )
 
-// Locale keys for feedback management
+// Locale keys for feedback management.
 const (
 	LocaleFeedbackText        = "feedback_text"
 	LocaleFeedbackHelpTitle   = "feedback_help_title"
@@ -283,14 +283,14 @@ const (
 	LocaleFeedbackHelp        = "feedback_help"
 )
 
-// Locale keys for welcome and general messages
+// Locale keys for welcome and general messages.
 const (
 	LocaleWelcomeMessage = "welcome_message"
 	LocaleUnknownCommand = "unknown_command"
 	LocaleUseMenuAbove   = "use_menu_above"
 )
 
-// Locale keys for time and communication preferences
+// Locale keys for time and communication preferences.
 const (
 	LocaleTimeWeekdays    = "time_weekdays"
 	LocaleTimeWeekends    = "time_weekends"
@@ -310,7 +310,7 @@ const (
 	LocaleFreqIntensive   = "freq_intensive"
 )
 
-// Locale keys for user status
+// Locale keys for user status.
 const (
 	LocaleStatusNew     = "status_new"
 	LocaleStatusFilling = "status_filling"
@@ -319,7 +319,7 @@ const (
 )
 
 // Locale keys for interest categories and interests
-// Categories
+// Categories.
 const (
 	LocaleCategoryEntertainment = "category_entertainment"
 	LocaleCategoryEducation     = "category_education"
@@ -328,7 +328,7 @@ const (
 	LocaleCategorySocial        = "category_social"
 )
 
-// Interests (examples - can be extended)
+// Interests (examples - can be extended).
 const (
 	LocaleInterestMovies = "interest_movies"
 	LocaleInterestMusic  = "interest_music"
@@ -336,7 +336,7 @@ const (
 	LocaleInterestTravel = "interest_travel"
 )
 
-// Locale keys for admin functionality
+// Locale keys for admin functionality.
 const (
 	LocaleShowActiveFeedbacks    = "show_active_feedbacks"
 	LocaleShowArchiveFeedbacks   = "show_archive_feedbacks"

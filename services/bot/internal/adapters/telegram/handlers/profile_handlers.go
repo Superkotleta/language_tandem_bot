@@ -114,6 +114,7 @@ func (ph *ProfileHandlerImpl) StartProfileSetup(callback *tgbotapi.CallbackQuery
 		text,
 		&keyboard,
 	)
+
 	return err
 }
 
@@ -174,19 +175,20 @@ func (ph *ProfileHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Callbac
 			fullText,
 			&keyboard,
 		)
+
 		return err
 	}
 
 	// Если интересы выбраны, завершаем профиль
 	completedMsg := ph.base.service.Localizer.Get(user.InterfaceLanguageCode, "profile_completed")
 	keyboard := ph.base.keyboardBuilder.CreateProfileCompletedKeyboard(user.InterfaceLanguageCode)
+
 	err = ph.base.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		completedMsg,
 		&keyboard,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -336,6 +338,7 @@ func (ph *ProfileHandlerImpl) HandleEditLanguages(callback *tgbotapi.CallbackQue
 		text,
 		&keyboard,
 	)
+
 	return err
 }
 
@@ -355,6 +358,7 @@ func (ph *ProfileHandlerImpl) HandleEditNativeLang(callback *tgbotapi.CallbackQu
 		text,
 		&keyboard,
 	)
+
 	return err
 }
 
@@ -381,6 +385,7 @@ func (ph *ProfileHandlerImpl) HandleEditTargetLang(callback *tgbotapi.CallbackQu
 		text,
 		&keyboard,
 	)
+
 	return err
 }
 
@@ -413,6 +418,7 @@ func (ph *ProfileHandlerImpl) HandleEditNativeLanguage(callback *tgbotapi.Callba
 			text,
 			&keyboard,
 		)
+
 		return err
 	} else {
 		// Если выбран не русский, автоматически устанавливаем русский как изучаемый
@@ -473,6 +479,7 @@ func (ph *ProfileHandlerImpl) HandleEditTargetLanguage(callback *tgbotapi.Callba
 		title,
 		&keyboard,
 	)
+
 	return err
 }
 
@@ -504,6 +511,7 @@ func (ph *ProfileHandlerImpl) HandleEditLevelSelection(callback *tgbotapi.Callba
 		text,
 		&keyboard,
 	)
+
 	return err
 }
 
@@ -525,6 +533,7 @@ func (ph *ProfileHandlerImpl) HandleEditLevelLang(callback *tgbotapi.CallbackQue
 		title,
 		&keyboard,
 	)
+
 	return err
 }
 
@@ -565,5 +574,6 @@ func (ph *ProfileHandlerImpl) ShowProfileSetupFeatures(callback *tgbotapi.Callba
 		fullText,
 		&keyboard,
 	)
+
 	return err
 }

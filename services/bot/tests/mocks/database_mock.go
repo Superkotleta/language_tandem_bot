@@ -3,7 +3,7 @@ package mocks
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
 	"language-exchange-bot/internal/models"
 	"time"
 )
@@ -193,12 +193,14 @@ func (db *DatabaseMock) SaveUserInterests(userID int, interestIDs []int) error {
 		if user.ID == userID {
 			user.Interests = interestIDs
 			user.UpdatedAt = time.Now()
+
 			break
 		}
 		// Альтернативно, если userID совпадает с telegramID
 		if int64(userID) == telegramID {
 			user.Interests = interestIDs
 			user.UpdatedAt = time.Now()
+
 			break
 		}
 	}
@@ -233,7 +235,7 @@ func (db *DatabaseMock) GetUserSelectedInterests(userID int) ([]int, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("user not found")
+	return nil, errors.New("user not found")
 }
 
 // UpdateUserInterfaceLanguage обновляет язык интерфейса пользователя.
@@ -538,31 +540,35 @@ func (db *DatabaseMock) GetUser(telegramID int64) *models.User {
 	return db.users[telegramID]
 }
 
-// UpdateUserProfileCompletionLevel обновляет уровень завершения профиля
+// UpdateUserProfileCompletionLevel обновляет уровень завершения профиля.
 func (db *DatabaseMock) UpdateUserProfileCompletionLevel(userID int, level int) error {
 	for _, user := range db.users {
 		if user.ID == userID {
 			user.ProfileCompletionLevel = level
 			user.UpdatedAt = time.Now()
+
 			return nil
 		}
 	}
-	return fmt.Errorf("user not found")
+
+	return errors.New("user not found")
 }
 
-// SaveTimeAvailability сохраняет временную доступность пользователя
+// SaveTimeAvailability сохраняет временную доступность пользователя.
 func (db *DatabaseMock) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
 	for _, user := range db.users {
 		if user.ID == userID {
 			user.TimeAvailability = availability
 			user.UpdatedAt = time.Now()
+
 			return nil
 		}
 	}
-	return fmt.Errorf("user not found")
+
+	return errors.New("user not found")
 }
 
-// GetTimeAvailability получает временную доступность пользователя
+// GetTimeAvailability получает временную доступность пользователя.
 func (db *DatabaseMock) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
 	for _, user := range db.users {
 		if user.ID == userID {
@@ -573,25 +579,29 @@ func (db *DatabaseMock) GetTimeAvailability(userID int) (*models.TimeAvailabilit
 					TimeSlot:     "any",
 				}, nil
 			}
+
 			return user.TimeAvailability, nil
 		}
 	}
-	return nil, fmt.Errorf("user not found")
+
+	return nil, errors.New("user not found")
 }
 
-// SaveFriendshipPreferences сохраняет предпочтения общения пользователя
+// SaveFriendshipPreferences сохраняет предпочтения общения пользователя.
 func (db *DatabaseMock) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
 	for _, user := range db.users {
 		if user.ID == userID {
 			user.FriendshipPreferences = preferences
 			user.UpdatedAt = time.Now()
+
 			return nil
 		}
 	}
-	return fmt.Errorf("user not found")
+
+	return errors.New("user not found")
 }
 
-// GetFriendshipPreferences получает предпочтения общения пользователя
+// GetFriendshipPreferences получает предпочтения общения пользователя.
 func (db *DatabaseMock) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
 	for _, user := range db.users {
 		if user.ID == userID {
@@ -602,10 +612,12 @@ func (db *DatabaseMock) GetFriendshipPreferences(userID int) (*models.Friendship
 					CommunicationFreq:  "weekly",
 				}, nil
 			}
+
 			return user.FriendshipPreferences, nil
 		}
 	}
-	return nil, fmt.Errorf("user not found")
+
+	return nil, errors.New("user not found")
 }
 
 // Reset очищает все данные в моке.

@@ -488,6 +488,7 @@ func (h *ImprovedInterestHandler) showPrimaryInterestsSelection(callback *tgbota
 
 	// Подсчитываем уже выбранные основные интересы
 	selectedPrimaryCount := 0
+
 	for _, selection := range tempSelections {
 		if selection.IsPrimary {
 			selectedPrimaryCount++
@@ -622,6 +623,7 @@ func (h *ImprovedInterestHandler) updatePrimaryInterestsKeyboard(callback *tgbot
 
 	// Подсчитываем уже выбранные основные интересы
 	selectedPrimaryCount := 0
+
 	for _, selection := range tempSelections {
 		if selection.IsPrimary {
 			selectedPrimaryCount++

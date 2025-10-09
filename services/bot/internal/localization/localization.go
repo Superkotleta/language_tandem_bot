@@ -375,7 +375,7 @@ func (l *Localizer) loadFallbackTranslations() {
 		"profile_field_native":    "Idioma nativo",
 		"profile_field_target":    "Idioma de aprendizaje",
 		"profile_field_interests": "Intereses",
-		"unknown_command":         "❓ Comando desconocido. Usa /start para comenzar",
+		"unknown_command":         "❓ Commando desconocido. Usa /start para comenzar",
 	}
 
 	l.translations["zh"] = map[string]string{

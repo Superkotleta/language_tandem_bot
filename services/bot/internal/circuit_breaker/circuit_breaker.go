@@ -125,8 +125,11 @@ func (cb *CircuitBreaker) Execute(req func() (interface{}, error)) (interface{},
 	}
 
 	// Переменные для результата
-	var result interface{}
-	var execErr error
+	var (
+		result  interface{}
+		execErr error
+	)
+
 	panicOccurred := false
 
 	// Функция для выполнения с перехватом паники
@@ -167,12 +170,14 @@ func (cb *CircuitBreaker) ExecuteWithContext(
 	select {
 	case <-ctx.Done():
 		cb.afterRequest(generation, false)
+
 		return nil, ctx.Err()
 	default:
 	}
 
 	// Переменные для результата
 	var execErr error
+
 	panicOccurred := false
 
 	// Функция для выполнения с перехватом паники

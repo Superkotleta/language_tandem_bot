@@ -76,9 +76,11 @@ func (lh *LanguageHandlerImpl) HandleLanguagesReselect(callback *tgbotapi.Callba
 	if err := lh.base.service.DB.UpdateUserNativeLanguage(user.ID, ""); err != nil {
 		log.Printf("Failed to reset native language for user %d: %v", user.ID, err)
 	}
+
 	if err := lh.base.service.DB.UpdateUserTargetLanguage(user.ID, ""); err != nil {
 		log.Printf("Failed to reset target language for user %d: %v", user.ID, err)
 	}
+
 	if err := lh.base.service.DB.UpdateUserTargetLanguageLevel(user.ID, ""); err != nil {
 		log.Printf("Failed to reset target language level for user %d: %v", user.ID, err)
 	}

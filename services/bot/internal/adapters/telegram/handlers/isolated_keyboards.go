@@ -10,7 +10,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// createEditMainMenuKeyboard создает клавиатуру главного меню редактирования
+// createEditMainMenuKeyboard создает клавиатуру главного меню редактирования.
 func (e *IsolatedInterestEditor) createEditMainMenuKeyboard(interfaceLang string, stats EditStats) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 
@@ -43,7 +43,7 @@ func (e *IsolatedInterestEditor) createEditMainMenuKeyboard(interfaceLang string
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// createEditCategoriesKeyboard создает клавиатуру категорий для редактирования
+// createEditCategoriesKeyboard создает клавиатуру категорий для редактирования.
 func (e *IsolatedInterestEditor) createEditCategoriesKeyboard(categories []models.InterestCategory, session *EditSession, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 
@@ -104,7 +104,7 @@ func (e *IsolatedInterestEditor) createEditCategoriesKeyboard(categories []model
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// createEditCategoryInterestsKeyboard создает клавиатуру интересов в категории для редактирования
+// createEditCategoryInterestsKeyboard создает клавиатуру интересов в категории для редактирования.
 func (e *IsolatedInterestEditor) createEditCategoryInterestsKeyboard(interests []models.Interest, selectedMap map[int]bool, categoryKey, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 
@@ -183,7 +183,7 @@ func (e *IsolatedInterestEditor) createEditCategoryInterestsKeyboard(interests [
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// createChangesPreviewKeyboard создает клавиатуру для предварительного просмотра изменений
+// createChangesPreviewKeyboard создает клавиатуру для предварительного просмотра изменений.
 func (e *IsolatedInterestEditor) createChangesPreviewKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 
@@ -216,7 +216,7 @@ func (e *IsolatedInterestEditor) createChangesPreviewKeyboard(interfaceLang stri
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 }
 
-// createEditPrimaryInterestsKeyboard создает клавиатуру для редактирования основных интересов
+// createEditPrimaryInterestsKeyboard создает клавиатуру для редактирования основных интересов.
 func (e *IsolatedInterestEditor) createEditPrimaryInterestsKeyboard(selections []models.InterestSelection, interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 
@@ -231,12 +231,14 @@ func (e *IsolatedInterestEditor) createEditPrimaryInterestsKeyboard(selections [
 
 		// Первая кнопка в ряду
 		selection1 := selections[i]
+
 		interest1, err := e.interestService.GetInterestByID(selection1.InterestID)
 		if err != nil {
 			continue
 		}
 
 		interestName1 := e.service.Localizer.Get(interfaceLang, "interest_"+interest1.KeyName)
+
 		prefix1 := "☐ "
 		if selection1.IsPrimary {
 			prefix1 = "⭐ "
@@ -251,12 +253,14 @@ func (e *IsolatedInterestEditor) createEditPrimaryInterestsKeyboard(selections [
 		// Вторая кнопка в ряду (если есть)
 		if i+1 < len(selections) {
 			selection2 := selections[i+1]
+
 			interest2, err := e.interestService.GetInterestByID(selection2.InterestID)
 			if err != nil {
 				continue
 			}
 
 			interestName2 := e.service.Localizer.Get(interfaceLang, "interest_"+interest2.KeyName)
+
 			prefix2 := "☐ "
 			if selection2.IsPrimary {
 				prefix2 = "⭐ "

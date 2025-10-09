@@ -95,6 +95,7 @@ func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.Callbac
 			callback.Message.MessageID,
 			"📝 Отзывов пока нет",
 		)
+
 		return err
 	}
 
@@ -126,6 +127,7 @@ func (h *AdminHandlerImpl) ShowFeedbackStatisticsEdit(callback *tgbotapi.Callbac
 		statsText,
 		&keyboard,
 	)
+
 	return err
 }
 
@@ -311,6 +313,7 @@ func (h *AdminHandlerImpl) ShowFeedbackItemWithNavigationEdit(
 		feedbackText,
 		&keyboard,
 	)
+
 	return err
 }
 

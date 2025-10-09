@@ -56,6 +56,7 @@ func NewMessageFactory(
 // SendText отправляет простое текстовое сообщение.
 func (f *MessageFactory) SendText(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)
+
 	return f.sendWithLogging(msg, chatID, 0, "SendText", "text")
 }
 
@@ -63,6 +64,7 @@ func (f *MessageFactory) SendText(chatID int64, text string) error {
 func (f *MessageFactory) SendWithKeyboard(chatID int64, text string, keyboard interface{}) error {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ReplyMarkup = keyboard
+
 	return f.sendWithLogging(msg, chatID, 0, "SendWithKeyboard", "text_with_keyboard")
 }
 
@@ -70,6 +72,7 @@ func (f *MessageFactory) SendWithKeyboard(chatID int64, text string, keyboard in
 func (f *MessageFactory) SendHTML(chatID int64, htmlText string) error {
 	msg := tgbotapi.NewMessage(chatID, htmlText)
 	msg.ParseMode = "HTML"
+
 	return f.sendWithLogging(msg, chatID, 0, "SendHTML", "html")
 }
 
@@ -78,12 +81,14 @@ func (f *MessageFactory) SendHTMLWithKeyboard(chatID int64, htmlText string, key
 	msg := tgbotapi.NewMessage(chatID, htmlText)
 	msg.ParseMode = "HTML"
 	msg.ReplyMarkup = keyboard
+
 	return f.sendWithLogging(msg, chatID, 0, "SendHTMLWithKeyboard", "html_with_keyboard")
 }
 
 // EditText редактирует текстовое сообщение.
 func (f *MessageFactory) EditText(chatID int64, messageID int, text string) error {
 	edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
+
 	return f.sendWithLogging(edit, chatID, 0, "EditText", "edit_text")
 }
 
@@ -91,6 +96,7 @@ func (f *MessageFactory) EditText(chatID int64, messageID int, text string) erro
 func (f *MessageFactory) EditWithKeyboard(chatID int64, messageID int, text string, keyboard *tgbotapi.InlineKeyboardMarkup) error {
 	edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
 	edit.ReplyMarkup = keyboard
+
 	return f.sendWithLogging(edit, chatID, 0, "EditWithKeyboard", "edit_with_keyboard")
 }
 
@@ -98,6 +104,7 @@ func (f *MessageFactory) EditWithKeyboard(chatID int64, messageID int, text stri
 func (f *MessageFactory) EditHTML(chatID int64, messageID int, htmlText string) error {
 	edit := tgbotapi.NewEditMessageText(chatID, messageID, htmlText)
 	edit.ParseMode = "HTML"
+
 	return f.sendWithLogging(edit, chatID, 0, "EditHTML", "edit_html")
 }
 
@@ -135,60 +142,70 @@ func (f *MessageFactory) NewEditMessage(chatID int64, messageID int) *EditMessag
 // WithText устанавливает текст сообщения.
 func (b *MessageBuilder) WithText(text string) *MessageBuilder {
 	b.config = tgbotapi.NewMessage(b.chatID, text)
+
 	return b
 }
 
 // WithKeyboard устанавливает клавиатуру.
 func (b *MessageBuilder) WithKeyboard(keyboard interface{}) *MessageBuilder {
 	b.config.ReplyMarkup = keyboard
+
 	return b
 }
 
 // WithParseMode устанавливает режим парсинга (HTML, Markdown, MarkdownV2).
 func (b *MessageBuilder) WithParseMode(mode string) *MessageBuilder {
 	b.config.ParseMode = mode
+
 	return b
 }
 
 // WithHTML устанавливает HTML режим парсинга.
 func (b *MessageBuilder) WithHTML() *MessageBuilder {
 	b.config.ParseMode = "HTML"
+
 	return b
 }
 
 // WithMarkdown устанавливает Markdown режим парсинга.
 func (b *MessageBuilder) WithMarkdown() *MessageBuilder {
 	b.config.ParseMode = "Markdown"
+
 	return b
 }
 
 // DisableWebPagePreview отключает превью веб-страниц.
 func (b *MessageBuilder) DisableWebPagePreview() *MessageBuilder {
 	b.config.DisableWebPagePreview = true
+
 	return b
 }
 
 // DisableNotification отправляет сообщение без уведомления.
 func (b *MessageBuilder) DisableNotification() *MessageBuilder {
 	b.config.DisableNotification = true
+
 	return b
 }
 
 // ReplyTo устанавливает сообщение для ответа.
 func (b *MessageBuilder) ReplyTo(messageID int) *MessageBuilder {
 	b.config.ReplyToMessageID = messageID
+
 	return b
 }
 
 // WithUserID устанавливает ID пользователя для логирования.
 func (b *MessageBuilder) WithUserID(userID int64) *MessageBuilder {
 	b.userID = userID
+
 	return b
 }
 
 // WithOperation устанавливает название операции для логирования.
 func (b *MessageBuilder) WithOperation(operation string) *MessageBuilder {
 	b.operation = operation
+
 	return b
 }
 
@@ -204,42 +221,49 @@ func (b *MessageBuilder) Send() error {
 // WithText устанавливает новый текст для редактирования.
 func (b *EditMessageBuilder) WithText(text string) *EditMessageBuilder {
 	b.config = tgbotapi.NewEditMessageText(b.chatID, b.messageID, text)
+
 	return b
 }
 
 // WithKeyboard устанавливает клавиатуру для редактирования.
 func (b *EditMessageBuilder) WithKeyboard(keyboard *tgbotapi.InlineKeyboardMarkup) *EditMessageBuilder {
 	b.config.ReplyMarkup = keyboard
+
 	return b
 }
 
 // WithParseMode устанавливает режим парсинга для редактирования.
 func (b *EditMessageBuilder) WithParseMode(mode string) *EditMessageBuilder {
 	b.config.ParseMode = mode
+
 	return b
 }
 
 // WithHTML устанавливает HTML режим парсинга для редактирования.
 func (b *EditMessageBuilder) WithHTML() *EditMessageBuilder {
 	b.config.ParseMode = "HTML"
+
 	return b
 }
 
 // WithMarkdown устанавливает Markdown режим парсинга для редактирования.
 func (b *EditMessageBuilder) WithMarkdown() *EditMessageBuilder {
 	b.config.ParseMode = "Markdown"
+
 	return b
 }
 
 // WithUserID устанавливает ID пользователя для логирования.
 func (b *EditMessageBuilder) WithUserID(userID int64) *EditMessageBuilder {
 	b.userID = userID
+
 	return b
 }
 
 // WithOperation устанавливает название операции для логирования.
 func (b *EditMessageBuilder) WithOperation(operation string) *EditMessageBuilder {
 	b.operation = operation
+
 	return b
 }
 

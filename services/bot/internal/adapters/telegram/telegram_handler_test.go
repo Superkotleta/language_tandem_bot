@@ -52,7 +52,7 @@ func TestTelegramHandler_HandleUpdate_Message(t *testing.T) {
 	assert.Contains(t, err.Error(), "service not initialized")
 }
 
-// TestTelegramHandler_HandleUpdate_CallbackQuery - smoke тест обработки callback'ов
+// TestTelegramHandler_HandleUpdate_CallbackQuery - smoke тест обработки callback'ов.
 func TestTelegramHandler_HandleUpdate_CallbackQuery(t *testing.T) {
 	// Создаем rate limiter для тестов
 	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
@@ -92,7 +92,7 @@ func TestTelegramHandler_HandleUpdate_CallbackQuery(t *testing.T) {
 	assert.Contains(t, err.Error(), "service not initialized")
 }
 
-// TestTelegramHandler_isAdmin - тест проверки прав администратора
+// TestTelegramHandler_isAdmin - тест проверки прав администратора.
 func TestTelegramHandler_isAdmin(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -141,7 +141,7 @@ func TestTelegramHandler_isAdmin(t *testing.T) {
 	}
 }
 
-// TestTelegramHandler_GetRateLimiterStats - тест получения статистики rate limiter
+// TestTelegramHandler_GetRateLimiterStats - тест получения статистики rate limiter.
 func TestTelegramHandler_GetRateLimiterStats(t *testing.T) {
 	t.Run("With rate limiter", func(t *testing.T) {
 		mockRateLimiter := &RateLimiter{}
@@ -165,7 +165,7 @@ func TestTelegramHandler_GetRateLimiterStats(t *testing.T) {
 	})
 }
 
-// TestTelegramHandler_Stop - тест остановки handler
+// TestTelegramHandler_Stop - тест остановки handler.
 func TestTelegramHandler_Stop(t *testing.T) {
 	t.Run("With rate limiter", func(t *testing.T) {
 		rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
@@ -196,7 +196,7 @@ func TestTelegramHandler_Stop(t *testing.T) {
 	})
 }
 
-// TestTelegramHandler_GettersSetters - тест геттеров и сеттеров
+// TestTelegramHandler_GettersSetters - тест геттеров и сеттеров.
 func TestTelegramHandler_GettersSetters(t *testing.T) {
 	handler := &TelegramHandler{}
 
@@ -211,7 +211,7 @@ func TestTelegramHandler_GettersSetters(t *testing.T) {
 	assert.Equal(t, mockBot, handler.GetBotAPI())
 }
 
-// TestTelegramHandler_sendRateLimitMessage - тест отправки сообщения о rate limit
+// TestTelegramHandler_sendRateLimitMessage - тест отправки сообщения о rate limit.
 func TestTelegramHandler_sendRateLimitMessage(t *testing.T) {
 	mockBot := &tgbotapi.BotAPI{} // Используем реальный BotAPI для простоты
 	handler := &TelegramHandler{
@@ -224,7 +224,7 @@ func TestTelegramHandler_sendRateLimitMessage(t *testing.T) {
 	})
 }
 
-// TestNewTelegramHandler - тест конструктора (пропускаем для реальных объектов)
+// TestNewTelegramHandler - тест конструктора (пропускаем для реальных объектов).
 func TestNewTelegramHandler(t *testing.T) {
 	t.Skip("Skipping test with real objects - requires full service initialization")
 
@@ -243,7 +243,7 @@ func TestNewTelegramHandler(t *testing.T) {
 	// assert.NotNil(t, handler)
 }
 
-// TestNewTelegramHandlerWithAdmins - тест конструктора с админами (пропускаем для реальных объектов)
+// TestNewTelegramHandlerWithAdmins - тест конструктора с админами (пропускаем для реальных объектов).
 func TestNewTelegramHandlerWithAdmins(t *testing.T) {
 	t.Skip("Skipping test with real objects - requires full service initialization")
 
@@ -263,7 +263,7 @@ func TestNewTelegramHandlerWithAdmins(t *testing.T) {
 	// assert.NotNil(t, handler)
 }
 
-// TestTelegramHandler_HandleCommand_Unknown - smoke тест неизвестной команды
+// TestTelegramHandler_HandleCommand_Unknown - smoke тест неизвестной команды.
 func TestTelegramHandler_HandleCommand_Unknown(t *testing.T) {
 	// Создаем rate limiter для тестов
 	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
@@ -304,7 +304,7 @@ func TestTelegramHandler_HandleCommand_Unknown(t *testing.T) {
 	assert.Contains(t, err.Error(), "service not initialized")
 }
 
-// TestTelegramHandler_HandleState - smoke тест обработки состояний
+// TestTelegramHandler_HandleState - smoke тест обработки состояний.
 func TestTelegramHandler_HandleState(t *testing.T) {
 	// Создаем rate limiter для тестов
 	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
@@ -339,7 +339,7 @@ func TestTelegramHandler_HandleState(t *testing.T) {
 	assert.Contains(t, err.Error(), "service not initialized")
 }
 
-// TestNewTelegramBot_InvalidToken tests bot creation with invalid token
+// TestNewTelegramBot_InvalidToken tests bot creation with invalid token.
 func TestNewTelegramBot_InvalidToken(t *testing.T) {
 	db := &database.DB{} // mock DB
 	adminChatIDs := []int64{123}
@@ -351,7 +351,7 @@ func TestNewTelegramBot_InvalidToken(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to create telegram bot")
 }
 
-// TestNewTelegramBotWithUsernames_EmptyUsernames tests bot creation with empty usernames
+// TestNewTelegramBotWithUsernames_EmptyUsernames tests bot creation with empty usernames.
 func TestNewTelegramBotWithUsernames_EmptyUsernames(t *testing.T) {
 	db := &database.DB{} // mock DB
 	adminUsernames := []string{"", "   ", ""}
@@ -362,7 +362,7 @@ func TestNewTelegramBotWithUsernames_EmptyUsernames(t *testing.T) {
 	assert.Nil(t, bot)
 }
 
-// TestResolveUsernameToChatID tests username resolution
+// TestResolveUsernameToChatID tests username resolution.
 func TestResolveUsernameToChatID(t *testing.T) {
 	bot := &TelegramBot{}
 
@@ -377,7 +377,7 @@ func TestResolveUsernameToChatID(t *testing.T) {
 	assert.Equal(t, int64(0), chatID)
 }
 
-// TestTelegramBot_GetService tests service getter
+// TestTelegramBot_GetService tests service getter.
 func TestTelegramBot_GetService(t *testing.T) {
 	// Create bot with mock service
 	service := &core.BotService{}
@@ -389,7 +389,7 @@ func TestTelegramBot_GetService(t *testing.T) {
 	assert.Equal(t, service, bot.GetService())
 }
 
-// TestTelegramBot_GetAdminCount tests admin count getter
+// TestTelegramBot_GetAdminCount tests admin count getter.
 func TestTelegramBot_GetAdminCount(t *testing.T) {
 	bot := &TelegramBot{
 		adminChatIDs: []int64{123, 456},
@@ -398,7 +398,7 @@ func TestTelegramBot_GetAdminCount(t *testing.T) {
 	assert.Equal(t, 2, bot.GetAdminCount())
 }
 
-// TestTelegramBot_SetAdminChatIDs tests setting admin chat IDs
+// TestTelegramBot_SetAdminChatIDs tests setting admin chat IDs.
 func TestTelegramBot_SetAdminChatIDs(t *testing.T) {
 	bot := &TelegramBot{}
 	newAdminChatIDs := []int64{789, 101112}
@@ -407,14 +407,14 @@ func TestTelegramBot_SetAdminChatIDs(t *testing.T) {
 	assert.Equal(t, newAdminChatIDs, bot.adminChatIDs)
 }
 
-// TestTelegramBot_GetPlatformName tests platform name getter
+// TestTelegramBot_GetPlatformName tests platform name getter.
 func TestTelegramBot_GetPlatformName(t *testing.T) {
 	bot := &TelegramBot{}
 
 	assert.Equal(t, "telegram", bot.GetPlatformName())
 }
 
-// TestTelegramBot_GetBotAPI tests API getter
+// TestTelegramBot_GetBotAPI tests API getter.
 func TestTelegramBot_GetBotAPI(t *testing.T) {
 	api := &tgbotapi.BotAPI{}
 	bot := &TelegramBot{
@@ -424,7 +424,7 @@ func TestTelegramBot_GetBotAPI(t *testing.T) {
 	assert.Equal(t, api, bot.GetBotAPI())
 }
 
-// TestTelegramBot_SetErrorHandler tests error handler setter
+// TestTelegramBot_SetErrorHandler tests error handler setter.
 func TestTelegramBot_SetErrorHandler(t *testing.T) {
 	bot := &TelegramBot{}
 	errorHandler := &errorsPkg.ErrorHandler{}
@@ -433,7 +433,7 @@ func TestTelegramBot_SetErrorHandler(t *testing.T) {
 	assert.Equal(t, errorHandler, bot.errorHandler)
 }
 
-// TestTelegramBot_ResolveUsernameToChatID tests username resolution
+// TestTelegramBot_ResolveUsernameToChatID tests username resolution.
 func TestTelegramBot_ResolveUsernameToChatID(t *testing.T) {
 	// Just test that the method exists
 	bot := &TelegramBot{}

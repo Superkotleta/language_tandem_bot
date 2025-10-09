@@ -7,7 +7,7 @@ import (
 	"language-exchange-bot/internal/models"
 )
 
-// TestIsolatedSystemFunctionality тестирует функциональность изолированной системы
+// TestIsolatedSystemFunctionality тестирует функциональность изолированной системы.
 func TestIsolatedSystemFunctionality(t *testing.T) {
 	// Тест 1: Создание сессии
 	session := &EditSession{
@@ -55,13 +55,14 @@ func TestIsolatedSystemFunctionality(t *testing.T) {
 
 	// Тест 4: Валидация сессии
 	editor := &IsolatedInterestEditor{}
+
 	err := editor.validateSelections(session)
 	if err != nil {
 		t.Errorf("Unexpected validation error: %v", err)
 	}
 }
 
-// TestNavigationFlow тестирует поток навигации
+// TestNavigationFlow тестирует поток навигации.
 func TestNavigationFlow(t *testing.T) {
 	// Тест хлебных крошек
 	breadcrumbTests := []struct {
@@ -77,13 +78,14 @@ func TestNavigationFlow(t *testing.T) {
 		if test.lang == "" {
 			t.Error("Language should not be empty")
 		}
+
 		if test.expected == "" {
 			t.Error("Expected breadcrumb should not be empty")
 		}
 	}
 }
 
-// TestErrorHandling тестирует обработку ошибок
+// TestErrorHandling тестирует обработку ошибок.
 func TestErrorHandling(t *testing.T) {
 	editor := &IsolatedInterestEditor{}
 
@@ -110,7 +112,7 @@ func TestErrorHandling(t *testing.T) {
 	}
 }
 
-// TestStatisticsIntegration тестирует интеграцию статистики
+// TestStatisticsIntegration тестирует интеграцию статистики.
 func TestStatisticsIntegration(t *testing.T) {
 	editor := &IsolatedInterestEditor{}
 
@@ -149,7 +151,7 @@ func TestStatisticsIntegration(t *testing.T) {
 	}
 }
 
-// TestMassOperations тестирует массовые операции
+// TestMassOperations тестирует массовые операции.
 func TestMassOperations(t *testing.T) {
 	session := &EditSession{
 		UserID:            123,
@@ -185,7 +187,7 @@ func TestMassOperations(t *testing.T) {
 	}
 }
 
-// TestUndoOperations тестирует операции отмены
+// TestUndoOperations тестирует операции отмены.
 func TestUndoOperations(t *testing.T) {
 	session := &EditSession{
 		UserID: 123,
@@ -221,12 +223,12 @@ func TestUndoOperations(t *testing.T) {
 	}
 }
 
-// TestPerformance тестирует производительность
+// TestPerformance тестирует производительность.
 func TestPerformance(t *testing.T) {
 	start := time.Now()
 
 	// Тест создания большого количества сессий
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		session := &EditSession{
 			UserID:            i,
 			CurrentSelections: make([]models.InterestSelection, 10),
@@ -246,7 +248,7 @@ func TestPerformance(t *testing.T) {
 	}
 }
 
-// TestDataIntegrity тестирует целостность данных
+// TestDataIntegrity тестирует целостность данных.
 func TestDataIntegrity(t *testing.T) {
 	// Тест создания сессии с корректными данными
 	session := &EditSession{
@@ -309,11 +311,11 @@ func TestDataIntegrity(t *testing.T) {
 	}
 }
 
-// TestEdgeCases тестирует граничные случаи
+// TestEdgeCases тестирует граничные случаи.
 func TestEdgeCases(t *testing.T) {
 	// Тест с максимальным количеством выборов
 	maxSelections := make([]models.InterestSelection, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		maxSelections[i] = models.InterestSelection{
 			UserID:     123,
 			InterestID: i + 1,
@@ -342,6 +344,7 @@ func TestEdgeCases(t *testing.T) {
 
 	// Подсчитываем основные интересы
 	primaryCount := 0
+
 	for _, selection := range session.CurrentSelections {
 		if selection.IsPrimary {
 			primaryCount++
@@ -360,6 +363,7 @@ func TestEdgeCases(t *testing.T) {
 	}
 
 	editor := &IsolatedInterestEditor{}
+
 	err := editor.validateSelections(emptySession)
 	if err != nil {
 		t.Error("Empty session should now be allowed")

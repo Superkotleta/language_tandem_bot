@@ -15,6 +15,7 @@ func TestCallbackRouter_RegisterSimple(t *testing.T) {
 	called := false
 	handler := func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
 		called = true
+
 		return nil
 	}
 
@@ -32,8 +33,10 @@ func TestCallbackRouter_RegisterPrefix(t *testing.T) {
 	router := NewCallbackRouter()
 
 	var capturedParam string
+
 	handler := func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
 		capturedParam = params["param"]
+
 		return nil
 	}
 
@@ -74,11 +77,13 @@ func TestCallbackRouter_MultipleRoutes(t *testing.T) {
 	callCount := 0
 	handler1 := func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
 		callCount = 1
+
 		return nil
 	}
 
 	handler2 := func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
 		callCount = 2
+
 		return nil
 	}
 

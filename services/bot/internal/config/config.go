@@ -148,6 +148,7 @@ func getTelegramMode() string {
 	// Валидация режима
 	if mode != "polling" && mode != "webhook" {
 		log.Printf("Warning: invalid TELEGRAM_MODE '%s', using 'polling' as default", mode)
+
 		return "polling"
 	}
 
@@ -200,6 +201,7 @@ func parseAdminUsernames() []string {
 			if username == "" {
 				continue
 			}
+
 			adminUsernames = append(adminUsernames, username)
 		}
 	}
@@ -346,6 +348,7 @@ func getDatabaseMaxOpenConns() int {
 	if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
 		return parsed
 	}
+
 	return 25 // значение по умолчанию
 }
 
@@ -355,5 +358,6 @@ func getDatabaseMaxIdleConns() int {
 	if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
 		return parsed
 	}
+
 	return 10 // значение по умолчанию
 }

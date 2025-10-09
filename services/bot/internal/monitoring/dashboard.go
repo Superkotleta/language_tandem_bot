@@ -54,6 +54,7 @@ func (d *Dashboard) Start(port int) error {
 	}
 
 	d.logger.Printf("Starting monitoring dashboard on port %d", port)
+
 	return d.server.ListenAndServe()
 }
 
@@ -62,6 +63,7 @@ func (d *Dashboard) Stop(ctx context.Context) error {
 	if d.server != nil {
 		return d.server.Shutdown(ctx)
 	}
+
 	return nil
 }
 
@@ -143,8 +145,10 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
 `
 
 	w.Header().Set("Content-Type", "text/html")
+
 	if _, err := fmt.Fprint(w, tmpl); err != nil {
 		log.Printf("Failed to write dashboard template: %v", err)
+
 		return
 	}
 }
@@ -154,8 +158,10 @@ func (d *Dashboard) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := d.performanceMonitor.GetPerformanceReport()
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(metrics); err != nil {
 		http.Error(w, "Failed to encode metrics", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -165,8 +171,10 @@ func (d *Dashboard) handleErrors(w http.ResponseWriter, r *http.Request) {
 	alerts := d.errorHandler.GetAlerts()
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(alerts); err != nil {
 		http.Error(w, "Failed to encode alerts", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -176,8 +184,10 @@ func (d *Dashboard) handleAlerts(w http.ResponseWriter, r *http.Request) {
 	activeAlerts := d.errorHandler.GetActiveAlerts()
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(activeAlerts); err != nil {
 		http.Error(w, "Failed to encode active alerts", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -203,8 +213,10 @@ func (d *Dashboard) handlePerformance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -218,8 +230,10 @@ func (d *Dashboard) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -313,8 +327,10 @@ func (d *Dashboard) handleMetricsPage(w http.ResponseWriter, r *http.Request) {
 `
 
 	w.Header().Set("Content-Type", "text/html")
+
 	if _, err := fmt.Fprint(w, tmpl); err != nil {
 		log.Printf("Failed to write dashboard template: %v", err)
+
 		return
 	}
 }
@@ -414,8 +430,10 @@ func (d *Dashboard) handleErrorsPage(w http.ResponseWriter, r *http.Request) {
 `
 
 	w.Header().Set("Content-Type", "text/html")
+
 	if _, err := fmt.Fprint(w, tmpl); err != nil {
 		log.Printf("Failed to write dashboard template: %v", err)
+
 		return
 	}
 }
@@ -527,8 +545,10 @@ func (d *Dashboard) handleAlertsPage(w http.ResponseWriter, r *http.Request) {
 `
 
 	w.Header().Set("Content-Type", "text/html")
+
 	if _, err := fmt.Fprint(w, tmpl); err != nil {
 		log.Printf("Failed to write dashboard template: %v", err)
+
 		return
 	}
 }

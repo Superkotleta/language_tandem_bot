@@ -22,7 +22,7 @@ func TestNewDB_InvalidConnection(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to ping database")
 }
 
-// TestDB_GetConnection тестирует получение соединения
+// TestDB_GetConnection тестирует получение соединения.
 func TestDB_GetConnection(t *testing.T) {
 	// Создаем mock DB для тестирования
 	mockDB := &DB{
@@ -33,7 +33,7 @@ func TestDB_GetConnection(t *testing.T) {
 	assert.NotNil(t, conn)
 }
 
-// TestDB_Close тестирует закрытие соединения
+// TestDB_Close тестирует закрытие соединения.
 func TestDB_Close(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
@@ -47,11 +47,12 @@ func TestDB_Close(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestDB_GetLanguages тестирует получение списка языков
+// TestDB_GetLanguages тестирует получение списка языков.
 func TestDB_GetLanguages(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
 			t.Logf("Failed to close database connection: %v", closeErr)
@@ -75,11 +76,12 @@ func TestDB_GetLanguages(t *testing.T) {
 	assert.Equal(t, "Russian", languages[1].NameEn)
 }
 
-// TestDB_GetLanguageByCode тестирует получение языка по коду
+// TestDB_GetLanguageByCode тестирует получение языка по коду.
 func TestDB_GetLanguageByCode(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
 			t.Logf("Failed to close database connection: %v", closeErr)
@@ -107,11 +109,12 @@ func TestDB_GetLanguageByCode(t *testing.T) {
 	assert.Nil(t, language)
 }
 
-// TestDB_GetInterests тестирует получение списка интересов
+// TestDB_GetInterests тестирует получение списка интересов.
 func TestDB_GetInterests(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
 			t.Logf("Failed to close database connection: %v", closeErr)
@@ -134,11 +137,12 @@ func TestDB_GetInterests(t *testing.T) {
 	assert.Equal(t, "Sports", interests[2].KeyName)
 }
 
-// TestDB_GetUserByTelegramID тестирует получение пользователя по Telegram ID
+// TestDB_GetUserByTelegramID тестирует получение пользователя по Telegram ID.
 func TestDB_GetUserByTelegramID(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
 			t.Logf("Failed to close database connection: %v", closeErr)
@@ -168,11 +172,12 @@ func TestDB_GetUserByTelegramID(t *testing.T) {
 	assert.Nil(t, user)
 }
 
-// TestDB_SaveUserInterests тестирует сохранение интересов пользователя
+// TestDB_SaveUserInterests тестирует сохранение интересов пользователя.
 func TestDB_SaveUserInterests(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
 			t.Logf("Failed to close database connection: %v", closeErr)
@@ -199,11 +204,12 @@ func TestDB_SaveUserInterests(t *testing.T) {
 	assert.Equal(t, interestIDs, savedInterests)
 }
 
-// TestDB_FindOrCreateUser_NewUser тестирует создание нового пользователя
+// TestDB_FindOrCreateUser_NewUser тестирует создание нового пользователя.
 func TestDB_FindOrCreateUser_NewUser(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
 			t.Logf("Failed to close database connection: %v", closeErr)
@@ -234,11 +240,12 @@ func TestDB_FindOrCreateUser_NewUser(t *testing.T) {
 	assert.Equal(t, 0, user.ProfileCompletionLevel)
 }
 
-// TestDB_FindOrCreateUser_ExistingUser тестирует поиск существующего пользователя
+// TestDB_FindOrCreateUser_ExistingUser тестирует поиск существующего пользователя.
 func TestDB_FindOrCreateUser_ExistingUser(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
 			t.Logf("Failed to close database connection: %v", closeErr)
@@ -262,11 +269,12 @@ func TestDB_FindOrCreateUser_ExistingUser(t *testing.T) {
 	assert.Equal(t, "Updated Name", user.FirstName) // должно обновиться
 }
 
-// TestDB_UpdateUserState тестирует обновление состояния пользователя
+// TestDB_UpdateUserState тестирует обновление состояния пользователя.
 func TestDB_UpdateUserState(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
 			t.Logf("Failed to close database connection: %v", closeErr)
@@ -290,11 +298,12 @@ func TestDB_UpdateUserState(t *testing.T) {
 	assert.Equal(t, "waiting_language", user.State)
 }
 
-// TestDB_UpdateUserStatus тестирует обновление статуса пользователя
+// TestDB_UpdateUserStatus тестирует обновление статуса пользователя.
 func TestDB_UpdateUserStatus(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
 			t.Logf("Failed to close database connection: %v", closeErr)
@@ -318,11 +327,12 @@ func TestDB_UpdateUserStatus(t *testing.T) {
 	assert.Equal(t, "active", user.Status)
 }
 
-// TestDB_UpdateUserInterfaceLanguage тестирует обновление языка интерфейса
+// TestDB_UpdateUserInterfaceLanguage тестирует обновление языка интерфейса.
 func TestDB_UpdateUserInterfaceLanguage(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
 			t.Logf("Failed to close database connection: %v", closeErr)
@@ -346,11 +356,12 @@ func TestDB_UpdateUserInterfaceLanguage(t *testing.T) {
 	assert.Equal(t, "ru", user.InterfaceLanguageCode)
 }
 
-// TestDB_UpdateUserNativeLanguage тестирует обновление родного языка
+// TestDB_UpdateUserNativeLanguage тестирует обновление родного языка.
 func TestDB_UpdateUserNativeLanguage(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя
@@ -370,11 +381,12 @@ func TestDB_UpdateUserNativeLanguage(t *testing.T) {
 	assert.Equal(t, "ru", user.NativeLanguageCode)
 }
 
-// TestDB_UpdateUserTargetLanguage тестирует обновление целевого языка
+// TestDB_UpdateUserTargetLanguage тестирует обновление целевого языка.
 func TestDB_UpdateUserTargetLanguage(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя
@@ -394,11 +406,12 @@ func TestDB_UpdateUserTargetLanguage(t *testing.T) {
 	assert.Equal(t, "en", user.TargetLanguageCode)
 }
 
-// TestDB_UpdateUserTargetLanguageLevel тестирует обновление уровня целевого языка
+// TestDB_UpdateUserTargetLanguageLevel тестирует обновление уровня целевого языка.
 func TestDB_UpdateUserTargetLanguageLevel(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя
@@ -418,11 +431,12 @@ func TestDB_UpdateUserTargetLanguageLevel(t *testing.T) {
 	assert.Equal(t, "intermediate", user.TargetLanguageLevel)
 }
 
-// TestDB_RemoveUserInterest тестирует удаление интереса пользователя
+// TestDB_RemoveUserInterest тестирует удаление интереса пользователя.
 func TestDB_RemoveUserInterest(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы
@@ -450,14 +464,15 @@ func TestDB_RemoveUserInterest(t *testing.T) {
 	// Проверяем, что интерес удален
 	interests, err = database.GetUserSelectedInterests(1)
 	require.NoError(t, err)
-	assert.Len(t, interests, 0)
+	assert.Empty(t, interests)
 }
 
-// TestDB_GetInterestByID тестирует получение интереса по ID
+// TestDB_GetInterestByID тестирует получение интереса по ID.
 func TestDB_GetInterestByID(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и интересы
@@ -475,11 +490,12 @@ func TestDB_GetInterestByID(t *testing.T) {
 	assert.Equal(t, "Programming", interest.KeyName)
 }
 
-// TestDB_SaveNativeLanguage тестирует сохранение родного языка
+// TestDB_SaveNativeLanguage тестирует сохранение родного языка.
 func TestDB_SaveNativeLanguage(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя
@@ -499,11 +515,12 @@ func TestDB_SaveNativeLanguage(t *testing.T) {
 	assert.Equal(t, "ru", user.NativeLanguageCode)
 }
 
-// TestDB_SaveTargetLanguage тестирует сохранение целевого языка
+// TestDB_SaveTargetLanguage тестирует сохранение целевого языка.
 func TestDB_SaveTargetLanguage(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя
@@ -523,11 +540,12 @@ func TestDB_SaveTargetLanguage(t *testing.T) {
 	assert.Equal(t, "en", user.TargetLanguageCode)
 }
 
-// TestDB_ResetUserProfile тестирует сброс профиля пользователя
+// TestDB_ResetUserProfile тестирует сброс профиля пользователя.
 func TestDB_ResetUserProfile(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы и пользователя с заполненным профилем
@@ -571,16 +589,17 @@ func TestDB_ResetUserProfile(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "waiting_language", user.State)
 	assert.Equal(t, "filling_profile", user.Status)
-	assert.Equal(t, "", user.NativeLanguageCode)
-	assert.Equal(t, "", user.TargetLanguageCode)
-	assert.Equal(t, "", user.TargetLanguageLevel)
+	assert.Empty(t, user.NativeLanguageCode)
+	assert.Empty(t, user.TargetLanguageCode)
+	assert.Empty(t, user.TargetLanguageLevel)
 }
 
-// TestDB_SaveUserFeedback тестирует сохранение отзыва пользователя
+// TestDB_SaveUserFeedback тестирует сохранение отзыва пользователя.
 func TestDB_SaveUserFeedback(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы
@@ -594,6 +613,7 @@ func TestDB_SaveUserFeedback(t *testing.T) {
 	// Проверим, какой ID имеет пользователь
 	user, err := database.GetUserByTelegramID(123456789)
 	require.NoError(t, err)
+
 	userID := user.ID
 
 	// Сохраняем отзыв
@@ -613,11 +633,12 @@ func TestDB_SaveUserFeedback(t *testing.T) {
 	assert.Equal(t, false, feedbacks[0]["is_processed"])
 }
 
-// TestDB_GetUserFeedbackByUserID тестирует получение отзывов пользователя
+// TestDB_GetUserFeedbackByUserID тестирует получение отзывов пользователя.
 func TestDB_GetUserFeedbackByUserID(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы
@@ -631,6 +652,7 @@ func TestDB_GetUserFeedbackByUserID(t *testing.T) {
 	// Получим userID
 	user, err := database.GetUserByTelegramID(123456789)
 	require.NoError(t, err)
+
 	userID := user.ID
 
 	// Сохраняем несколько отзывов
@@ -650,11 +672,12 @@ func TestDB_GetUserFeedbackByUserID(t *testing.T) {
 	assert.Equal(t, "Second feedback", feedbacks[1]["feedback_text"])
 }
 
-// TestDB_GetUnprocessedFeedback тестирует получение необработанных отзывов
+// TestDB_GetUnprocessedFeedback тестирует получение необработанных отзывов.
 func TestDB_GetUnprocessedFeedback(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы
@@ -697,11 +720,12 @@ func TestDB_GetUnprocessedFeedback(t *testing.T) {
 	assert.Equal(t, "Unprocessed feedback 2", feedbacks[0]["feedback_text"])
 }
 
-// TestDB_MarkFeedbackProcessed тестирует пометку отзыва как обработанного
+// TestDB_MarkFeedbackProcessed тестирует пометку отзыва как обработанного.
 func TestDB_MarkFeedbackProcessed(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() { _ = db.Close() }()
 
 	// Создаем таблицы
@@ -715,6 +739,7 @@ func TestDB_MarkFeedbackProcessed(t *testing.T) {
 	// Получим userID
 	user, err := database.GetUserByTelegramID(123456789)
 	require.NoError(t, err)
+
 	userID := user.ID
 
 	// Сохраняем отзыв
@@ -745,7 +770,7 @@ func TestDB_MarkFeedbackProcessed(t *testing.T) {
 
 // ===== Helper functions for test setup =====
 
-// setupTestUserFeedbackTable creates user_feedback table for testing
+// setupTestUserFeedbackTable creates user_feedback table for testing.
 func setupTestUserFeedbackTable(t *testing.T, db *sql.DB) {
 	_, err := db.Exec(`
 		CREATE TABLE user_feedback (
@@ -763,7 +788,7 @@ func setupTestUserFeedbackTable(t *testing.T, db *sql.DB) {
 	require.NoError(t, err)
 }
 
-// setupTestLanguagesTable creates and populates languages table for testing
+// setupTestLanguagesTable creates and populates languages table for testing.
 func setupTestLanguagesTable(t *testing.T, db *sql.DB) {
 	// Create languages table
 	_, err := db.Exec(`
@@ -786,7 +811,7 @@ func setupTestLanguagesTable(t *testing.T, db *sql.DB) {
 	require.NoError(t, err)
 }
 
-// setupTestInterestsTable creates and populates interests table for testing
+// setupTestInterestsTable creates and populates interests table for testing.
 func setupTestInterestsTable(t *testing.T, db *sql.DB) {
 	// Create interests table
 	_, err := db.Exec(`
@@ -811,7 +836,7 @@ func setupTestInterestsTable(t *testing.T, db *sql.DB) {
 	require.NoError(t, err)
 }
 
-// setupTestUsersTable creates users table for testing
+// setupTestUsersTable creates users table for testing.
 func setupTestUsersTable(t *testing.T, db *sql.DB) {
 	_, err := db.Exec(`
 		CREATE TABLE users (
@@ -833,7 +858,7 @@ func setupTestUsersTable(t *testing.T, db *sql.DB) {
 	require.NoError(t, err)
 }
 
-// setupTestUserInterestsTable creates user_interests table for testing
+// setupTestUserInterestsTable creates user_interests table for testing.
 func setupTestUserInterestsTable(t *testing.T, db *sql.DB) {
 	_, err := db.Exec(`
 		CREATE TABLE user_interests (
@@ -849,7 +874,7 @@ func setupTestUserInterestsTable(t *testing.T, db *sql.DB) {
 	require.NoError(t, err)
 }
 
-// setupTestSchema creates all necessary tables for testing
+// setupTestSchema creates all necessary tables for testing.
 func setupTestSchema(t *testing.T, db *sql.DB) {
 	setupTestUsersTable(t, db)
 	setupTestUserInterestsTable(t, db)
@@ -886,7 +911,7 @@ func setupTestSchema(t *testing.T, db *sql.DB) {
 	require.NoError(t, err)
 }
 
-// setupTestInterests creates test interests in the database
+// setupTestInterests creates test interests in the database.
 func setupTestInterests(t *testing.T, db *sql.DB) {
 	setupTestInterestsTable(t, db)
 
@@ -895,11 +920,12 @@ func setupTestInterests(t *testing.T, db *sql.DB) {
 	require.NoError(t, err)
 }
 
-// TestDB_ClearUserInterests тестирует очистку интересов пользователя
+// TestDB_ClearUserInterests тестирует очистку интересов пользователя.
 func TestDB_ClearUserInterests(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if err := db.Close(); err != nil {
 			t.Errorf("Failed to close database: %v", err)
@@ -911,6 +937,7 @@ func TestDB_ClearUserInterests(t *testing.T) {
 
 	// Создаем тестового пользователя
 	userID := 1
+
 	setupTestUser(t, db, 12345, "testuser", "Test User")
 
 	// Создаем тестовые интересы
@@ -929,23 +956,25 @@ func TestDB_ClearUserInterests(t *testing.T) {
 
 	// Проверяем, что интересы удалены
 	var count int
+
 	err = db.QueryRow(`SELECT COUNT(*) FROM user_interests WHERE user_id = ?`, userID).Scan(&count)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
 }
 
-// TestDB_GetUserByID tests getting user by ID (if method exists)
+// TestDB_GetUserByID tests getting user by ID (if method exists).
 func TestDB_GetUserByID(t *testing.T) {
 	// This test checks if GetUserByID method exists and is callable
 	// Skip if method doesn't exist
 	t.Skip("GetUserByID method may not exist in current implementation")
 }
 
-// TestDB_UpdateUserProfileCompletionLevel tests updating profile completion level
+// TestDB_UpdateUserProfileCompletionLevel tests updating profile completion level.
 func TestDB_UpdateUserProfileCompletionLevel(t *testing.T) {
 	// Создаем тестовую базу данных в памяти
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
+
 	defer func() {
 		if err := db.Close(); err != nil {
 			t.Errorf("Failed to close database: %v", err)
@@ -957,6 +986,7 @@ func TestDB_UpdateUserProfileCompletionLevel(t *testing.T) {
 
 	// Создаем тестового пользователя
 	userID := 1
+
 	setupTestUser(t, db, 12345, "testuser", "Test User")
 
 	// Создаем database instance
@@ -968,12 +998,13 @@ func TestDB_UpdateUserProfileCompletionLevel(t *testing.T) {
 
 	// Проверяем, что значение обновлено
 	var level int
+
 	err = db.QueryRow(`SELECT profile_completion_level FROM users WHERE id = ?`, userID).Scan(&level)
 	assert.NoError(t, err)
 	assert.Equal(t, 75, level)
 }
 
-// setupTestUser creates a test user in the database
+// setupTestUser creates a test user in the database.
 func setupTestUser(t *testing.T, db *sql.DB, telegramID int64, username, firstName string) {
 	_, err := db.Exec(`
 		INSERT INTO users (telegram_id, username, first_name, interface_language_code, state, status)

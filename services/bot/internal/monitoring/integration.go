@@ -60,6 +60,7 @@ func (ms *MonitoringService) Stop(ctx context.Context) error {
 	}
 
 	ms.logger.Printf("Monitoring service stopped")
+
 	return nil
 }
 

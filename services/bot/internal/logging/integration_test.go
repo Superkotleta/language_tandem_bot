@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewLoggingService tests creating new logging service
+// TestNewLoggingService tests creating new logging service.
 func TestNewLoggingService(t *testing.T) {
 	errorHandler := &customErrors.ErrorHandler{}
 	service := NewLoggingService(errorHandler)
@@ -21,7 +21,7 @@ func TestNewLoggingService(t *testing.T) {
 	assert.Equal(t, errorHandler, service.errorHandler)
 }
 
-// TestLoggingService_Getters tests getter methods
+// TestLoggingService_Getters tests getter methods.
 func TestLoggingService_Getters(t *testing.T) {
 	errorHandler := &customErrors.ErrorHandler{}
 	service := NewLoggingService(errorHandler)
@@ -39,7 +39,7 @@ func TestLoggingService_Getters(t *testing.T) {
 	assert.IsType(t, &ValidationLogger{}, service.Validation())
 }
 
-// TestLoggingService_LogErrorWithContext tests error logging with context
+// TestLoggingService_LogErrorWithContext tests error logging with context.
 func TestLoggingService_LogErrorWithContext(t *testing.T) {
 	// Just test that the method exists
 	errorHandler := &customErrors.ErrorHandler{}

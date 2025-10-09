@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -51,6 +52,7 @@ func (mc *MetricCollector) IncrementCounter(name string, labels map[string]strin
 	defer mc.mutex.Unlock()
 
 	key := mc.getMetricKey(name, labels)
+
 	metric, exists := mc.metrics[key]
 	if !exists {
 		metric = &Metric{
@@ -91,6 +93,7 @@ func (mc *MetricCollector) RecordHistogram(name string, value float64, labels ma
 	defer mc.mutex.Unlock()
 
 	key := mc.getMetricKey(name, labels)
+
 	metric, exists := mc.metrics[key]
 	if !exists {
 		metric = &Metric{
@@ -118,6 +121,7 @@ func (mc *MetricCollector) RecordHistogram(name string, value float64, labels ma
 	if value < metric.Metadata["min"].(float64) {
 		metric.Metadata["min"] = value
 	}
+
 	if value > metric.Metadata["max"].(float64) {
 		metric.Metadata["max"] = value
 	}
@@ -138,6 +142,7 @@ func (mc *MetricCollector) GetMetric(name string, labels map[string]string) (*Me
 
 	key := mc.getMetricKey(name, labels)
 	metric, exists := mc.metrics[key]
+
 	return metric, exists
 }
 
@@ -151,6 +156,7 @@ func (mc *MetricCollector) GetAllMetrics() map[string]*Metric {
 	for key, metric := range mc.metrics {
 		result[key] = metric
 	}
+
 	return result
 }
 
@@ -160,11 +166,13 @@ func (mc *MetricCollector) GetMetricsByType(metricType MetricType) map[string]*M
 	defer mc.mutex.RUnlock()
 
 	result := make(map[string]*Metric)
+
 	for key, metric := range mc.metrics {
 		if metric.Type == metricType {
 			result[key] = metric
 		}
 	}
+
 	return result
 }
 
@@ -199,6 +207,7 @@ func (mc *MetricCollector) LogMetrics() {
 		jsonData, err := json.Marshal(metricData)
 		if err != nil {
 			mc.logger.Printf("Failed to marshal metric data: %v", err)
+
 			continue
 		}
 
@@ -212,6 +221,7 @@ func (mc *MetricCollector) getMetricKey(name string, labels map[string]string) s
 	for labelKey, labelValue := range labels {
 		key += fmt.Sprintf("_%s_%s", labelKey, labelValue)
 	}
+
 	return key
 }
 
@@ -263,7 +273,7 @@ func (pm *PerformanceMonitor) RecordCacheOperation(requestID, operation string, 
 
 	labels := map[string]string{
 		"operation": operation,
-		"hit":       fmt.Sprintf("%t", hit),
+		"hit":       strconv.FormatBool(hit),
 		"status":    "success",
 	}
 	if err != nil {
@@ -309,6 +319,7 @@ func (pm *PerformanceMonitor) LogPerformanceReport() {
 	jsonData, err := json.Marshal(report)
 	if err != nil {
 		pm.logger.Printf("Failed to marshal performance report: %v", err)
+
 		return
 	}
 

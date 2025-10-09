@@ -6,7 +6,7 @@ import (
 	"language-exchange-bot/internal/errors"
 )
 
-// TestNewBaseHandler_NilInputs тестирует создание BaseHandler с nil значениями
+// TestNewBaseHandler_NilInputs тестирует создание BaseHandler с nil значениями.
 func TestNewBaseHandler_NilInputs(t *testing.T) {
 	// Тестируем создание BaseHandler с nil значениями
 	baseHandler := NewBaseHandler(nil, nil, nil, nil, nil)
@@ -37,7 +37,7 @@ func TestNewBaseHandler_NilInputs(t *testing.T) {
 	}
 }
 
-// TestBaseHandler_Getters тестирует getter методы BaseHandler
+// TestBaseHandler_Getters тестирует getter методы BaseHandler.
 func TestBaseHandler_Getters(t *testing.T) {
 	// Создаем BaseHandler с nil значениями для простоты тестирования
 	baseHandler := NewBaseHandler(nil, nil, nil, nil, nil)
@@ -64,7 +64,7 @@ func TestBaseHandler_Getters(t *testing.T) {
 	}
 }
 
-// TestNewBaseHandler_NotNil тестирует, что NewBaseHandler возвращает не-nil объект
+// TestNewBaseHandler_NotNil тестирует, что NewBaseHandler возвращает не-nil объект.
 func TestNewBaseHandler_NotNil(t *testing.T) {
 	baseHandler := NewBaseHandler(nil, nil, nil, nil, nil)
 
@@ -73,7 +73,7 @@ func TestNewBaseHandler_NotNil(t *testing.T) {
 	}
 }
 
-// TestBaseHandler_GetKeyboardBuilder тестирует getter для KeyboardBuilder
+// TestBaseHandler_GetKeyboardBuilder тестирует getter для KeyboardBuilder.
 func TestBaseHandler_GetKeyboardBuilder(t *testing.T) {
 	kb := &KeyboardBuilder{}
 	baseHandler := NewBaseHandler(nil, nil, kb, nil, nil)
@@ -84,7 +84,7 @@ func TestBaseHandler_GetKeyboardBuilder(t *testing.T) {
 	}
 }
 
-// TestBaseHandler_GetErrorHandler тестирует getter для ErrorHandler
+// TestBaseHandler_GetErrorHandler тестирует getter для ErrorHandler.
 func TestBaseHandler_GetErrorHandler(t *testing.T) {
 	eh := &errors.ErrorHandler{}
 	baseHandler := NewBaseHandler(nil, nil, nil, eh, nil)
@@ -95,7 +95,7 @@ func TestBaseHandler_GetErrorHandler(t *testing.T) {
 	}
 }
 
-// TestBaseHandler_GetMessageFactory тестирует getter для MessageFactory
+// TestBaseHandler_GetMessageFactory тестирует getter для MessageFactory.
 func TestBaseHandler_GetMessageFactory(t *testing.T) {
 	mf := &MessageFactory{}
 	baseHandler := NewBaseHandler(nil, nil, nil, nil, mf)

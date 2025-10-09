@@ -37,7 +37,7 @@ const (
 // - Handles language and interest selection
 // - Processes user feedback and notifications
 // - Provides caching and performance optimization
-// - Implements circuit breaker patterns for resilience
+// - Implements circuit breaker patterns for resilience.
 type BotService struct {
 	// DB provides database operations interface
 	DB database.Database
@@ -671,10 +671,13 @@ func (s *BotService) buildInterestsProfileInfo(user *models.User, lang string) s
 	}
 
 	// Используем новую систему
-	var allInterests []string
-	var primaryCount, additionalCount int
+	var (
+		allInterests                  []string
+		primaryCount, additionalCount int
+	)
 
 	// Обрабатываем выборы пользователя
+
 	for _, selection := range selections {
 		// Получаем информацию об интересе
 		interest, err := s.DB.GetInterestByID(selection.InterestID)
@@ -1709,29 +1712,29 @@ func (s *BotService) GetCircuitBreakerCounts() map[string]interface{} {
 	return counts
 }
 
-// GetConfig возвращает конфигурацию приложения
+// GetConfig возвращает конфигурацию приложения.
 func (s *BotService) GetConfig() *config.Config {
 	return s.Config
 }
 
 // === Методы databaseAdapter для работы с доступностью ===
 
-// SaveTimeAvailability сохраняет временную доступность пользователя
+// SaveTimeAvailability сохраняет временную доступность пользователя.
 func (a *databaseAdapter) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
 	return a.db.SaveTimeAvailability(userID, availability)
 }
 
-// GetTimeAvailability получает временную доступность пользователя
+// GetTimeAvailability получает временную доступность пользователя.
 func (a *databaseAdapter) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
 	return a.db.GetTimeAvailability(userID)
 }
 
-// SaveFriendshipPreferences сохраняет предпочтения общения пользователя
+// SaveFriendshipPreferences сохраняет предпочтения общения пользователя.
 func (a *databaseAdapter) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
 	return a.db.SaveFriendshipPreferences(userID, preferences)
 }
 
-// GetFriendshipPreferences получает предпочтения общения пользователя
+// GetFriendshipPreferences получает предпочтения общения пользователя.
 func (a *databaseAdapter) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
 	return a.db.GetFriendshipPreferences(userID)
 }

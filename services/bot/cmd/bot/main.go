@@ -78,7 +78,7 @@ func main() {
 	waitForShutdown(bots, wg, adminServer, ctx, cancel)
 }
 
-// initializeService создает общий сервис для всех компонентов
+// initializeService создает общий сервис для всех компонентов.
 func initializeService(
 	cfg *config.Config,
 	db *database.DB,
@@ -93,6 +93,7 @@ func initializeService(
 	} else {
 		log.Printf("Redis cache initialized: %s", service.Cache.String())
 	}
+
 	return service, nil
 }
 
@@ -102,7 +103,6 @@ func initializeTelegramBotWithService(
 	cfg *config.Config,
 	errorHandler *errors.ErrorHandler,
 ) (*telegram.TelegramBot, error) {
-
 	// Создаем бота с Chat ID для уведомлений и username для проверки прав
 	telegramBot, err := telegram.NewTelegramBotWithService(cfg.TelegramToken, service, cfg.Debug, cfg.AdminUsernames)
 	if err != nil {
@@ -160,7 +160,7 @@ func setupGracefulShutdown() (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-// startAdminServerWithService запускает административный API сервер с общим сервисом
+// startAdminServerWithService запускает административный API сервер с общим сервисом.
 func startAdminServerWithService(cfg *config.Config, service *core.BotService, errorHandler *errors.ErrorHandler) *server.AdminServer {
 	log.Printf("Admin API using shared service: %s", service.Cache.String())
 
@@ -193,11 +193,13 @@ func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, adminServer
 	if len(bots) == 0 {
 		log.Println("No bots running, waiting for shutdown signal...")
 		<-ctx.Done()
+
 		return
 	}
 
 	// Ждем завершения всех горутин
 	done := make(chan struct{})
+
 	go func() {
 		wg.Wait()
 		close(done)
@@ -218,6 +220,7 @@ func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, adminServer
 		if err := adminServer.Stop(ctx); err != nil {
 			log.Printf("Error stopping admin server: %v", err)
 		}
+
 		cancelStop()
 		log.Println("Admin server stopped")
 	}
@@ -240,13 +243,14 @@ func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, adminServer
 			if service != nil {
 				service.StopCache()
 				log.Println("Cache service stopped")
+
 				break // останавливаем только один раз для общего сервиса
 			}
 		}
 	}
 }
 
-// startBotsWithService запускает все боты с общим сервисом
+// startBotsWithService запускает все боты с общим сервисом.
 func startBotsWithService(
 	ctx context.Context,
 	cfg *config.Config,
@@ -264,7 +268,6 @@ func startBotsWithService(
 		if err != nil {
 			log.Printf("Failed to initialize Telegram bot, continuing with Admin API only: %v", err)
 		} else {
-
 			// Создаем handler для Telegram для admin server
 			telegramHandler := telegram.NewTelegramHandlerWithAdmins(
 				telegramBot.GetBotAPI(),
@@ -276,16 +279,21 @@ func startBotsWithService(
 
 			// Запускаем бота
 			wg.Add(1)
+
 			go func() {
 				defer wg.Done()
+
 				log.Printf("Starting Telegram bot...")
+
 				if err := telegramBot.Start(ctx); err != nil {
 					log.Printf("Telegram bot error: %v", err)
 				}
+
 				log.Printf("Telegram bot stopped")
 			}()
 
 			bots = append(bots, telegramBot)
+
 			return bots, &wg, telegramHandler
 		}
 	}

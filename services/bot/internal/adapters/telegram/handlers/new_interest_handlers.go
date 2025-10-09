@@ -385,6 +385,7 @@ func (h *NewInterestHandlerImpl) showPrimaryInterestsSelection(callback *tgbotap
 
 	// Подсчитываем уже выбранные основные интересы
 	selectedPrimaryCount := 0
+
 	for _, selection := range userSelections {
 		if selection.IsPrimary {
 			selectedPrimaryCount++
@@ -521,6 +522,7 @@ func (h *NewInterestHandlerImpl) updatePrimaryInterestsKeyboard(callback *tgbota
 
 	// Подсчитываем уже выбранные основные интересы
 	selectedPrimaryCount := 0
+
 	for _, selection := range userSelections {
 		if selection.IsPrimary {
 			selectedPrimaryCount++
@@ -641,7 +643,8 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 }
 
 // updateProfileCompletionLevel обновляет уровень завершения профиля.
-// nolint:unused
+//
+//nolint:unused
 func (h *NewInterestHandlerImpl) updateProfileCompletionLevel(userID int, completionLevel int) error {
 	_, err := h.base.service.DB.GetConnection().Exec(`
 		UPDATE users

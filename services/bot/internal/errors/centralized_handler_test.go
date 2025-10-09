@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestAlertLevel_String tests AlertLevel string representation
+// TestAlertLevel_String tests AlertLevel string representation.
 func TestAlertLevel_String(t *testing.T) {
 	tests := []struct {
 		level    AlertLevel
@@ -28,7 +28,7 @@ func TestAlertLevel_String(t *testing.T) {
 	}
 }
 
-// TestNewCentralizedErrorHandler tests creating new centralized error handler
+// TestNewCentralizedErrorHandler tests creating new centralized error handler.
 func TestNewCentralizedErrorHandler(t *testing.T) {
 	handler := NewCentralizedErrorHandler()
 
@@ -38,7 +38,7 @@ func TestNewCentralizedErrorHandler(t *testing.T) {
 	assert.NotNil(t, handler.logger)
 }
 
-// TestCentralizedErrorHandler_HandleError tests error handling
+// TestCentralizedErrorHandler_HandleError tests error handling.
 func TestCentralizedErrorHandler_HandleError(t *testing.T) {
 	handler := NewCentralizedErrorHandler()
 
@@ -52,7 +52,7 @@ func TestCentralizedErrorHandler_HandleError(t *testing.T) {
 	})
 }
 
-// TestCentralizedErrorHandler_GetActiveAlerts tests getting active alerts
+// TestCentralizedErrorHandler_GetActiveAlerts tests getting active alerts.
 func TestCentralizedErrorHandler_GetActiveAlerts(t *testing.T) {
 	handler := NewCentralizedErrorHandler()
 
@@ -62,7 +62,7 @@ func TestCentralizedErrorHandler_GetActiveAlerts(t *testing.T) {
 	assert.IsType(t, map[string]*Alert{}, alerts)
 }
 
-// TestCentralizedErrorHandler_ResolveAlert tests alert resolution
+// TestCentralizedErrorHandler_ResolveAlert tests alert resolution.
 func TestCentralizedErrorHandler_ResolveAlert(t *testing.T) {
 	handler := NewCentralizedErrorHandler()
 

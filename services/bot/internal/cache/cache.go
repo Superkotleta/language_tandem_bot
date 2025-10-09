@@ -546,6 +546,7 @@ func (cacheService *Service) Set(ctx context.Context, key string, value interfac
 	}
 
 	cacheService.updateSize()
+
 	return nil
 }
 
@@ -562,6 +563,7 @@ func (cacheService *Service) Get(ctx context.Context, key string, dest interface
 	// Простое присваивание для совместимости
 	// В реальной реализации нужно было бы использовать reflection
 	*dest.(*interface{}) = entry.Data
+
 	return nil
 }
 
@@ -572,6 +574,7 @@ func (cacheService *Service) Delete(ctx context.Context, key string) error {
 
 	delete(cacheService.stats, key)
 	cacheService.updateSize()
+
 	return nil
 }
 
@@ -585,10 +588,12 @@ func (cacheService *Service) GetInterestCategories(ctx context.Context, lang str
 	entry, exists := cacheService.interestCategories[lang]
 	if !exists || entry.IsExpired() {
 		cacheService.cacheStats.Misses++
+
 		return nil, false
 	}
 
 	cacheService.cacheStats.Hits++
+
 	return entry.Data.([]*models.InterestCategory), true
 }
 
@@ -612,10 +617,12 @@ func (cacheService *Service) GetUserStats(ctx context.Context, userID int64) (ma
 	entry, exists := cacheService.userStats[userID]
 	if !exists || entry.IsExpired() {
 		cacheService.cacheStats.Misses++
+
 		return nil, false
 	}
 
 	cacheService.cacheStats.Hits++
+
 	return entry.Data.(map[string]interface{}), true
 }
 
@@ -639,10 +646,12 @@ func (cacheService *Service) GetConfig(ctx context.Context, configKey string) (i
 	entry, exists := cacheService.configCache[configKey]
 	if !exists || entry.IsExpired() {
 		cacheService.cacheStats.Misses++
+
 		return nil, false
 	}
 
 	cacheService.cacheStats.Hits++
+
 	return entry.Data, true
 }
 
@@ -679,6 +688,7 @@ func (cacheService *Service) InvalidateUserStats(ctx context.Context, userID int
 // WarmUp предзагружает критичные данные в кэш при старте приложения.
 func (cacheService *Service) WarmUp(ctx context.Context, dataLoader DataLoader) error {
 	log.Println("Starting cache warming...")
+
 	start := time.Now()
 
 	// Список языков для предзагрузки
@@ -715,6 +725,7 @@ func (cacheService *Service) WarmUp(ctx context.Context, dataLoader DataLoader) 
 
 	duration := time.Since(start)
 	log.Printf("Cache warming completed in %v", duration)
+
 	return nil
 }
 
@@ -747,6 +758,7 @@ func (cacheService *Service) warmUpLanguages(ctx context.Context, dataLoader Dat
 	}
 
 	cacheService.updateSize()
+
 	return nil
 }
 
@@ -771,6 +783,7 @@ func (cacheService *Service) warmUpInterests(ctx context.Context, dataLoader Dat
 	}
 
 	cacheService.updateSize()
+
 	return nil
 }
 
@@ -795,6 +808,7 @@ func (cacheService *Service) warmUpInterestCategories(ctx context.Context, dataL
 	}
 
 	cacheService.updateSize()
+
 	return nil
 }
 
@@ -814,5 +828,6 @@ func (cacheService *Service) warmUpTranslations(ctx context.Context, dataLoader 
 	}
 
 	cacheService.updateSize()
+
 	return nil
 }

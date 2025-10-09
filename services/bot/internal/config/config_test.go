@@ -20,14 +20,14 @@ func TestConfig_Load_DefaultValues(t *testing.T) {
 	config := Load()
 
 	// Проверяем дефолтные значения
-	assert.Equal(t, "", config.TelegramToken)
-	assert.Equal(t, "", config.DatabaseURL)
+	assert.Empty(t, config.TelegramToken)
+	assert.Empty(t, config.DatabaseURL)
 	assert.Equal(t, "localhost:6379", config.RedisURL)
-	assert.Equal(t, "", config.RedisPassword)
+	assert.Empty(t, config.RedisPassword)
 	assert.Equal(t, 0, config.RedisDB)
 	assert.Equal(t, "8080", config.Port)
 	assert.False(t, config.Debug)
-	assert.Equal(t, "", config.WebhookURL)
+	assert.Empty(t, config.WebhookURL)
 	assert.True(t, config.EnableTelegram)
 	assert.False(t, config.EnableDiscord)
 	assert.Equal(t, "polling", config.TelegramMode)
@@ -44,7 +44,6 @@ func TestConfig_Load_DefaultValues(t *testing.T) {
 
 // TestConfig_Load_FromEnvironment тестирует загрузку конфигурации из environment variables.
 func TestConfig_Load_FromEnvironment(t *testing.T) {
-
 	// Очищаем environment перед тестом
 	clearEnvironment()
 
@@ -77,6 +76,7 @@ func TestConfig_Load_FromEnvironment(t *testing.T) {
 			t.Logf("Failed to set environment variable %s: %v", key, err)
 		}
 	}
+
 	defer clearEnvironment()
 
 	config := Load()
@@ -106,7 +106,6 @@ func TestConfig_Load_FromEnvironment(t *testing.T) {
 
 // TestConfig_Load_InvalidValues тестирует загрузку конфигурации с невалидными значениями.
 func TestConfig_Load_InvalidValues(t *testing.T) {
-
 	// Очищаем environment перед тестом
 	clearEnvironment()
 
@@ -127,6 +126,7 @@ func TestConfig_Load_InvalidValues(t *testing.T) {
 			t.Logf("Failed to set environment variable %s: %v", key, err)
 		}
 	}
+
 	defer clearEnvironment()
 
 	config := Load()
@@ -144,7 +144,6 @@ func TestConfig_Load_InvalidValues(t *testing.T) {
 
 // TestConfig_Load_AdminChatIDs тестирует парсинг admin chat IDs.
 func TestConfig_Load_AdminChatIDs(t *testing.T) {
-
 	testCases := []struct {
 		input    string
 		expected []int64
@@ -161,9 +160,11 @@ func TestConfig_Load_AdminChatIDs(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			clearEnvironment()
+
 			if err := os.Setenv("ADMIN_CHAT_IDS", tc.input); err != nil {
 				t.Logf("Failed to set ADMIN_CHAT_IDS: %v", err)
 			}
+
 			defer clearEnvironment()
 
 			config := Load()
@@ -174,7 +175,6 @@ func TestConfig_Load_AdminChatIDs(t *testing.T) {
 
 // TestConfig_Load_AdminUsernames тестирует парсинг admin usernames.
 func TestConfig_Load_AdminUsernames(t *testing.T) {
-
 	testCases := []struct {
 		input    string
 		expected []string
@@ -191,9 +191,11 @@ func TestConfig_Load_AdminUsernames(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			clearEnvironment()
+
 			if err := os.Setenv("ADMIN_USERNAMES", tc.input); err != nil {
 				t.Logf("Failed to set ADMIN_USERNAMES: %v", err)
 			}
+
 			defer clearEnvironment()
 
 			config := Load()
@@ -204,7 +206,6 @@ func TestConfig_Load_AdminUsernames(t *testing.T) {
 
 // TestConfig_Load_TelegramMode тестирует валидацию режима Telegram.
 func TestConfig_Load_TelegramMode(t *testing.T) {
-
 	testCases := []struct {
 		input    string
 		expected string
@@ -221,9 +222,11 @@ func TestConfig_Load_TelegramMode(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			clearEnvironment()
+
 			if err := os.Setenv("TELEGRAM_MODE", tc.input); err != nil {
 				t.Logf("Failed to set TELEGRAM_MODE: %v", err)
 			}
+
 			defer clearEnvironment()
 
 			config := Load()
@@ -234,7 +237,6 @@ func TestConfig_Load_TelegramMode(t *testing.T) {
 
 // TestConfig_Load_TokenFromFile тестирует загрузку токена из файла.
 func TestConfig_Load_TokenFromFile(t *testing.T) {
-
 	// Очищаем environment перед тестом
 	clearEnvironment()
 
@@ -242,6 +244,7 @@ func TestConfig_Load_TokenFromFile(t *testing.T) {
 	if err := os.Unsetenv("TELEGRAM_TOKEN"); err != nil {
 		t.Logf("Failed to unset TELEGRAM_TOKEN: %v", err)
 	}
+
 	if err := os.Unsetenv("TELEGRAM_TOKEN_FILE"); err != nil {
 		t.Logf("Failed to unset TELEGRAM_TOKEN_FILE: %v", err)
 	}
@@ -250,6 +253,7 @@ func TestConfig_Load_TokenFromFile(t *testing.T) {
 	if err := os.Setenv("GO_TEST", "1"); err != nil {
 		t.Logf("Failed to set GO_TEST: %v", err)
 	}
+
 	defer func() {
 		if err := os.Unsetenv("GO_TEST"); err != nil {
 			t.Logf("Failed to unset GO_TEST: %v", err)
@@ -268,6 +272,7 @@ func TestConfig_Load_TokenFromFile(t *testing.T) {
 	if err := os.Setenv("TELEGRAM_TOKEN_FILE", tokenFile); err != nil {
 		t.Logf("Failed to set TELEGRAM_TOKEN_FILE: %v", err)
 	}
+
 	defer clearEnvironment()
 
 	config := Load()
@@ -277,7 +282,6 @@ func TestConfig_Load_TokenFromFile(t *testing.T) {
 
 // TestConfig_Load_DatabaseURLFromFile тестирует загрузку database URL из файла.
 func TestConfig_Load_DatabaseURLFromFile(t *testing.T) {
-
 	// Очищаем environment перед тестом
 	clearEnvironment()
 
@@ -285,6 +289,7 @@ func TestConfig_Load_DatabaseURLFromFile(t *testing.T) {
 	if err := os.Unsetenv("DATABASE_URL"); err != nil {
 		t.Logf("Failed to unset DATABASE_URL: %v", err)
 	}
+
 	if err := os.Unsetenv("DATABASE_URL_FILE"); err != nil {
 		t.Logf("Failed to unset DATABASE_URL_FILE: %v", err)
 	}
@@ -293,6 +298,7 @@ func TestConfig_Load_DatabaseURLFromFile(t *testing.T) {
 	if err := os.Setenv("GO_TEST", "1"); err != nil {
 		t.Logf("Failed to set GO_TEST: %v", err)
 	}
+
 	defer func() {
 		if err := os.Unsetenv("GO_TEST"); err != nil {
 			t.Logf("Failed to unset GO_TEST: %v", err)
@@ -311,6 +317,7 @@ func TestConfig_Load_DatabaseURLFromFile(t *testing.T) {
 	if err := os.Setenv("DATABASE_URL_FILE", dbFile); err != nil {
 		t.Logf("Failed to set DATABASE_URL_FILE: %v", err)
 	}
+
 	defer clearEnvironment()
 
 	config := Load()
@@ -320,7 +327,6 @@ func TestConfig_Load_DatabaseURLFromFile(t *testing.T) {
 
 // TestConfig_Load_FileSecurity тестирует безопасность загрузки файлов.
 func TestConfig_Load_FileSecurity(t *testing.T) {
-
 	// Очищаем environment перед тестом
 	clearEnvironment()
 
@@ -336,6 +342,7 @@ func TestConfig_Load_FileSecurity(t *testing.T) {
 			if err := os.Setenv("TELEGRAM_TOKEN_FILE", dangerousPath); err != nil {
 				t.Logf("Failed to set TELEGRAM_TOKEN_FILE: %v", err)
 			}
+
 			defer clearEnvironment()
 
 			config := Load()
@@ -347,7 +354,6 @@ func TestConfig_Load_FileSecurity(t *testing.T) {
 
 // TestConfig_Load_NumericParsing тестирует парсинг числовых значений.
 func TestConfig_Load_NumericParsing(t *testing.T) {
-
 	testCases := []struct {
 		envKey   string
 		envValue string
@@ -366,9 +372,11 @@ func TestConfig_Load_NumericParsing(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.envKey+"_"+tc.envValue, func(t *testing.T) {
 			clearEnvironment()
+
 			if err := os.Setenv(tc.envKey, tc.envValue); err != nil {
 				t.Logf("Failed to set %s: %v", tc.envKey, err)
 			}
+
 			defer clearEnvironment()
 
 			config := Load()
@@ -393,7 +401,6 @@ func TestConfig_Load_NumericParsing(t *testing.T) {
 
 // TestConfig_Load_BooleanParsing тестирует парсинг булевых значений.
 func TestConfig_Load_BooleanParsing(t *testing.T) {
-
 	testCases := []struct {
 		envKey   string
 		envValue string
@@ -411,9 +418,11 @@ func TestConfig_Load_BooleanParsing(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.envKey+"_"+tc.envValue, func(t *testing.T) {
 			clearEnvironment()
+
 			if err := os.Setenv(tc.envKey, tc.envValue); err != nil {
 				t.Logf("Failed to set %s: %v", tc.envKey, err)
 			}
+
 			defer clearEnvironment()
 
 			config := Load()
@@ -432,7 +441,6 @@ func TestConfig_Load_BooleanParsing(t *testing.T) {
 
 // TestConfig_Load_FloatParsing тестирует парсинг float значений.
 func TestConfig_Load_FloatParsing(t *testing.T) {
-
 	testCases := []struct {
 		envValue string
 		expected float64
@@ -449,11 +457,13 @@ func TestConfig_Load_FloatParsing(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run("PRIMARY_PERCENTAGE_"+tc.envValue, func(t *testing.T) {
 			clearEnvironment()
+
 			if tc.envValue != "" {
 				if err := os.Setenv("PRIMARY_PERCENTAGE", tc.envValue); err != nil {
 					t.Logf("Failed to set environment variable PRIMARY_PERCENTAGE: %v", err)
 				}
 			}
+
 			defer clearEnvironment()
 
 			config := Load()

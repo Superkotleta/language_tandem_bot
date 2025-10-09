@@ -543,6 +543,7 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 				"error": err.Error(),
 			},
 		)
+
 		return err
 	}
 

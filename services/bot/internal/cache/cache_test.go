@@ -296,8 +296,9 @@ func TestService_ConcurrentAccess(t *testing.T) {
 	// Используем sync.WaitGroup для корректной синхронизации
 	var wg sync.WaitGroup
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
+
 		go func(id int) {
 			defer wg.Done()
 

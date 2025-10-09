@@ -36,6 +36,7 @@ func (bo *BatchOperations) BatchInsertUsers(ctx context.Context, users []*models
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
+
 	defer func() {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			log.Printf("Failed to rollback transaction in BatchInsertUsers: %v", rollbackErr)
@@ -46,6 +47,7 @@ func (bo *BatchOperations) BatchInsertUsers(ctx context.Context, users []*models
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
+
 	defer func() {
 		if closeErr := stmt.Close(); closeErr != nil {
 			log.Printf("Failed to close prepared statement in BatchInsertUsers: %v", closeErr)
@@ -54,6 +56,7 @@ func (bo *BatchOperations) BatchInsertUsers(ctx context.Context, users []*models
 
 	// Подготавливаем данные для COPY
 	var rows []string
+
 	for _, user := range users {
 		row := fmt.Sprintf("%d,%s,%s,%s,%s,%s,%s,%s,%s,%d,%s,%s",
 			user.TelegramID,
@@ -83,6 +86,7 @@ func (bo *BatchOperations) BatchInsertUsers(ctx context.Context, users []*models
 	}
 
 	log.Printf("Batch inserted %d users", len(users))
+
 	return nil
 }
 
@@ -113,6 +117,7 @@ func (bo *BatchOperations) BatchUpdateUsers(ctx context.Context, users []*models
 
 	// Подготавливаем VALUES
 	var values []string
+
 	for _, user := range users {
 		value := fmt.Sprintf("(%d, %s, %s, %s, %s, %s, %s, %s, %s, %d, %s)",
 			user.ID,
@@ -132,12 +137,14 @@ func (bo *BatchOperations) BatchUpdateUsers(ctx context.Context, users []*models
 
 	// Выполняем обновление
 	finalQuery := fmt.Sprintf(query, strings.Join(values, ","))
+
 	_, err := bo.db.conn.ExecContext(ctx, finalQuery)
 	if err != nil {
 		return fmt.Errorf("failed to execute batch update: %w", err)
 	}
 
 	log.Printf("Batch updated %d users", len(users))
+
 	return nil
 }
 
@@ -154,6 +161,7 @@ func (bo *BatchOperations) BatchInsertInterests(ctx context.Context, interests [
 
 	// Подготавливаем VALUES
 	var values []string
+
 	for _, interest := range interests {
 		value := fmt.Sprintf("(%s, %d, %d, %s, %s)",
 			escapeSQL(interest.KeyName),
@@ -166,12 +174,14 @@ func (bo *BatchOperations) BatchInsertInterests(ctx context.Context, interests [
 	}
 
 	finalQuery := fmt.Sprintf(query, strings.Join(values, ","))
+
 	_, err := bo.db.conn.ExecContext(ctx, finalQuery)
 	if err != nil {
 		return fmt.Errorf("failed to execute batch insert interests: %w", err)
 	}
 
 	log.Printf("Batch inserted %d interests", len(interests))
+
 	return nil
 }
 
@@ -188,6 +198,7 @@ func (bo *BatchOperations) BatchInsertUserInterests(ctx context.Context, userID 
 
 	// Подготавливаем VALUES
 	var values []string
+
 	now := time.Now().Format(time.RFC3339)
 	for _, interestID := range interestIDs {
 		value := fmt.Sprintf("(%d, %d, %s)",
@@ -199,12 +210,14 @@ func (bo *BatchOperations) BatchInsertUserInterests(ctx context.Context, userID 
 	}
 
 	finalQuery := fmt.Sprintf(query, strings.Join(values, ","))
+
 	_, err := bo.db.conn.ExecContext(ctx, finalQuery)
 	if err != nil {
 		return fmt.Errorf("failed to execute batch insert user interests: %w", err)
 	}
 
 	log.Printf("Batch inserted %d user interests for user %d", len(interestIDs), userID)
+
 	return nil
 }
 
@@ -235,6 +248,7 @@ func (bo *BatchOperations) BatchDeleteUserInterests(ctx context.Context, userID 
 	}
 
 	log.Printf("Batch deleted %d user interests for user %d", len(interestIDs), userID)
+
 	return nil
 }
 
@@ -251,6 +265,7 @@ func (bo *BatchOperations) BatchInsertLanguages(ctx context.Context, languages [
 
 	// Подготавливаем VALUES
 	var values []string
+
 	for _, language := range languages {
 		value := fmt.Sprintf("(%s, %s, %s, %s)",
 			escapeSQL(language.Code),
@@ -262,12 +277,14 @@ func (bo *BatchOperations) BatchInsertLanguages(ctx context.Context, languages [
 	}
 
 	finalQuery := fmt.Sprintf(query, strings.Join(values, ","))
+
 	_, err := bo.db.conn.ExecContext(ctx, finalQuery)
 	if err != nil {
 		return fmt.Errorf("failed to execute batch insert languages: %w", err)
 	}
 
 	log.Printf("Batch inserted %d languages", len(languages))
+
 	return nil
 }
 
@@ -286,6 +303,7 @@ func (bo *BatchOperations) BatchUpdateUserStats(ctx context.Context, userStats [
 
 	// Подготавливаем VALUES
 	var values []string
+
 	for _, stats := range userStats {
 		value := fmt.Sprintf("(%d, %d, %s)",
 			stats.UserID,
@@ -296,12 +314,14 @@ func (bo *BatchOperations) BatchUpdateUserStats(ctx context.Context, userStats [
 	}
 
 	finalQuery := fmt.Sprintf(query, strings.Join(values, ","))
+
 	_, err := bo.db.conn.ExecContext(ctx, finalQuery)
 	if err != nil {
 		return fmt.Errorf("failed to execute batch update user stats: %w", err)
 	}
 
 	log.Printf("Batch updated stats for %d users", len(userStats))
+
 	return nil
 }
 
@@ -332,6 +352,7 @@ func (bo *BatchOperations) BatchGetUsers(ctx context.Context, userIDs []int) ([]
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute batch get users: %w", err)
 	}
+
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
 			log.Printf("Failed to close rows in BatchGetUsers: %v", closeErr)
@@ -341,6 +362,7 @@ func (bo *BatchOperations) BatchGetUsers(ctx context.Context, userIDs []int) ([]
 	var users []*models.User
 	for rows.Next() {
 		user := &models.User{}
+
 		err := rows.Scan(
 			&user.ID,
 			&user.TelegramID,
@@ -359,6 +381,7 @@ func (bo *BatchOperations) BatchGetUsers(ctx context.Context, userIDs []int) ([]
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user: %w", err)
 		}
+
 		users = append(users, user)
 	}
 
@@ -367,6 +390,7 @@ func (bo *BatchOperations) BatchGetUsers(ctx context.Context, userIDs []int) ([]
 	}
 
 	log.Printf("Batch retrieved %d users", len(users))
+
 	return users, nil
 }
 
@@ -384,6 +408,7 @@ func escapeSQL(s string) string {
 	if s == "" {
 		return "NULL"
 	}
+
 	return fmt.Sprintf("'%s'", strings.ReplaceAll(s, "'", "''"))
 }
 
@@ -397,5 +422,6 @@ func escapeCSV(s string) string {
 	if strings.Contains(s, ",") || strings.Contains(s, "\"") || strings.Contains(s, "\n") {
 		return fmt.Sprintf("\"%s\"", s)
 	}
+
 	return s
 }

@@ -9,19 +9,19 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// AvailabilityHandlerImpl реализует обработчики для настройки доступности пользователя
+// AvailabilityHandlerImpl реализует обработчики для настройки доступности пользователя.
 type AvailabilityHandlerImpl struct {
 	base *BaseHandler
 }
 
-// NewAvailabilityHandler создает новый обработчик доступности
+// NewAvailabilityHandler создает новый обработчик доступности.
 func NewAvailabilityHandler(base *BaseHandler) *AvailabilityHandlerImpl {
 	return &AvailabilityHandlerImpl{
 		base: base,
 	}
 }
 
-// HandleTimeAvailabilityStart начинает настройку временной доступности
+// HandleTimeAvailabilityStart начинает настройку временной доступности.
 func (ah *AvailabilityHandlerImpl) HandleTimeAvailabilityStart(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	text := ah.base.service.Localizer.Get(user.InterfaceLanguageCode, "time_availability_intro")
 	keyboard := ah.createDayTypeSelectionKeyboard(user.InterfaceLanguageCode)
@@ -42,7 +42,7 @@ func (ah *AvailabilityHandlerImpl) HandleTimeAvailabilityStart(callback *tgbotap
 	return ah.base.service.DB.UpdateUserState(user.ID, models.StateWaitingTimeAvailability)
 }
 
-// HandleDayTypeSelection обрабатывает выбор типа дней (weekdays/weekends/any/specific)
+// HandleDayTypeSelection обрабатывает выбор типа дней (weekdays/weekends/any/specific).
 func (ah *AvailabilityHandlerImpl) HandleDayTypeSelection(callback *tgbotapi.CallbackQuery, user *models.User, dayType string) error {
 	// Сохраняем выбранный тип дней
 	availability := &models.TimeAvailability{
@@ -66,7 +66,7 @@ func (ah *AvailabilityHandlerImpl) HandleDayTypeSelection(callback *tgbotapi.Cal
 	return ah.ShowTimeSlotSelection(callback, user)
 }
 
-// HandleSpecificDaysSelection обрабатывает выбор конкретных дней недели
+// HandleSpecificDaysSelection обрабатывает выбор конкретных дней недели.
 func (ah *AvailabilityHandlerImpl) HandleSpecificDaysSelection(callback *tgbotapi.CallbackQuery, user *models.User, day string) error {
 	// Получаем текущую доступность
 	availability, err := ah.base.service.DB.GetTimeAvailability(user.ID)
@@ -93,7 +93,7 @@ func (ah *AvailabilityHandlerImpl) HandleSpecificDaysSelection(callback *tgbotap
 	return ah.ShowSpecificDaysSelection(callback, user)
 }
 
-// HandleTimeSlotSelection обрабатывает выбор временного слота
+// HandleTimeSlotSelection обрабатывает выбор временного слота.
 func (ah *AvailabilityHandlerImpl) HandleTimeSlotSelection(callback *tgbotapi.CallbackQuery, user *models.User, timeSlot string) error {
 	// Получаем текущую доступность
 	availability, err := ah.base.service.DB.GetTimeAvailability(user.ID)
@@ -114,7 +114,7 @@ func (ah *AvailabilityHandlerImpl) HandleTimeSlotSelection(callback *tgbotapi.Ca
 	return ah.startFriendshipPreferencesSetup(callback, user)
 }
 
-// HandleFriendshipPreferencesStart начинает настройку предпочтений общения
+// HandleFriendshipPreferencesStart начинает настройку предпочтений общения.
 func (ah *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	text := ah.base.service.Localizer.Get(user.InterfaceLanguageCode, "friendship_preferences_intro")
 	keyboard := ah.createActivityTypeSelectionKeyboard(user.InterfaceLanguageCode)
@@ -135,7 +135,7 @@ func (ah *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tg
 	return ah.base.service.DB.UpdateUserState(user.ID, models.StateWaitingFriendshipPreferences)
 }
 
-// HandleActivityTypeSelection обрабатывает выбор типа активности
+// HandleActivityTypeSelection обрабатывает выбор типа активности.
 func (ah *AvailabilityHandlerImpl) HandleActivityTypeSelection(callback *tgbotapi.CallbackQuery, user *models.User, activityType string) error {
 	// Сохраняем выбранный тип активности
 	preferences := &models.FriendshipPreferences{
@@ -154,7 +154,7 @@ func (ah *AvailabilityHandlerImpl) HandleActivityTypeSelection(callback *tgbotap
 	return ah.showCommunicationStyleSelection(callback, user)
 }
 
-// HandleCommunicationStyleSelection обрабатывает выбор стиля общения
+// HandleCommunicationStyleSelection обрабатывает выбор стиля общения.
 func (ah *AvailabilityHandlerImpl) HandleCommunicationStyleSelection(callback *tgbotapi.CallbackQuery, user *models.User, communicationStyle string) error {
 	// Получаем текущие предпочтения
 	preferences, err := ah.base.service.DB.GetFriendshipPreferences(user.ID)
@@ -175,7 +175,7 @@ func (ah *AvailabilityHandlerImpl) HandleCommunicationStyleSelection(callback *t
 	return ah.showCommunicationFrequencySelection(callback, user)
 }
 
-// HandleCommunicationFrequencySelection обрабатывает выбор частоты общения
+// HandleCommunicationFrequencySelection обрабатывает выбор частоты общения.
 func (ah *AvailabilityHandlerImpl) HandleCommunicationFrequencySelection(callback *tgbotapi.CallbackQuery, user *models.User, frequency string) error {
 	// Получаем текущие предпочтения
 	preferences, err := ah.base.service.DB.GetFriendshipPreferences(user.ID)
@@ -196,7 +196,7 @@ func (ah *AvailabilityHandlerImpl) HandleCommunicationFrequencySelection(callbac
 	return ah.completeAvailabilitySetup(callback, user)
 }
 
-// completeAvailabilitySetup завершает настройку доступности и переводит пользователя в активное состояние
+// completeAvailabilitySetup завершает настройку доступности и переводит пользователя в активное состояние.
 func (ah *AvailabilityHandlerImpl) completeAvailabilitySetup(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Обновляем уровень завершения профиля
 	err := ah.base.service.DB.UpdateUserProfileCompletionLevel(user.ID, 100)
@@ -229,12 +229,13 @@ func (ah *AvailabilityHandlerImpl) completeAvailabilitySetup(callback *tgbotapi.
 	)
 
 	_, err = ah.base.bot.Request(editMsg)
+
 	return err
 }
 
 // === Вспомогательные методы ===
 
-// ShowSpecificDaysSelection показывает интерфейс выбора конкретных дней недели
+// ShowSpecificDaysSelection показывает интерфейс выбора конкретных дней недели.
 func (ah *AvailabilityHandlerImpl) ShowSpecificDaysSelection(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	availability, err := ah.base.service.DB.GetTimeAvailability(user.ID)
 	if err != nil {
@@ -258,10 +259,11 @@ func (ah *AvailabilityHandlerImpl) ShowSpecificDaysSelection(callback *tgbotapi.
 	)
 
 	_, err = ah.base.bot.Request(editMsg)
+
 	return err
 }
 
-// ShowTimeSlotSelection показывает интерфейс выбора временного слота
+// ShowTimeSlotSelection показывает интерфейс выбора временного слота.
 func (ah *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	text := ah.base.service.Localizer.Get(user.InterfaceLanguageCode, "select_time_slot")
 	keyboard := ah.createTimeSlotSelectionKeyboard(user.InterfaceLanguageCode)
@@ -274,10 +276,11 @@ func (ah *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.Call
 	)
 
 	_, err := ah.base.bot.Request(editMsg)
+
 	return err
 }
 
-// startFriendshipPreferencesSetup начинает настройку предпочтений общения
+// startFriendshipPreferencesSetup начинает настройку предпочтений общения.
 func (ah *AvailabilityHandlerImpl) startFriendshipPreferencesSetup(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	text := ah.base.service.Localizer.Get(user.InterfaceLanguageCode, "friendship_preferences_intro")
 	keyboard := ah.createActivityTypeSelectionKeyboard(user.InterfaceLanguageCode)
@@ -298,7 +301,7 @@ func (ah *AvailabilityHandlerImpl) startFriendshipPreferencesSetup(callback *tgb
 	return ah.base.service.DB.UpdateUserState(user.ID, models.StateWaitingFriendshipPreferences)
 }
 
-// showCommunicationStyleSelection показывает интерфейс выбора стиля общения
+// showCommunicationStyleSelection показывает интерфейс выбора стиля общения.
 func (ah *AvailabilityHandlerImpl) showCommunicationStyleSelection(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	text := ah.base.service.Localizer.Get(user.InterfaceLanguageCode, "select_communication_style")
 	keyboard := ah.createCommunicationStyleSelectionKeyboard(user.InterfaceLanguageCode)
@@ -311,10 +314,11 @@ func (ah *AvailabilityHandlerImpl) showCommunicationStyleSelection(callback *tgb
 	)
 
 	_, err := ah.base.bot.Request(editMsg)
+
 	return err
 }
 
-// showCommunicationFrequencySelection показывает интерфейс выбора частоты общения
+// showCommunicationFrequencySelection показывает интерфейс выбора частоты общения.
 func (ah *AvailabilityHandlerImpl) showCommunicationFrequencySelection(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	text := ah.base.service.Localizer.Get(user.InterfaceLanguageCode, "select_communication_frequency")
 	keyboard := ah.createCommunicationFrequencySelectionKeyboard(user.InterfaceLanguageCode)
@@ -327,6 +331,7 @@ func (ah *AvailabilityHandlerImpl) showCommunicationFrequencySelection(callback 
 	)
 
 	_, err := ah.base.bot.Request(editMsg)
+
 	return err
 }
 
@@ -338,16 +343,19 @@ func (ah *AvailabilityHandlerImpl) containsDay(days []string, day string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
 func (ah *AvailabilityHandlerImpl) removeDay(days []string, day string) []string {
 	var result []string
+
 	for _, d := range days {
 		if d != day {
 			result = append(result, d)
 		}
 	}
+
 	return result
 }
 
@@ -358,6 +366,7 @@ func (ah *AvailabilityHandlerImpl) formatSelectedDays(days []string, lang string
 
 	// Сортируем дни для последовательного отображения
 	dayOrder := []string{"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+
 	var sortedDays []string
 
 	for _, day := range dayOrder {

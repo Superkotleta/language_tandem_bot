@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestUserConstants тестирует константы состояний и статусов пользователя
+// TestUserConstants тестирует константы состояний и статусов пользователя.
 func TestUserConstants(t *testing.T) {
 	// Test User States
 	assert.Equal(t, "new", StateNew)
@@ -28,7 +28,7 @@ func TestUserConstants(t *testing.T) {
 	assert.Equal(t, "paused", StatusPaused)
 }
 
-// TestUser_JSONSerialization тестирует JSON сериализацию/десериализацию User
+// TestUser_JSONSerialization тестирует JSON сериализацию/десериализацию User.
 func TestUser_JSONSerialization(t *testing.T) {
 	now := time.Now()
 
@@ -66,6 +66,7 @@ func TestUser_JSONSerialization(t *testing.T) {
 
 	// Test JSON deserialization
 	var deserialized User
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -95,7 +96,7 @@ func TestUser_JSONSerialization(t *testing.T) {
 	assert.Equal(t, user.FriendshipPreferences.CommunicationFreq, deserialized.FriendshipPreferences.CommunicationFreq)
 }
 
-// TestUser_MinimalUser тестирует создание минимального пользователя
+// TestUser_MinimalUser тестирует создание минимального пользователя.
 func TestUser_MinimalUser(t *testing.T) {
 	user := User{
 		ID:         1,
@@ -116,7 +117,7 @@ func TestUser_MinimalUser(t *testing.T) {
 	assert.Nil(t, user.FriendshipPreferences)
 }
 
-// TestUser_ProfileCompletion тестирует логику завершения профиля
+// TestUser_ProfileCompletion тестирует логику завершения профиля.
 func TestUser_ProfileCompletion(t *testing.T) {
 	user := User{
 		ID:                     1,
@@ -143,12 +144,12 @@ func TestUser_ProfileCompletion(t *testing.T) {
 
 	// Test complete profile
 	assert.Equal(t, 100, user.ProfileCompletionLevel)
-	assert.True(t, len(user.Interests) > 0)
+	assert.NotEmpty(t, user.Interests)
 	assert.NotNil(t, user.TimeAvailability)
 	assert.NotNil(t, user.FriendshipPreferences)
 }
 
-// TestTimeAvailability_JSONSerialization тестирует JSON сериализацию TimeAvailability
+// TestTimeAvailability_JSONSerialization тестирует JSON сериализацию TimeAvailability.
 func TestTimeAvailability_JSONSerialization(t *testing.T) {
 	ta := TimeAvailability{
 		DayType:      "specific",
@@ -163,6 +164,7 @@ func TestTimeAvailability_JSONSerialization(t *testing.T) {
 
 	// Test JSON deserialization
 	var deserialized TimeAvailability
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -171,7 +173,7 @@ func TestTimeAvailability_JSONSerialization(t *testing.T) {
 	assert.Equal(t, ta.TimeSlot, deserialized.TimeSlot)
 }
 
-// TestFriendshipPreferences_JSONSerialization тестирует JSON сериализацию FriendshipPreferences
+// TestFriendshipPreferences_JSONSerialization тестирует JSON сериализацию FriendshipPreferences.
 func TestFriendshipPreferences_JSONSerialization(t *testing.T) {
 	fp := FriendshipPreferences{
 		ActivityType:       "movies",
@@ -186,6 +188,7 @@ func TestFriendshipPreferences_JSONSerialization(t *testing.T) {
 
 	// Test JSON deserialization
 	var deserialized FriendshipPreferences
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -194,7 +197,7 @@ func TestFriendshipPreferences_JSONSerialization(t *testing.T) {
 	assert.Equal(t, fp.CommunicationFreq, deserialized.CommunicationFreq)
 }
 
-// TestLanguage_JSONSerialization тестирует JSON сериализацию Language
+// TestLanguage_JSONSerialization тестирует JSON сериализацию Language.
 func TestLanguage_JSONSerialization(t *testing.T) {
 	now := time.Now()
 	lang := Language{
@@ -213,6 +216,7 @@ func TestLanguage_JSONSerialization(t *testing.T) {
 
 	// Test JSON deserialization
 	var deserialized Language
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -223,7 +227,7 @@ func TestLanguage_JSONSerialization(t *testing.T) {
 	assert.Equal(t, lang.IsInterfaceLanguage, deserialized.IsInterfaceLanguage)
 }
 
-// TestLanguage_InterfaceLanguages тестирует интерфейсные языки
+// TestLanguage_InterfaceLanguages тестирует интерфейсные языки.
 func TestLanguage_InterfaceLanguages(t *testing.T) {
 	interfaceLang := Language{
 		Code:                "en",
@@ -243,7 +247,7 @@ func TestLanguage_InterfaceLanguages(t *testing.T) {
 	assert.False(t, nonInterfaceLang.IsInterfaceLanguage)
 }
 
-// TestInterest_JSONSerialization тестирует JSON сериализацию Interest
+// TestInterest_JSONSerialization тестирует JSON сериализацию Interest.
 func TestInterest_JSONSerialization(t *testing.T) {
 	now := time.Now()
 	interest := Interest{
@@ -266,7 +270,7 @@ func TestInterest_JSONSerialization(t *testing.T) {
 	assert.Equal(t, "tech", interest.CategoryKey)
 }
 
-// TestInterestCategory_JSONSerialization тестирует JSON сериализацию InterestCategory
+// TestInterestCategory_JSONSerialization тестирует JSON сериализацию InterestCategory.
 func TestInterestCategory_JSONSerialization(t *testing.T) {
 	now := time.Now()
 	category := InterestCategory{
@@ -285,6 +289,7 @@ func TestInterestCategory_JSONSerialization(t *testing.T) {
 
 	// Test JSON deserialization
 	var deserialized InterestCategory
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -295,7 +300,7 @@ func TestInterestCategory_JSONSerialization(t *testing.T) {
 	assert.Equal(t, category.Description, deserialized.Description)
 }
 
-// TestInterestSelection_JSONSerialization тестирует JSON сериализацию InterestSelection
+// TestInterestSelection_JSONSerialization тестирует JSON сериализацию InterestSelection.
 func TestInterestSelection_JSONSerialization(t *testing.T) {
 	now := time.Now()
 	selection := InterestSelection{
@@ -314,6 +319,7 @@ func TestInterestSelection_JSONSerialization(t *testing.T) {
 
 	// Test JSON deserialization
 	var deserialized InterestSelection
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -324,7 +330,7 @@ func TestInterestSelection_JSONSerialization(t *testing.T) {
 	assert.Equal(t, selection.SelectionOrder, deserialized.SelectionOrder)
 }
 
-// TestInterestSelection_PrimaryVsAdditional тестирует различие между primary и additional интересами
+// TestInterestSelection_PrimaryVsAdditional тестирует различие между primary и additional интересами.
 func TestInterestSelection_PrimaryVsAdditional(t *testing.T) {
 	primarySelection := InterestSelection{
 		UserID:     1,
@@ -343,7 +349,7 @@ func TestInterestSelection_PrimaryVsAdditional(t *testing.T) {
 	assert.NotEqual(t, primarySelection.InterestID, additionalSelection.InterestID)
 }
 
-// TestMatchingConfig_JSONSerialization тестирует JSON сериализацию MatchingConfig
+// TestMatchingConfig_JSONSerialization тестирует JSON сериализацию MatchingConfig.
 func TestMatchingConfig_JSONSerialization(t *testing.T) {
 	now := time.Now()
 	config := MatchingConfig{
@@ -362,6 +368,7 @@ func TestMatchingConfig_JSONSerialization(t *testing.T) {
 
 	// Test JSON deserialization
 	var deserialized MatchingConfig
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -371,7 +378,7 @@ func TestMatchingConfig_JSONSerialization(t *testing.T) {
 	assert.Equal(t, config.Description, deserialized.Description)
 }
 
-// TestInterestLimitsConfig_JSONSerialization тестирует JSON сериализацию InterestLimitsConfig
+// TestInterestLimitsConfig_JSONSerialization тестирует JSON сериализацию InterestLimitsConfig.
 func TestInterestLimitsConfig_JSONSerialization(t *testing.T) {
 	now := time.Now()
 	limits := InterestLimitsConfig{
@@ -390,6 +397,7 @@ func TestInterestLimitsConfig_JSONSerialization(t *testing.T) {
 
 	// Test JSON deserialization
 	var deserialized InterestLimitsConfig
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -399,7 +407,7 @@ func TestInterestLimitsConfig_JSONSerialization(t *testing.T) {
 	assert.Equal(t, limits.PrimaryPercentage, deserialized.PrimaryPercentage)
 }
 
-// TestInterestLimitsConfig_Validation тестирует валидацию лимитов интересов
+// TestInterestLimitsConfig_Validation тестирует валидацию лимитов интересов.
 func TestInterestLimitsConfig_Validation(t *testing.T) {
 	validLimits := InterestLimitsConfig{
 		MinPrimaryInterests: 1,
@@ -407,13 +415,13 @@ func TestInterestLimitsConfig_Validation(t *testing.T) {
 		PrimaryPercentage:   0.7,
 	}
 
-	assert.True(t, validLimits.MinPrimaryInterests > 0)
-	assert.True(t, validLimits.MaxPrimaryInterests >= validLimits.MinPrimaryInterests)
-	assert.True(t, validLimits.PrimaryPercentage >= 0.0)
-	assert.True(t, validLimits.PrimaryPercentage <= 1.0)
+	assert.Positive(t, validLimits.MinPrimaryInterests)
+	assert.GreaterOrEqual(t, validLimits.MaxPrimaryInterests, validLimits.MinPrimaryInterests)
+	assert.GreaterOrEqual(t, validLimits.PrimaryPercentage, 0.0)
+	assert.LessOrEqual(t, validLimits.PrimaryPercentage, 1.0)
 }
 
-// TestInterestWithCategory_JSONSerialization тестирует JSON сериализацию InterestWithCategory
+// TestInterestWithCategory_JSONSerialization тестирует JSON сериализацию InterestWithCategory.
 func TestInterestWithCategory_JSONSerialization(t *testing.T) {
 	now := time.Now()
 	interestWithCat := InterestWithCategory{
@@ -436,6 +444,7 @@ func TestInterestWithCategory_JSONSerialization(t *testing.T) {
 
 	// Test JSON deserialization
 	var deserialized InterestWithCategory
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -445,7 +454,7 @@ func TestInterestWithCategory_JSONSerialization(t *testing.T) {
 	assert.Equal(t, interestWithCat.CategoryKey, deserialized.CategoryKey)
 }
 
-// TestUserInterestSummary_JSONSerialization тестирует JSON сериализацию UserInterestSummary
+// TestUserInterestSummary_JSONSerialization тестирует JSON сериализацию UserInterestSummary.
 func TestUserInterestSummary_JSONSerialization(t *testing.T) {
 	summary := UserInterestSummary{
 		UserID:         123,
@@ -484,6 +493,7 @@ func TestUserInterestSummary_JSONSerialization(t *testing.T) {
 
 	// Test JSON deserialization
 	var deserialized UserInterestSummary
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -493,7 +503,7 @@ func TestUserInterestSummary_JSONSerialization(t *testing.T) {
 	assert.Len(t, deserialized.AdditionalInterests, 2)
 }
 
-// TestUserInterestSummary_InterestDistribution тестирует распределение интересов
+// TestUserInterestSummary_InterestDistribution тестирует распределение интересов.
 func TestUserInterestSummary_InterestDistribution(t *testing.T) {
 	summary := UserInterestSummary{
 		UserID:              123,
@@ -511,7 +521,7 @@ func TestUserInterestSummary_InterestDistribution(t *testing.T) {
 	assert.Equal(t, summary.TotalInterests, totalCalculated)
 }
 
-// TestModels_JSONEdgeCases тестирует edge cases JSON сериализации
+// TestModels_JSONEdgeCases тестирует edge cases JSON сериализации.
 func TestModels_JSONEdgeCases(t *testing.T) {
 	// Test empty User
 	emptyUser := User{}
@@ -520,6 +530,7 @@ func TestModels_JSONEdgeCases(t *testing.T) {
 	assert.NotEmpty(t, data)
 
 	var deserialized User
+
 	err = json.Unmarshal(data, &deserialized)
 	assert.NoError(t, err)
 
@@ -537,7 +548,7 @@ func TestModels_JSONEdgeCases(t *testing.T) {
 	assert.Nil(t, deserialized.Interests)
 }
 
-// TestModels_TimeHandling тестирует работу с временными полями
+// TestModels_TimeHandling тестирует работу с временными полями.
 func TestModels_TimeHandling(t *testing.T) {
 	now := time.Now()
 	past := now.Add(-24 * time.Hour)
@@ -563,13 +574,13 @@ func TestModels_TimeHandling(t *testing.T) {
 	assert.True(t, user.UpdatedAt.Equal(now))
 }
 
-// TestModels_DefaultValues тестирует значения по умолчанию
+// TestModels_DefaultValues тестирует значения по умолчанию.
 func TestModels_DefaultValues(t *testing.T) {
 	// Test default User values
 	user := User{}
-	assert.Equal(t, "", user.State)                 // empty string, no default value
-	assert.Equal(t, "", user.Status)                // empty string, no default value
-	assert.Equal(t, "", user.InterfaceLanguageCode) // empty string, no default value
+	assert.Empty(t, user.State)                 // empty string, no default value
+	assert.Empty(t, user.Status)                // empty string, no default value
+	assert.Empty(t, user.InterfaceLanguageCode) // empty string, no default value
 	assert.Equal(t, 0, user.ProfileCompletionLevel)
 	assert.Nil(t, user.TimeAvailability)
 	assert.Nil(t, user.FriendshipPreferences)
@@ -585,19 +596,19 @@ func TestModels_DefaultValues(t *testing.T) {
 	assert.Equal(t, 0, selection.SelectionOrder)
 }
 
-// TestModels_DataIntegrity тестирует целостность данных
+// TestModels_DataIntegrity тестирует целостность данных.
 func TestModels_DataIntegrity(t *testing.T) {
 	// Test that IDs are positive
 	user := User{ID: 1, TelegramID: 123, FirstName: "John"}
-	assert.Greater(t, user.ID, 0)
-	assert.Greater(t, user.TelegramID, int64(0))
+	assert.Positive(t, user.ID)
+	assert.Positive(t, user.TelegramID)
 
 	interest := Interest{ID: 5, CategoryID: 2, KeyName: "programming"}
-	assert.Greater(t, interest.ID, 0)
-	assert.Greater(t, interest.CategoryID, 0)
+	assert.Positive(t, interest.ID)
+	assert.Positive(t, interest.CategoryID)
 
 	category := InterestCategory{ID: 10, DisplayOrder: 3, KeyName: "tech", Name: "Technology"}
-	assert.Greater(t, category.ID, 0)
+	assert.Positive(t, category.ID)
 	assert.GreaterOrEqual(t, category.DisplayOrder, 0)
 
 	// Test string fields are not empty for populated data

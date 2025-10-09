@@ -14,11 +14,11 @@ import (
 
 // TestInterestsConfig_Load_DefaultValues тестирует загрузку конфигурации интересов с дефолтными значениями.
 func TestInterestsConfig_Load_DefaultValues(t *testing.T) {
-
 	// Меняем в изолированную директорию
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)
@@ -60,7 +60,6 @@ func TestInterestsConfig_Load_DefaultValues(t *testing.T) {
 
 // TestInterestsConfig_Load_FromFile тестирует загрузку конфигурации интересов из JSON файла.
 func TestInterestsConfig_Load_FromFile(t *testing.T) {
-
 	// Создаем тестовый конфиг файл
 	tempDir := t.TempDir()
 
@@ -96,6 +95,7 @@ func TestInterestsConfig_Load_FromFile(t *testing.T) {
 	// Меняем текущую директорию для теста
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)
@@ -118,7 +118,6 @@ func TestInterestsConfig_Load_FromFile(t *testing.T) {
 
 // TestInterestsConfig_Load_InvalidJSON тестирует загрузку невалидного JSON файла.
 func TestInterestsConfig_Load_InvalidJSON(t *testing.T) {
-
 	// Создаем файл с невалидным JSON
 	tempDir := t.TempDir()
 	configDir := filepath.Join(tempDir, "config")
@@ -135,6 +134,7 @@ func TestInterestsConfig_Load_InvalidJSON(t *testing.T) {
 	// Меняем текущую директорию для теста
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)
@@ -155,11 +155,11 @@ func TestInterestsConfig_Load_InvalidJSON(t *testing.T) {
 
 // TestInterestsConfig_Load_UnsafePath тестирует безопасность загрузки файлов.
 func TestInterestsConfig_Load_UnsafePath(t *testing.T) {
-
 	// Создаем изолированную директорию
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)
@@ -194,7 +194,6 @@ func TestInterestsConfig_Load_UnsafePath(t *testing.T) {
 
 // TestInterestsConfig_SaveAndLoad тестирует сохранение и загрузку конфигурации.
 func TestInterestsConfig_SaveAndLoad(t *testing.T) {
-
 	// Создаем изолированную директорию для теста
 	tempDir := t.TempDir()
 
@@ -220,6 +219,7 @@ func TestInterestsConfig_SaveAndLoad(t *testing.T) {
 	// Меняем текущую директорию
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)
@@ -249,11 +249,11 @@ func TestInterestsConfig_SaveAndLoad(t *testing.T) {
 
 // TestInterestsConfig_Save_InvalidData тестирует сохранение с ошибками.
 func TestInterestsConfig_Save_InvalidData(t *testing.T) {
-
 	// Создаем изолированную директорию
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)
@@ -273,11 +273,11 @@ func TestInterestsConfig_Save_InvalidData(t *testing.T) {
 
 // TestInterestsConfig_GetInterestsConfig тестирует функцию GetInterestsConfig.
 func TestInterestsConfig_GetInterestsConfig(t *testing.T) {
-
 	// Изолируем тест
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)
@@ -299,7 +299,6 @@ func TestInterestsConfig_GetInterestsConfig(t *testing.T) {
 
 // TestInterestsConfig_JSON_MarshalUnmarshal тестирует JSON сериализацию/десериализацию.
 func TestInterestsConfig_JSON_MarshalUnmarshal(t *testing.T) {
-
 	originalConfig := &InterestsConfig{
 		Matching: MatchingConfig{
 			PrimaryInterestScore:    3,
@@ -325,6 +324,7 @@ func TestInterestsConfig_JSON_MarshalUnmarshal(t *testing.T) {
 
 	// Десериализуем обратно
 	var unmarshaledConfig InterestsConfig
+
 	err = json.Unmarshal(data, &unmarshaledConfig)
 	require.NoError(t, err)
 
@@ -336,7 +336,6 @@ func TestInterestsConfig_JSON_MarshalUnmarshal(t *testing.T) {
 
 // TestInterestsConfig_Constants тестирует константы конфигурации интересов.
 func TestInterestsConfig_Constants(t *testing.T) {
-
 	// Проверяем константы
 	assert.Equal(t, localization.DefaultPrimaryPercentage, localization.DefaultPrimaryPercentage)
 	assert.Equal(t, localization.DefaultDirectoryPermissions, localization.DefaultDirectoryPermissions)
@@ -359,11 +358,11 @@ func TestInterestsConfig_Constants(t *testing.T) {
 
 // TestInterestsConfig_DefaultCategories тестирует дефолтные категории.
 func TestInterestsConfig_DefaultCategories(t *testing.T) {
-
 	// Изолируем тест в отдельной директории
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)
@@ -385,18 +384,18 @@ func TestInterestsConfig_DefaultCategories(t *testing.T) {
 	for _, categoryName := range expectedCategories {
 		category, exists := categories[categoryName]
 		assert.True(t, exists, "Category %s should exist", categoryName)
-		assert.Greater(t, category.DisplayOrder, 0, "DisplayOrder should be > 0")
+		assert.Positive(t, category.DisplayOrder, "DisplayOrder should be > 0")
 		assert.Equal(t, localization.DefaultMaxPrimaryPerCategory, category.MaxPrimaryPerCategory)
 	}
 }
 
 // TestInterestsConfig_Load_FileNotFound тестирует загрузку когда файл не найден.
 func TestInterestsConfig_Load_FileNotFound(t *testing.T) {
-
 	// Меняем в директорию где нет файла конфигурации
 	tempDir := t.TempDir()
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)
@@ -418,7 +417,6 @@ func TestInterestsConfig_Load_FileNotFound(t *testing.T) {
 
 // TestInterestsConfig_Save_DirectoryCreation тестирует создание директории при сохранении.
 func TestInterestsConfig_Save_DirectoryCreation(t *testing.T) {
-
 	// Создаем изолированную директорию
 	tempDir := t.TempDir()
 
@@ -433,6 +431,7 @@ func TestInterestsConfig_Save_DirectoryCreation(t *testing.T) {
 	// Меняем текущую директорию
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)
@@ -455,7 +454,6 @@ func TestInterestsConfig_Save_DirectoryCreation(t *testing.T) {
 
 // TestInterestsConfig_Load_MultiplePaths тестирует поиск файла в разных путях.
 func TestInterestsConfig_Load_MultiplePaths(t *testing.T) {
-
 	// Создаем структуру директорий для теста
 	tempDir := t.TempDir()
 
@@ -481,6 +479,7 @@ func TestInterestsConfig_Load_MultiplePaths(t *testing.T) {
 	// Меняем текущую директорию
 	oldWd, err := os.Getwd()
 	require.NoError(t, err)
+
 	defer func() {
 		if chdirErr := os.Chdir(oldWd); chdirErr != nil {
 			t.Logf("Failed to restore working directory: %v", chdirErr)

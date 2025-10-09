@@ -4,6 +4,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 
 	"language-exchange-bot/internal/adapters/telegram"
 	"language-exchange-bot/internal/core"
-	"language-exchange-bot/internal/errors"
+	errorsPkg "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/models"
 	docs "language-exchange-bot/internal/server/docs"
 
@@ -21,7 +22,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-// AdminServer provides REST API for administrative operations and webhook handling
+// AdminServer provides REST API for administrative operations and webhook handling.
 type AdminServer struct {
 	port        string
 	botService  *core.BotService
@@ -30,17 +31,17 @@ type AdminServer struct {
 	server      *http.Server
 }
 
-// New creates a new admin HTTP server
+// New creates a new admin HTTP server.
 func New(port string, botService *core.BotService, handler *telegram.TelegramHandler) *AdminServer {
 	return NewWithWebhook(port, botService, handler, false)
 }
 
-// SetTelegramHandler устанавливает Telegram handler для сервера
+// SetTelegramHandler устанавливает Telegram handler для сервера.
 func (s *AdminServer) SetTelegramHandler(handler *telegram.TelegramHandler) {
 	s.handler = handler
 }
 
-// NewWithWebhook creates a new admin HTTP server with webhook support
+// NewWithWebhook creates a new admin HTTP server with webhook support.
 func NewWithWebhook(port string, botService *core.BotService, handler *telegram.TelegramHandler, webhookMode bool) *AdminServer {
 	r := mux.NewRouter()
 
@@ -84,7 +85,7 @@ func NewWithWebhook(port string, botService *core.BotService, handler *telegram.
 	return s
 }
 
-// setupAPIV1 configures API version 1 routes (current stable version)
+// setupAPIV1 configures API version 1 routes (current stable version).
 func (s *AdminServer) setupAPIV1(r *mux.Router) {
 	// Initialize swagger docs for v1
 	docs.SwaggerInfo.Host = "localhost:" + s.port
@@ -110,7 +111,7 @@ func (s *AdminServer) setupAPIV1(r *mux.Router) {
 	v1.HandleFunc("/webhook/remove", s.handleRemoveWebhook).Methods("POST")
 }
 
-// setupAPIV2 configures API version 2 routes (future version with enhanced features)
+// setupAPIV2 configures API version 2 routes (future version with enhanced features).
 func (s *AdminServer) setupAPIV2(r *mux.Router) {
 	// API v2 routes
 	v2 := r.PathPrefix("/api/v2").Subrouter()
@@ -135,26 +136,28 @@ func (s *AdminServer) setupAPIV2(r *mux.Router) {
 	v2.HandleFunc("/metrics/performance", s.handleGetPerformanceMetrics).Methods("GET")
 }
 
-// Start starts the admin HTTP server
+// Start starts the admin HTTP server.
 func (s *AdminServer) Start() error {
 	fmt.Printf("Admin API server starting on port %s\n", s.port)
+
 	return s.server.ListenAndServe()
 }
 
-// Stop stops the admin HTTP server
+// Stop stops the admin HTTP server.
 func (s *AdminServer) Stop(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-// corsMiddleware adds CORS headers
+// corsMiddleware adds CORS headers.
 func (s *AdminServer) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
-		if r.Method == "OPTIONS" {
+		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
+
 			return
 		}
 
@@ -162,13 +165,14 @@ func (s *AdminServer) corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// authMiddleware provides basic authentication for admin endpoints
+// authMiddleware provides basic authentication for admin endpoints.
 func (s *AdminServer) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// TODO: Implement proper authentication
 		// For now, just check for a simple header
 		if auth := r.Header.Get("X-Admin-Key"); auth != "admin-secret-key" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+
 			return
 		}
 
@@ -182,7 +186,7 @@ func (s *AdminServer) authMiddleware(next http.Handler) http.Handler {
 // @Tags health
 // @Produce json
 // @Success 200 {object} map[string]string
-// @Router /healthz [get]
+// @Router /healthz [get].
 func (s *AdminServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{
 		"status": "healthy",
@@ -190,9 +194,11 @@ func (s *AdminServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -203,7 +209,7 @@ func (s *AdminServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 // @Tags health
 // @Produce json
 // @Success 200 {object} map[string]string
-// @Router /readyz [get]
+// @Router /readyz [get].
 func (s *AdminServer) handleReady(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{
 		"status": "ready",
@@ -211,9 +217,11 @@ func (s *AdminServer) handleReady(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -225,7 +233,7 @@ func (s *AdminServer) handleReady(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /api/v1/stats [get]
+// @Router /api/v1/stats [get].
 func (s *AdminServer) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	stats := map[string]interface{}{
 		"timestamp":    time.Now().Format(time.RFC3339),
@@ -237,9 +245,11 @@ func (s *AdminServer) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(stats); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -253,7 +263,7 @@ func (s *AdminServer) handleGetStats(w http.ResponseWriter, r *http.Request) {
 // @Param id path int true "Telegram User ID"
 // @Success 200 {object} models.User
 // @Failure 404 {object} map[string]string
-// @Router /api/v1/users/{id} [get]
+// @Router /api/v1/users/{id} [get].
 func (s *AdminServer) handleGetUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userIDStr := vars["id"]
@@ -261,23 +271,30 @@ func (s *AdminServer) handleGetUser(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+
 		return
 	}
 
 	user, err := s.botService.GetCachedUser(userID)
 	if err != nil {
-		if customErr, ok := err.(*errors.CustomError); ok && customErr.Type == errors.ErrorTypeDatabase {
+		customErr := &errorsPkg.CustomError{}
+		if errors.As(err, &customErr) {
 			http.Error(w, "User not found", http.StatusNotFound)
+
 			return
 		}
+
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(user); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -291,7 +308,7 @@ func (s *AdminServer) handleGetUser(w http.ResponseWriter, r *http.Request) {
 // @Param limit query int false "Number of users to return" default(50)
 // @Param offset query int false "Offset for pagination" default(0)
 // @Success 200 {object} map[string]interface{}
-// @Router /api/v1/users [get]
+// @Router /api/v1/users [get].
 func (s *AdminServer) handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	// TODO: Implement pagination
 	// For now, return empty list
@@ -303,9 +320,11 @@ func (s *AdminServer) handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -317,18 +336,21 @@ func (s *AdminServer) handleGetUsers(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {array} map[string]interface{}
-// @Router /api/v1/feedback/unprocessed [get]
+// @Router /api/v1/feedback/unprocessed [get].
 func (s *AdminServer) handleGetUnprocessedFeedback(w http.ResponseWriter, r *http.Request) {
 	feedback, err := s.botService.GetAllUnprocessedFeedback()
 	if err != nil {
 		http.Error(w, "Failed to get feedback", http.StatusInternalServerError)
+
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(feedback); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -344,7 +366,7 @@ func (s *AdminServer) handleGetUnprocessedFeedback(w http.ResponseWriter, r *htt
 // @Param request body map[string]string true "Processing request"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]string
-// @Router /api/v1/feedback/{id}/process [post]
+// @Router /api/v1/feedback/{id}/process [post].
 func (s *AdminServer) handleProcessFeedback(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	feedbackIDStr := vars["id"]
@@ -352,12 +374,14 @@ func (s *AdminServer) handleProcessFeedback(w http.ResponseWriter, r *http.Reque
 	feedbackID, err := strconv.Atoi(feedbackIDStr)
 	if err != nil {
 		http.Error(w, "Invalid feedback ID", http.StatusBadRequest)
+
 		return
 	}
 
 	var req map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+
 		return
 	}
 
@@ -368,11 +392,15 @@ func (s *AdminServer) handleProcessFeedback(w http.ResponseWriter, r *http.Reque
 
 	err = s.botService.MarkFeedbackProcessed(feedbackID, adminResponse)
 	if err != nil {
-		if customErr, ok := err.(*errors.CustomError); ok && customErr.Type == errors.ErrorTypeDatabase {
+		customErr := &errorsPkg.CustomError{}
+		if errors.As(err, &customErr) {
 			http.Error(w, "Feedback not found", http.StatusNotFound)
+
 			return
 		}
+
 		http.Error(w, "Failed to process feedback", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -382,9 +410,11 @@ func (s *AdminServer) handleProcessFeedback(w http.ResponseWriter, r *http.Reque
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -396,19 +426,22 @@ func (s *AdminServer) handleProcessFeedback(w http.ResponseWriter, r *http.Reque
 // @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /api/v1/rate-limits/stats [get]
+// @Router /api/v1/rate-limits/stats [get].
 func (s *AdminServer) handleGetRateLimitStats(w http.ResponseWriter, r *http.Request) {
 	if s.handler == nil {
 		http.Error(w, "Handler not available", http.StatusServiceUnavailable)
+
 		return
 	}
 
 	stats := s.handler.GetRateLimiterStats()
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(stats); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -420,14 +453,16 @@ func (s *AdminServer) handleGetRateLimitStats(w http.ResponseWriter, r *http.Req
 // @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /api/v1/cache/stats [get]
+// @Router /api/v1/cache/stats [get].
 func (s *AdminServer) handleGetCacheStats(w http.ResponseWriter, r *http.Request) {
 	stats := s.botService.GetCacheStats()
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(stats); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -438,7 +473,7 @@ func (s *AdminServer) handleGetCacheStats(w http.ResponseWriter, r *http.Request
 // @Tags navigation
 // @Produce html
 // @Success 200 {string} string "HTML page"
-// @Router / [get]
+// @Router / [get].
 func (s *AdminServer) handleNavigation(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./static/index.html")
 }
@@ -451,7 +486,7 @@ func (s *AdminServer) handleNavigation(w http.ResponseWriter, r *http.Request) {
 // @Param token path string true "Bot token"
 // @Param update body object true "Telegram update JSON"
 // @Success 200 {string} string "OK"
-// @Router /webhook/telegram/{token} [post]
+// @Router /webhook/telegram/{token} [post].
 func (s *AdminServer) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	token := vars["token"]
@@ -460,6 +495,7 @@ func (s *AdminServer) handleTelegramWebhook(w http.ResponseWriter, r *http.Reque
 	// In production, this should validate against a stored secret
 	if token == "" {
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
+
 		return
 	}
 
@@ -467,6 +503,7 @@ func (s *AdminServer) handleTelegramWebhook(w http.ResponseWriter, r *http.Reque
 	var update tgbotapi.Update
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 		http.Error(w, "Failed to parse update", http.StatusBadRequest)
+
 		return
 	}
 
@@ -482,6 +519,7 @@ func (s *AdminServer) handleTelegramWebhook(w http.ResponseWriter, r *http.Reque
 	// Respond immediately to acknowledge receipt
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
+
 	if _, err := w.Write([]byte("OK")); err != nil {
 		log.Printf("Failed to write response: %v", err)
 	}
@@ -494,7 +532,7 @@ func (s *AdminServer) handleTelegramWebhook(w http.ResponseWriter, r *http.Reque
 // @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /api/v1/webhook/status [get]
+// @Router /api/v1/webhook/status [get].
 func (s *AdminServer) handleGetWebhookStatus(w http.ResponseWriter, r *http.Request) {
 	status := map[string]interface{}{
 		"webhook_mode_enabled": s.webhookMode,
@@ -504,9 +542,11 @@ func (s *AdminServer) handleGetWebhookStatus(w http.ResponseWriter, r *http.Requ
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(status); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -520,17 +560,19 @@ func (s *AdminServer) handleGetWebhookStatus(w http.ResponseWriter, r *http.Requ
 // @Security ApiKeyAuth
 // @Param request body map[string]string true "Webhook setup parameters"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/v1/webhook/setup [post]
+// @Router /api/v1/webhook/setup [post].
 func (s *AdminServer) handleSetupWebhook(w http.ResponseWriter, r *http.Request) {
 	var req map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+
 		return
 	}
 
 	webhookURL, exists := req["webhook_url"]
 	if !exists || webhookURL == "" {
 		http.Error(w, "webhook_url is required", http.StatusBadRequest)
+
 		return
 	}
 
@@ -543,9 +585,11 @@ func (s *AdminServer) handleSetupWebhook(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -557,7 +601,7 @@ func (s *AdminServer) handleSetupWebhook(w http.ResponseWriter, r *http.Request)
 // @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /api/v1/webhook/remove [post]
+// @Router /api/v1/webhook/remove [post].
 func (s *AdminServer) handleRemoveWebhook(w http.ResponseWriter, r *http.Request) {
 	// This would need access to the bot instance to remove webhook
 	result := map[string]interface{}{
@@ -566,16 +610,18 @@ func (s *AdminServer) handleRemoveWebhook(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
 
 // ===== Helper Methods =====
 
-// getStatsData returns basic statistics data
+// getStatsData returns basic statistics data.
 func (s *AdminServer) getStatsData() (map[string]interface{}, error) {
 	stats := map[string]interface{}{
 		"timestamp":    time.Now().Format(time.RFC3339),
@@ -598,12 +644,13 @@ func (s *AdminServer) getStatsData() (map[string]interface{}, error) {
 // @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /api/v2/stats [get]
+// @Router /api/v2/stats [get].
 func (s *AdminServer) handleGetStatsV2(w http.ResponseWriter, r *http.Request) {
 	// Get basic stats from v1 handler
 	basicStats, err := s.getStatsData()
 	if err != nil {
 		http.Error(w, "Failed to get statistics", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -622,9 +669,11 @@ func (s *AdminServer) handleGetStatsV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(enhancedStats); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -636,7 +685,7 @@ func (s *AdminServer) handleGetStatsV2(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /api/v2/system/health [get]
+// @Router /api/v2/system/health [get].
 func (s *AdminServer) handleGetSystemHealth(w http.ResponseWriter, r *http.Request) {
 	health := map[string]interface{}{
 		"version":   "v2",
@@ -662,9 +711,11 @@ func (s *AdminServer) handleGetSystemHealth(w http.ResponseWriter, r *http.Reque
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(health); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -676,7 +727,7 @@ func (s *AdminServer) handleGetSystemHealth(w http.ResponseWriter, r *http.Reque
 // @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /api/v2/metrics/performance [get]
+// @Router /api/v2/metrics/performance [get].
 func (s *AdminServer) handleGetPerformanceMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := map[string]interface{}{
 		"version":   "v2",
@@ -706,9 +757,11 @@ func (s *AdminServer) handleGetPerformanceMetrics(w http.ResponseWriter, r *http
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(metrics); err != nil {
 		log.Printf("Failed to encode JSON response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }

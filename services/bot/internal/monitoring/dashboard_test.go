@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewDashboard tests creating new dashboard
+// TestNewDashboard tests creating new dashboard.
 func TestNewDashboard(t *testing.T) {
 	monitor := &logging.PerformanceMonitor{}
 	handler := &errors.CentralizedErrorHandler{}
@@ -22,7 +22,7 @@ func TestNewDashboard(t *testing.T) {
 	assert.NotNil(t, dashboard.logger)
 }
 
-// TestDashboard_Start tests starting the dashboard server
+// TestDashboard_Start tests starting the dashboard server.
 func TestDashboard_Start(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}
@@ -34,7 +34,7 @@ func TestDashboard_Start(t *testing.T) {
 	assert.NotNil(t, dashboard.Start)
 }
 
-// TestDashboard_Stop tests stopping the dashboard server
+// TestDashboard_Stop tests stopping the dashboard server.
 func TestDashboard_Stop(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}
@@ -46,7 +46,7 @@ func TestDashboard_Stop(t *testing.T) {
 	assert.NotNil(t, dashboard.Stop)
 }
 
-// TestDashboard_handleHealth tests health check endpoint
+// TestDashboard_handleHealth tests health check endpoint.
 func TestDashboard_handleHealth(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}
@@ -58,7 +58,7 @@ func TestDashboard_handleHealth(t *testing.T) {
 	assert.NotNil(t, dashboard.handleHealth)
 }
 
-// TestDashboard_handleMetrics tests metrics endpoint
+// TestDashboard_handleMetrics tests metrics endpoint.
 func TestDashboard_handleMetrics(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}
@@ -70,7 +70,7 @@ func TestDashboard_handleMetrics(t *testing.T) {
 	assert.NotNil(t, dashboard.handleMetrics)
 }
 
-// TestDashboard_handleErrors tests errors endpoint
+// TestDashboard_handleErrors tests errors endpoint.
 func TestDashboard_handleErrors(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}
@@ -82,7 +82,7 @@ func TestDashboard_handleErrors(t *testing.T) {
 	assert.NotNil(t, dashboard.handleErrors)
 }
 
-// TestDashboard_handleAlerts tests alerts endpoint
+// TestDashboard_handleAlerts tests alerts endpoint.
 func TestDashboard_handleAlerts(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}
@@ -94,7 +94,7 @@ func TestDashboard_handleAlerts(t *testing.T) {
 	assert.NotNil(t, dashboard.handleAlerts)
 }
 
-// TestDashboard_handlePerformance tests performance endpoint
+// TestDashboard_handlePerformance tests performance endpoint.
 func TestDashboard_handlePerformance(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}
@@ -106,7 +106,7 @@ func TestDashboard_handlePerformance(t *testing.T) {
 	assert.NotNil(t, dashboard.handlePerformance)
 }
 
-// TestDashboard_handleIndex tests index page endpoint
+// TestDashboard_handleIndex tests index page endpoint.
 func TestDashboard_handleIndex(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}
@@ -118,7 +118,7 @@ func TestDashboard_handleIndex(t *testing.T) {
 	assert.NotNil(t, dashboard.handleIndex)
 }
 
-// TestDashboard_handleMetricsPage tests metrics page endpoint
+// TestDashboard_handleMetricsPage tests metrics page endpoint.
 func TestDashboard_handleMetricsPage(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}
@@ -130,7 +130,7 @@ func TestDashboard_handleMetricsPage(t *testing.T) {
 	assert.NotNil(t, dashboard.handleMetricsPage)
 }
 
-// TestDashboard_handleErrorsPage tests errors page endpoint
+// TestDashboard_handleErrorsPage tests errors page endpoint.
 func TestDashboard_handleErrorsPage(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}
@@ -142,7 +142,7 @@ func TestDashboard_handleErrorsPage(t *testing.T) {
 	assert.NotNil(t, dashboard.handleErrorsPage)
 }
 
-// TestDashboard_handleAlertsPage tests alerts page endpoint
+// TestDashboard_handleAlertsPage tests alerts page endpoint.
 func TestDashboard_handleAlertsPage(t *testing.T) {
 	// Just test that the method exists
 	monitor := &logging.PerformanceMonitor{}

@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewLocalizer tests creating new localizer
+// TestNewLocalizer tests creating new localizer.
 func TestNewLocalizer(t *testing.T) {
 	localizer := NewLocalizer(nil)
 
@@ -17,7 +17,7 @@ func TestNewLocalizer(t *testing.T) {
 	assert.NotNil(t, localizer.errorHandler)
 }
 
-// TestLocalizer_Get tests getting translations
+// TestLocalizer_Get tests getting translations.
 func TestLocalizer_Get(t *testing.T) {
 	localizer := NewLocalizer(nil)
 
@@ -31,7 +31,7 @@ func TestLocalizer_Get(t *testing.T) {
 	assert.NotEmpty(t, result)
 }
 
-// TestLocalizer_GetWithFallback tests getting translations with fallback
+// TestLocalizer_GetWithFallback tests getting translations with fallback.
 func TestLocalizer_GetWithFallback(t *testing.T) {
 	localizer := NewLocalizer(nil)
 
@@ -51,7 +51,7 @@ func TestLocalizer_GetWithFallback(t *testing.T) {
 	assert.NotEmpty(t, result)
 }
 
-// TestLocalizer_GetInterests tests getting interests
+// TestLocalizer_GetInterests tests getting interests.
 func TestLocalizer_GetInterests(t *testing.T) {
 	localizer := NewLocalizer(nil)
 

@@ -123,6 +123,7 @@ func (ts *TracingService) AddSubTrace(parentRequestID, subOperation, subComponen
 	}
 
 	parentTrace.SubTraces = append(parentTrace.SubTraces, subTrace)
+
 	return subTrace
 }
 
@@ -178,6 +179,7 @@ func (ts *TracingService) logTrace(trace *RequestTrace, event string) {
 	jsonData, err := json.Marshal(traceData)
 	if err != nil {
 		ts.logger.Printf("Failed to marshal trace data: %v", err)
+
 		return
 	}
 
@@ -203,9 +205,11 @@ func (ts *TracingService) recordMetrics(trace *RequestTrace) {
 	if dbHits, ok := trace.Metadata["db_hits"].(int); ok {
 		metrics.DatabaseHits = dbHits
 	}
+
 	if cacheHits, ok := trace.Metadata["cache_hits"].(int); ok {
 		metrics.CacheHits = cacheHits
 	}
+
 	if cacheMisses, ok := trace.Metadata["cache_misses"].(int); ok {
 		metrics.CacheMisses = cacheMisses
 	}
@@ -231,6 +235,7 @@ func (ts *TracingService) GetActiveTraces() map[string]*RequestTrace {
 // GetTraceByRequestID возвращает трейс по ID запроса.
 func (ts *TracingService) GetTraceByRequestID(requestID string) (*RequestTrace, bool) {
 	trace, exists := ts.activeTraces[requestID]
+
 	return trace, exists
 }
 
@@ -249,9 +254,11 @@ func (ts *TracingService) GetPerformanceSummary() map[string]interface{} {
 		}
 	}
 
-	var totalDuration time.Duration
-	var errorCount, successCount int
-	var totalDbHits, totalCacheHits, totalCacheMisses int
+	var (
+		totalDuration                                 time.Duration
+		errorCount, successCount                      int
+		totalDbHits, totalCacheHits, totalCacheMisses int
+	)
 
 	for _, metric := range ts.metrics {
 		totalDuration += metric.Duration
@@ -285,5 +292,6 @@ func ContextWithTrace(ctx context.Context, trace *RequestTrace) context.Context 
 // TraceFromContext извлекает трейс из контекста.
 func TraceFromContext(ctx context.Context) (*RequestTrace, bool) {
 	trace, ok := ctx.Value(traceContextKey("trace")).(*RequestTrace)
+
 	return trace, ok
 }

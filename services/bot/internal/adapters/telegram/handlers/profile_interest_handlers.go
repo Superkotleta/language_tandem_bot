@@ -65,6 +65,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 			"HandleEditInterestsFromProfile",
 			map[string]interface{}{"userID": user.ID, "error": err.Error()},
 		)
+
 		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetInterestCategories")
 	}
 
@@ -119,6 +120,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 			"HandleEditInterestsFromProfile",
 			map[string]interface{}{"userID": user.ID, "error": err.Error()},
 		)
+
 		return pih.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "EditMessage")
 	}
 
@@ -130,6 +132,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 		"HandleEditInterestsFromProfile",
 		map[string]interface{}{"userID": user.ID, "result": "message_sent"},
 	)
+
 	return nil
 }
 

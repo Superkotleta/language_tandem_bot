@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockDatabase - мок для интерфейса Database
+// MockDatabase - мок для интерфейса Database.
 type MockDatabase struct {
 	mock.Mock
 }
@@ -23,6 +23,7 @@ func (m *MockDatabase) FindOrCreateUser(telegramID int64, username, firstName st
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
+
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
@@ -31,56 +32,67 @@ func (m *MockDatabase) GetUserByTelegramID(telegramID int64) (*models.User, erro
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
+
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
 func (m *MockDatabase) UpdateUser(user *models.User) error {
 	args := m.Called(user)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) UpdateUserInterfaceLanguage(userID int, language string) error {
 	args := m.Called(userID, language)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) UpdateUserState(userID int, state string) error {
 	args := m.Called(userID, state)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) UpdateUserStatus(userID int, status string) error {
 	args := m.Called(userID, status)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) UpdateUserProfileCompletionLevel(userID int, level int) error {
 	args := m.Called(userID, level)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) UpdateUserNativeLanguage(userID int, langCode string) error {
 	args := m.Called(userID, langCode)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) UpdateUserTargetLanguage(userID int, langCode string) error {
 	args := m.Called(userID, langCode)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) UpdateUserTargetLanguageLevel(userID int, level string) error {
 	args := m.Called(userID, level)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) ResetUserProfile(userID int) error {
 	args := m.Called(userID)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) GetLanguages() ([]*models.Language, error) {
 	args := m.Called()
+
 	return args.Get(0).([]*models.Language), args.Error(1)
 }
 
@@ -89,41 +101,49 @@ func (m *MockDatabase) GetLanguageByCode(code string) (*models.Language, error) 
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
+
 	return args.Get(0).(*models.Language), args.Error(1)
 }
 
 func (m *MockDatabase) GetInterests() ([]*models.Interest, error) {
 	args := m.Called()
+
 	return args.Get(0).([]*models.Interest), args.Error(1)
 }
 
 func (m *MockDatabase) GetUserSelectedInterests(userID int) ([]int, error) {
 	args := m.Called(userID)
+
 	return args.Get(0).([]int), args.Error(1)
 }
 
 func (m *MockDatabase) SaveUserInterests(userID int, interestIDs []int) error {
 	args := m.Called(userID, interestIDs)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) SaveUserInterest(userID, interestID int, isPrimary bool) error {
 	args := m.Called(userID, interestID, isPrimary)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) RemoveUserInterest(userID, interestID int) error {
 	args := m.Called(userID, interestID)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) ClearUserInterests(userID int) error {
 	args := m.Called(userID)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) GetUserInterestSelections(userID int) ([]models.InterestSelection, error) {
 	args := m.Called(userID)
+
 	return args.Get(0).([]models.InterestSelection), args.Error(1)
 }
 
@@ -132,21 +152,25 @@ func (m *MockDatabase) GetInterestByID(interestID int) (*models.Interest, error)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
+
 	return args.Get(0).(*models.Interest), args.Error(1)
 }
 
 func (m *MockDatabase) SaveUserFeedback(userID int, feedbackText string, contactInfo *string) error {
 	args := m.Called(userID, feedbackText, contactInfo)
+
 	return args.Error(0)
 }
 
 func (m *MockDatabase) GetUnprocessedFeedback() ([]map[string]interface{}, error) {
 	args := m.Called()
+
 	return args.Get(0).([]map[string]interface{}), args.Error(1)
 }
 
 func (m *MockDatabase) MarkFeedbackProcessed(feedbackID int, adminResponse string) error {
 	args := m.Called(feedbackID, adminResponse)
+
 	return args.Error(0)
 }
 
@@ -155,17 +179,20 @@ func (m *MockDatabase) GetConnection() *sql.DB {
 	if args.Get(0) == nil {
 		return nil
 	}
+
 	return args.Get(0).(*sql.DB)
 }
 
 func (m *MockDatabase) Close() error {
 	args := m.Called()
+
 	return args.Error(0)
 }
 
-// Методы для работы с доступностью
+// Методы для работы с доступностью.
 func (m *MockDatabase) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
 	args := m.Called(userID, availability)
+
 	return args.Error(0)
 }
 
@@ -174,11 +201,13 @@ func (m *MockDatabase) GetTimeAvailability(userID int) (*models.TimeAvailability
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
+
 	return args.Get(0).(*models.TimeAvailability), args.Error(1)
 }
 
 func (m *MockDatabase) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
 	args := m.Called(userID, preferences)
+
 	return args.Error(0)
 }
 
@@ -187,6 +216,7 @@ func (m *MockDatabase) GetFriendshipPreferences(userID int) (*models.FriendshipP
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
+
 	return args.Get(0).(*models.FriendshipPreferences), args.Error(1)
 }
 
@@ -367,7 +397,6 @@ func TestGetDisplayName(t *testing.T) {
 		result := service.getDisplayName(user)
 		assert.Equal(t, "John", result)
 	})
-
 }
 
 func TestGetWelcomeMessage(t *testing.T) {
@@ -438,6 +467,7 @@ func TestSetFeedbackNotificationFunc(t *testing.T) {
 	called := false
 	testFunc := func(data map[string]interface{}) error {
 		called = true
+
 		return nil
 	}
 
@@ -627,8 +657,10 @@ func TestSendFeedbackNotification(t *testing.T) {
 
 	t.Run("With notification function", func(t *testing.T) {
 		called := false
+
 		service.SetFeedbackNotificationFunc(func(data map[string]interface{}) error {
 			called = true
+
 			return nil
 		})
 

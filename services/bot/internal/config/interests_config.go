@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -120,7 +121,7 @@ func GetInterestsConfig() *InterestsConfig {
 // SaveInterestsConfig сохраняет конфигурацию в файл.
 func SaveInterestsConfig(config *InterestsConfig) error {
 	if config == nil {
-		return fmt.Errorf("config cannot be nil")
+		return errors.New("config cannot be nil")
 	}
 
 	// Определяем путь для сохранения

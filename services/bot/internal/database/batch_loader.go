@@ -54,6 +54,7 @@ func (bl *BatchLoader) closeRowsSafely(rows *sql.Rows, operation string) {
 	if rows == nil {
 		return
 	}
+
 	if closeErr := rows.Close(); closeErr != nil {
 		log.Printf("Warning: failed to close rows in %s: %v", operation, closeErr)
 	}
@@ -308,6 +309,7 @@ func (bl *BatchLoader) BatchLoadUserInterests(ctx context.Context, userIDs []int
 
 	// Создаем placeholders для SQLite: ?, ?, ?
 	placeholders := make([]string, len(userIDs))
+
 	args := make([]interface{}, len(userIDs))
 	for i, id := range userIDs {
 		placeholders[i] = "?"
@@ -709,6 +711,7 @@ func (bl *BatchLoader) BatchUpdateUserInterests(ctx context.Context, userID int,
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
+
 	defer func() { _ = tx.Rollback() }()
 
 	// Удаляем старые интересы
@@ -725,6 +728,7 @@ func (bl *BatchLoader) BatchUpdateUserInterests(ctx context.Context, userID int,
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
+
 	defer func() {
 		if closeErr := stmt.Close(); closeErr != nil {
 			bl.logger.Error("Failed to close prepared statement in batch loader", map[string]interface{}{
@@ -737,9 +741,11 @@ func (bl *BatchLoader) BatchUpdateUserInterests(ctx context.Context, userID int,
 	// Вставляем новые интересы
 	for _, interestID := range interests {
 		isPrimary := false
+
 		for _, primaryID := range primaryInterests {
 			if interestID == primaryID {
 				isPrimary = true
+
 				break
 			}
 		}
@@ -798,6 +804,7 @@ func (bl *BatchLoader) BatchLoadInterestCategories(ctx context.Context, lang str
 	var categories []*models.InterestCategory
 	for rows.Next() {
 		var category models.InterestCategory
+
 		err := rows.Scan(
 			&category.ID,
 			&category.KeyName,
@@ -807,6 +814,7 @@ func (bl *BatchLoader) BatchLoadInterestCategories(ctx context.Context, lang str
 		)
 		if err != nil {
 			log.Printf("Error scanning interest category row: %v", err)
+
 			continue
 		}
 
@@ -852,10 +860,12 @@ func (bl *BatchLoader) BatchLoadUserStatistics(ctx context.Context, userIDs []in
 
 	stats := make(map[int64]map[string]interface{})
 	for rows.Next() {
-		var telegramID int64
-		var interestsCount, primaryInterestsCount int
-		var profileCompletionLevel, status string
-		var createdAt time.Time
+		var (
+			telegramID                            int64
+			interestsCount, primaryInterestsCount int
+			profileCompletionLevel, status        string
+			createdAt                             time.Time
+		)
 
 		err := rows.Scan(
 			&telegramID,
@@ -867,6 +877,7 @@ func (bl *BatchLoader) BatchLoadUserStatistics(ctx context.Context, userIDs []in
 		)
 		if err != nil {
 			log.Printf("Error scanning user statistics row: %v", err)
+
 			continue
 		}
 
@@ -912,14 +923,18 @@ func (bl *BatchLoader) BatchLoadPopularInterests(ctx context.Context, limit int)
 	defer bl.closeRowsSafely(rows, "BatchLoadPopularInterests")
 
 	var interests []map[string]interface{}
+
 	for rows.Next() {
-		var id int
-		var keyName string
-		var userCount, primaryCount int
+		var (
+			id                      int
+			keyName                 string
+			userCount, primaryCount int
+		)
 
 		err := rows.Scan(&id, &keyName, &userCount, &primaryCount)
 		if err != nil {
 			log.Printf("Error scanning popular interest row: %v", err)
+
 			continue
 		}
 

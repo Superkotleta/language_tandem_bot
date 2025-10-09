@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewFeedbackHandler tests creating new feedback handler
+// TestNewFeedbackHandler tests creating new feedback handler.
 func TestNewFeedbackHandler(t *testing.T) {
 	base := &BaseHandler{}
 	adminChatIDs := []int64{123, 456}
@@ -20,7 +20,7 @@ func TestNewFeedbackHandler(t *testing.T) {
 	assert.Equal(t, adminUsernames, handler.adminUsernames)
 }
 
-// TestFeedbackHandlerImpl_HandleFeedbackCommand tests feedback command handling
+// TestFeedbackHandlerImpl_HandleFeedbackCommand tests feedback command handling.
 func TestFeedbackHandlerImpl_HandleFeedbackCommand(t *testing.T) {
 	// Just test that the method exists and can be called
 	base := &BaseHandler{}
@@ -30,7 +30,7 @@ func TestFeedbackHandlerImpl_HandleFeedbackCommand(t *testing.T) {
 	assert.NotNil(t, handler.HandleFeedbackCommand)
 }
 
-// TestFeedbackHandlerImpl_HandleFeedbacksCommand tests feedbacks command handling
+// TestFeedbackHandlerImpl_HandleFeedbacksCommand tests feedbacks command handling.
 func TestFeedbackHandlerImpl_HandleFeedbacksCommand(t *testing.T) {
 	// Just test that the method exists and can be called
 	base := &BaseHandler{}
@@ -40,7 +40,7 @@ func TestFeedbackHandlerImpl_HandleFeedbacksCommand(t *testing.T) {
 	assert.NotNil(t, handler.HandleFeedbacksCommand)
 }
 
-// TestFeedbackHandlerImpl_HandleFeedbackMessage tests feedback message handling
+// TestFeedbackHandlerImpl_HandleFeedbackMessage tests feedback message handling.
 func TestFeedbackHandlerImpl_HandleFeedbackMessage(t *testing.T) {
 	// Just test that the method exists and can be called
 	base := &BaseHandler{}
@@ -50,7 +50,7 @@ func TestFeedbackHandlerImpl_HandleFeedbackMessage(t *testing.T) {
 	assert.NotNil(t, handler.HandleFeedbackMessage)
 }
 
-// TestFeedbackHandlerImpl_HandleFeedbackContactMessage tests feedback contact message handling
+// TestFeedbackHandlerImpl_HandleFeedbackContactMessage tests feedback contact message handling.
 func TestFeedbackHandlerImpl_HandleFeedbackContactMessage(t *testing.T) {
 	// Just test that the method exists and can be called
 	base := &BaseHandler{}

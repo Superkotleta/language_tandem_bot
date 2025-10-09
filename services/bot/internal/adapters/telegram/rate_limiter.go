@@ -9,7 +9,7 @@ import (
 	"language-exchange-bot/internal/localization"
 )
 
-// RateLimitConfig конфигурация rate limiter'а
+// RateLimitConfig конфигурация rate limiter'а.
 type RateLimitConfig struct {
 	MaxRequests     int           // Максимальное количество запросов
 	WindowDuration  time.Duration // Период времени для подсчета
@@ -29,14 +29,14 @@ func DefaultRateLimitConfig() RateLimitConfig {
 	}
 }
 
-// UserRateLimit информация о rate limit для пользователя
+// UserRateLimit информация о rate limit для пользователя.
 type UserRateLimit struct {
 	RequestCount int       // Количество запросов
 	FirstRequest time.Time // Время первого запроса в окне
 	BlockUntil   time.Time // Время окончания блокировки
 }
 
-// RateLimiter реализация rate limiting для защиты от спама
+// RateLimiter реализация rate limiting для защиты от спама.
 type RateLimiter struct {
 	config     RateLimitConfig
 	userLimits map[int64]*UserRateLimit
@@ -44,7 +44,7 @@ type RateLimiter struct {
 	stopChan   chan struct{}
 }
 
-// NewRateLimiter создает новый rate limiter
+// NewRateLimiter создает новый rate limiter.
 func NewRateLimiter(config RateLimitConfig) *RateLimiter {
 	rl := &RateLimiter{
 		config:     config,
@@ -58,7 +58,7 @@ func NewRateLimiter(config RateLimitConfig) *RateLimiter {
 	return rl
 }
 
-// IsAllowed проверяет, разрешен ли запрос от пользователя
+// IsAllowed проверяет, разрешен ли запрос от пользователя.
 func (rl *RateLimiter) IsAllowed(userID int64) (bool, time.Duration) {
 	rl.mutex.Lock()
 	defer rl.mutex.Unlock()
@@ -72,12 +72,14 @@ func (rl *RateLimiter) IsAllowed(userID int64) (bool, time.Duration) {
 			RequestCount: 1,
 			FirstRequest: now,
 		}
+
 		return true, 0
 	}
 
 	// Проверяем, заблокирован ли пользователь
 	if now.Before(userLimit.BlockUntil) {
 		remaining := userLimit.BlockUntil.Sub(now)
+
 		return false, remaining
 	}
 
@@ -89,6 +91,7 @@ func (rl *RateLimiter) IsAllowed(userID int64) (bool, time.Duration) {
 		userLimit.RequestCount = 1 // Сбрасываем на 1 (текущий запрос)
 		userLimit.FirstRequest = now
 		userLimit.BlockUntil = time.Time{}
+
 		return true, 0
 	}
 
@@ -97,6 +100,7 @@ func (rl *RateLimiter) IsAllowed(userID int64) (bool, time.Duration) {
 	if !userLimit.BlockUntil.IsZero() && now.After(userLimit.BlockUntil) {
 		userLimit.RequestCount = 1         // Сбрасываем на 1 (второй шанс)
 		userLimit.BlockUntil = time.Time{} // Сбрасываем блокировку
+
 		return true, 0
 	}
 
@@ -107,13 +111,14 @@ func (rl *RateLimiter) IsAllowed(userID int64) (bool, time.Duration) {
 	if userLimit.RequestCount > rl.config.MaxRequests {
 		userLimit.BlockUntil = now.Add(rl.config.BlockDuration)
 		remaining := rl.config.BlockDuration
+
 		return false, remaining
 	}
 
 	return true, 0
 }
 
-// GetStats возвращает статистику rate limiter'а
+// GetStats возвращает статистику rate limiter'а.
 func (rl *RateLimiter) GetStats() map[string]interface{} {
 	rl.mutex.RLock()
 	defer rl.mutex.RUnlock()
@@ -125,6 +130,7 @@ func (rl *RateLimiter) GetStats() map[string]interface{} {
 	for _, limit := range rl.userLimits {
 		if now.Sub(limit.FirstRequest) < rl.config.WindowDuration*2 { // Активные за последние 2 окна
 			activeUsers++
+
 			if now.Before(limit.BlockUntil) {
 				blockedUsers++
 			}
@@ -141,7 +147,7 @@ func (rl *RateLimiter) GetStats() map[string]interface{} {
 	}
 }
 
-// cleanupWorker периодически очищает устаревшие записи
+// cleanupWorker периодически очищает устаревшие записи.
 func (rl *RateLimiter) cleanupWorker() {
 	ticker := time.NewTicker(rl.config.CleanupInterval)
 	defer ticker.Stop()
@@ -156,7 +162,7 @@ func (rl *RateLimiter) cleanupWorker() {
 	}
 }
 
-// cleanup удаляет устаревшие записи пользователей
+// cleanup удаляет устаревшие записи пользователей.
 func (rl *RateLimiter) cleanup() {
 	rl.mutex.Lock()
 	defer rl.mutex.Unlock()
@@ -171,7 +177,7 @@ func (rl *RateLimiter) cleanup() {
 	}
 }
 
-// Stop останавливает rate limiter
+// Stop останавливает rate limiter.
 func (rl *RateLimiter) Stop() {
 	if rl.stopChan != nil {
 		select {
@@ -183,7 +189,7 @@ func (rl *RateLimiter) Stop() {
 	}
 }
 
-// CheckRateLimit проверяет rate limit и возвращает ошибку если превышен
+// CheckRateLimit проверяет rate limit и возвращает ошибку если превышен.
 func (rl *RateLimiter) CheckRateLimit(userID int64) error {
 	allowed, remaining := rl.IsAllowed(userID)
 

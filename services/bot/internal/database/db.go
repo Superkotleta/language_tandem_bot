@@ -333,7 +333,6 @@ func (db *DB) UpdateUser(user *models.User) error {
 		user.TargetLanguageCode, user.TargetLanguageLevel,
 		user.InterfaceLanguageCode, user.State, user.Status,
 		user.ProfileCompletionLevel, user.ID)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
@@ -578,7 +577,6 @@ func (db *DB) RemoveUserInterest(userID, interestID int) error {
         DELETE FROM user_interests
         WHERE user_id = $1 AND interest_id = $2
     `, userID, interestID)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
@@ -611,6 +609,7 @@ func (db *DB) GetUserInterestSelections(userID int) ([]models.InterestSelection,
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
+
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
 			db.logger.Error("Failed to close database rows", map[string]interface{}{
@@ -623,6 +622,7 @@ func (db *DB) GetUserInterestSelections(userID int) ([]models.InterestSelection,
 	var selections []models.InterestSelection
 	for rows.Next() {
 		var selection models.InterestSelection
+
 		err := rows.Scan(
 			&selection.ID,
 			&selection.UserID,
@@ -634,6 +634,7 @@ func (db *DB) GetUserInterestSelections(userID int) ([]models.InterestSelection,
 		if err != nil {
 			return nil, fmt.Errorf("operation failed: %w", err)
 		}
+
 		selections = append(selections, selection)
 	}
 
@@ -653,6 +654,7 @@ func (db *DB) GetInterestByID(interestID int) (*models.Interest, error) {
 	`
 
 	var interest models.Interest
+
 	err := db.conn.QueryRowContext(context.Background(), query, interestID).Scan(
 		&interest.ID,
 		&interest.KeyName,
@@ -927,7 +929,6 @@ func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error 
     `
 
 	_, err := db.conn.ExecContext(context.Background(), query, adminResponse, feedbackID)
-
 	if err != nil {
 		return fmt.Errorf("operation failed: %w", err)
 	}
@@ -935,7 +936,7 @@ func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error 
 	return nil
 }
 
-// SaveTimeAvailability сохраняет временную доступность пользователя
+// SaveTimeAvailability сохраняет временную доступность пользователя.
 func (db *DB) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
 	query := `
 		INSERT INTO user_time_availability (user_id, day_type, specific_days, time_slot)
@@ -953,7 +954,6 @@ func (db *DB) SaveTimeAvailability(userID int, availability *models.TimeAvailabi
 		availability.SpecificDays,
 		availability.TimeSlot,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to save time availability: %w", err)
 	}
@@ -961,7 +961,7 @@ func (db *DB) SaveTimeAvailability(userID int, availability *models.TimeAvailabi
 	return nil
 }
 
-// GetTimeAvailability получает временную доступность пользователя
+// GetTimeAvailability получает временную доступность пользователя.
 func (db *DB) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
 	query := `
 		SELECT day_type, specific_days, time_slot
@@ -970,12 +970,12 @@ func (db *DB) GetTimeAvailability(userID int) (*models.TimeAvailability, error) 
 	`
 
 	var availability models.TimeAvailability
+
 	err := db.conn.QueryRowContext(context.Background(), query, userID).Scan(
 		&availability.DayType,
 		&availability.SpecificDays,
 		&availability.TimeSlot,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Возвращаем значения по умолчанию, если данных нет
@@ -985,13 +985,14 @@ func (db *DB) GetTimeAvailability(userID int) (*models.TimeAvailability, error) 
 				TimeSlot:     "any",
 			}, nil
 		}
+
 		return nil, fmt.Errorf("failed to get time availability: %w", err)
 	}
 
 	return &availability, nil
 }
 
-// SaveFriendshipPreferences сохраняет предпочтения общения пользователя
+// SaveFriendshipPreferences сохраняет предпочтения общения пользователя.
 func (db *DB) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
 	query := `
 		INSERT INTO friendship_preferences (user_id, activity_type, communication_style, communication_frequency)
@@ -1009,7 +1010,6 @@ func (db *DB) SaveFriendshipPreferences(userID int, preferences *models.Friendsh
 		preferences.CommunicationStyle,
 		preferences.CommunicationFreq,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to save friendship preferences: %w", err)
 	}
@@ -1017,7 +1017,7 @@ func (db *DB) SaveFriendshipPreferences(userID int, preferences *models.Friendsh
 	return nil
 }
 
-// GetFriendshipPreferences получает предпочтения общения пользователя
+// GetFriendshipPreferences получает предпочтения общения пользователя.
 func (db *DB) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
 	query := `
 		SELECT activity_type, communication_style, communication_frequency
@@ -1026,12 +1026,12 @@ func (db *DB) GetFriendshipPreferences(userID int) (*models.FriendshipPreference
 	`
 
 	var preferences models.FriendshipPreferences
+
 	err := db.conn.QueryRowContext(context.Background(), query, userID).Scan(
 		&preferences.ActivityType,
 		&preferences.CommunicationStyle,
 		&preferences.CommunicationFreq,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Возвращаем значения по умолчанию, если данных нет
@@ -1041,6 +1041,7 @@ func (db *DB) GetFriendshipPreferences(userID int) (*models.FriendshipPreference
 				CommunicationFreq:  "weekly",
 			}, nil
 		}
+
 		return nil, fmt.Errorf("failed to get friendship preferences: %w", err)
 	}
 

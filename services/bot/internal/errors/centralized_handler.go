@@ -76,7 +76,8 @@ func NewCentralizedErrorHandler() *CentralizedErrorHandler {
 
 // RegisterNotifier регистрирует уведомитель алертов.
 func (ceh *CentralizedErrorHandler) RegisterNotifier(notifier AlertNotifier) {
-	ceh.mutex <- struct{}{}        // Блокируем
+	ceh.mutex <- struct{}{} // Блокируем
+
 	defer func() { <-ceh.mutex }() // Разблокируем
 
 	ceh.notifiers = append(ceh.notifiers, notifier)
@@ -133,6 +134,7 @@ func (ceh *CentralizedErrorHandler) logError(err error, requestID string, userID
 	jsonData, err := json.Marshal(logData)
 	if err != nil {
 		ceh.logger.Printf("Failed to marshal error log: %v", err)
+
 		return
 	}
 
@@ -156,6 +158,7 @@ func (ceh *CentralizedErrorHandler) logCustomError(customErr *CustomError, reque
 	jsonData, err := json.Marshal(logData)
 	if err != nil {
 		ceh.logger.Printf("Failed to marshal custom error log: %v", err)
+
 		return
 	}
 
@@ -237,7 +240,7 @@ func (ceh *CentralizedErrorHandler) createAlertFromCustomError(customErr *Custom
 	alert := &Alert{
 		ID:      alertID,
 		Level:   ceh.determineCustomErrorAlertLevel(customErr),
-		Title:   fmt.Sprintf("%s Error Alert", customErr.Type.String()),
+		Title:   customErr.Type.String() + " Error Alert",
 		Message: customErr.Message,
 		Error:   customErr,
 		Context: map[string]interface{}{
@@ -297,7 +300,8 @@ func (ceh *CentralizedErrorHandler) determineCustomErrorAlertLevel(customErr *Cu
 
 // sendAlert отправляет алерт всем зарегистрированным уведомителям.
 func (ceh *CentralizedErrorHandler) sendAlert(alert *Alert) {
-	ceh.mutex <- struct{}{}        // Блокируем
+	ceh.mutex <- struct{}{} // Блокируем
+
 	defer func() { <-ceh.mutex }() // Разблокируем
 
 	// Сохраняем алерт
@@ -317,7 +321,8 @@ func (ceh *CentralizedErrorHandler) sendAlert(alert *Alert) {
 
 // ResolveAlert разрешает алерт.
 func (ceh *CentralizedErrorHandler) ResolveAlert(alertID string) error {
-	ceh.mutex <- struct{}{}        // Блокируем
+	ceh.mutex <- struct{}{} // Блокируем
+
 	defer func() { <-ceh.mutex }() // Разблокируем
 
 	alert, exists := ceh.alerts[alertID]
@@ -330,12 +335,14 @@ func (ceh *CentralizedErrorHandler) ResolveAlert(alertID string) error {
 	alert.ResolvedAt = &now
 
 	ceh.logger.Printf("Alert resolved: %s", alertID)
+
 	return nil
 }
 
 // GetAlerts возвращает все алерты.
 func (ceh *CentralizedErrorHandler) GetAlerts() map[string]*Alert {
-	ceh.mutex <- struct{}{}        // Блокируем
+	ceh.mutex <- struct{}{} // Блокируем
+
 	defer func() { <-ceh.mutex }() // Разблокируем
 
 	// Создаем копию для безопасности
@@ -343,40 +350,48 @@ func (ceh *CentralizedErrorHandler) GetAlerts() map[string]*Alert {
 	for key, alert := range ceh.alerts {
 		result[key] = alert
 	}
+
 	return result
 }
 
 // GetActiveAlerts возвращает активные алерты.
 func (ceh *CentralizedErrorHandler) GetActiveAlerts() map[string]*Alert {
-	ceh.mutex <- struct{}{}        // Блокируем
+	ceh.mutex <- struct{}{} // Блокируем
+
 	defer func() { <-ceh.mutex }() // Разблокируем
 
 	result := make(map[string]*Alert)
+
 	for key, alert := range ceh.alerts {
 		if !alert.Resolved {
 			result[key] = alert
 		}
 	}
+
 	return result
 }
 
 // GetAlertsByLevel возвращает алерты по уровню.
 func (ceh *CentralizedErrorHandler) GetAlertsByLevel(level AlertLevel) map[string]*Alert {
-	ceh.mutex <- struct{}{}        // Блокируем
+	ceh.mutex <- struct{}{} // Блокируем
+
 	defer func() { <-ceh.mutex }() // Разблокируем
 
 	result := make(map[string]*Alert)
+
 	for key, alert := range ceh.alerts {
 		if alert.Level == level {
 			result[key] = alert
 		}
 	}
+
 	return result
 }
 
 // ClearResolvedAlerts очищает разрешенные алерты.
 func (ceh *CentralizedErrorHandler) ClearResolvedAlerts() {
-	ceh.mutex <- struct{}{}        // Блокируем
+	ceh.mutex <- struct{}{} // Блокируем
+
 	defer func() { <-ceh.mutex }() // Разблокируем
 
 	for key, alert := range ceh.alerts {
@@ -405,5 +420,6 @@ func containsSubstring(s, substr string) bool {
 			return true
 		}
 	}
+
 	return false
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewAdminNotifier tests creating new admin notifier
+// TestNewAdminNotifier tests creating new admin notifier.
 func TestNewAdminNotifier(t *testing.T) {
 	adminChatIDs := []int64{123, 456}
 	botAPI := "mock_bot_api"
@@ -19,7 +19,7 @@ func TestNewAdminNotifier(t *testing.T) {
 	assert.Equal(t, botAPI, notifier.botAPI)
 }
 
-// TestAdminNotifierImpl_NotifyCriticalError tests critical error notification
+// TestAdminNotifierImpl_NotifyCriticalError tests critical error notification.
 func TestAdminNotifierImpl_NotifyCriticalError(t *testing.T) {
 	adminChatIDs := []int64{123, 456}
 	botAPI := "mock_bot_api"
@@ -46,7 +46,7 @@ func TestAdminNotifierImpl_NotifyCriticalError(t *testing.T) {
 	})
 }
 
-// TestAdminNotifierImpl_formatContext tests context formatting
+// TestAdminNotifierImpl_formatContext tests context formatting.
 func TestAdminNotifierImpl_formatContext(t *testing.T) {
 	adminChatIDs := []int64{123}
 	botAPI := "mock_bot_api"
@@ -67,7 +67,7 @@ func TestAdminNotifierImpl_formatContext(t *testing.T) {
 	})
 }
 
-// TestAdminNotifierImpl_sendToAdmins tests sending messages to admins
+// TestAdminNotifierImpl_sendToAdmins tests sending messages to admins.
 func TestAdminNotifierImpl_sendToAdmins(t *testing.T) {
 	adminChatIDs := []int64{123, 456}
 	botAPI := "mock_bot_api"

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// BotServiceInterface - интерфейс для тестирования
+// BotServiceInterface - интерфейс для тестирования.
 type BotServiceInterface interface {
 	GetCircuitBreakerStates() map[string]string
 	GetCircuitBreakerCounts() map[string]map[string]int
@@ -21,10 +21,11 @@ type BotServiceInterface interface {
 }
 
 // mockBotService - mock для BotService в тестах server
-// nolint:unused
+//
+//nolint:unused
 type mockBotService struct{}
 
-// nolint:unused
+//nolint:unused
 func (m *mockBotService) GetCircuitBreakerStates() map[string]string {
 	return map[string]string{
 		"telegram": "closed",
@@ -33,7 +34,7 @@ func (m *mockBotService) GetCircuitBreakerStates() map[string]string {
 	}
 }
 
-// nolint:unused
+//nolint:unused
 func (m *mockBotService) GetCircuitBreakerCounts() map[string]map[string]int {
 	return map[string]map[string]int{
 		"telegram": {"requests": 100, "successes": 95, "failures": 5},
@@ -42,7 +43,7 @@ func (m *mockBotService) GetCircuitBreakerCounts() map[string]map[string]int {
 	}
 }
 
-// nolint:unused
+//nolint:unused
 func (m *mockBotService) GetConfig() interface{} {
 	return map[string]interface{}{
 		"version": "1.0.0",
@@ -50,12 +51,12 @@ func (m *mockBotService) GetConfig() interface{} {
 	}
 }
 
-// nolint:unused
+//nolint:unused
 func (m *mockBotService) StopCache() {
 	// mock implementation
 }
 
-// nolint:unused
+//nolint:unused
 func (m *mockBotService) GetCacheStats() map[string]interface{} {
 	return map[string]interface{}{
 		"total_entries": 100,
@@ -66,10 +67,11 @@ func (m *mockBotService) GetCacheStats() map[string]interface{} {
 }
 
 // mockTelegramHandler - mock для TelegramHandler
-// nolint:unused
+//
+//nolint:unused
 type mockTelegramHandler struct{}
 
-// nolint:unused
+//nolint:unused
 func (m *mockTelegramHandler) GetRateLimiterStats() map[string]interface{} {
 	return map[string]interface{}{
 		"total_requests":   1000,
@@ -78,7 +80,7 @@ func (m *mockTelegramHandler) GetRateLimiterStats() map[string]interface{} {
 	}
 }
 
-// TestAdminServer_Constructor - тест конструкторов
+// TestAdminServer_Constructor - тест конструкторов.
 func TestAdminServer_Constructor(t *testing.T) {
 	// Test New constructor
 	server1 := New("8080", nil, nil)
@@ -96,7 +98,7 @@ func TestAdminServer_Constructor(t *testing.T) {
 func TestAdminServer_handleHealth(t *testing.T) {
 	server := New("8080", nil, nil)
 
-	req := httptest.NewRequest("GET", "/healthz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
 
 	server.handleHealth(w, req)
@@ -105,6 +107,7 @@ func TestAdminServer_handleHealth(t *testing.T) {
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
 	var response map[string]interface{}
+
 	err := json.NewDecoder(w.Body).Decode(&response)
 	assert.NoError(t, err)
 
@@ -115,7 +118,7 @@ func TestAdminServer_handleHealth(t *testing.T) {
 func TestAdminServer_handleReady(t *testing.T) {
 	server := New("8080", nil, nil)
 
-	req := httptest.NewRequest("GET", "/readyz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 
 	server.handleReady(w, req)
@@ -124,6 +127,7 @@ func TestAdminServer_handleReady(t *testing.T) {
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
 	var response map[string]interface{}
+
 	err := json.NewDecoder(w.Body).Decode(&response)
 	assert.NoError(t, err)
 
@@ -137,6 +141,7 @@ func TestAdminServer_corsMiddleware(t *testing.T) {
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+
 		if _, err := w.Write([]byte("test response")); err != nil {
 			t.Logf("Failed to write response: %v", err)
 		}
@@ -146,9 +151,10 @@ func TestAdminServer_corsMiddleware(t *testing.T) {
 	corsHandler := server.corsMiddleware(testHandler)
 
 	// Test CORS preflight request
-	req := httptest.NewRequest("OPTIONS", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodOptions, "/api/v1/test", nil)
 	req.Header.Set("Origin", "http://localhost:3000")
 	req.Header.Set("Access-Control-Request-Method", "GET")
+
 	w := httptest.NewRecorder()
 
 	corsHandler.ServeHTTP(w, req)
@@ -165,6 +171,7 @@ func TestAdminServer_authMiddleware_ValidToken(t *testing.T) {
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+
 		if _, err := w.Write([]byte("authenticated")); err != nil {
 			t.Logf("Failed to write response: %v", err)
 		}
@@ -174,8 +181,9 @@ func TestAdminServer_authMiddleware_ValidToken(t *testing.T) {
 	authHandler := server.authMiddleware(testHandler)
 
 	// Test with valid admin key
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.Header.Set("X-Admin-Key", "admin-secret-key")
+
 	w := httptest.NewRecorder()
 
 	authHandler.ServeHTTP(w, req)
@@ -191,6 +199,7 @@ func TestAdminServer_authMiddleware_InvalidToken(t *testing.T) {
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+
 		if _, err := w.Write([]byte("should not reach here")); err != nil {
 			t.Logf("Failed to write response: %v", err)
 		}
@@ -200,8 +209,9 @@ func TestAdminServer_authMiddleware_InvalidToken(t *testing.T) {
 	authHandler := server.authMiddleware(testHandler)
 
 	// Test with invalid admin key
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.Header.Set("X-Admin-Key", "invalid-key")
+
 	w := httptest.NewRecorder()
 
 	authHandler.ServeHTTP(w, req)
@@ -217,6 +227,7 @@ func TestAdminServer_authMiddleware_NoToken(t *testing.T) {
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+
 		if _, err := w.Write([]byte("should not reach here")); err != nil {
 			t.Logf("Failed to write response: %v", err)
 		}
@@ -226,7 +237,7 @@ func TestAdminServer_authMiddleware_NoToken(t *testing.T) {
 	authHandler := server.authMiddleware(testHandler)
 
 	// Test without admin key
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	w := httptest.NewRecorder()
 
 	authHandler.ServeHTTP(w, req)
@@ -239,7 +250,7 @@ func TestAdminServer_authMiddleware_NoToken(t *testing.T) {
 func TestAdminServer_handleNavigation(t *testing.T) {
 	server := New("8080", nil, nil)
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 
 	server.handleNavigation(w, req)
@@ -277,8 +288,9 @@ func TestAdminServer_getStatsData(t *testing.T) {
 func TestAdminServer_handleGetStats(t *testing.T) {
 	server := New("8080", nil, nil)
 
-	req := httptest.NewRequest("GET", "/api/v1/stats", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
 	req.Header.Set("X-Admin-Key", "admin-secret-key")
+
 	w := httptest.NewRecorder()
 
 	// Create router and add routes
@@ -292,6 +304,7 @@ func TestAdminServer_handleGetStats(t *testing.T) {
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
 	var response map[string]interface{}
+
 	err := json.NewDecoder(w.Body).Decode(&response)
 	assert.NoError(t, err)
 
@@ -304,10 +317,12 @@ func TestAdminServer_handleGetStats(t *testing.T) {
 
 func TestAdminServer_handleGetStatsV2(t *testing.T) {
 	t.Skip("Requires full BotService mock - skipping for now")
+
 	server := New("8080", nil, nil)
 
-	req := httptest.NewRequest("GET", "/api/v2/stats", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v2/stats", nil)
 	req.Header.Set("X-Admin-Key", "admin-secret-key")
+
 	w := httptest.NewRecorder()
 
 	// Create router and add routes
@@ -321,6 +336,7 @@ func TestAdminServer_handleGetStatsV2(t *testing.T) {
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
 	var response map[string]interface{}
+
 	err := json.NewDecoder(w.Body).Decode(&response)
 	assert.NoError(t, err)
 
@@ -331,10 +347,12 @@ func TestAdminServer_handleGetStatsV2(t *testing.T) {
 
 func TestAdminServer_handleGetSystemHealth(t *testing.T) {
 	t.Skip("Requires full BotService mock - skipping for now")
+
 	server := New("8080", nil, nil)
 
-	req := httptest.NewRequest("GET", "/api/v2/system/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v2/system/health", nil)
 	req.Header.Set("X-Admin-Key", "admin-secret-key")
+
 	w := httptest.NewRecorder()
 
 	// Create router and add routes
@@ -348,6 +366,7 @@ func TestAdminServer_handleGetSystemHealth(t *testing.T) {
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
 	var response map[string]interface{}
+
 	err := json.NewDecoder(w.Body).Decode(&response)
 	assert.NoError(t, err)
 
@@ -360,10 +379,12 @@ func TestAdminServer_handleGetSystemHealth(t *testing.T) {
 
 func TestAdminServer_handleGetPerformanceMetrics(t *testing.T) {
 	t.Skip("Requires full BotService mock - skipping for now")
+
 	server := New("8080", nil, nil)
 
-	req := httptest.NewRequest("GET", "/api/v2/metrics/performance", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v2/metrics/performance", nil)
 	req.Header.Set("X-Admin-Key", "admin-secret-key")
+
 	w := httptest.NewRecorder()
 
 	// Create router and add routes
@@ -377,6 +398,7 @@ func TestAdminServer_handleGetPerformanceMetrics(t *testing.T) {
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
 	var response map[string]interface{}
+
 	err := json.NewDecoder(w.Body).Decode(&response)
 	assert.NoError(t, err)
 
@@ -385,11 +407,11 @@ func TestAdminServer_handleGetPerformanceMetrics(t *testing.T) {
 	assert.Contains(t, response, "version")
 }
 
-// Test error cases
+// Test error cases.
 func TestAdminServer_handleGetStats_Unauthenticated(t *testing.T) {
 	server := New("8080", nil, nil)
 
-	req := httptest.NewRequest("GET", "/api/v1/stats", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
 	// No Authorization header
 	w := httptest.NewRecorder()
 
@@ -403,7 +425,7 @@ func TestAdminServer_handleGetStats_Unauthenticated(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
-// Test invalid HTTP methods
+// Test invalid HTTP methods.
 func TestAdminServer_InvalidMethods(t *testing.T) {
 	server := New("8080", nil, nil)
 
@@ -426,6 +448,7 @@ func TestAdminServer_InvalidMethods(t *testing.T) {
 			if tc.path != "/healthz" && tc.path != "/readyz" {
 				req.Header.Set("X-Admin-Key", "admin-secret-key")
 			}
+
 			w := httptest.NewRecorder()
 
 			r.ServeHTTP(w, req)
@@ -435,7 +458,7 @@ func TestAdminServer_InvalidMethods(t *testing.T) {
 	}
 }
 
-// Test server lifecycle
+// Test server lifecycle.
 func TestAdminServer_StartStop(t *testing.T) {
 	server := New("0", nil, nil) // Use port 0 for automatic assignment
 

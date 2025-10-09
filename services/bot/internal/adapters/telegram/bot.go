@@ -3,13 +3,14 @@ package telegram
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/database"
-	"language-exchange-bot/internal/errors"
+	errorsPkg "language-exchange-bot/internal/errors"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -32,7 +33,7 @@ type TelegramBot struct {
 	debug          bool
 	adminChatIDs   []int64  // ID администраторов для уведомлений (resolved)
 	adminUsernames []string // Usernames администраторов (дополнительно храним для логов)
-	errorHandler   *errors.ErrorHandler
+	errorHandler   *errorsPkg.ErrorHandler
 	handler        *TelegramHandler // handler для обработки сообщений
 }
 
@@ -275,21 +276,21 @@ func NewTelegramBotWithService(
 }
 
 // SetErrorHandler устанавливает обработчик ошибок.
-func (tb *TelegramBot) SetErrorHandler(errorHandler *errors.ErrorHandler) {
+func (tb *TelegramBot) SetErrorHandler(errorHandler *errorsPkg.ErrorHandler) {
 	tb.errorHandler = errorHandler
 
 	log.Printf("Error handler установлен для TelegramBot")
 }
 
-// GetBotAPI возвращает BotAPI бота
+// GetBotAPI возвращает BotAPI бота.
 func (tb *TelegramBot) GetBotAPI() *tgbotapi.BotAPI {
 	return tb.api
 }
 
-// SetupWebhook настраивает webhook для бота в Telegram
+// SetupWebhook настраивает webhook для бота в Telegram.
 func (tb *TelegramBot) SetupWebhook(webhookURL string) error {
 	if webhookURL == "" {
-		return fmt.Errorf("webhook URL cannot be empty")
+		return errors.New("webhook URL cannot be empty")
 	}
 
 	// Создаем конфигурацию webhook
@@ -305,10 +306,11 @@ func (tb *TelegramBot) SetupWebhook(webhookURL string) error {
 	}
 
 	log.Printf("Webhook successfully configured: %s", webhookURL)
+
 	return nil
 }
 
-// RemoveWebhook удаляет webhook для бота
+// RemoveWebhook удаляет webhook для бота.
 func (tb *TelegramBot) RemoveWebhook() error {
 	webhookConfig, err := tgbotapi.NewWebhook("")
 	if err != nil {
@@ -321,5 +323,6 @@ func (tb *TelegramBot) RemoveWebhook() error {
 	}
 
 	log.Printf("Webhook successfully removed")
+
 	return nil
 }

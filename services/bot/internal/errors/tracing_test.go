@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewRequestContext tests creating new request context
+// TestNewRequestContext tests creating new request context.
 func TestNewRequestContext(t *testing.T) {
 	userID := int64(123)
 	chatID := int64(456)
@@ -21,10 +21,10 @@ func TestNewRequestContext(t *testing.T) {
 	assert.Equal(t, userID, ctx.UserID)
 	assert.Equal(t, chatID, ctx.ChatID)
 	assert.Equal(t, operation, ctx.Operation)
-	assert.True(t, time.Since(ctx.Timestamp) < time.Second)
+	assert.Less(t, time.Since(ctx.Timestamp), time.Second)
 }
 
-// TestGenerateRequestID tests request ID generation
+// TestGenerateRequestID tests request ID generation.
 func TestGenerateRequestID(t *testing.T) {
 	// Test multiple generations to ensure uniqueness
 	id1 := generateRequestID()
@@ -37,7 +37,7 @@ func TestGenerateRequestID(t *testing.T) {
 	assert.Contains(t, id2, "req_")
 }
 
-// TestWithContext tests creating error with context
+// TestWithContext tests creating error with context.
 func TestWithContext(t *testing.T) {
 	originalErr := errors.New("original error")
 	ctx := NewRequestContext(123, 456, "test_op")
@@ -54,7 +54,7 @@ func TestWithContext(t *testing.T) {
 	assert.Equal(t, ctx.Operation, customErr.Context["operation"])
 }
 
-// TestRequestContext_JSONSerialization tests JSON serialization of RequestContext
+// TestRequestContext_JSONSerialization tests JSON serialization of RequestContext.
 func TestRequestContext_JSONSerialization(t *testing.T) {
 	ctx := &RequestContext{
 		RequestID: "req_123456789_999",
@@ -66,8 +66,8 @@ func TestRequestContext_JSONSerialization(t *testing.T) {
 
 	// Test JSON serialization (RequestContext doesn't have JSON tags, but we can test the fields)
 	assert.NotEmpty(t, ctx.RequestID)
-	assert.Greater(t, ctx.UserID, int64(0))
-	assert.Greater(t, ctx.ChatID, int64(0))
+	assert.Positive(t, ctx.UserID)
+	assert.Positive(t, ctx.ChatID)
 	assert.NotEmpty(t, ctx.Operation)
 	assert.False(t, ctx.Timestamp.IsZero())
 }

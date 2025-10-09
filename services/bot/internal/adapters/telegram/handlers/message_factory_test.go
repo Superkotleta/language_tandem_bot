@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewMessageFactory tests creating new message factory
+// TestNewMessageFactory tests creating new message factory.
 func TestNewMessageFactory(t *testing.T) {
 	factory := NewMessageFactory(nil, nil, nil)
 
@@ -16,7 +16,7 @@ func TestNewMessageFactory(t *testing.T) {
 	assert.Nil(t, factory.logger)
 }
 
-// TestMessageFactory_SendText tests sending text messages
+// TestMessageFactory_SendText tests sending text messages.
 func TestMessageFactory_SendText(t *testing.T) {
 	// Just test that the method exists
 	factory := NewMessageFactory(nil, nil, nil)
@@ -25,7 +25,7 @@ func TestMessageFactory_SendText(t *testing.T) {
 	assert.NotNil(t, factory.SendText)
 }
 
-// TestMessageFactory_SendWithKeyboard tests sending messages with keyboard
+// TestMessageFactory_SendWithKeyboard tests sending messages with keyboard.
 func TestMessageFactory_SendWithKeyboard(t *testing.T) {
 	// Just test that the method exists
 	factory := NewMessageFactory(nil, nil, nil)
@@ -34,7 +34,7 @@ func TestMessageFactory_SendWithKeyboard(t *testing.T) {
 	assert.NotNil(t, factory.SendWithKeyboard)
 }
 
-// TestMessageFactory_SendHTML tests sending HTML messages
+// TestMessageFactory_SendHTML tests sending HTML messages.
 func TestMessageFactory_SendHTML(t *testing.T) {
 	// Just test that the method exists
 	factory := NewMessageFactory(nil, nil, nil)
@@ -43,7 +43,7 @@ func TestMessageFactory_SendHTML(t *testing.T) {
 	assert.NotNil(t, factory.SendHTML)
 }
 
-// TestMessageFactory_SendHTMLWithKeyboard tests sending HTML messages with keyboard
+// TestMessageFactory_SendHTMLWithKeyboard tests sending HTML messages with keyboard.
 func TestMessageFactory_SendHTMLWithKeyboard(t *testing.T) {
 	// Just test that the method exists
 	factory := NewMessageFactory(nil, nil, nil)
@@ -52,7 +52,7 @@ func TestMessageFactory_SendHTMLWithKeyboard(t *testing.T) {
 	assert.NotNil(t, factory.SendHTMLWithKeyboard)
 }
 
-// TestMessageFactory_EditText tests editing text messages
+// TestMessageFactory_EditText tests editing text messages.
 func TestMessageFactory_EditText(t *testing.T) {
 	// Just test that the method exists
 	factory := NewMessageFactory(nil, nil, nil)
@@ -61,7 +61,7 @@ func TestMessageFactory_EditText(t *testing.T) {
 	assert.NotNil(t, factory.EditText)
 }
 
-// TestMessageFactory_EditWithKeyboard tests editing messages with keyboard
+// TestMessageFactory_EditWithKeyboard tests editing messages with keyboard.
 func TestMessageFactory_EditWithKeyboard(t *testing.T) {
 	// Just test that the method exists
 	factory := NewMessageFactory(nil, nil, nil)
@@ -70,7 +70,7 @@ func TestMessageFactory_EditWithKeyboard(t *testing.T) {
 	assert.NotNil(t, factory.EditWithKeyboard)
 }
 
-// TestMessageFactory_NewMessage tests creating new message builder
+// TestMessageFactory_NewMessage tests creating new message builder.
 func TestMessageFactory_NewMessage(t *testing.T) {
 	factory := NewMessageFactory(nil, nil, nil)
 
@@ -81,7 +81,7 @@ func TestMessageFactory_NewMessage(t *testing.T) {
 	assert.Equal(t, int64(123), builder.chatID)
 }
 
-// TestMessageFactory_NewEditMessage tests creating edit message builder
+// TestMessageFactory_NewEditMessage tests creating edit message builder.
 func TestMessageFactory_NewEditMessage(t *testing.T) {
 	factory := NewMessageFactory(nil, nil, nil)
 

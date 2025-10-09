@@ -40,7 +40,7 @@ func TestCircuitBreaker_StateOpen(t *testing.T) {
 	})
 
 	// Вызываем несколько неудачных запросов
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		_, err := cb.Execute(func() (interface{}, error) {
 			return nil, errors.New("test error")
 		})
@@ -252,6 +252,7 @@ func TestCircuitBreaker_PanicRecovery(t *testing.T) {
 
 	// CircuitBreaker должен вернуть ошибку с информацией о панике
 	assert.Error(t, err)
+
 	if err != nil {
 		assert.Contains(t, err.Error(), "panic recovered")
 		assert.Contains(t, err.Error(), "test panic")
@@ -268,7 +269,7 @@ func TestCircuitBreaker_ConcurrentAccess(t *testing.T) {
 	// Запускаем несколько горутин для конкурентного доступа
 	done := make(chan bool, 10)
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		go func(id int) {
 			defer func() { done <- true }()
 
@@ -281,7 +282,7 @@ func TestCircuitBreaker_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Ждем завершения всех горутин
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 

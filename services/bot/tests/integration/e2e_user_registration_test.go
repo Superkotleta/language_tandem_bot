@@ -11,27 +11,28 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// E2EUserRegistrationSuite - E2E тест для полного цикла регистрации пользователя
+// E2EUserRegistrationSuite - E2E тест для полного цикла регистрации пользователя.
 type E2EUserRegistrationSuite struct {
 	suite.Suite
+
 	handler *mocks.TelegramHandlerWrapper
 	service *core.BotService
 	mockDB  *mocks.DatabaseMock
 }
 
-// SetupSuite выполняется один раз перед всеми тестами
+// SetupSuite выполняется один раз перед всеми тестами.
 func (s *E2EUserRegistrationSuite) SetupSuite() {
 	s.mockDB = mocks.NewDatabaseMock()
 	s.handler, s.service = helpers.SetupTestBot(s.mockDB)
 }
 
-// SetupTest выполняется перед каждым тестом
+// SetupTest выполняется перед каждым тестом.
 func (s *E2EUserRegistrationSuite) SetupTest() {
 	s.mockDB.Reset()
 	s.handler.Reset()
 }
 
-// TestCompleteUserRegistrationFlow - полный E2E сценарий регистрации пользователя
+// TestCompleteUserRegistrationFlow - полный E2E сценарий регистрации пользователя.
 func (s *E2EUserRegistrationSuite) TestCompleteUserRegistrationFlow() {
 	// Test Data
 	userID := int64(123456789)
@@ -78,7 +79,7 @@ func (s *E2EUserRegistrationSuite) TestCompleteUserRegistrationFlow() {
 	s.Equal(2, s.handler.GetSentMessagesCount(), "Should have sent status message")
 }
 
-// TestUserRegistrationWithRussianLanguage - тест регистрации с русским языком Telegram
+// TestUserRegistrationWithRussianLanguage - тест регистрации с русским языком Telegram.
 func (s *E2EUserRegistrationSuite) TestUserRegistrationWithRussianLanguage() {
 	userID := int64(987654321)
 	username := "russianuser"
@@ -98,7 +99,7 @@ func (s *E2EUserRegistrationSuite) TestUserRegistrationWithRussianLanguage() {
 	s.Equal("ru", user.InterfaceLanguageCode, "Should detect Russian language from Telegram")
 }
 
-// TestUserRegistrationFallbackToDefaultLanguage - тест с неизвестным языком Telegram
+// TestUserRegistrationFallbackToDefaultLanguage - тест с неизвестным языком Telegram.
 func (s *E2EUserRegistrationSuite) TestUserRegistrationFallbackToDefaultLanguage() {
 	userID := int64(555666777)
 	username := "unknownlang"
@@ -118,7 +119,7 @@ func (s *E2EUserRegistrationSuite) TestUserRegistrationFallbackToDefaultLanguage
 	s.Equal("en", user.InterfaceLanguageCode, "Should fallback to English for unknown language")
 }
 
-// TestUserRegistrationDatabaseError - тест обработки ошибки базы данных
+// TestUserRegistrationDatabaseError - тест обработки ошибки базы данных.
 func (s *E2EUserRegistrationSuite) TestUserRegistrationDatabaseError() {
 	userID := int64(111222333)
 	username := "erroruser"
@@ -137,10 +138,10 @@ func (s *E2EUserRegistrationSuite) TestUserRegistrationDatabaseError() {
 	s.Error(err, "Handler should return error when database fails")
 
 	// Assert: Error should be recorded in handler
-	s.NotNil(s.handler.LastError, "Error should be recorded in handler")
+	s.Error(s.handler.LastError, "Error should be recorded in handler")
 }
 
-// TestSuite runs the test suite
+// TestSuite runs the test suite.
 func TestE2EUserRegistrationSuite(t *testing.T) {
 	suite.Run(t, new(E2EUserRegistrationSuite))
 }

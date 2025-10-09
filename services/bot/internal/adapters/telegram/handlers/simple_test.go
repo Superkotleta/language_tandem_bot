@@ -7,7 +7,7 @@ import (
 	"language-exchange-bot/internal/models"
 )
 
-// TestEditSession создает и тестирует сессию редактирования
+// TestEditSession создает и тестирует сессию редактирования.
 func TestEditSession(t *testing.T) {
 	session := &EditSession{
 		UserID:             123,
@@ -50,7 +50,7 @@ func TestEditSession(t *testing.T) {
 	}
 }
 
-// TestInterestChange тестирует структуру изменений
+// TestInterestChange тестирует структуру изменений.
 func TestInterestChange(t *testing.T) {
 	change := InterestChange{
 		Action:       "add",
@@ -81,7 +81,7 @@ func TestInterestChange(t *testing.T) {
 	}
 }
 
-// TestEditStats тестирует статистику редактирования
+// TestEditStats тестирует статистику редактирования.
 func TestEditStats(t *testing.T) {
 	stats := EditStats{
 		TotalSelected:  5,
@@ -112,7 +112,7 @@ func TestEditStats(t *testing.T) {
 	}
 }
 
-// TestValidation тестирует валидацию
+// TestValidation тестирует валидацию.
 func TestValidation(t *testing.T) {
 	// Тест пустых выборов (теперь разрешено)
 	emptySession := &EditSession{
@@ -120,6 +120,7 @@ func TestValidation(t *testing.T) {
 	}
 
 	editor := &IsolatedInterestEditor{}
+
 	err := editor.validateSelections(emptySession)
 	if err != nil {
 		t.Error("Empty selections should now be allowed")
@@ -139,7 +140,7 @@ func TestValidation(t *testing.T) {
 	}
 }
 
-// TestStatisticsCalculation тестирует расчет статистики
+// TestStatisticsCalculation тестирует расчет статистики.
 func TestStatisticsCalculation(t *testing.T) {
 	editor := &IsolatedInterestEditor{}
 
@@ -170,12 +171,12 @@ func TestStatisticsCalculation(t *testing.T) {
 	}
 }
 
-// TestBasicPerformance тестирует базовую производительность
+// TestBasicPerformance тестирует базовую производительность.
 func TestBasicPerformance(t *testing.T) {
 	start := time.Now()
 
 	// Тест создания большого количества сессий
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		session := &EditSession{
 			UserID:            i,
 			CurrentSelections: make([]models.InterestSelection, 10),
@@ -195,9 +196,9 @@ func TestBasicPerformance(t *testing.T) {
 	}
 }
 
-// BenchmarkSessionCreation бенчмарк создания сессий
+// BenchmarkSessionCreation бенчмарк создания сессий.
 func BenchmarkSessionCreation(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		session := &EditSession{
 			UserID:            i,
 			CurrentSelections: make([]models.InterestSelection, 10),
@@ -212,7 +213,7 @@ func BenchmarkSessionCreation(b *testing.B) {
 	}
 }
 
-// BenchmarkStatisticsCalculation бенчмарк расчета статистики
+// BenchmarkStatisticsCalculation бенчмарк расчета статистики.
 func BenchmarkStatisticsCalculation(b *testing.B) {
 	editor := &IsolatedInterestEditor{}
 
@@ -225,7 +226,8 @@ func BenchmarkStatisticsCalculation(b *testing.B) {
 	_ = session.Changes
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		_ = editor.calculateEditStats(session)
 	}
 }

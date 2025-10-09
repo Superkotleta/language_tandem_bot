@@ -11,26 +11,27 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// AvailabilitySystemSuite тестирует систему доступности
+// AvailabilitySystemSuite тестирует систему доступности.
 type AvailabilitySystemSuite struct {
 	suite.Suite
+
 	handler *mocks.TelegramHandlerWrapper
 	service *core.BotService
 	mockDB  *mocks.DatabaseMock
 }
 
-// SetupSuite выполняется один раз перед всеми тестами
+// SetupSuite выполняется один раз перед всеми тестами.
 func (s *AvailabilitySystemSuite) SetupSuite() {
 	s.mockDB = mocks.NewDatabaseMock()
 	s.handler, s.service = helpers.SetupTestBot(s.mockDB)
 }
 
-// SetupTest выполняется перед каждым тестом
+// SetupTest выполняется перед каждым тестом.
 func (s *AvailabilitySystemSuite) SetupTest() {
 	s.mockDB.Reset()
 }
 
-// TestSaveAndGetTimeAvailability тестирует сохранение и получение временной доступности
+// TestSaveAndGetTimeAvailability тестирует сохранение и получение временной доступности.
 func (s *AvailabilitySystemSuite) TestSaveAndGetTimeAvailability() {
 	// Создаем пользователя
 	user := &models.User{
@@ -65,7 +66,7 @@ func (s *AvailabilitySystemSuite) TestSaveAndGetTimeAvailability() {
 	s.Equal("morning", savedAvailability.TimeSlot)
 }
 
-// TestSaveAndGetFriendshipPreferences тестирует сохранение и получение предпочтений общения
+// TestSaveAndGetFriendshipPreferences тестирует сохранение и получение предпочтений общения.
 func (s *AvailabilitySystemSuite) TestSaveAndGetFriendshipPreferences() {
 	// Создаем пользователя
 	user := &models.User{
@@ -98,7 +99,7 @@ func (s *AvailabilitySystemSuite) TestSaveAndGetFriendshipPreferences() {
 	s.Equal("weekly", savedPreferences.CommunicationFreq)
 }
 
-// TestSpecificDaysSelection тестирует выбор конкретных дней недели
+// TestSpecificDaysSelection тестирует выбор конкретных дней недели.
 func (s *AvailabilitySystemSuite) TestSpecificDaysSelection() {
 	// Создаем пользователя
 	user := &models.User{
@@ -131,7 +132,7 @@ func (s *AvailabilitySystemSuite) TestSpecificDaysSelection() {
 	s.Equal("day", specificSaved.TimeSlot)
 }
 
-// TestDefaultValues тестирует значения по умолчанию для новых пользователей
+// TestDefaultValues тестирует значения по умолчанию для новых пользователей.
 func (s *AvailabilitySystemSuite) TestDefaultValues() {
 	// Создаем пользователя
 	user := &models.User{
@@ -160,7 +161,7 @@ func (s *AvailabilitySystemSuite) TestDefaultValues() {
 	s.Equal("weekly", preferences.CommunicationFreq)
 }
 
-// TestAvailabilitySystemIntegration запускает все тесты системы доступности
+// TestAvailabilitySystemIntegration запускает все тесты системы доступности.
 func TestAvailabilitySystemIntegration(t *testing.T) {
 	suite.Run(t, new(AvailabilitySystemSuite))
 }

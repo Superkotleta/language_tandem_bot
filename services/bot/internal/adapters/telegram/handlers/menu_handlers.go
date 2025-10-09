@@ -191,6 +191,7 @@ func (mh *MenuHandler) editMessageTextAndMarkup(chatID int64, messageID int, tex
 	if keyboard != nil {
 		return mh.base.messageFactory.EditWithKeyboard(chatID, messageID, text, keyboard)
 	}
+
 	return mh.base.messageFactory.EditText(chatID, messageID, text)
 }
 

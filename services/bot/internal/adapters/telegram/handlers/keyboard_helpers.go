@@ -299,7 +299,7 @@ func (kb *KeyboardBuilder) CreateProfileCompletedKeyboard(interfaceLang string) 
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-// CreateAvailabilitySetupKeyboard создает клавиатуру для перехода к настройке доступности
+// CreateAvailabilitySetupKeyboard создает клавиатуру для перехода к настройке доступности.
 func (kb *KeyboardBuilder) CreateAvailabilitySetupKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	setupAvailabilityButton := tgbotapi.NewInlineKeyboardButtonData(
 		"⏰ "+kb.service.Localizer.Get(interfaceLang, "setup_availability_button"),
@@ -573,6 +573,7 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 		if !exists {
 			// Fallback: пытаемся получить через getInterestName
 			var err error
+
 			interestName1, err = kb.getInterestName(selection1.InterestID, interfaceLang)
 			if err != nil {
 				interestName1 = fmt.Sprintf("Интерес %d", selection1.InterestID)
@@ -610,6 +611,7 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 			if !exists {
 				// Fallback: пытаемся получить через getInterestName
 				var err error
+
 				interestName2, err = kb.getInterestName(selection2.InterestID, interfaceLang)
 				if err != nil {
 					interestName2 = fmt.Sprintf("Интерес %d", selection2.InterestID)
@@ -749,6 +751,7 @@ func (kb *KeyboardBuilder) CreateEditPrimaryInterestsKeyboard(selections interfa
 		if tempSelections[i].IsPrimary != tempSelections[j].IsPrimary {
 			return tempSelections[i].IsPrimary
 		}
+
 		return tempSelections[i].InterestID < tempSelections[j].InterestID
 	})
 
@@ -763,6 +766,7 @@ func (kb *KeyboardBuilder) CreateEditPrimaryInterestsKeyboard(selections interfa
 		if !exists {
 			// Fallback: пытаемся получить через getInterestName
 			var err error
+
 			interestName1, err = kb.getInterestName(selection1.InterestID, interfaceLang)
 			if err != nil {
 				interestName1 = fmt.Sprintf("Интерес %d", selection1.InterestID)
@@ -800,6 +804,7 @@ func (kb *KeyboardBuilder) CreateEditPrimaryInterestsKeyboard(selections interfa
 			if !exists {
 				// Fallback: пытаемся получить через getInterestName
 				var err error
+
 				interestName2, err = kb.getInterestName(selection2.InterestID, interfaceLang)
 				if err != nil {
 					interestName2 = fmt.Sprintf("Интерес %d", selection2.InterestID)
@@ -828,6 +833,7 @@ func (kb *KeyboardBuilder) CreateEditPrimaryInterestsKeyboard(selections interfa
 			)
 			row = append(row, button2)
 		}
+
 		buttonRows = append(buttonRows, row)
 	}
 

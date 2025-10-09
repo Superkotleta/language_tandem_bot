@@ -15,7 +15,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Redis connection constants (using centralized constants for consistency)
+// Redis connection constants (using centralized constants for consistency).
 var (
 	DefaultDialTimeout     = localization.RedisDialTimeoutSeconds * time.Second
 	DefaultReadTimeout     = localization.RedisReadTimeoutSeconds * time.Second
@@ -24,7 +24,7 @@ var (
 	DefaultMaxRetryBackoff = localization.RedisMaxRetryBackoffMs * time.Millisecond
 )
 
-// Redis configuration constants
+// Redis configuration constants.
 const (
 	DefaultRedisProtocol   = 3
 	DefaultMaxRetries      = 3
@@ -484,9 +484,10 @@ func (r *RedisCacheService) Delete(ctx context.Context, key string) error {
 
 // GetInterestCategories получает категории интересов из Redis кэша.
 func (r *RedisCacheService) GetInterestCategories(ctx context.Context, lang string) ([]*models.InterestCategory, bool) {
-	key := fmt.Sprintf("interest_categories:%s", lang)
+	key := "interest_categories:" + lang
 
 	var categories []*models.InterestCategory
+
 	err := r.Get(ctx, key, &categories)
 	if err != nil {
 		return nil, false
@@ -497,7 +498,7 @@ func (r *RedisCacheService) GetInterestCategories(ctx context.Context, lang stri
 
 // SetInterestCategories сохраняет категории интересов в Redis кэш.
 func (r *RedisCacheService) SetInterestCategories(ctx context.Context, lang string, categories []*models.InterestCategory) {
-	key := fmt.Sprintf("interest_categories:%s", lang)
+	key := "interest_categories:" + lang
 	if err := r.Set(ctx, key, categories, r.config.LanguagesTTL); err != nil {
 		log.Printf("Failed to cache interest categories for language %s: %v", lang, err)
 	}
@@ -508,6 +509,7 @@ func (r *RedisCacheService) GetUserStats(ctx context.Context, userID int64) (map
 	key := fmt.Sprintf("user_stats:%d", userID)
 
 	var stats map[string]interface{}
+
 	err := r.Get(ctx, key, &stats)
 	if err != nil {
 		return nil, false
@@ -526,9 +528,10 @@ func (r *RedisCacheService) SetUserStats(ctx context.Context, userID int64, stat
 
 // GetConfig получает конфигурацию из Redis кэша.
 func (r *RedisCacheService) GetConfig(ctx context.Context, configKey string) (interface{}, bool) {
-	key := fmt.Sprintf("config:%s", configKey)
+	key := "config:" + configKey
 
 	var value interface{}
+
 	err := r.Get(ctx, key, &value)
 	if err != nil {
 		return nil, false
@@ -539,7 +542,7 @@ func (r *RedisCacheService) GetConfig(ctx context.Context, configKey string) (in
 
 // SetConfig сохраняет конфигурацию в Redis кэш.
 func (r *RedisCacheService) SetConfig(ctx context.Context, configKey string, value interface{}) {
-	key := fmt.Sprintf("config:%s", configKey)
+	key := "config:" + configKey
 	if err := r.Set(ctx, key, value, r.config.LanguagesTTL); err != nil {
 		log.Printf("Failed to cache config for key %s: %v", configKey, err)
 	}
@@ -548,6 +551,7 @@ func (r *RedisCacheService) SetConfig(ctx context.Context, configKey string, val
 // InvalidateInterestCategories инвалидирует кэш категорий интересов.
 func (r *RedisCacheService) InvalidateInterestCategories(ctx context.Context) {
 	pattern := "interest_categories:*"
+
 	keys, err := r.client.Keys(ctx, pattern).Result()
 	if err != nil {
 		return
@@ -578,8 +582,10 @@ func (r *RedisCacheService) BatchSet(ctx context.Context, items map[string]inter
 		data, err := json.Marshal(value)
 		if err != nil {
 			log.Printf("Redis error marshaling value for key %s: %v", key, err)
+
 			continue
 		}
+
 		pipe.Set(ctx, key, data, ttl)
 	}
 
@@ -610,19 +616,23 @@ func (r *RedisCacheService) BatchGet(ctx context.Context, keys []string) (map[st
 	}
 
 	result := make(map[string]interface{})
+
 	for i, cmd := range cmds {
 		val, err := cmd.Result()
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
 				continue // Ключ не найден, пропускаем
 			}
+
 			log.Printf("Redis error getting key %s: %v", keys[i], err)
+
 			continue
 		}
 
 		var data interface{}
 		if err := json.Unmarshal([]byte(val), &data); err != nil {
 			log.Printf("Redis error unmarshaling key %s: %v", keys[i], err)
+
 			continue
 		}
 
@@ -659,6 +669,7 @@ func (r *RedisCacheService) BatchSetUsers(ctx context.Context, users []*models.U
 	}
 
 	items := make(map[string]interface{})
+
 	for _, user := range users {
 		key := fmt.Sprintf("user:%d", user.ID)
 		items[key] = user
@@ -691,41 +702,53 @@ func (r *RedisCacheService) BatchGetUsers(ctx context.Context, userIDs []int64) 
 			if id, ok := userData["id"].(float64); ok {
 				user.ID = int(id)
 			}
+
 			if telegramID, ok := userData["telegram_id"].(float64); ok {
 				user.TelegramID = int64(telegramID)
 			}
+
 			if username, ok := userData["username"].(string); ok {
 				user.Username = username
 			}
+
 			if firstName, ok := userData["first_name"].(string); ok {
 				user.FirstName = firstName
 			}
+
 			if nativeLang, ok := userData["native_language_code"].(string); ok {
 				user.NativeLanguageCode = nativeLang
 			}
+
 			if targetLang, ok := userData["target_language_code"].(string); ok {
 				user.TargetLanguageCode = targetLang
 			}
+
 			if targetLevel, ok := userData["target_language_level"].(string); ok {
 				user.TargetLanguageLevel = targetLevel
 			}
+
 			if interfaceLang, ok := userData["interface_language_code"].(string); ok {
 				user.InterfaceLanguageCode = interfaceLang
 			}
+
 			if state, ok := userData["state"].(string); ok {
 				user.State = state
 			}
+
 			if status, ok := userData["status"].(string); ok {
 				user.Status = status
 			}
+
 			if profileLevel, ok := userData["profile_completion_level"].(float64); ok {
 				user.ProfileCompletionLevel = int(profileLevel)
 			}
+
 			if createdAt, ok := userData["created_at"].(string); ok {
 				if parsed, err := time.Parse(time.RFC3339, createdAt); err == nil {
 					user.CreatedAt = parsed
 				}
 			}
+
 			if updatedAt, ok := userData["updated_at"].(string); ok {
 				if parsed, err := time.Parse(time.RFC3339, updatedAt); err == nil {
 					user.UpdatedAt = parsed
@@ -742,6 +765,7 @@ func (r *RedisCacheService) BatchGetUsers(ctx context.Context, userIDs []int64) 
 // WarmUpBatch предзагружает критичные данные в Redis через batch операции.
 func (r *RedisCacheService) WarmUpBatch(ctx context.Context, dataLoader DataLoader) error {
 	log.Println("Starting Redis cache warming...")
+
 	start := time.Now()
 
 	// Загружаем языки для всех поддерживаемых языков
@@ -752,6 +776,7 @@ func (r *RedisCacheService) WarmUpBatch(ctx context.Context, dataLoader DataLoad
 
 	// Сохраняем языки через batch операцию
 	items := make(map[string]interface{})
+
 	items["languages:en"] = languages
 	if err := r.BatchSet(ctx, items, r.config.LanguagesTTL); err != nil {
 		log.Printf("Failed to warm up languages: %v", err)
@@ -765,6 +790,7 @@ func (r *RedisCacheService) WarmUpBatch(ctx context.Context, dataLoader DataLoad
 
 	// Сохраняем интересы через batch операцию
 	items = make(map[string]interface{})
+
 	items["interests:en"] = interests
 	if err := r.BatchSet(ctx, items, r.config.InterestsTTL); err != nil {
 		log.Printf("Failed to warm up interests: %v", err)
@@ -778,6 +804,7 @@ func (r *RedisCacheService) WarmUpBatch(ctx context.Context, dataLoader DataLoad
 
 	// Сохраняем категории через batch операцию
 	items = make(map[string]interface{})
+
 	items["interest_categories:en"] = categories
 	if err := r.BatchSet(ctx, items, r.config.InterestCategoriesTTL); err != nil {
 		log.Printf("Failed to warm up interest categories: %v", err)
@@ -791,6 +818,7 @@ func (r *RedisCacheService) WarmUpBatch(ctx context.Context, dataLoader DataLoad
 
 	// Сохраняем переводы через batch операцию
 	items = make(map[string]interface{})
+
 	items["translations:en"] = translations
 	if err := r.BatchSet(ctx, items, r.config.TranslationsTTL); err != nil {
 		log.Printf("Failed to warm up translations: %v", err)
@@ -798,6 +826,7 @@ func (r *RedisCacheService) WarmUpBatch(ctx context.Context, dataLoader DataLoad
 
 	duration := time.Since(start)
 	log.Printf("Redis cache warming completed in %v", duration)
+
 	return nil
 }
 
@@ -806,6 +835,7 @@ func (r *RedisCacheService) GetConnectionStats(ctx context.Context) map[string]i
 	info, err := r.client.Info(ctx, "stats").Result()
 	if err != nil {
 		log.Printf("Redis error getting connection stats: %v", err)
+
 		return map[string]interface{}{
 			"error": "failed to get connection stats",
 		}
@@ -813,6 +843,7 @@ func (r *RedisCacheService) GetConnectionStats(ctx context.Context) map[string]i
 
 	// Парсим информацию о соединениях
 	stats := make(map[string]interface{})
+
 	lines := strings.Split(info, "\r\n")
 	for _, line := range lines {
 		if strings.Contains(line, ":") && !strings.HasPrefix(line, "#") {

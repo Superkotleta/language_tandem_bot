@@ -569,6 +569,7 @@ func (s *InterestService) GetAllInterests() ([]models.Interest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("operation failed: %w", err)
 	}
+
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
 			s.logger.ErrorWithContext(
@@ -584,6 +585,7 @@ func (s *InterestService) GetAllInterests() ([]models.Interest, error) {
 	var interests []models.Interest
 	for rows.Next() {
 		var interest models.Interest
+
 		err := rows.Scan(
 			&interest.ID,
 			&interest.KeyName,
@@ -595,6 +597,7 @@ func (s *InterestService) GetAllInterests() ([]models.Interest, error) {
 		if err != nil {
 			return nil, fmt.Errorf("operation failed: %w", err)
 		}
+
 		interests = append(interests, interest)
 	}
 
@@ -605,7 +608,7 @@ func (s *InterestService) GetAllInterests() ([]models.Interest, error) {
 	return interests, nil
 }
 
-// GetInterestsByCategoryKey возвращает интересы по ключу категории
+// GetInterestsByCategoryKey возвращает интересы по ключу категории.
 func (s *InterestService) GetInterestsByCategoryKey(categoryKey string) ([]models.Interest, error) {
 	query := `
 		SELECT i.id, i.key_name, i.category_id, i.display_order, i.type, i.created_at, ic.key_name
@@ -623,13 +626,14 @@ func (s *InterestService) GetInterestsByCategoryKey(categoryKey string) ([]model
 	return s.scanInterestsWithCategory(rows)
 }
 
-// BatchUpdateUserInterests обновляет интересы пользователя батчем
+// BatchUpdateUserInterests обновляет интересы пользователя батчем.
 func (s *InterestService) BatchUpdateUserInterests(userID int, selections []models.InterestSelection) error {
 	// Начинаем транзакцию
 	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
+
 	defer func() { _ = tx.Rollback() }()
 
 	// Удаляем все текущие выборы пользователя
@@ -649,6 +653,7 @@ func (s *InterestService) BatchUpdateUserInterests(userID int, selections []mode
 		if err != nil {
 			return fmt.Errorf("failed to prepare statement: %w", err)
 		}
+
 		defer func() {
 			if closeErr := stmt.Close(); closeErr != nil {
 				s.logger.ErrorWithContext(
@@ -678,7 +683,7 @@ func (s *InterestService) BatchUpdateUserInterests(userID int, selections []mode
 	return nil
 }
 
-// scanInterestsWithCategory сканирует строки интересов с категорией
+// scanInterestsWithCategory сканирует строки интересов с категорией.
 func (s *InterestService) scanInterestsWithCategory(rows *sql.Rows) ([]models.Interest, error) {
 	if err := rows.Err(); err != nil {
 		if closeErr := rows.Close(); closeErr != nil {

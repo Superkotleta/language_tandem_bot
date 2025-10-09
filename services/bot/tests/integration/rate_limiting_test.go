@@ -1,11 +1,12 @@
 package integration //nolint:testpackage
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"language-exchange-bot/internal/adapters/telegram"
-	"language-exchange-bot/internal/errors"
+	errorsPkg "language-exchange-bot/internal/errors"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -41,7 +42,7 @@ func (s *RateLimitingSuite) TearDownSuite() {
 // TestRateLimiting_AllowWithinLimits тестирует, что запросы в пределах лимита разрешены.
 func (s *RateLimitingSuite) TestRateLimiting_AllowWithinLimits() {
 	// Act & Assert
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		err := s.rateLimiter.CheckRateLimit(s.userID)
 		s.NoError(err, "Request %d should be allowed", i+1)
 	}
@@ -50,7 +51,7 @@ func (s *RateLimitingSuite) TestRateLimiting_AllowWithinLimits() {
 // TestRateLimiting_BlockAfterLimit тестирует блокировку после превышения лимита.
 func (s *RateLimitingSuite) TestRateLimiting_BlockAfterLimit() {
 	// Arrange - превышаем лимит
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		_ = s.rateLimiter.CheckRateLimit(s.userID)
 	}
 
@@ -59,17 +60,18 @@ func (s *RateLimitingSuite) TestRateLimiting_BlockAfterLimit() {
 
 	// Assert
 	s.Error(err, "Request should be blocked after exceeding limit")
-	s.IsType(&errors.CustomError{}, err, "Error should be CustomError")
+	s.IsType(&errorsPkg.CustomError{}, err, "Error should be CustomError")
 
-	customErr, ok := err.(*errors.CustomError)
+	customErr := &errorsPkg.CustomError{}
+	ok := errors.As(err, &customErr)
 	s.True(ok, "Error should be convertible to CustomError")
-	s.Equal(errors.ErrorTypeValidation, customErr.Type, "Error type should be validation")
+	s.Equal(errorsPkg.ErrorTypeValidation, customErr.Type, "Error type should be validation")
 }
 
 // TestRateLimiting_BlockDuration тестирует длительность блокировки.
 func (s *RateLimitingSuite) TestRateLimiting_BlockDuration() {
 	// Arrange - превышаем лимит и проверяем блокировку
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		_ = s.rateLimiter.CheckRateLimit(s.userID)
 	}
 
@@ -95,7 +97,7 @@ func (s *RateLimitingSuite) TestRateLimiting_BlockDuration() {
 // TestRateLimiting_WindowReset тестирует сброс окна времени.
 func (s *RateLimitingSuite) TestRateLimiting_WindowReset() {
 	// Arrange - делаем максимальное количество запросов
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		err := s.rateLimiter.CheckRateLimit(s.userID)
 		s.NoError(err, "Request %d should be allowed", i+1)
 	}
@@ -104,7 +106,7 @@ func (s *RateLimitingSuite) TestRateLimiting_WindowReset() {
 	time.Sleep(time.Second * 3)
 
 	// Assert - новые запросы должны быть разрешены
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		err := s.rateLimiter.CheckRateLimit(s.userID)
 		s.NoError(err, "Request %d should be allowed after window reset", i+1)
 	}
@@ -116,7 +118,7 @@ func (s *RateLimitingSuite) TestRateLimiting_MultipleUsers() {
 	userID2 := int64(222222222)
 
 	// Arrange - user1 превышает лимит
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		err := s.rateLimiter.CheckRateLimit(userID1)
 		s.NoError(err)
 	}
@@ -135,7 +137,7 @@ func (s *RateLimitingSuite) TestRateLimiting_GetStats() {
 	testUserID := int64(999999999)
 
 	// Arrange - делаем несколько запросов
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		_ = s.rateLimiter.CheckRateLimit(testUserID)
 	}
 
@@ -166,6 +168,7 @@ func (s *RateLimitingSuite) TestRateLimiting_EndToEndIntegration() {
 		BlockDuration:   time.Second * 2, // Блокировка 2 секунды
 		CleanupInterval: time.Minute,
 	}
+
 	strictLimiter := telegram.NewRateLimiter(strictConfig)
 	defer strictLimiter.Stop()
 

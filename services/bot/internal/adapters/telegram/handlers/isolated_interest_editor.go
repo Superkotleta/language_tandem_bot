@@ -14,7 +14,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// IsolatedInterestEditor управляет изолированной системой редактирования интересов
+// IsolatedInterestEditor управляет изолированной системой редактирования интересов.
 type IsolatedInterestEditor struct {
 	service         *core.BotService
 	interestService *core.InterestService
@@ -24,7 +24,7 @@ type IsolatedInterestEditor struct {
 	cache           cache.ServiceInterface
 }
 
-// EditSession представляет сессию редактирования интересов
+// EditSession представляет сессию редактирования интересов.
 type EditSession struct {
 	UserID             int
 	OriginalSelections []models.InterestSelection
@@ -35,7 +35,7 @@ type EditSession struct {
 	LastActivity       time.Time
 }
 
-// InterestChange представляет изменение в интересах
+// InterestChange представляет изменение в интересах.
 type InterestChange struct {
 	Action       string // "add", "remove", "set_primary", "unset_primary"
 	InterestID   int
@@ -44,7 +44,7 @@ type InterestChange struct {
 	Timestamp    time.Time
 }
 
-// EditStats представляет статистику редактирования
+// EditStats представляет статистику редактирования.
 type EditStats struct {
 	TotalSelected  int
 	PrimaryCount   int
@@ -53,7 +53,7 @@ type EditStats struct {
 	LastUpdated    time.Time
 }
 
-// NewIsolatedInterestEditor создает новый редактор изолированных интересов
+// NewIsolatedInterestEditor создает новый редактор изолированных интересов.
 func NewIsolatedInterestEditor(
 	service *core.BotService,
 	interestService *core.InterestService,
@@ -72,7 +72,7 @@ func NewIsolatedInterestEditor(
 	}
 }
 
-// StartEditSession начинает новую сессию редактирования
+// StartEditSession начинает новую сессию редактирования.
 func (e *IsolatedInterestEditor) StartEditSession(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	e.service.LoggingService.Telegram().InfoWithContext(
 		"Starting isolated edit session",
@@ -113,6 +113,7 @@ func (e *IsolatedInterestEditor) StartEditSession(callback *tgbotapi.CallbackQue
 		"StartEditSession",
 		map[string]interface{}{"userID": user.ID, "cacheKey": cacheKey},
 	)
+
 	err = e.cache.Set(context.Background(), cacheKey, session, 30*time.Minute)
 	if err != nil {
 		e.service.LoggingService.Cache().WarnWithContext(
@@ -138,7 +139,7 @@ func (e *IsolatedInterestEditor) StartEditSession(callback *tgbotapi.CallbackQue
 	return e.ShowEditMainMenu(callback, user, session)
 }
 
-// showEditMainMenu показывает главное меню редактирования
+// showEditMainMenu показывает главное меню редактирования.
 func (e *IsolatedInterestEditor) ShowEditMainMenu(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
 	// Получаем статистику
 	stats := e.calculateEditStats(session)
@@ -163,10 +164,11 @@ func (e *IsolatedInterestEditor) ShowEditMainMenu(callback *tgbotapi.CallbackQue
 	)
 
 	_, err := e.bot.Request(editMsg)
+
 	return err
 }
 
-// showEditCategoriesMenu показывает меню категорий для редактирования
+// showEditCategoriesMenu показывает меню категорий для редактирования.
 func (e *IsolatedInterestEditor) ShowEditCategoriesMenu(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
 	// Получаем категории с индикаторами прогресса
 	categories, err := e.interestService.GetInterestCategories()
@@ -191,10 +193,11 @@ func (e *IsolatedInterestEditor) ShowEditCategoriesMenu(callback *tgbotapi.Callb
 	)
 
 	_, err = e.bot.Request(editMsg)
+
 	return err
 }
 
-// showEditCategoryInterests показывает интересы в категории для редактирования
+// showEditCategoryInterests показывает интересы в категории для редактирования.
 func (e *IsolatedInterestEditor) ShowEditCategoryInterests(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession, categoryKey string) error {
 	// Обновляем текущую категорию в сессии
 	session.CurrentCategory = categoryKey
@@ -233,10 +236,11 @@ func (e *IsolatedInterestEditor) ShowEditCategoryInterests(callback *tgbotapi.Ca
 	)
 
 	_, err = e.bot.Request(editMsg)
+
 	return err
 }
 
-// ShowEditPrimaryInterests показывает основные интересы для редактирования
+// ShowEditPrimaryInterests показывает основные интересы для редактирования.
 func (e *IsolatedInterestEditor) ShowEditPrimaryInterests(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
 	e.service.LoggingService.Telegram().DebugWithContext(
 		"ShowEditPrimaryInterests called",
@@ -258,6 +262,7 @@ func (e *IsolatedInterestEditor) ShowEditPrimaryInterests(callback *tgbotapi.Cal
 			"ShowEditPrimaryInterests",
 			map[string]interface{}{"userID": user.ID, "error": err.Error()},
 		)
+
 		return e.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "GetUserInterestSelections")
 	}
 
@@ -285,12 +290,14 @@ func (e *IsolatedInterestEditor) ShowEditPrimaryInterests(callback *tgbotapi.Cal
 	if recommendedPrimary < config.MinPrimaryInterests {
 		recommendedPrimary = config.MinPrimaryInterests
 	}
+
 	if recommendedPrimary > config.MaxPrimaryInterests {
 		recommendedPrimary = config.MaxPrimaryInterests
 	}
 
 	// Подсчитываем уже выбранные основные интересы
 	selectedPrimaryCount := 0
+
 	for _, selection := range selections {
 		if selection.IsPrimary {
 			selectedPrimaryCount++
@@ -318,10 +325,11 @@ func (e *IsolatedInterestEditor) ShowEditPrimaryInterests(callback *tgbotapi.Cal
 	)
 
 	_, err = e.bot.Request(editMsg)
+
 	return err
 }
 
-// toggleInterestSelection переключает выбор интереса
+// toggleInterestSelection переключает выбор интереса.
 func (e *IsolatedInterestEditor) ToggleInterestSelection(callback *tgbotapi.CallbackQuery, user *models.User, interestID int) error {
 	// Получаем сессию
 	session, err := e.GetEditSession(user.ID)
@@ -341,6 +349,7 @@ func (e *IsolatedInterestEditor) ToggleInterestSelection(callback *tgbotapi.Call
 	for _, selection := range session.CurrentSelections {
 		if selection.InterestID == interestID {
 			isSelected = true
+
 			break
 		}
 	}
@@ -380,7 +389,7 @@ func (e *IsolatedInterestEditor) ToggleInterestSelection(callback *tgbotapi.Call
 	return e.ShowEditCategoryInterests(callback, user, session, session.CurrentCategory)
 }
 
-// showChangesPreview показывает предварительный просмотр изменений
+// showChangesPreview показывает предварительный просмотр изменений.
 func (e *IsolatedInterestEditor) ShowChangesPreview(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
 	// Создаем текст с изменениями
 	text := e.formatChangesPreview(session, user.InterfaceLanguageCode)
@@ -396,10 +405,11 @@ func (e *IsolatedInterestEditor) ShowChangesPreview(callback *tgbotapi.CallbackQ
 	)
 
 	_, err := e.bot.Request(editMsg)
+
 	return err
 }
 
-// saveChanges сохраняет изменения
+// saveChanges сохраняет изменения.
 func (e *IsolatedInterestEditor) SaveChanges(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
 	e.service.LoggingService.Database().InfoWithContext(
 		"Saving changes for user",
@@ -424,6 +434,7 @@ func (e *IsolatedInterestEditor) SaveChanges(callback *tgbotapi.CallbackQuery, u
 			"SaveChanges",
 			map[string]interface{}{"userID": user.ID, "error": err.Error()},
 		)
+
 		return e.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "ValidateSelections")
 	}
 
@@ -436,6 +447,7 @@ func (e *IsolatedInterestEditor) SaveChanges(callback *tgbotapi.CallbackQuery, u
 		"SaveChanges",
 		map[string]interface{}{"userID": user.ID, "selectionsCount": len(session.CurrentSelections)},
 	)
+
 	err := e.interestService.BatchUpdateUserInterests(user.ID, session.CurrentSelections)
 	if err != nil {
 		e.service.LoggingService.Database().ErrorWithContext(
@@ -446,6 +458,7 @@ func (e *IsolatedInterestEditor) SaveChanges(callback *tgbotapi.CallbackQuery, u
 			"SaveChanges",
 			map[string]interface{}{"userID": user.ID, "selectionsCount": len(session.CurrentSelections), "error": err.Error()},
 		)
+
 		return e.errorHandler.HandleTelegramError(err, callback.Message.Chat.ID, int64(user.ID), "BatchUpdateUserInterests")
 	}
 
@@ -477,10 +490,11 @@ func (e *IsolatedInterestEditor) SaveChanges(callback *tgbotapi.CallbackQuery, u
 	)
 
 	_, err = e.bot.Request(editMsg)
+
 	return err
 }
 
-// cancelEdit отменяет редактирование
+// cancelEdit отменяет редактирование.
 func (e *IsolatedInterestEditor) CancelEdit(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	e.service.LoggingService.Telegram().InfoWithContext(
 		"Canceling edit for user",
@@ -493,6 +507,7 @@ func (e *IsolatedInterestEditor) CancelEdit(callback *tgbotapi.CallbackQuery, us
 
 	// Получаем сессию для подсчета изменений
 	session, err := e.GetEditSession(user.ID)
+
 	changesCount := 0
 	if err == nil {
 		changesCount = len(session.Changes)
@@ -525,6 +540,7 @@ func (e *IsolatedInterestEditor) CancelEdit(callback *tgbotapi.CallbackQuery, us
 	)
 
 	_, err = e.bot.Request(editMsg)
+
 	return err
 }
 
@@ -539,7 +555,9 @@ func (e *IsolatedInterestEditor) GetEditSession(userID int) (*EditSession, error
 		"GetEditSession",
 		map[string]interface{}{"userID": userID},
 	)
+
 	var session EditSession
+
 	cacheKey := fmt.Sprintf("edit_session_%d", userID)
 	e.service.LoggingService.Cache().DebugWithContext(
 		"Cache key generated",
@@ -560,6 +578,7 @@ func (e *IsolatedInterestEditor) GetEditSession(userID int) (*EditSession, error
 			"GetEditSession",
 			map[string]interface{}{"userID": userID, "cacheKey": cacheKey, "error": err.Error()},
 		)
+
 		return nil, fmt.Errorf("session not found: %w", err)
 	}
 
@@ -571,6 +590,7 @@ func (e *IsolatedInterestEditor) GetEditSession(userID int) (*EditSession, error
 		"GetEditSession",
 		map[string]interface{}{"userID": userID, "selectionsCount": len(session.CurrentSelections)},
 	)
+
 	return &session, nil
 }
 
@@ -587,6 +607,7 @@ func (e *IsolatedInterestEditor) removeSelectionFromSession(session *EditSession
 	for i, selection := range session.CurrentSelections {
 		if selection.InterestID == interestID {
 			session.CurrentSelections = append(session.CurrentSelections[:i], session.CurrentSelections[i+1:]...)
+
 			break
 		}
 	}
@@ -611,6 +632,7 @@ func (e *IsolatedInterestEditor) calculateEditStats(session *EditSession) EditSt
 	}
 
 	stats.ChangesCount = len(session.Changes)
+
 	return stats
 }
 
@@ -629,6 +651,7 @@ func (e *IsolatedInterestEditor) formatChangesPreview(session *EditSession, lang
 
 	if len(session.Changes) == 0 {
 		text += e.service.Localizer.Get(lang, "no_changes_made")
+
 		return text
 	}
 
@@ -650,6 +673,7 @@ func (e *IsolatedInterestEditor) formatChangesPreview(session *EditSession, lang
 		for _, change := range added {
 			text += fmt.Sprintf("• %s\n", change.InterestName)
 		}
+
 		text += "\n"
 	}
 
@@ -658,6 +682,7 @@ func (e *IsolatedInterestEditor) formatChangesPreview(session *EditSession, lang
 		for _, change := range removed {
 			text += fmt.Sprintf("• %s\n", change.InterestName)
 		}
+
 		text += "\n"
 	}
 
@@ -684,18 +709,21 @@ func (e *IsolatedInterestEditor) validateSelections(session *EditSession) error 
 	return nil
 }
 
-// formatChangesSummary форматирует краткое описание изменений
+// formatChangesSummary форматирует краткое описание изменений.
 func (e *IsolatedInterestEditor) formatChangesSummary(session *EditSession, lang string) string {
 	if len(session.Changes) == 0 {
 		return "\n• Изменений не было"
 	}
 
-	var addedInterests []string
-	var removedInterests []string
-	var primarySet []string
-	var primaryUnset []string
+	var (
+		addedInterests   []string
+		removedInterests []string
+		primarySet       []string
+		primaryUnset     []string
+	)
 
 	// Группируем изменения по типам
+
 	for _, change := range session.Changes {
 		interestName := e.service.Localizer.Get(lang, "interest_"+change.InterestName)
 
@@ -715,6 +743,7 @@ func (e *IsolatedInterestEditor) formatChangesSummary(session *EditSession, lang
 
 	if len(addedInterests) > 0 {
 		summary.WriteString("\n\n➕ Добавлены:")
+
 		for _, interest := range addedInterests {
 			summary.WriteString("\n" + interest)
 		}
@@ -722,6 +751,7 @@ func (e *IsolatedInterestEditor) formatChangesSummary(session *EditSession, lang
 
 	if len(removedInterests) > 0 {
 		summary.WriteString("\n\n➖ Удалены:")
+
 		for _, interest := range removedInterests {
 			summary.WriteString("\n" + interest)
 		}
@@ -729,6 +759,7 @@ func (e *IsolatedInterestEditor) formatChangesSummary(session *EditSession, lang
 
 	if len(primarySet) > 0 {
 		summary.WriteString("\n\n⭐ Сделаны основными:")
+
 		for _, interest := range primarySet {
 			summary.WriteString("\n" + interest)
 		}
@@ -736,6 +767,7 @@ func (e *IsolatedInterestEditor) formatChangesSummary(session *EditSession, lang
 
 	if len(primaryUnset) > 0 {
 		summary.WriteString("\n\n☐ Убраны из основных:")
+
 		for _, interest := range primaryUnset {
 			summary.WriteString("\n" + interest)
 		}
@@ -744,7 +776,7 @@ func (e *IsolatedInterestEditor) formatChangesSummary(session *EditSession, lang
 	return summary.String()
 }
 
-// togglePrimaryInterest переключает статус основного интереса
+// togglePrimaryInterest переключает статус основного интереса.
 func (e *IsolatedInterestEditor) TogglePrimaryInterest(callback *tgbotapi.CallbackQuery, user *models.User, interestID int) error {
 	session, err := e.GetEditSession(user.ID)
 	if err != nil {
@@ -756,6 +788,7 @@ func (e *IsolatedInterestEditor) TogglePrimaryInterest(callback *tgbotapi.Callba
 		if selection.InterestID == interestID {
 			// Проверяем лимиты перед переключением
 			currentPrimaryCount := 0
+
 			for _, sel := range session.CurrentSelections {
 				if sel.IsPrimary {
 					currentPrimaryCount++
@@ -779,6 +812,7 @@ func (e *IsolatedInterestEditor) TogglePrimaryInterest(callback *tgbotapi.Callba
 				if recommendedPrimary < config.MinPrimaryInterests {
 					recommendedPrimary = config.MinPrimaryInterests
 				}
+
 				if recommendedPrimary > config.MaxPrimaryInterests {
 					recommendedPrimary = config.MaxPrimaryInterests
 				}
@@ -799,6 +833,7 @@ func (e *IsolatedInterestEditor) TogglePrimaryInterest(callback *tgbotapi.Callba
 						keyboard,
 					)
 					_, err = e.bot.Request(editMsg)
+
 					return err
 				}
 			}
@@ -834,7 +869,7 @@ func (e *IsolatedInterestEditor) TogglePrimaryInterest(callback *tgbotapi.Callba
 	return e.showEditPrimaryInterests(callback, user, session)
 }
 
-// showEditPrimaryInterests показывает интерфейс редактирования основных интересов
+// showEditPrimaryInterests показывает интерфейс редактирования основных интересов.
 func (e *IsolatedInterestEditor) showEditPrimaryInterests(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
 	// Создаем текст с хлебными крошками
 	breadcrumb := e.service.Localizer.Get(user.InterfaceLanguageCode, "edit_interests_breadcrumb_primary")
@@ -853,10 +888,11 @@ func (e *IsolatedInterestEditor) showEditPrimaryInterests(callback *tgbotapi.Cal
 	)
 
 	_, err := e.bot.Request(editMsg)
+
 	return err
 }
 
-// massSelectCategory выбирает все интересы в категории
+// massSelectCategory выбирает все интересы в категории.
 func (e *IsolatedInterestEditor) MassSelectCategory(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession, categoryKey string) error {
 	// Получаем все интересы в категории
 	interests, err := e.interestService.GetInterestsByCategoryKey(categoryKey)
@@ -897,7 +933,7 @@ func (e *IsolatedInterestEditor) MassSelectCategory(callback *tgbotapi.CallbackQ
 	return e.ShowEditCategoryInterests(callback, user, session, categoryKey)
 }
 
-// massClearCategory очищает все интересы в категории
+// massClearCategory очищает все интересы в категории.
 func (e *IsolatedInterestEditor) MassClearCategory(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession, categoryKey string) error {
 	// Получаем все интересы в категории
 	interests, err := e.interestService.GetInterestsByCategoryKey(categoryKey)
@@ -913,6 +949,7 @@ func (e *IsolatedInterestEditor) MassClearCategory(callback *tgbotapi.CallbackQu
 
 	// Удаляем все интересы из этой категории
 	var newSelections []models.InterestSelection
+
 	for _, selection := range session.CurrentSelections {
 		if !categoryInterestIDs[selection.InterestID] {
 			newSelections = append(newSelections, selection)
@@ -940,7 +977,7 @@ func (e *IsolatedInterestEditor) MassClearCategory(callback *tgbotapi.CallbackQu
 	return e.ShowEditCategoryInterests(callback, user, session, categoryKey)
 }
 
-// undoLastChange отменяет последнее изменение
+// undoLastChange отменяет последнее изменение.
 func (e *IsolatedInterestEditor) UndoLastChange(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
 	if len(session.Changes) == 0 {
 		// Нет изменений для отмены
@@ -968,6 +1005,7 @@ func (e *IsolatedInterestEditor) UndoLastChange(callback *tgbotapi.CallbackQuery
 		for i, selection := range session.CurrentSelections {
 			if selection.InterestID == lastChange.InterestID {
 				session.CurrentSelections[i].IsPrimary = false
+
 				break
 			}
 		}
@@ -976,6 +1014,7 @@ func (e *IsolatedInterestEditor) UndoLastChange(callback *tgbotapi.CallbackQuery
 		for i, selection := range session.CurrentSelections {
 			if selection.InterestID == lastChange.InterestID {
 				session.CurrentSelections[i].IsPrimary = true
+
 				break
 			}
 		}
@@ -991,7 +1030,7 @@ func (e *IsolatedInterestEditor) UndoLastChange(callback *tgbotapi.CallbackQuery
 	return e.ShowEditMainMenu(callback, user, session)
 }
 
-// showEditStatistics показывает статистику редактирования
+// showEditStatistics показывает статистику редактирования.
 func (e *IsolatedInterestEditor) ShowEditStatistics(callback *tgbotapi.CallbackQuery, user *models.User, session *EditSession) error {
 	stats := e.calculateEditStats(session)
 
@@ -1009,10 +1048,11 @@ func (e *IsolatedInterestEditor) ShowEditStatistics(callback *tgbotapi.CallbackQ
 	)
 
 	_, err := e.bot.Request(editMsg)
+
 	return err
 }
 
-// formatDetailedStatistics форматирует детальную статистику
+// formatDetailedStatistics форматирует детальную статистику.
 func (e *IsolatedInterestEditor) formatDetailedStatistics(stats EditStats, session *EditSession, lang string) string {
 	text := e.service.Localizer.Get(lang, "edit_interests_detailed_statistics") + "\n\n"
 
@@ -1035,7 +1075,7 @@ func (e *IsolatedInterestEditor) formatDetailedStatistics(stats EditStats, sessi
 	return text
 }
 
-// createStatisticsKeyboard создает клавиатуру для статистики
+// createStatisticsKeyboard создает клавиатуру для статистики.
 func (e *IsolatedInterestEditor) createStatisticsKeyboard(interfaceLang string) tgbotapi.InlineKeyboardMarkup {
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
 

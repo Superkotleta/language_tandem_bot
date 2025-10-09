@@ -6,7 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// createDayTypeSelectionKeyboard создает клавиатуру выбора типа дней
+// createDayTypeSelectionKeyboard создает клавиатуру выбора типа дней.
 func (ah *AvailabilityHandlerImpl) createDayTypeSelectionKeyboard(lang string) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
@@ -36,9 +36,10 @@ func (ah *AvailabilityHandlerImpl) createDayTypeSelectionKeyboard(lang string) t
 	)
 }
 
-// createSpecificDaysSelectionKeyboard создает клавиатуру выбора конкретных дней
+// createSpecificDaysSelectionKeyboard создает клавиатуру выбора конкретных дней.
 func (ah *AvailabilityHandlerImpl) createSpecificDaysSelectionKeyboard(lang string, selectedDays []string) tgbotapi.InlineKeyboardMarkup {
 	days := []string{"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+
 	var rows [][]tgbotapi.InlineKeyboardButton
 
 	// Создаем кнопки для каждого дня (2 в ряд)
@@ -48,6 +49,7 @@ func (ah *AvailabilityHandlerImpl) createSpecificDaysSelectionKeyboard(lang stri
 		// Первая кнопка в ряду
 		day1 := days[i]
 		day1Name := ah.base.service.Localizer.Get(lang, "day_"+day1)
+
 		prefix1 := "☐"
 		if ah.containsDay(selectedDays, day1) {
 			prefix1 = "☑"
@@ -55,13 +57,14 @@ func (ah *AvailabilityHandlerImpl) createSpecificDaysSelectionKeyboard(lang stri
 
 		row = append(row, tgbotapi.NewInlineKeyboardButtonData(
 			fmt.Sprintf("%s %s", prefix1, day1Name),
-			fmt.Sprintf("availability_specific_day_%s", day1),
+			"availability_specific_day_"+day1,
 		))
 
 		// Вторая кнопка в ряду (если есть)
 		if i+1 < len(days) {
 			day2 := days[i+1]
 			day2Name := ah.base.service.Localizer.Get(lang, "day_"+day2)
+
 			prefix2 := "☐"
 			if ah.containsDay(selectedDays, day2) {
 				prefix2 = "☑"
@@ -69,7 +72,7 @@ func (ah *AvailabilityHandlerImpl) createSpecificDaysSelectionKeyboard(lang stri
 
 			row = append(row, tgbotapi.NewInlineKeyboardButtonData(
 				fmt.Sprintf("%s %s", prefix2, day2Name),
-				fmt.Sprintf("availability_specific_day_%s", day2),
+				"availability_specific_day_"+day2,
 			))
 		}
 
@@ -87,7 +90,7 @@ func (ah *AvailabilityHandlerImpl) createSpecificDaysSelectionKeyboard(lang stri
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
 }
 
-// createTimeSlotSelectionKeyboard создает клавиатуру выбора временного слота
+// createTimeSlotSelectionKeyboard создает клавиатуру выбора временного слота.
 func (ah *AvailabilityHandlerImpl) createTimeSlotSelectionKeyboard(lang string) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
@@ -117,7 +120,7 @@ func (ah *AvailabilityHandlerImpl) createTimeSlotSelectionKeyboard(lang string) 
 	)
 }
 
-// createActivityTypeSelectionKeyboard создает клавиатуру выбора типа активности
+// createActivityTypeSelectionKeyboard создает клавиатуру выбора типа активности.
 func (ah *AvailabilityHandlerImpl) createActivityTypeSelectionKeyboard(lang string) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
@@ -159,7 +162,7 @@ func (ah *AvailabilityHandlerImpl) createActivityTypeSelectionKeyboard(lang stri
 	)
 }
 
-// createCommunicationStyleSelectionKeyboard создает клавиатуру выбора стиля общения
+// createCommunicationStyleSelectionKeyboard создает клавиатуру выбора стиля общения.
 func (ah *AvailabilityHandlerImpl) createCommunicationStyleSelectionKeyboard(lang string) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
@@ -195,7 +198,7 @@ func (ah *AvailabilityHandlerImpl) createCommunicationStyleSelectionKeyboard(lan
 	)
 }
 
-// createCommunicationFrequencySelectionKeyboard создает клавиатуру выбора частоты общения
+// createCommunicationFrequencySelectionKeyboard создает клавиатуру выбора частоты общения.
 func (ah *AvailabilityHandlerImpl) createCommunicationFrequencySelectionKeyboard(lang string) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(

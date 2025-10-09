@@ -435,6 +435,7 @@ func TestMessageValidator_ValidateMessage(t *testing.T) {
 
 	// Тест сообщения допустимой длины
 	validMessage := strings.Repeat("a", 4000)
+
 	result = validator.ValidateMessage(123456789, 987654321, validMessage)
 	if result.HasErrors() {
 		t.Errorf("Expected no errors for valid length message, got: %v", result.GetErrors())
@@ -495,6 +496,7 @@ func TestMessageValidator_ValidateCommand(t *testing.T) {
 
 	// Тест слишком длинной команды
 	longCommand := "/" + strings.Repeat("a", 50)
+
 	result = validator.ValidateCommand(123456789, 987654321, longCommand)
 	if !result.HasErrors() {
 		t.Error("Expected validation errors for too long command")
@@ -572,6 +574,7 @@ func TestUserValidator_ValidateUserUpdate(t *testing.T) {
 		InterfaceLanguageCode: "ru",
 		State:                 "idle", // валидное состояние
 	}
+
 	result := validator.ValidateUserUpdate(user)
 	if result.HasErrors() {
 		t.Errorf("Expected no errors, got: %v", result.GetErrors())
@@ -585,6 +588,7 @@ func TestUserValidator_ValidateUserUpdate(t *testing.T) {
 		InterfaceLanguageCode: "invalid", // invalid
 		State:                 "",        // invalid (empty state)
 	}
+
 	result = validator.ValidateUserUpdate(user)
 	if !result.HasErrors() {
 		t.Error("Expected validation errors for invalid update")
@@ -624,6 +628,7 @@ func TestValidationService_ValidateUserUpdateWithErrorHandling(t *testing.T) {
 		InterfaceLanguageCode: "ru",
 		State:                 "idle", // валидное состояние
 	}
+
 	err := validationService.ValidateUserUpdateWithErrorHandling(user, 123456789, 987654321, "TestUserUpdate")
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
@@ -637,6 +642,7 @@ func TestValidationService_ValidateUserUpdateWithErrorHandling(t *testing.T) {
 		InterfaceLanguageCode: "invalid",
 		State:                 "invalid_state", // невалидное состояние
 	}
+
 	err = validationService.ValidateUserUpdateWithErrorHandling(user, 123456789, 987654321, "TestUserUpdate")
 	if err == nil {
 		t.Error("Expected validation error, got nil")
@@ -822,6 +828,7 @@ func TestValidator_ValidateIntEdgeCases(t *testing.T) {
 		if tc.expected && hasErrors {
 			t.Errorf("Expected no errors for value %d with rules %v, got: %v", tc.value, tc.rules, errors)
 		}
+
 		if !tc.expected && !hasErrors {
 			t.Errorf("Expected errors for value %d with rules %v, got none", tc.value, tc.rules)
 		}
@@ -886,6 +893,7 @@ func TestValidator_ValidateFeedbackTextEdgeCases(t *testing.T) {
 
 	// Тест валидного текста отзыва
 	validFeedback := "This is a comprehensive feedback about the language exchange service. It provides detailed information about user experience."
+
 	errors := validator.ValidateFeedbackText(validFeedback)
 	if len(errors) > 0 {
 		t.Errorf("Expected no errors for valid feedback, got: %v", errors)
@@ -893,6 +901,7 @@ func TestValidator_ValidateFeedbackTextEdgeCases(t *testing.T) {
 
 	// Тест слишком короткого отзыва
 	shortFeedback := "Too short"
+
 	errors = validator.ValidateFeedbackText(shortFeedback)
 	if len(errors) == 0 {
 		t.Error("Expected validation errors for too short feedback")
@@ -900,6 +909,7 @@ func TestValidator_ValidateFeedbackTextEdgeCases(t *testing.T) {
 
 	// Тест слишком длинного отзыва
 	longFeedback := strings.Repeat("This is a very long feedback message. ", 100) // ~4000 characters
+
 	errors = validator.ValidateFeedbackText(longFeedback)
 	if len(errors) == 0 {
 		t.Error("Expected validation errors for too long feedback")
