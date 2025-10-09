@@ -1,10 +1,9 @@
 package telegram
 
 import (
-	"time"
-
 	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/logging"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
