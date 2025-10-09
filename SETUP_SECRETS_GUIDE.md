@@ -12,18 +12,21 @@
 ### **🐳 Docker Hub Secrets**
 
 #### **DOCKER_USERNAME**
-```
+
+```shell
 Название: DOCKER_USERNAME
 Значение: ваш-dockerhub-username
 ```
 
 #### **DOCKER_TOKEN**
-```
+
+```shell
 Название: DOCKER_TOKEN
 Значение: ваш-dockerhub-token
 ```
 
 **Как получить Docker Hub токен:**
+
 1. Зайдите на [hub.docker.com](https://hub.docker.com)
 2. Войдите в аккаунт
 3. Settings → Security → New Access Token
@@ -36,19 +39,22 @@
 ### **🖥️ Production Server Secrets**
 
 #### **SERVER_HOST**
-```
+
+```shell
 Название: SERVER_HOST
 Значение: your-server-ip-or-domain.com
 ```
 
 #### **SERVER_USER**
-```
+
+```shell
 Название: SERVER_USER
 Значение: root (или ваш-пользователь)
 ```
 
 #### **SERVER_SSH_KEY**
-```
+
+```shell
 Название: SERVER_SSH_KEY
 Значение: -----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
@@ -57,12 +63,14 @@ b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
 ```
 
 #### **SERVER_URL**
-```
+
+```shell
 Название: SERVER_URL
 Значение: https://your-domain.com
 ```
 
 **Как создать SSH ключ:**
+
 ```bash
 # Создайте SSH ключ специально для GitHub Actions
 ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/github_actions
@@ -79,18 +87,21 @@ ssh-copy-id -i ~/.ssh/github_actions.pub user@your-server.com
 ### **📱 Telegram Notifications**
 
 #### **TELEGRAM_BOT_TOKEN**
-```
+
+```shell
 Название: TELEGRAM_BOT_TOKEN
 Значение: 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
 ```
 
 #### **TELEGRAM_CHAT_ID**
-```
+
+```shell
 Название: TELEGRAM_CHAT_ID
 Значение: 123456789
 ```
 
 **Как создать Telegram бота:**
+
 1. Напишите [@BotFather](https://t.me/botfather)
 2. Отправьте `/newbot`
 3. Введите имя бота: `Language Exchange Bot CI`
@@ -98,6 +109,7 @@ ssh-copy-id -i ~/.ssh/github_actions.pub user@your-server.com
 5. Скопируйте токен
 
 **Как получить Chat ID:**
+
 1. Напишите [@userinfobot](https://t.me/userinfobot)
 2. Скопируйте ваш ID
 3. Или добавьте бота в группу и получите ID группы
@@ -107,12 +119,14 @@ ssh-copy-id -i ~/.ssh/github_actions.pub user@your-server.com
 ### **💬 Slack Notifications (опционально)**
 
 #### **SLACK_WEBHOOK_URL**
-```
+
+```shell
 Название: SLACK_WEBHOOK_URL
 Значение: https://hooks.slack.com/services/YOUR_WORKSPACE_ID/YOUR_CHANNEL_ID/YOUR_WEBHOOK_TOKEN
 ```
 
 **Как создать Slack webhook:**
+
 1. Зайдите в [api.slack.com](https://api.slack.com/apps)
 2. Create New App → From scratch
 3. App Name: `Language Exchange Bot`

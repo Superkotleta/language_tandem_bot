@@ -42,6 +42,7 @@ Language Exchange Bot представляет собой микросервис
 | **Server/API** | 41.5% | 20+ | HTTP endpoints |
 
 **Тестовая инфраструктура:**
+
 - SQLite in-memory для database тестов
 - Mock объекты для внешних зависимостей
 - Parallel testing с изоляцией

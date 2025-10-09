@@ -16265,15 +16265,6 @@ func (s *BotService) formatMemberSince(createdAt time.Time, lang string) string 
         return fmt.Sprintf("📅 %s: %s", s.Localizer.Get(lang, "profile_field_member_since"), dateStr)
 }</span>
 
-// getDisplayName возвращает отображаемое имя пользователя.
-func (s *BotService) getDisplayName(user *models.User) string <span class="cov8" title="1">{
-        if user.Username == "madam_di_5" </span><span class="cov8" title="1">{
-                return "Лисёнок 🦊"
-        }</span>
-
-        <span class="cov8" title="1">return user.FirstName</span>
-}
-
 // formatLanguageLevel форматирует уровень языка в читаемый вид.
 func (s *BotService) formatLanguageLevel(level string) string <span class="cov8" title="1">{
         switch level </span>{

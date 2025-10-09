@@ -6,12 +6,13 @@
 
 ### 1. Приложение не запускается
 
-#### Симптомы
+#### Симптомы {#симптомы-1}
+
 - Сервис не стартует
 - Ошибки в логах при запуске
 - Health check не проходит
 
-#### Диагностика
+#### Диагностика {#диагностика-1}
 
 ```bash
 # Проверьте статус сервиса
@@ -26,7 +27,7 @@ sudo journalctl -u language-exchange-bot -f
 
 #### Возможные причины и решения
 
-**1.1. Неверные переменные окружения**
+##### 1.1. Неверные переменные окружения
 
 ```bash
 # Проверьте .env файл
@@ -38,7 +39,7 @@ env | grep -E "(DATABASE|REDIS|TELEGRAM)"
 # Решение: Исправьте .env файл
 ```
 
-**1.2. Проблемы с базой данных**
+##### 1.2. Проблемы с базой данных
 
 ```bash
 # Проверьте подключение к PostgreSQL
@@ -51,7 +52,7 @@ migrate -path services/deploy/migrations -database "$DATABASE_URL" version
 migrate -path services/deploy/migrations -database "$DATABASE_URL" up
 ```
 
-**1.3. Проблемы с Redis**
+##### 1.3. Проблемы с Redis
 
 ```bash
 # Проверьте Redis
@@ -66,12 +67,13 @@ sudo systemctl restart redis
 
 ### 2. Высокое потребление памяти
 
-#### Симптомы
+#### Симптомы {#симптомы-2}
+
 - Медленная работа приложения
 - OOM (Out of Memory) ошибки
 - Высокое использование swap
 
-#### Диагностика
+#### Диагностика {#диагностика-2}
 
 ```bash
 # Проверьте использование памяти
@@ -85,9 +87,9 @@ ps aux --sort=-%mem | head -10
 dmesg | grep -i "killed process"
 ```
 
-#### Решения
+#### Решения {#решения-1}
 
-**2.1. Оптимизация кэша**
+##### 2.1. Оптимизация кэша
 
 ```bash
 # Проверьте размер кэша
@@ -97,7 +99,7 @@ curl -H "Authorization: Bearer $API_TOKEN" http://localhost:8080/api/v1/cache/st
 curl -X POST -H "Authorization: Bearer $API_TOKEN" http://localhost:8080/api/v1/cache/clear
 ```
 
-**2.2. Настройка лимитов памяти**
+##### 2.2. Настройка лимитов памяти
 
 ```bash
 # Увеличьте лимиты в systemd
@@ -111,12 +113,13 @@ MemoryHigh=1.5G
 
 ### 3. Медленные запросы к базе данных
 
-#### Симптомы
+#### Симптомы {#симптомы-3}
+
 - Высокое время ответа API
 - Таймауты запросов
 - Медленная работа бота
 
-#### Диагностика
+#### Диагностика {#диагностика-3}
 
 ```bash
 # Проверьте активные соединения
@@ -129,9 +132,9 @@ sudo -u postgres psql -c "SELECT query, mean_time, calls FROM pg_stat_statements
 sudo -u postgres psql -c "SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read FROM pg_stat_user_indexes ORDER BY idx_scan DESC;"
 ```
 
-#### Решения
+#### Решения {#решения-2}
 
-**3.1. Оптимизация запросов**
+##### 3.1. Оптимизация запросов
 
 ```sql
 -- Добавьте индексы для часто используемых полей
@@ -140,7 +143,7 @@ CREATE INDEX CONCURRENTLY idx_users_state ON users (state);
 CREATE INDEX CONCURRENTLY idx_user_interests_user_id ON user_interests (user_id);
 ```
 
-**3.2. Настройка connection pool**
+##### 3.2. Настройка connection pool
 
 ```bash
 # Увеличьте лимиты соединений в .env
@@ -150,12 +153,13 @@ DATABASE_MAX_IDLE_CONNS=20
 
 ### 4. Проблемы с Redis
 
-#### Симптомы
+#### Симптомы {#симптомы-4}
+
 - Ошибки подключения к Redis
 - Низкий hit ratio кэша
 - Медленная работа кэша
 
-#### Диагностика
+#### Диагностика {#диагностика-4}
 
 ```bash
 # Проверьте статус Redis
@@ -168,9 +172,9 @@ redis-cli info memory
 redis-cli info stats | grep keyspace
 ```
 
-#### Решения
+#### Решения {#решения-3}
 
-**4.1. Настройка памяти Redis**
+##### 4.1. Настройка памяти Redis
 
 ```bash
 # В /etc/redis/redis.conf
@@ -178,7 +182,7 @@ maxmemory 2gb
 maxmemory-policy allkeys-lru
 ```
 
-**4.2. Очистка кэша**
+##### 4.2. Очистка кэша
 
 ```bash
 # Очистите весь кэш
@@ -190,12 +194,13 @@ redis-cli --scan --pattern "user:*" | xargs redis-cli DEL
 
 ### 5. Проблемы с Telegram API
 
-#### Симптомы
+#### Симптомы {#симптомы-5}
+
 - Бот не отвечает на сообщения
 - Ошибки webhook
 - Таймауты при отправке сообщений
 
-#### Диагностика
+#### Диагностика {#диагностика-5}
 
 ```bash
 # Проверьте токен бота
@@ -208,9 +213,9 @@ curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getWebhookInfo"
 sudo journalctl -u language-exchange-bot | grep -i telegram
 ```
 
-#### Решения
+#### Решения {#решения-4}
 
-**5.1. Настройка webhook**
+##### 5.1. Настройка webhook
 
 ```bash
 # Установите webhook
@@ -219,7 +224,7 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
   -d '{"url": "https://yourdomain.com/webhook/telegram", "secret_token": "your_secret"}'
 ```
 
-**5.2. Обработка rate limiting**
+##### 5.2. Обработка rate limiting
 
 ```bash
 # Добавьте задержки в код
@@ -230,12 +235,13 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
 
 ### 1. Проблемы с миграциями
 
-#### Симптомы
+#### Симптомы {#симптомы-6}
+
 - Ошибки при применении миграций
 - Несоответствие схемы базы данных
 - Ошибки при запуске приложения
 
-#### Диагностика
+#### Диагностика {#диагностика-6}
 
 ```bash
 # Проверьте текущую версию миграций
@@ -245,9 +251,9 @@ migrate -path services/deploy/migrations -database "$DATABASE_URL" version
 migrate -path services/deploy/migrations -database "$DATABASE_URL" status
 ```
 
-#### Решения
+#### Решения {#решения-5}
 
-**1.1. Откат миграций**
+##### 1.1. Откат миграций
 
 ```bash
 # Откатите на одну версию назад
@@ -257,7 +263,7 @@ migrate -path services/deploy/migrations -database "$DATABASE_URL" down 1
 migrate -path services/deploy/migrations -database "$DATABASE_URL" down
 ```
 
-**1.2. Принудительное применение**
+##### 1.2. Принудительное применение
 
 ```bash
 # Принудительно установите версию
@@ -266,12 +272,13 @@ migrate -path services/deploy/migrations -database "$DATABASE_URL" force 1
 
 ### 2. Проблемы с кэшем
 
-#### Симптомы
+#### Симптомы {#симптомы-7}
+
 - Низкий hit ratio
 - Медленная работа кэша
 - Ошибки сериализации
 
-#### Диагностика
+#### Диагностика {#диагностика-7}
 
 ```bash
 # Проверьте статистику кэша
@@ -282,9 +289,9 @@ redis-cli info stats
 redis-cli monitor
 ```
 
-#### Решения
+#### Решения {#решения-6}
 
-**2.1. Настройка TTL**
+##### 2.1. Настройка TTL
 
 ```go
 // Увеличьте TTL для статичных данных
@@ -293,7 +300,7 @@ config.LanguagesTTL = 24 * time.Hour
 config.InterestsTTL = 24 * time.Hour
 ```
 
-**2.2. Очистка проблемных ключей**
+##### 2.2. Очистка проблемных ключей
 
 ```bash
 # Найдите проблемные ключи
@@ -305,12 +312,13 @@ redis-cli --scan --pattern "problematic:*" | xargs redis-cli DEL
 
 ### 3. Проблемы с производительностью
 
-#### Симптомы
+#### Симптомы {#симптомы-8}
+
 - Медленные API запросы
 - Высокое использование CPU
 - Таймауты
 
-#### Диагностика
+#### Диагностика {#диагностика-8}
 
 ```bash
 # Профилирование CPU
@@ -323,9 +331,9 @@ go tool pprof http://localhost:8080/debug/pprof/heap
 go tool pprof http://localhost:8080/debug/pprof/goroutine
 ```
 
-#### Решения
+#### Решения {#решения-7}
 
-**3.1. Оптимизация запросов**
+##### 3.1. Оптимизация запросов {#оптимизация-запросов-2}
 
 ```go
 // Используйте batch operations
@@ -336,7 +344,7 @@ db.SetMaxOpenConns(25)
 db.SetMaxIdleConns(10)
 ```
 
-**3.2. Настройка кэша**
+##### 3.2. Настройка кэша
 
 ```go
 // Включите Redis для production

@@ -4,7 +4,7 @@
 
 ## Базовый URL
 
-```
+```shell
 http://localhost:8080/api/v1
 ```
 
@@ -20,14 +20,16 @@ Authorization: Bearer YOUR_API_TOKEN
 
 ### 1. Получение статистики
 
-#### Запрос
+#### Запрос {#запрос-1}
+
 ```bash
 curl -X GET "http://localhost:8080/api/v1/stats" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json"
 ```
 
-#### Ответ
+#### Ответ {#ответ-1}
+
 ```json
 {
   "total_users": 1250,
@@ -48,14 +50,16 @@ curl -X GET "http://localhost:8080/api/v1/stats" \
 
 ### 2. Получение списка пользователей
 
-#### Запрос
+#### Запрос {#запрос-2}
+
 ```bash
 curl -X GET "http://localhost:8080/api/v1/users?page=1&limit=10&status=active" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json"
 ```
 
-#### Ответ
+#### Ответ {#ответ-2}
+
 ```json
 {
   "users": [
@@ -86,14 +90,16 @@ curl -X GET "http://localhost:8080/api/v1/users?page=1&limit=10&status=active" \
 
 ### 3. Получение пользователя по ID
 
-#### Запрос
+#### Запрос {#запрос-3}
+
 ```bash
 curl -X GET "http://localhost:8080/api/v1/users/123" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json"
 ```
 
-#### Ответ
+#### Ответ {#ответ-3}
+
 ```json
 {
   "id": 123,
@@ -125,7 +131,8 @@ curl -X GET "http://localhost:8080/api/v1/users/123" \
 
 ### 4. Обновление пользователя
 
-#### Запрос
+#### Запрос {#запрос-4}
+
 ```bash
 curl -X PUT "http://localhost:8080/api/v1/users/123" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
@@ -137,7 +144,8 @@ curl -X PUT "http://localhost:8080/api/v1/users/123" \
   }'
 ```
 
-#### Ответ
+#### Ответ {#ответ-4}
+
 ```json
 {
   "success": true,
@@ -162,14 +170,16 @@ curl -X PUT "http://localhost:8080/api/v1/users/123" \
 
 ### 5. Получение языков
 
-#### Запрос
+#### Запрос {#запрос-5}
+
 ```bash
 curl -X GET "http://localhost:8080/api/v1/languages" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json"
 ```
 
-#### Ответ
+#### Ответ {#ответ-5}
+
 ```json
 {
   "languages": [
@@ -195,14 +205,16 @@ curl -X GET "http://localhost:8080/api/v1/languages" \
 
 ### 6. Получение интересов
 
-#### Запрос
+#### Запрос {#запрос-6}
+
 ```bash
 curl -X GET "http://localhost:8080/api/v1/interests" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json"
 ```
 
-#### Ответ
+#### Ответ {#ответ-6}
+
 ```json
 {
   "interests": [
@@ -228,14 +240,16 @@ curl -X GET "http://localhost:8080/api/v1/interests" \
 
 ### 7. Получение отзывов
 
-#### Запрос
+#### Запрос {#запрос-7}
+
 ```bash
 curl -X GET "http://localhost:8080/api/v1/feedback?page=1&limit=10&is_processed=false" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json"
 ```
 
-#### Ответ
+#### Ответ {#ответ-7}
+
 ```json
 {
   "feedback": [
@@ -259,7 +273,8 @@ curl -X GET "http://localhost:8080/api/v1/feedback?page=1&limit=10&is_processed=
 
 ### 8. Обработка отзыва
 
-#### Запрос
+#### Запрос {#запрос-8}
+
 ```bash
 curl -X PUT "http://localhost:8080/api/v1/feedback/1/process" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
@@ -270,7 +285,8 @@ curl -X PUT "http://localhost:8080/api/v1/feedback/1/process" \
   }'
 ```
 
-#### Ответ
+#### Ответ {#ответ-8}
+
 ```json
 {
   "success": true,
@@ -280,14 +296,16 @@ curl -X PUT "http://localhost:8080/api/v1/feedback/1/process" \
 
 ### 9. Получение кэш статистики
 
-#### Запрос
+#### Запрос {#запрос-9}
+
 ```bash
 curl -X GET "http://localhost:8080/api/v1/cache/stats" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json"
 ```
 
-#### Ответ
+#### Ответ {#ответ-9}
+
 ```json
 {
   "cache_stats": {
@@ -310,14 +328,16 @@ curl -X GET "http://localhost:8080/api/v1/cache/stats" \
 
 ### 10. Очистка кэша
 
-#### Запрос
+#### Запрос {#запрос-10}
+
 ```bash
 curl -X POST "http://localhost:8080/api/v1/cache/clear" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json"
 ```
 
-#### Ответ
+#### Ответ {#ответ-10}
+
 ```json
 {
   "success": true,
@@ -328,6 +348,7 @@ curl -X POST "http://localhost:8080/api/v1/cache/clear" \
 ## Коды ошибок
 
 ### 400 Bad Request
+
 ```json
 {
   "error": "Invalid request parameters",
@@ -336,6 +357,7 @@ curl -X POST "http://localhost:8080/api/v1/cache/clear" \
 ```
 
 ### 401 Unauthorized
+
 ```json
 {
   "error": "Unauthorized",
@@ -344,6 +366,7 @@ curl -X POST "http://localhost:8080/api/v1/cache/clear" \
 ```
 
 ### 404 Not Found
+
 ```json
 {
   "error": "Not Found",
@@ -352,6 +375,7 @@ curl -X POST "http://localhost:8080/api/v1/cache/clear" \
 ```
 
 ### 500 Internal Server Error
+
 ```json
 {
   "error": "Internal Server Error",
@@ -381,7 +405,8 @@ API имеет ограничения по количеству запросов
 
 ### Telegram Webhook
 
-#### Запрос
+#### Запрос {#запрос-11}
+
 ```bash
 curl -X POST "http://localhost:8080/webhook/telegram" \
   -H "Content-Type: application/json" \
@@ -405,7 +430,8 @@ curl -X POST "http://localhost:8080/webhook/telegram" \
   }'
 ```
 
-#### Ответ
+#### Ответ {#ответ-11}
+
 ```json
 {
   "success": true,
@@ -416,16 +442,19 @@ curl -X POST "http://localhost:8080/webhook/telegram" \
 ## Тестирование API
 
 ### Health Check
+
 ```bash
 curl -X GET "http://localhost:8080/health"
 ```
 
 ### Metrics
+
 ```bash
 curl -X GET "http://localhost:8080/metrics"
 ```
 
 ### Swagger UI
-```
+
+```shell
 http://localhost:8080/swagger/
 ```

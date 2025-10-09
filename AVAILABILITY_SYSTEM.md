@@ -8,7 +8,7 @@
 
 ### 📁 Структура файлов
 
-```
+```shell
 services/bot/internal/adapters/telegram/handlers/
 ├── availability_handlers.go     # Основная логика обработчиков
 ├── availability_keyboards.go   # Создание клавиатур для UI
@@ -28,6 +28,7 @@ services/bot/internal/models/
 ### 🗄️ База данных
 
 #### Таблица `user_time_availability`
+
 ```sql
 CREATE TABLE user_time_availability (
     id SERIAL PRIMARY KEY,
@@ -40,6 +41,7 @@ CREATE TABLE user_time_availability (
 ```
 
 #### Таблица `friendship_preferences`
+
 ```sql
 CREATE TABLE friendship_preferences (
     id SERIAL PRIMARY KEY,
@@ -99,7 +101,7 @@ CREATE TABLE friendship_preferences (
 
 ### Основной процесс настройки
 
-```
+```shell
 🎯 Выбери интересы → ✅ Готово
     ↓
 ⏰ Настроить доступность → Выбор типа дней
@@ -121,6 +123,7 @@ CREATE TABLE friendship_preferences (
 ## 🌐 Локализация
 
 ### Русский язык (`ru.json`)
+
 ```json
 {
   "time_availability_intro": "⏰ Настройка доступности\n\nДавайте настроим, когда вы обычно свободны для общения на иностранном языке.",
@@ -133,6 +136,7 @@ CREATE TABLE friendship_preferences (
 ```
 
 ### Английский язык (`en.json`)
+
 ```json
 {
   "time_availability_intro": "⏰ Time Availability Setup\n\nLet's set up when you're usually available for language exchange conversations.",

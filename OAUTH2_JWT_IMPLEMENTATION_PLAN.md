@@ -70,7 +70,7 @@ func JWTAuthMiddleware(jwtManager *JWTManager) gin.HandlerFunc {
 
 ## 📁 Структура файлов
 
-```
+```shell
 services/bot/internal/auth/
 ├── jwt_manager.go          # JWT токены
 ├── oauth_provider.go       # OAuth2 провайдеры
@@ -354,7 +354,7 @@ type SecurityConfig struct {
 | **Phase 3** | 1 неделя | RBAC system |
 | **Phase 4** | 1 неделя | Advanced features |
 
-**Total: 4 недели**
+**Total: 4 недели:**
 
 ## 💰 Ресурсы
 
@@ -362,5 +362,3 @@ type SecurityConfig struct {
 - **Security Review**: 0.2 FTE
 - **Testing**: 0.3 FTE
 - **Documentation**: 0.1 FTE
-
-**Total: 1.6 FTE (4 недели)**

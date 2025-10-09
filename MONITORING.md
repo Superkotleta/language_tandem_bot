@@ -21,10 +21,10 @@ func main() {
 
 ### 2. Доступ к дашборду
 
-- **🌐 Главная страница**: http://localhost:8080
-- **📊 Метрики**: http://localhost:8080/metrics  
-- **🚨 Ошибки**: http://localhost:8080/errors
-- **⚠️ Алерты**: http://localhost:8080/alerts
+- **🌐 Главная страница**: <http://localhost:8080>
+- **📊 Метрики**: <http://localhost:8080/metrics>  
+- **🚨 Ошибки**: <http://localhost:8080/errors>
+- **⚠️ Алерты**: <http://localhost:8080/alerts>
 
 ## 📊 Компоненты мониторинга
 
@@ -229,10 +229,10 @@ curl -X POST http://localhost:8080/api/alerts/{alert_id}/resolve
 
 ## 📚 Дополнительные ресурсы
 
-- **📖 Документация Go**: https://golang.org/doc/
-- **🗄️ Redis**: https://redis.io/documentation
-- **📊 Prometheus**: https://prometheus.io/docs/
-- **🚨 Grafana**: https://grafana.com/docs/
+- **📖 Документация Go**: <https://golang.org/doc/>
+- **🗄️ Redis**: <https://redis.io/documentation>
+- **📊 Prometheus**: <https://prometheus.io/docs/>
+- **🚨 Grafana**: <https://grafana.com/docs/>
 
 ---
 

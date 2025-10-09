@@ -74,7 +74,7 @@ Related to #(issue number)
 
 ## 📝 Commit Messages
 <!-- Примеры commit messages для этого PR -->
-```
+```shell
 feat(api): add new user statistics endpoint
 fix(cache): resolve memory leak in Redis client
 docs(readme): update installation instructions

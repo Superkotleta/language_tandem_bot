@@ -84,7 +84,7 @@ const (
 
 ## 📁 Структура файлов
 
-```
+```shell
 services/bot/internal/audit/
 ├── event.go              # Audit event model
 ├── logger.go             # Audit logger interface
@@ -100,18 +100,21 @@ services/bot/internal/audit/
 ### Phase 1: Core Audit Infrastructure (1 неделя)
 
 #### 1.1 Event Model
+
 - [ ] Определение структуры AuditEvent
 - [ ] Валидация событий
 - [ ] Сериализация в JSON
 - [ ] Уникальные ID для событий
 
 #### 1.2 Audit Logger
+
 - [ ] Базовый AuditLogger interface
 - [ ] Синхронное логирование
 - [ ] Асинхронное логирование (queue)
 - [ ] Batch processing для производительности
 
 #### 1.3 Storage Backend
+
 - [ ] PostgreSQL storage для audit events
 - [ ] Индексы для быстрого поиска
 - [ ] Партиционирование по датам
@@ -120,6 +123,7 @@ services/bot/internal/audit/
 ### Phase 2: Event Collection (1 неделя)
 
 #### 2.1 Middleware Integration
+
 ```go
 // internal/middleware/audit_middleware.go
 func AuditMiddleware(auditLogger AuditLogger) gin.HandlerFunc {
@@ -151,6 +155,7 @@ func AuditMiddleware(auditLogger AuditLogger) gin.HandlerFunc {
 ```
 
 #### 2.2 Business Logic Integration
+
 - [ ] User registration/login events
 - [ ] Profile update events
 - [ ] Interest selection events
@@ -158,6 +163,7 @@ func AuditMiddleware(auditLogger AuditLogger) gin.HandlerFunc {
 - [ ] System events
 
 #### 2.3 Security Events
+
 - [ ] Failed login attempts
 - [ ] Rate limiting violations
 - [ ] Unauthorized access attempts
@@ -166,6 +172,7 @@ func AuditMiddleware(auditLogger AuditLogger) gin.HandlerFunc {
 ### Phase 3: Compliance Features (1 неделя)
 
 #### 3.1 Data Retention Policies
+
 ```go
 // internal/audit/retention.go
 type RetentionPolicy struct {
@@ -185,12 +192,14 @@ var DefaultRetentionPolicies = []RetentionPolicy{
 ```
 
 #### 3.2 Data Anonymization
+
 - [ ] PII detection в audit events
 - [ ] Автоматическая анонимизация
 - [ ] Конфигурируемые правила
 - [ ] GDPR compliance
 
 #### 3.3 Export and Reporting
+
 - [ ] Export audit logs в различных форматах
 - [ ] Compliance reports
 - [ ] Security incident reports
@@ -199,12 +208,14 @@ var DefaultRetentionPolicies = []RetentionPolicy{
 ### Phase 4: Advanced Features (1 неделя)
 
 #### 4.1 Real-time Monitoring
+
 - [ ] WebSocket для real-time audit events
 - [ ] Dashboard для мониторинга
 - [ ] Alerts для подозрительной активности
 - [ ] Integration с SIEM системами
 
 #### 4.2 Analytics and Insights
+
 - [ ] User behavior analytics
 - [ ] Security threat detection
 - [ ] Performance impact analysis
@@ -213,6 +224,7 @@ var DefaultRetentionPolicies = []RetentionPolicy{
 ## 🗄️ Database Schema
 
 ### Audit Events Table
+
 ```sql
 CREATE TABLE audit_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -244,6 +256,7 @@ CREATE TABLE audit_events_y2025m01 PARTITION OF audit_events
 ```
 
 ### Audit Configuration Table
+
 ```sql
 CREATE TABLE audit_config (
     id SERIAL PRIMARY KEY,
@@ -260,6 +273,7 @@ CREATE TABLE audit_config (
 ## 🔧 Конфигурация
 
 ### Environment Variables
+
 ```bash
 # Audit Configuration
 AUDIT_ENABLED=true
@@ -281,6 +295,7 @@ AUDIT_ANONYMIZE_PII=true
 ```
 
 ### Config Structure
+
 ```go
 type AuditConfig struct {
     Enabled        bool          `json:"enabled"`
@@ -309,18 +324,21 @@ type SecurityConfig struct {
 ## 🧪 Тестирование
 
 ### Unit Tests
+
 - [ ] Event creation и validation
 - [ ] Logger functionality
 - [ ] Storage operations
 - [ ] Retention policies
 
 ### Integration Tests
+
 - [ ] End-to-end audit flow
 - [ ] Middleware integration
 - [ ] Database operations
 - [ ] Performance testing
 
 ### Compliance Tests
+
 - [ ] GDPR compliance
 - [ ] Data retention
 - [ ] PII anonymization
@@ -329,18 +347,21 @@ type SecurityConfig struct {
 ## 📊 Мониторинг и метрики
 
 ### Audit Metrics
+
 - [ ] Количество audit events в секунду
 - [ ] Размер audit database
 - [ ] Время обработки events
 - [ ] Ошибки в audit logging
 
 ### Compliance Metrics
+
 - [ ] Retention policy compliance
 - [ ] PII detection rate
 - [ ] Export success rate
 - [ ] Security event frequency
 
 ### Performance Metrics
+
 - [ ] Audit logging overhead
 - [ ] Database query performance
 - [ ] Storage utilization
@@ -349,12 +370,14 @@ type SecurityConfig struct {
 ## 🚀 Deployment
 
 ### Production Considerations
+
 - [ ] Dedicated audit database
 - [ ] Backup и recovery procedures
 - [ ] Monitoring и alerting
 - [ ] Compliance reporting
 
 ### Security Considerations
+
 - [ ] Encryption в transit и at rest
 - [ ] Access control для audit data
 - [ ] Tamper-proof storage
@@ -376,7 +399,7 @@ type SecurityConfig struct {
 | **Phase 3** | 1 неделя | Compliance features |
 | **Phase 4** | 1 неделя | Advanced features |
 
-**Total: 4 недели**
+**Total: 4 недели:**
 
 ## 💰 Ресурсы
 
@@ -386,23 +409,26 @@ type SecurityConfig struct {
 - **Testing**: 0.3 FTE
 - **Documentation**: 0.2 FTE
 
-**Total: 2 FTE (4 недели)**
+**Total: 2 FTE (4 недели):**
 
 ## 📋 Compliance Requirements
 
 ### GDPR Compliance
+
 - [ ] Right to be forgotten (data deletion)
 - [ ] Data portability (export user data)
 - [ ] Consent tracking
 - [ ] Data minimization
 
 ### SOX Compliance
+
 - [ ] Financial data access logging
 - [ ] Change tracking
 - [ ] Segregation of duties
 - [ ] Management oversight
 
 ### HIPAA Compliance (если применимо)
+
 - [ ] PHI access logging
 - [ ] Encryption requirements
 - [ ] Access controls

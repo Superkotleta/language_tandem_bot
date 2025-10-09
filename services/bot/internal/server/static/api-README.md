@@ -17,91 +17,117 @@
 ### Основные методы
 
 #### GetUser
+
 ```protobuf
 rpc GetUser(GetUserRequest) returns (GetUserResponse);
 ```
+
 Получить информацию о пользователе по Telegram ID.
 
 **Параметры:**
+
 - `telegram_id` (int64): Telegram ID пользователя
 
 **Ответ:**
+
 - `user` (User): полная информация о пользователе
 
 #### CreateOrUpdateUser
+
 ```protobuf
 rpc CreateOrUpdateUser(CreateOrUpdateUserRequest) returns (CreateOrUpdateUserResponse);
 ```
+
 Создать нового пользователя или обновить существующего.
 
 **Параметры:**
+
 - `user` (User): данные пользователя
 
 #### FindPartners
+
 ```protobuf
 rpc FindPartners(FindPartnersRequest) returns (FindPartnersResponse);
 ```
+
 Найти подходящих партнеров для языкового обмена.
 
 **Параметры:**
+
 - `user_id` (int64): ID пользователя
 - `limit` (int32): максимальное количество результатов
 - `offset` (int32): смещение для пагинации
 
 **Ответ:**
+
 - `partners` ([]User): список подходящих партнеров
 - `total_count` (int32): общее количество найденных партнеров
 
 #### UpdateUserInterests
+
 ```protobuf
 rpc UpdateUserInterests(UpdateUserInterestsRequest) returns (UpdateUserInterestsResponse);
 ```
+
 Обновить интересы пользователя.
 
 #### GetUserStats
+
 ```protobuf
 rpc GetUserStats(GetUserStatsRequest) returns (GetUserStatsResponse);
 ```
+
 Получить статистику по пользователям системы.
 
 ## Interest Service API
 
 Сервис для управления системой интересов, категориями и алгоритмами совместимости.
 
-### Основные методы
+### Основные методы {#основные-методы-1}
 
 #### GetInterests
+
 ```protobuf
 rpc GetInterests(GetInterestsRequest) returns (GetInterestsResponse);
 ```
+
 Получить все доступные интересы.
 
 **Параметры:**
+
 - `language_code` (string): код языка для локализации (опционально)
 
 #### GetInterestsByCategories
+
 ```protobuf
 rpc GetInterestsByCategories(GetInterestsByCategoriesRequest) returns (GetInterestsByCategoriesResponse);
 ```
+
 Получить интересы, сгруппированные по категориям.
 
-#### UpdateUserInterests
+#### UpdateUserInterests {#update-user-interests-2}
+
 ```protobuf
 rpc UpdateUserInterests(UpdateUserInterestsRequest) returns (UpdateUserInterestsResponse);
 ```
+
 Обновить выбор интересов пользователя с указанием приоритета (primary/additional).
 
 #### FindCompatibleInterests
+
 ```protobuf
 rpc FindCompatibleInterests(FindCompatibleInterestsRequest) returns (FindCompatibleInterestsResponse);
 ```
+
 Найти совместимые интересы между двумя пользователями и рассчитать балл совместимости.
 
 **Параметры:**
+
 - `user_id` (int64): ID первого пользователя
 - `partner_interest_ids` ([]int32): интересы второго пользователя
 
 **Ответ:**
+
 - `matches` ([]InterestMatch): детали совпадений интересов
 - `compatibility_score` (int32): общий балл совместимости
 
@@ -109,43 +135,54 @@ rpc FindCompatibleInterests(FindCompatibleInterestsRequest) returns (FindCompati
 
 Сервис для подбора партнеров с учетом языков, интересов, расписания и предпочтений.
 
-### Основные методы
+### Основные методы {#основные-методы-2}
 
-#### FindPartners
+#### FindPartners {#find-partners-2}
+
 ```protobuf
 rpc FindPartners(FindPartnersRequest) returns (FindPartnersResponse);
 ```
+
 Найти подходящих партнеров с учетом всех критериев совместимости.
 
 **Параметры:**
+
 - `criteria` (MatchCriteria): критерии поиска
 - `limit` (int32): максимальное количество результатов
 - `include_details` (bool): включать детали совместимости
 
 #### CreateMatch
+
 ```protobuf
 rpc CreateMatch(CreateMatchRequest) returns (CreateMatchResponse);
 ```
+
 Создать предложение о матче между двумя пользователями.
 
 #### UpdateMatchStatus
+
 ```protobuf
 rpc UpdateMatchStatus(UpdateMatchStatusRequest) returns (UpdateMatchStatusResponse);
 ```
+
 Обновить статус матча (принять/отклонить/завершить).
 
 #### CalculateCompatibility
+
 ```protobuf
 rpc CalculateCompatibility(CalculateCompatibilityRequest) returns (CalculateCompatibilityResponse);
 ```
+
 Рассчитать балл совместимости между двумя пользователями.
 
 **Параметры:**
+
 - `user1_id` (int64): ID первого пользователя
 - `user2_id` (int64): ID второго пользователя
 - `detailed` (bool): возвращать детальную информацию
 
 **Ответ:**
+
 - `score` (int32): балл совместимости (0-100)
 - `details` (MatchDetails): детальная информация о совместимости
 
@@ -153,7 +190,7 @@ rpc CalculateCompatibility(CalculateCompatibilityRequest) returns (CalculateComp
 
 Система использует многофакторный алгоритм для оценки совместимости партнеров:
 
-### Факторы совместимости:
+### Факторы совместимости
 
 1. **Языковая совместимость (30% веса)**
    - Совпадение родного языка одного с изучаемым языком другого
@@ -172,9 +209,9 @@ rpc CalculateCompatibility(CalculateCompatibilityRequest) returns (CalculateComp
    - Совпадение предпочтений по типу общения (текст/голос/видео)
    - Совпадение частоты общения
 
-### Расчет итогового балла:
+### Расчет итогового балла
 
-```
+```text
 compatibility_score = (language_score * 0.3) +
                      (interest_score * 0.4) +
                      (availability_score * 0.15) +
@@ -182,6 +219,7 @@ compatibility_score = (language_score * 0.3) +
 ```
 
 Балл совместимости варьируется от 0 до 100, где:
+
 - 90-100: Отличная совместимость
 - 70-89: Хорошая совместимость
 - 50-69: Приемлемая совместимость
@@ -218,31 +256,40 @@ go run services/matcher/cmd/main.go
 ## Мониторинг и отладка
 
 ### Health Checks
+
 Каждый сервис предоставляет health check эндпоинты:
+
 - `GET /healthz` - проверка здоровья
 - `GET /readyz` - проверка готовности
 
 ### Метрики
+
 Сервисы экспортируют метрики в формате Prometheus:
+
 - `GET /metrics` - метрики производительности
 
 ### Логирование
+
 Все сервисы используют структурированное логирование с уровнями:
+
 - DEBUG, INFO, WARN, ERROR
 
 ## Безопасность
 
 ### Аутентификация
+
 - Внутреннее общение между сервисами использует mTLS
 - API для внешних клиентов требуют JWT токены
 
 ### Авторизация
+
 - Role-Based Access Control (RBAC)
 - Проверка прав доступа на уровне методов
 
 ## Версионирование
 
 API использует семантическое версионирование:
+
 - `v1` - текущая стабильная версия
 - Изменения совместимые назад не ломают существующую функциональность
 - Критические изменения вводятся в новых major версиях

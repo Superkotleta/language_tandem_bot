@@ -74,7 +74,7 @@ type KeyStore interface {
 
 ## 📁 Структура файлов
 
-```
+```shell
 services/bot/internal/security/
 ├── api_key.go           # API key model
 ├── key_store.go         # Key storage interface
@@ -91,12 +91,14 @@ services/bot/internal/security/
 ### Phase 1: Key Management Infrastructure (1 неделя)
 
 #### 1.1 API Key Model
+
 - [ ] Определение структуры APIKey
 - [ ] Генерация безопасных ключей
 - [ ] Хеширование ключей (bcrypt/scrypt)
 - [ ] Валидация ключей
 
 #### 1.2 Key Store Implementation
+
 ```go
 // internal/security/key_store_impl.go
 type PostgreSQLKeyStore struct {
@@ -120,6 +122,7 @@ func (s *PostgreSQLKeyStore) CreateKey(key *APIKey) error {
 ```
 
 #### 1.3 Key Generation
+
 - [ ] Криптографически стойкая генерация
 - [ ] Уникальность ключей
 - [ ] Форматирование ключей (prefix-suffix)
@@ -128,6 +131,7 @@ func (s *PostgreSQLKeyStore) CreateKey(key *APIKey) error {
 ### Phase 2: Rotation Logic (1 неделя)
 
 #### 2.1 Rotation Scheduler
+
 ```go
 // internal/security/rotation_scheduler.go
 type RotationScheduler struct {
@@ -159,12 +163,14 @@ func (s *RotationScheduler) checkAndRotateKeys() {
 ```
 
 #### 2.2 Rotation Process
+
 - [ ] Создание нового ключа
 - [ ] Grace period для старого ключа
 - [ ] Уведомления пользователей
 - [ ] Деактивация старого ключа
 
 #### 2.3 Notification System
+
 ```go
 // internal/security/notifications.go
 type NotificationService struct {
@@ -191,6 +197,7 @@ func (n *NotificationService) NotifyKeyExpiration(key *APIKey, daysLeft int) err
 ### Phase 3: Security Enhancements (1 неделя)
 
 #### 3.1 Key Validation Middleware
+
 ```go
 // internal/middleware/api_key_middleware.go
 func APIKeyMiddleware(keyStore KeyStore) gin.HandlerFunc {
@@ -226,12 +233,14 @@ func APIKeyMiddleware(keyStore KeyStore) gin.HandlerFunc {
 ```
 
 #### 3.2 Permission System
+
 - [ ] Scope-based permissions
 - [ ] Resource-based access control
 - [ ] Rate limiting per key
 - [ ] Audit logging для использования ключей
 
 #### 3.3 Security Monitoring
+
 - [ ] Отслеживание использования ключей
 - [ ] Detection подозрительной активности
 - [ ] Automatic key revocation
@@ -240,6 +249,7 @@ func APIKeyMiddleware(keyStore KeyStore) gin.HandlerFunc {
 ### Phase 4: Advanced Features (1 неделя)
 
 #### 4.1 Key Lifecycle Management
+
 ```go
 // internal/security/lifecycle.go
 type KeyLifecycle struct {
@@ -269,12 +279,14 @@ func (l *KeyLifecycle) GetStatus() string {
 ```
 
 #### 4.2 Bulk Operations
+
 - [ ] Массовая ротация ключей
 - [ ] Bulk key generation
 - [ ] Batch notifications
 - [ ] Bulk key revocation
 
 #### 4.3 Integration Features
+
 - [ ] REST API для управления ключами
 - [ ] CLI tools для администраторов
 - [ ] Webhook notifications
@@ -283,6 +295,7 @@ func (l *KeyLifecycle) GetStatus() string {
 ## 🗄️ Database Schema
 
 ### API Keys Table
+
 ```sql
 CREATE TABLE api_keys (
     id VARCHAR(36) PRIMARY KEY,
@@ -311,6 +324,7 @@ CREATE INDEX idx_api_keys_is_active ON api_keys(is_active);
 ```
 
 ### Key Rotation History
+
 ```sql
 CREATE TABLE api_key_rotations (
     id SERIAL PRIMARY KEY,
@@ -327,6 +341,7 @@ CREATE TABLE api_key_rotations (
 ```
 
 ### Key Usage Logs
+
 ```sql
 CREATE TABLE api_key_usage (
     id SERIAL PRIMARY KEY,
@@ -350,6 +365,7 @@ CREATE TABLE api_key_usage_y2025m01 PARTITION OF api_key_usage
 ## 🔧 Конфигурация
 
 ### Environment Variables
+
 ```bash
 # Key Rotation Configuration
 API_KEY_ROTATION_ENABLED=true
@@ -371,6 +387,7 @@ API_KEY_NOTIFICATION_WEBHOOK_URL=https://hooks.slack.com/services/YOUR_WORKSPACE
 ```
 
 ### Config Structure
+
 ```go
 type KeyRotationConfig struct {
     Enabled           bool          `json:"enabled"`
@@ -399,18 +416,21 @@ type GenerationConfig struct {
 ## 🧪 Тестирование
 
 ### Unit Tests
+
 - [ ] Key generation и validation
 - [ ] Rotation logic
 - [ ] Notification system
 - [ ] Permission checking
 
 ### Integration Tests
+
 - [ ] End-to-end rotation flow
 - [ ] API key validation
 - [ ] Notification delivery
 - [ ] Database operations
 
 ### Security Tests
+
 - [ ] Key uniqueness
 - [ ] Hash security
 - [ ] Permission enforcement
@@ -419,18 +439,21 @@ type GenerationConfig struct {
 ## 📊 Мониторинг и метрики
 
 ### Key Metrics
+
 - [ ] Количество активных ключей
 - [ ] Количество ротаций в день
 - [ ] Время жизни ключей
 - [ ] Использование ключей
 
 ### Security Metrics
+
 - [ ] Неудачные попытки аутентификации
 - [ ] Подозрительная активность
 - [ ] Expired key usage attempts
 - [ ] Unauthorized access attempts
 
 ### Performance Metrics
+
 - [ ] Время генерации ключей
 - [ ] Время валидации ключей
 - [ ] Database query performance
@@ -439,12 +462,14 @@ type GenerationConfig struct {
 ## 🚀 Deployment
 
 ### Production Considerations
+
 - [ ] Secure key storage
 - [ ] Backup и recovery
 - [ ] Monitoring и alerting
 - [ ] Performance optimization
 
 ### Security Considerations
+
 - [ ] Encryption в transit и at rest
 - [ ] Access control для key management
 - [ ] Audit logging
@@ -466,7 +491,7 @@ type GenerationConfig struct {
 | **Phase 3** | 1 неделя | Security enhancements |
 | **Phase 4** | 1 неделя | Advanced features |
 
-**Total: 4 недели**
+**Total: 4 недели:**
 
 ## 💰 Ресурсы
 
@@ -476,29 +501,33 @@ type GenerationConfig struct {
 - **Testing**: 0.3 FTE
 - **Documentation**: 0.2 FTE
 
-**Total: 2 FTE (4 недели)**
+**Total: 2 FTE (4 недели):**
 
 ## 📋 Best Practices
 
 ### Key Generation
+
 - [ ] Использование криптографически стойких генераторов
 - [ ] Достаточная длина ключей (минимум 32 символа)
 - [ ] Уникальность ключей
 - [ ] Случайность генерации
 
 ### Key Storage
+
 - [ ] Хеширование ключей (bcrypt/scrypt)
 - [ ] Шифрование в базе данных
 - [ ] Secure key transmission
 - [ ] Access control
 
 ### Key Rotation
+
 - [ ] Регулярная ротация (90 дней)
 - [ ] Grace period для перехода
 - [ ] Уведомления пользователей
 - [ ] Audit trail
 
 ### Key Monitoring
+
 - [ ] Отслеживание использования
 - [ ] Detection аномалий
 - [ ] Automatic revocation

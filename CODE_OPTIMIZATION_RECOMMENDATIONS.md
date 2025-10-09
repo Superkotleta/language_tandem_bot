@@ -322,15 +322,15 @@ func NewDatabaseError(message string, cause error) *AppError {
 
 ### 🟡 Средний приоритет (3-6 месяцев)
 
-4. **Оптимизация производительности**: Кэширование и database queries
-5. **Мониторинг**: Метрики и alerting
-6. **Документация**: Архитектурная и developer docs
+1. **Оптимизация производительности**: Кэширование и database queries
+2. **Мониторинг**: Метрики и alerting
+3. **Документация**: Архитектурная и developer docs
 
 ### 🟢 Низкий приоритет (6+ месяцев)
 
-7. **Code generation**: Автоматизация boilerplate
-8. **Advanced features**: A/B testing, personalization
-9. **Infrastructure**: Kubernetes, service mesh
+1. **Code generation**: Автоматизация boilerplate
+2. **Advanced features**: A/B testing, personalization
+3. **Infrastructure**: Kubernetes, service mesh
 
 ---
 

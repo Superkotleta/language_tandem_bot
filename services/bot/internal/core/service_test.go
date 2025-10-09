@@ -368,15 +368,6 @@ func TestGetDisplayName(t *testing.T) {
 		assert.Equal(t, "John", result)
 	})
 
-	t.Run("Special user", func(t *testing.T) {
-		user := &models.User{
-			FirstName: "Test",
-			Username:  "madam_di_5",
-		}
-
-		result := service.getDisplayName(user)
-		assert.Equal(t, "Лисёнок 🦊", result)
-	})
 }
 
 func TestGetWelcomeMessage(t *testing.T) {
