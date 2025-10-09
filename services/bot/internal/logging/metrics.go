@@ -19,6 +19,9 @@ const (
 	MetricTypeGauge     MetricType = "gauge"
 	MetricTypeHistogram MetricType = "histogram"
 	MetricTypeTimer     MetricType = "timer"
+
+	StatusSuccess = "success"
+	StatusError   = "error"
 )
 
 // Metric представляет отдельную метрику.
@@ -257,10 +260,10 @@ func (pm *PerformanceMonitor) RecordDatabaseOperation(requestID, operation strin
 
 	labels := map[string]string{
 		"operation": operation,
-		"status":    "success",
+		"status":    StatusSuccess,
 	}
 	if err != nil {
-		labels["status"] = "error"
+		labels["status"] = StatusError
 	}
 
 	pm.collector.RecordTimer("database_operation_duration", duration, labels)
@@ -274,10 +277,10 @@ func (pm *PerformanceMonitor) RecordCacheOperation(requestID, operation string, 
 	labels := map[string]string{
 		"operation": operation,
 		"hit":       strconv.FormatBool(hit),
-		"status":    "success",
+		"status":    StatusSuccess,
 	}
 	if err != nil {
-		labels["status"] = "error"
+		labels["status"] = StatusError
 	}
 
 	pm.collector.RecordTimer("cache_operation_duration", duration, labels)
@@ -290,10 +293,10 @@ func (pm *PerformanceMonitor) RecordTelegramOperation(requestID, operation strin
 
 	labels := map[string]string{
 		"operation": operation,
-		"status":    "success",
+		"status":    StatusSuccess,
 	}
 	if err != nil {
-		labels["status"] = "error"
+		labels["status"] = StatusError
 	}
 
 	pm.collector.RecordTimer("telegram_operation_duration", duration, labels)

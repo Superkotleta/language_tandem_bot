@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"language-exchange-bot/internal/localization"
 )
 
-// Константы для метрик.
-const (
-	// secondsPerMinute - количество секунд в минуте для расчета запросов в секунду.
-	secondsPerMinute = 60.0
-)
+// Cache metrics constants are now defined in localization/constants.go
 
 // MetricsService сервис для сбора метрик кэша.
 type MetricsService struct {
@@ -182,7 +180,7 @@ func (ms *MetricsService) updateCacheEfficiency() {
 	total := stats.Hits + stats.Misses
 
 	if total > 0 {
-		ms.cacheEfficiency = float64(stats.Hits) / float64(total) * PercentageMultiplier
+		ms.cacheEfficiency = float64(stats.Hits) / float64(total) * localization.PercentageMultiplier
 	}
 }
 
@@ -193,7 +191,7 @@ func (ms *MetricsService) getHitRate(stats Stats) float64 {
 		return 0
 	}
 
-	return float64(stats.Hits) / float64(total) * PercentageMultiplier
+	return float64(stats.Hits) / float64(total) * localization.PercentageMultiplier
 }
 
 // getErrorRate возвращает процент ошибок.
@@ -202,7 +200,7 @@ func (ms *MetricsService) getErrorRate() float64 {
 		return 0
 	}
 
-	return float64(ms.errorCount) / float64(ms.totalRequests) * PercentageMultiplier
+	return float64(ms.errorCount) / float64(ms.totalRequests) * localization.PercentageMultiplier
 }
 
 // getRequestsPerSecond возвращает количество запросов в секунду.
@@ -212,7 +210,7 @@ func (ms *MetricsService) getRequestsPerSecond() float64 {
 		return 0
 	}
 
-	return float64(ms.totalRequests) / secondsPerMinute // Предполагаем 1 минуту работы
+	return float64(ms.totalRequests) / localization.SecondsPerMinute // Предполагаем 1 минуту работы
 }
 
 // getMemoryUsagePercent возвращает процент использования памяти.
@@ -221,7 +219,7 @@ func (ms *MetricsService) getMemoryUsagePercent() float64 {
 		return 0
 	}
 
-	return float64(ms.memoryUsage) / float64(ms.maxMemoryUsage) * PercentageMultiplier
+	return float64(ms.memoryUsage) / float64(ms.maxMemoryUsage) * localization.PercentageMultiplier
 }
 
 // getCleanupFrequency возвращает частоту очистки.

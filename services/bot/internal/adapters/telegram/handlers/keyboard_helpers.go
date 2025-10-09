@@ -12,10 +12,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// Константы для символов.
-const (
-	SymbolUnchecked = "☐ "
-)
+// Keyboard symbols are now defined in localization/constants.go
 
 // Константы для callback команд.
 const (
@@ -486,9 +483,9 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 		interest1 := interests[i]
 		interestName1 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest1.KeyName)
 
-		prefix1 := SymbolUnchecked
+		prefix1 := localization.SymbolUnchecked
 		if selectedMap[interest1.ID] {
-			prefix1 = "✅ "
+			prefix1 = localization.SymbolChecked
 		}
 
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
@@ -502,7 +499,7 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 			interest2 := interests[i+1]
 			interestName2 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest2.KeyName)
 
-			prefix2 := SymbolUnchecked
+			prefix2 := localization.SymbolUnchecked
 			if selectedMap[interest2.ID] {
 				prefix2 = "✅ "
 			}
@@ -591,9 +588,9 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 			}
 		}
 
-		prefix1 := SymbolUnchecked
+		prefix1 := localization.SymbolUnchecked
 		if selection1.IsPrimary {
-			prefix1 = "⭐ "
+			prefix1 = localization.SymbolStar
 		}
 
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
@@ -629,7 +626,7 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(selections interface{}
 				}
 			}
 
-			prefix2 := SymbolUnchecked
+			prefix2 := localization.SymbolUnchecked
 			if selection2.IsPrimary {
 				prefix2 = "⭐ "
 			}
@@ -784,9 +781,9 @@ func (kb *KeyboardBuilder) CreateEditPrimaryInterestsKeyboard(selections interfa
 			}
 		}
 
-		prefix1 := SymbolUnchecked
+		prefix1 := localization.SymbolUnchecked
 		if selection1.IsPrimary {
-			prefix1 = "⭐ "
+			prefix1 = localization.SymbolStar
 		}
 
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
@@ -822,7 +819,7 @@ func (kb *KeyboardBuilder) CreateEditPrimaryInterestsKeyboard(selections interfa
 				}
 			}
 
-			prefix2 := SymbolUnchecked
+			prefix2 := localization.SymbolUnchecked
 			if selection2.IsPrimary {
 				prefix2 = "⭐ "
 			}
@@ -874,9 +871,9 @@ func (kb *KeyboardBuilder) CreateEditCategoryInterestsKeyboard(interests []model
 		interest1 := interests[i]
 		interestName1 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest1.KeyName)
 
-		prefix1 := SymbolUnchecked
+		prefix1 := localization.SymbolUnchecked
 		if selectedMap[interest1.ID] {
-			prefix1 = "✅ "
+			prefix1 = localization.SymbolChecked
 		}
 
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
@@ -890,7 +887,7 @@ func (kb *KeyboardBuilder) CreateEditCategoryInterestsKeyboard(interests []model
 			interest2 := interests[i+1]
 			interestName2 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest2.KeyName)
 
-			prefix2 := SymbolUnchecked
+			prefix2 := localization.SymbolUnchecked
 			if selectedMap[interest2.ID] {
 				prefix2 = "✅ "
 			}
@@ -933,7 +930,7 @@ func (kb *KeyboardBuilder) getInterestName(interestID int, interfaceLang string)
 	// Fallback: пытаемся получить из базы данных напрямую
 	interest, err := kb.service.DB.GetInterestByID(interestID)
 	if err != nil {
-		return fmt.Sprintf("Интерес %d", interestID), nil
+		return "", err
 	}
 
 	// Пытаемся получить локализованное название через ключ

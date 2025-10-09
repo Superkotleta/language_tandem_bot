@@ -10,36 +10,42 @@ import (
 	"time"
 )
 
+// Константы для трассировки.
+const (
+	// maxTracingMetrics - максимальное количество метрик для хранения.
+	maxTracingMetrics = 1000
+)
+
 // traceContextKey тип ключа для контекста трейса.
 type traceContextKey string
 
 // RequestTrace представляет трейс запроса.
 type RequestTrace struct {
-	RequestID string                 `json:"request_id"`
-	UserID    int64                  `json:"user_id"`
-	ChatID    int64                  `json:"chat_id"`
+	RequestID string                 `json:"requestId"`
+	UserID    int64                  `json:"userId"`
+	ChatID    int64                  `json:"chatId"`
 	Operation string                 `json:"operation"`
 	Component string                 `json:"component"`
-	StartTime time.Time              `json:"start_time"`
-	EndTime   time.Time              `json:"end_time"`
-	Duration  time.Duration          `json:"duration_ms"`
+	StartTime time.Time              `json:"startTime"`
+	EndTime   time.Time              `json:"endTime"`
+	Duration  time.Duration          `json:"durationMs"`
 	Status    string                 `json:"status"`
 	Error     string                 `json:"error,omitempty"`
 	Metadata  map[string]interface{} `json:"metadata"`
-	SubTraces []*RequestTrace        `json:"sub_traces,omitempty"`
+	SubTraces []*RequestTrace        `json:"subTraces,omitempty"`
 }
 
 // PerformanceMetrics представляет метрики производительности.
 type PerformanceMetrics struct {
 	Operation    string        `json:"operation"`
 	Component    string        `json:"component"`
-	Duration     time.Duration `json:"duration_ms"`
-	MemoryUsage  int64         `json:"memory_bytes"`
-	DatabaseHits int           `json:"database_hits"`
-	CacheHits    int           `json:"cache_hits"`
-	CacheMisses  int           `json:"cache_misses"`
-	ErrorCount   int           `json:"error_count"`
-	SuccessCount int           `json:"success_count"`
+	Duration     time.Duration `json:"durationMs"`
+	MemoryUsage  int64         `json:"memoryBytes"`
+	DatabaseHits int           `json:"databaseHits"`
+	CacheHits    int           `json:"cacheHits"`
+	CacheMisses  int           `json:"cacheMisses"`
+	ErrorCount   int           `json:"errorCount"`
+	SuccessCount int           `json:"successCount"`
 	Timestamp    time.Time     `json:"timestamp"`
 }
 
@@ -217,8 +223,8 @@ func (ts *TracingService) recordMetrics(trace *RequestTrace) {
 	ts.metrics = append(ts.metrics, metrics)
 
 	// Ограничиваем размер массива метрик
-	if len(ts.metrics) > 1000 {
-		ts.metrics = ts.metrics[len(ts.metrics)-1000:]
+	if len(ts.metrics) > maxTracingMetrics {
+		ts.metrics = ts.metrics[len(ts.metrics)-maxTracingMetrics:]
 	}
 }
 

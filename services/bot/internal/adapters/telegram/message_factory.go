@@ -2,11 +2,14 @@ package telegram
 
 import (
 	"language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/logging"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+// Parse modes are now defined in localization/constants.go
 
 // MessageFactory предоставляет гибридный API для отправки Telegram сообщений.
 // Поддерживает как простые методы для частых случаев, так и Builder паттерн для сложных сценариев.
@@ -70,7 +73,7 @@ func (f *MessageFactory) SendWithKeyboard(chatID int64, text string, keyboard in
 // SendHTML отправляет HTML-форматированное сообщение.
 func (f *MessageFactory) SendHTML(chatID int64, htmlText string) error {
 	msg := tgbotapi.NewMessage(chatID, htmlText)
-	msg.ParseMode = "HTML"
+	msg.ParseMode = localization.ParseModeHTML
 
 	return f.sendWithLogging(msg, chatID, 0, "SendHTML", "html")
 }
@@ -78,7 +81,7 @@ func (f *MessageFactory) SendHTML(chatID int64, htmlText string) error {
 // SendHTMLWithKeyboard отправляет HTML-форматированное сообщение с клавиатурой.
 func (f *MessageFactory) SendHTMLWithKeyboard(chatID int64, htmlText string, keyboard interface{}) error {
 	msg := tgbotapi.NewMessage(chatID, htmlText)
-	msg.ParseMode = "HTML"
+	msg.ParseMode = localization.ParseModeHTML
 	msg.ReplyMarkup = keyboard
 
 	return f.sendWithLogging(msg, chatID, 0, "SendHTMLWithKeyboard", "html_with_keyboard")
@@ -102,7 +105,7 @@ func (f *MessageFactory) EditWithKeyboard(chatID int64, messageID int, text stri
 // EditHTML редактирует HTML-форматированное сообщение.
 func (f *MessageFactory) EditHTML(chatID int64, messageID int, htmlText string) error {
 	edit := tgbotapi.NewEditMessageText(chatID, messageID, htmlText)
-	edit.ParseMode = "HTML"
+	edit.ParseMode = localization.ParseModeHTML
 
 	return f.sendWithLogging(edit, chatID, 0, "EditHTML", "edit_html")
 }
@@ -161,7 +164,7 @@ func (b *MessageBuilder) WithParseMode(mode string) *MessageBuilder {
 
 // WithHTML устанавливает HTML режим парсинга.
 func (b *MessageBuilder) WithHTML() *MessageBuilder {
-	b.config.ParseMode = "HTML"
+	b.config.ParseMode = localization.ParseModeHTML
 
 	return b
 }
@@ -240,7 +243,7 @@ func (b *EditMessageBuilder) WithParseMode(mode string) *EditMessageBuilder {
 
 // WithHTML устанавливает HTML режим парсинга для редактирования.
 func (b *EditMessageBuilder) WithHTML() *EditMessageBuilder {
-	b.config.ParseMode = "HTML"
+	b.config.ParseMode = localization.ParseModeHTML
 
 	return b
 }

@@ -6,15 +6,13 @@ import (
 	"strconv"
 
 	"language-exchange-bot/internal/core"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// Константы для символов.
-const (
-	SymbolUnchecked = "☐ "
-)
+// Keyboard symbols are now defined in localization/constants.go
 
 // KeyboardBuilder создает различные типы клавиатур для Telegram.
 type KeyboardBuilder struct {
@@ -101,7 +99,7 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 		interest1 := interests[i]
 		interestName1 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest1.KeyName)
 
-		prefix1 := SymbolUnchecked
+		prefix1 := localization.SymbolUnchecked
 		if selectedMap[interest1.ID] {
 			prefix1 = "✅ "
 		}
@@ -117,7 +115,7 @@ func (kb *KeyboardBuilder) CreateCategoryInterestsKeyboard(interests []models.In
 			interest2 := interests[i+1]
 			interestName2 := kb.service.Localizer.Get(interfaceLang, "interest_"+interest2.KeyName)
 
-			prefix2 := SymbolUnchecked
+			prefix2 := localization.SymbolUnchecked
 			if selectedMap[interest2.ID] {
 				prefix2 = "✅ "
 			}
@@ -175,7 +173,7 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(
 		// Получаем название интереса (упрощенно, в реальности нужно загружать из БД)
 		interestName1 := fmt.Sprintf("Интерес %d", selection1.InterestID)
 
-		prefix1 := SymbolUnchecked
+		prefix1 := localization.SymbolUnchecked
 		if selection1.IsPrimary {
 			prefix1 = "⭐ "
 		}
@@ -191,7 +189,7 @@ func (kb *KeyboardBuilder) CreatePrimaryInterestsKeyboard(
 			selection2 := tempSelections[i+1]
 			interestName2 := fmt.Sprintf("Интерес %d", selection2.InterestID)
 
-			prefix2 := SymbolUnchecked
+			prefix2 := localization.SymbolUnchecked
 			if selection2.IsPrimary {
 				prefix2 = "⭐ "
 			}

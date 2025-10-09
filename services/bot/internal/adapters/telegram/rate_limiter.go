@@ -22,7 +22,7 @@ type RateLimitConfig struct {
 // но обычно гораздо медленнее. При превышении - короткая блокировка для коррекции поведения.
 func DefaultRateLimitConfig() RateLimitConfig {
 	return RateLimitConfig{
-		MaxRequests:     20,                                                 // 20 запросов (мягкий лимит для пиковых нагрузок)
+		MaxRequests:     localization.DefaultRateLimitMaxRequests,           // 20 запросов (мягкий лимит для пиковых нагрузок)
 		WindowDuration:  localization.RateLimitWindowMinutes * time.Minute,  // в минуту
 		BlockDuration:   localization.RateLimitBlockMinutes * time.Minute,   // блокировка на 2 минуты (короткая для мягкого режима)
 		CleanupInterval: localization.RateLimitCleanupMinutes * time.Minute, // очистка каждые 10 минут
@@ -168,7 +168,7 @@ func (rl *RateLimiter) cleanup() {
 	defer rl.mutex.Unlock()
 
 	now := time.Now()
-	cutoff := now.Add(-rl.config.WindowDuration * 2) // Удаляем записи старше 2 окон
+	cutoff := now.Add(-rl.config.WindowDuration * localization.RateLimitCleanupWindowMultiplier) // Удаляем записи старше 2 окон
 
 	for userID, limit := range rl.userLimits {
 		if limit.FirstRequest.Before(cutoff) && now.After(limit.BlockUntil) {

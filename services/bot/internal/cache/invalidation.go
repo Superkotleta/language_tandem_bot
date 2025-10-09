@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"time"
+
+	"language-exchange-bot/internal/localization"
 )
 
 // InvalidationService сервис для управления инвалидацией кэша.
@@ -94,7 +96,7 @@ func (is *InvalidationService) GetInvalidationStats() map[string]interface{} {
 		"cache_hits":   stats.Hits,
 		"cache_misses": stats.Misses,
 		"cache_size":   stats.Size,
-		"hit_rate":     float64(stats.Hits) / float64(stats.Hits+stats.Misses) * PercentageMultiplier,
+		"hit_rate":     float64(stats.Hits) / float64(stats.Hits+stats.Misses) * localization.PercentageMultiplier,
 		"last_cleanup": time.Now().Format(time.RFC3339),
 	}
 }

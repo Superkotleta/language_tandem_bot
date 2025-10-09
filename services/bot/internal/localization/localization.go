@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"language-exchange-bot/internal/errors"
+	errorsPkg "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/logging"
 )
 
@@ -19,7 +19,7 @@ type Localizer struct {
 	db           *sql.DB
 	translations map[string]map[string]string
 	logger       *logging.ComponentLogger
-	errorHandler *errors.ErrorHandler
+	errorHandler *errorsPkg.ErrorHandler
 }
 
 // NewLocalizer создает новый экземпляр Localizer.
@@ -28,7 +28,7 @@ func NewLocalizer(db *sql.DB) *Localizer {
 		db:           db,
 		translations: make(map[string]map[string]string),
 		logger:       logging.NewComponentLogger("localization"),
-		errorHandler: errors.NewErrorHandler(nil),
+		errorHandler: errorsPkg.NewErrorHandler(nil),
 	}
 	localizer.loadTranslations()
 

@@ -7,6 +7,7 @@ import (
 
 	"language-exchange-bot/internal/config"
 	errorsPkg "language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/logging"
 	"language-exchange-bot/internal/models"
 )
@@ -15,10 +16,9 @@ import (
 const (
 	// countPrimaryInterestsQuery - запрос для подсчета основных интересов пользователя.
 	countPrimaryInterestsQuery = `SELECT COUNT(*) FROM user_interest_selections WHERE user_id = $1 AND is_primary = true`
-
-	// primaryInterestMultiplier - множитель для максимального балла основных интересов.
-	primaryInterestMultiplier = 2
 )
+
+// Interest service constants are now defined in localization/constants.go
 
 // InterestService handles user interest management and matching.
 type InterestService struct {
@@ -463,7 +463,7 @@ func (s *InterestService) calculateInterestScore(
 	switch {
 	case user1Maps.PrimaryInterests[interestID] && user2Maps.PrimaryInterests[interestID]:
 		// Оба пользователя считают этот интерес основным
-		return config.PrimaryInterestScore * primaryInterestMultiplier
+		return config.PrimaryInterestScore * localization.PrimaryInterestMultiplier
 	case user1Maps.PrimaryInterests[interestID] || user2Maps.PrimaryInterests[interestID]:
 		// Один из пользователей считает основным
 		return config.PrimaryInterestScore + config.AdditionalInterestScore

@@ -15,11 +15,7 @@ import (
 // CacheCleanupInterval - интервал очистки кэша (используется из centralized constants).
 var CacheCleanupInterval = localization.CacheCleanupMinutes * time.Minute
 
-// Константы для вычислений.
-const (
-	// PercentageMultiplier - множитель для преобразования в проценты.
-	PercentageMultiplier = 100.0
-)
+// PercentageMultiplier constant is now defined in localization/constants.go
 
 // Service основной сервис кэширования.
 type Service struct {
@@ -353,11 +349,11 @@ func (cacheService *Service) String() string {
 	hitRate := float64(0)
 
 	if stats.Hits+stats.Misses > 0 {
-		hitRate = float64(stats.Hits) / float64(stats.Hits+stats.Misses) * PercentageMultiplier
+		hitRate = float64(stats.Hits) / float64(stats.Hits+stats.Misses) * localization.PercentageMultiplier
 	}
 
 	return fmt.Sprintf("Cache Stats: Hits=%d, Misses=%d, HitRate=%.2f%%, Size=%d, Evictions=%d, Memory=%dKB",
-		stats.Hits, stats.Misses, hitRate, stats.Size, stats.Evictions, stats.MemoryUsage/1024)
+		stats.Hits, stats.Misses, hitRate, stats.Size, stats.Evictions, stats.MemoryUsage/localization.BytesInKilobyte)
 }
 
 // updateSize обновляет размер кэша и метрики.
@@ -373,7 +369,7 @@ func (cacheService *Service) updateSize() {
 	}
 
 	// Обновляем использование памяти (приблизительная оценка)
-	cacheService.cacheStats.MemoryUsage = int64(cacheService.cacheStats.Size * 1024) // 1KB на запись
+	cacheService.cacheStats.MemoryUsage = int64(cacheService.cacheStats.Size * localization.BytesInKilobyte) // 1KB на запись
 }
 
 // startCleanup запускает фоновую очистку истекших записей.

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"language-exchange-bot/internal/errors"
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/logging"
 	"language-exchange-bot/internal/models"
 	"time"
@@ -42,10 +43,10 @@ func NewDB(databaseURL string) (*DB, error) {
 	}
 
 	// Настройка connection pool для оптимизации производительности
-	conn.SetMaxOpenConns(25)                  // Максимум 25 открытых соединений
-	conn.SetMaxIdleConns(10)                  // Максимум 10 idle соединений
-	conn.SetConnMaxLifetime(5 * time.Minute)  // Максимальное время жизни соединения
-	conn.SetConnMaxIdleTime(10 * time.Minute) // Максимальное время idle соединения
+	conn.SetMaxOpenConns(localization.DefaultDatabaseMaxOpenConns)                                        // Максимум открытых соединений
+	conn.SetMaxIdleConns(localization.DefaultDatabaseMaxIdleConns)                                        // Максимум idle соединений
+	conn.SetConnMaxLifetime(time.Duration(localization.DefaultDatabaseConnLifetimeMinutes) * time.Minute) // Максимальное время жизни соединения
+	conn.SetConnMaxIdleTime(time.Duration(localization.DefaultDatabaseConnIdleTimeMinutes) * time.Minute) // Максимальное время idle соединения
 
 	if err := conn.PingContext(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
@@ -73,8 +74,8 @@ func NewDBWithConfig(databaseURL string, maxOpenConns, maxIdleConns int) (*DB, e
 	// Настройка connection pool с переданными параметрами
 	conn.SetMaxOpenConns(maxOpenConns)
 	conn.SetMaxIdleConns(maxIdleConns)
-	conn.SetConnMaxLifetime(5 * time.Minute)  // Максимальное время жизни соединения
-	conn.SetConnMaxIdleTime(10 * time.Minute) // Максимальное время idle соединения
+	conn.SetConnMaxLifetime(time.Duration(localization.DefaultDatabaseConnMaxLifetime) * time.Minute) // Максимальное время жизни соединения
+	conn.SetConnMaxIdleTime(time.Duration(localization.DefaultDatabaseConnMaxIdleTime) * time.Minute) // Максимальное время idle соединения
 
 	if err := conn.PingContext(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)

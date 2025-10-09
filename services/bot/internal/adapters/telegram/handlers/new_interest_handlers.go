@@ -562,7 +562,7 @@ func (h *NewInterestHandlerImpl) updatePrimaryInterestsKeyboard(callback *tgbota
 
 // completeProfileSetup завершает настройку профиля.
 //
-//nolint:cyclop,funlen // функция содержит последовательную логику завершения профиля, длина оправдана
+//nolint:funlen // функция содержит последовательную логику завершения профиля, длина оправдана
 func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// New interest handler implementation
 	// Legacy implementation for backward compatibility

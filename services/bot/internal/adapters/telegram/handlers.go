@@ -1060,7 +1060,7 @@ func (h *TelegramHandler) sendRateLimitMessage(userID int64, err error) {
 
 	// Отправляем сообщение пользователю
 	msg := tgbotapi.NewMessage(userID, message)
-	msg.ParseMode = "HTML"
+	msg.ParseMode = localization.ParseModeHTML
 
 	if _, sendErr := h.bot.Send(msg); sendErr != nil {
 		// Логируем ошибку отправки, но не возвращаем её

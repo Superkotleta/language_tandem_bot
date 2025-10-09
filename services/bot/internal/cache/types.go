@@ -40,7 +40,7 @@ func DefaultConfig() *Config {
 		UsersTTL:              localization.UsersTTLMinutes * time.Minute,        // 15 минут - пользователи могут изменяться
 		UserStatsTTL:          time.Hour,                                         // 1 час - статистика пользователей
 		StatsTTL:              localization.StatsTTLMinutes * time.Minute,        // 5 минут - статистика часто обновляется
-		ConfigTTL:             time.Hour * 24,                                    // 24 часа - конфигурация редко изменяется
+		ConfigTTL:             localization.ConfigTTLHours * time.Hour,           // 24 часа - конфигурация редко изменяется
 	}
 }
 

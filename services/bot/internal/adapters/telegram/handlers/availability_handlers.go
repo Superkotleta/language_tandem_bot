@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -199,7 +200,7 @@ func (ah *AvailabilityHandlerImpl) HandleCommunicationFrequencySelection(callbac
 // completeAvailabilitySetup завершает настройку доступности и переводит пользователя в активное состояние.
 func (ah *AvailabilityHandlerImpl) completeAvailabilitySetup(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Обновляем уровень завершения профиля
-	err := ah.base.service.DB.UpdateUserProfileCompletionLevel(user.ID, 100)
+	err := ah.base.service.DB.UpdateUserProfileCompletionLevel(user.ID, localization.ProfileCompletionLevelComplete)
 	if err != nil {
 		return fmt.Errorf("failed to update profile completion level: %w", err)
 	}

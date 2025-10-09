@@ -56,15 +56,18 @@ const (
 	TranslationsTTLMinutes = 30 // How long translations are cached (30 minutes)
 	UsersTTLMinutes        = 15 // How long user data is cached (15 minutes)
 	StatsTTLMinutes        = 5  // How long statistics are cached (5 minutes)
+	ConfigTTLHours         = 24 // How long configuration is cached (24 hours)
 	CacheCleanupMinutes    = 5  // Interval between cache cleanup operations (5 minutes)
 )
 
 // Rate Limiter Constants (in minutes and seconds)
 // Used in: services/bot/internal/adapters/telegram/rate_limiter.go.
 const (
-	RateLimitWindowMinutes  = 1  // Time window for rate limiting (1 minute)
-	RateLimitBlockMinutes   = 2  // How long to block after exceeding limits (2 minutes)
-	RateLimitCleanupMinutes = 10 // Interval for cleaning up expired rate limit entries (10 minutes)
+	RateLimitWindowMinutes           = 1  // Time window for rate limiting (1 minute)
+	RateLimitBlockMinutes            = 2  // How long to block after exceeding limits (2 minutes)
+	RateLimitCleanupMinutes          = 10 // Interval for cleaning up expired rate limit entries (10 minutes)
+	DefaultRateLimitMaxRequests      = 20 // Default maximum requests per window
+	RateLimitCleanupWindowMultiplier = 2  // Multiplier for cleanup window (remove entries older than 2 windows)
 )
 
 // Redis Connection Constants (in seconds)
@@ -77,6 +80,27 @@ const (
 	RedisMaxRetries          = 3   // Maximum number of retry attempts (3 retries)
 	RedisMinRetryBackoffMs   = 8   // Minimum backoff between retries (8 milliseconds)
 	RedisMaxRetryBackoffMs   = 512 // Maximum backoff between retries (512 milliseconds)
+
+	// Additional Redis configuration constants
+	DefaultRedisProtocol   = 3
+	DefaultMinIdleConns    = 5                // Минимум idle соединений
+	DefaultMaxIdleConns    = 10               // Максимум idle соединений
+	DefaultPoolTimeout     = 5 * time.Second  // Таймаут для получения соединения
+	DefaultConnMaxLifetime = 30 * time.Minute // Максимальное время жизни соединения
+	DefaultConnMaxIdleTime = 5 * time.Minute  // Максимальное время idle соединения
+
+	// Redis buffer sizes
+	RedisReadBufferSize  = 16384 // 16KB буфер для чтения
+	RedisWriteBufferSize = 16384 // 16KB буфер для записи
+
+	// Redis health check timeout
+	RedisHealthCheckTimeoutSeconds = 5 // Timeout for Redis health check in seconds
+
+	// Interest editor session timeout
+	InterestEditorSessionTimeoutMinutes = 30 // Timeout for interest editor sessions in minutes
+
+	// Progress display threshold
+	ProgressDisplayThreshold = 3 // Minimum count to show progress indicator
 )
 
 // Circuit Breaker Constants
@@ -119,13 +143,16 @@ const (
 // Keyboard Symbols
 // Used in: services/bot/internal/adapters/telegram/keyboard_helpers.go.
 const (
-	SymbolUnchecked = "☐ "
+	SymbolUnchecked = "☐ " // Unchecked symbol
+	SymbolChecked   = "✅ " // Checked symbol
+	SymbolStar      = "⭐ " // Star symbol
+	SymbolEmpty     = "☐"  // Empty symbol (without space)
 )
 
-// Interest Profile Completion
-// Used in: services/bot/internal/adapters/telegram/handlers/improved_interest_handlers.go.
+// Profile Completion
+// Used in: services/bot/internal/adapters/telegram/handlers/improved_interest_handlers.go, profile_handlers.go, availability_handlers.go.
 const (
-	ImprovedInterestProfileCompletionLevelComplete = 100 // Профиль полностью завершен
+	ProfileCompletionLevelComplete = 100 // Полный уровень завершения профиля
 )
 
 // Callback Data Constants
@@ -146,9 +173,7 @@ const (
 //
 //	services/bot/internal/adapters/telegram/handlers/new_interest_handlers.go,
 //	services/bot/internal/adapters/telegram/handlers/improved_interest_handlers.go
-const (
-	ProfileCompletionLevelComplete = 100 // Профиль полностью завершен
-)
+const ()
 
 // Language Fallback IDs
 // Used in: services/bot/internal/adapters/telegram/handlers/keyboard_helpers.go.
@@ -180,9 +205,21 @@ const (
 	DefaultMinCompatibilityScore   = 5 // Минимальный балл совместимости
 
 	// Interest limits.
-	DefaultMinPrimaryInterests   = 1 // Минимальное количество основных интересов
-	DefaultMaxPrimaryInterests   = 5 // Максимальное количество основных интересов
-	DefaultMaxPrimaryPerCategory = 2 // Максимум основных интересов на категорию
+	DefaultMinPrimaryInterests         = 1  // Минимальное количество основных интересов
+	DefaultMaxPrimaryInterests         = 5  // Максимальное количество основных интересов
+	DefaultMaxPrimaryPerCategory       = 2  // Максимум основных интересов на категорию
+	DefaultMinAdditionalInterests      = 0  // Минимальное количество дополнительных интересов
+	DefaultDatabaseMaxOpenConns        = 25 // Максимальное количество открытых соединений БД
+	DefaultDatabaseMaxIdleConns        = 10 // Максимальное количество idle соединений БД
+	DefaultDatabaseConnMaxLifetime     = 5  // Максимальное время жизни соединения (минуты)
+	DefaultDatabaseConnMaxIdleTime     = 10 // Максимальное время idle соединения (минуты)
+	DefaultDatabaseConnLifetimeMinutes = 5  // Время жизни соединения в минутах
+	DefaultDatabaseConnIdleTimeMinutes = 10 // Время idle соединения в минутах
+
+	// Cache warming timeout
+	CacheWarmingTimeoutSeconds = 30 // Timeout for cache warming in seconds
+
+	// Profile completion
 
 	// Category display orders.
 	EntertainmentDisplayOrder = 1
@@ -196,6 +233,64 @@ const (
 // Used in: services/bot/cmd/bot/main.go.
 const (
 	ForceShutdownTimeoutSeconds = 10 // in seconds
+)
+
+// Interest Service Constants
+// Used in: services/bot/internal/core/interest_service.go.
+const (
+	PrimaryInterestMultiplier = 2 // Multiplier for maximum primary interest score
+)
+
+// Telegram Parse Modes
+// Used in: services/bot/internal/adapters/telegram/message_factory.go, services/bot/internal/adapters/telegram/handlers/message_factory.go.
+const (
+	ParseModeHTML = "HTML" // HTML parse mode for Telegram messages
+)
+
+// Feedback Handler Constants
+// Used in: services/bot/internal/adapters/telegram/handlers/feedback_handlers.go.
+const (
+	ButtonsPerRow      = 2    // Количество кнопок в ряду
+	MaxKeyboardButtons = 10   // Максимальное количество кнопок в клавиатуре
+	MaxFeedbackItems   = 1000 // Максимальное количество отзывов для отображения
+
+	// Feedback types
+	FeedbackTypeActiveLocal  = "active"  // Активные отзывы
+	FeedbackTypeArchiveLocal = "archive" // Архивные отзывы
+	FeedbackTypeAllLocal     = "all"     // Все отзывы
+)
+
+// Interest Handler Message Constants
+// Used in: services/bot/internal/adapters/telegram/handlers/improved_interest_handlers.go.
+const (
+	MessageChooseAtLeastOneInterest    = "choose_at_least_one_interest"
+	MessageMaxPrimaryInterestsReached  = "max_primary_interests_reached"
+	MessageMaxPrimaryInterestsFallback = "✅ Максимальное количество основных интересов выбрано!"
+)
+
+// Interest Editor Action Constants
+// Used in: services/bot/internal/adapters/telegram/handlers/isolated_interest_editor.go.
+const (
+	ActionAdd          = "add"           // Добавить интерес
+	ActionRemove       = "remove"        // Удалить интерес
+	ActionSetPrimary   = "set_primary"   // Сделать основным
+	ActionUnsetPrimary = "unset_primary" // Убрать из основных
+)
+
+// Admin Handler Constants
+// Used in: services/bot/internal/adapters/telegram/handlers/admin_handlers.go.
+const (
+	FeedbackTypeArchive = "archive" // Архивные отзывы
+	FeedbackTypeAll     = "all"     // Все отзывы
+	FeedbackTypeActive  = "active"  // Активные отзывы
+)
+
+// Cache Calculation Constants
+// Used in: services/bot/internal/cache/cache.go, services/bot/internal/cache/metrics.go.
+const (
+	PercentageMultiplier = 100.0 // Множитель для преобразования в проценты
+	SecondsPerMinute     = 60.0  // Количество секунд в минуте
+	BytesInKilobyte      = 1024  // Количество байтов в килобайте
 )
 
 // =============================================================================

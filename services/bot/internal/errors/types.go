@@ -221,6 +221,7 @@ var (
 	// ===== НОВЫЕ ТИПЫ ОШИБОК =====.
 
 	// Ошибки изолированного редактирования.
+	// ErrEditSessionNotFound ошибка при отсутствии сессии редактирования.
 	ErrEditSessionNotFound = NewCustomError(
 		ErrorTypeInternal, "сессия редактирования не найдена", "Сессия редактирования не найдена", "",
 	)
@@ -232,6 +233,7 @@ var (
 	)
 
 	// Ошибки батчинга.
+	// ErrBatchOperationFailed ошибка при выполнении батчевой операции.
 	ErrBatchOperationFailed = NewCustomError(
 		ErrorTypeDatabase, "ошибка батчевой операции", "Ошибка при выполнении батчевой операции", "",
 	)
@@ -243,6 +245,7 @@ var (
 	)
 
 	// Ошибки кеширования.
+	// ErrCacheOperationFailed ошибка операции с кэшем.
 	ErrCacheOperationFailed = NewCustomError(
 		ErrorTypeCache, "ошибка операции с кэшем", "Ошибка при работе с кэшем", "",
 	)
@@ -254,6 +257,7 @@ var (
 	)
 
 	// Ошибки трейсинга.
+	// ErrTraceNotFound ошибка при отсутствии трейса.
 	ErrTraceNotFound = NewCustomError(
 		ErrorTypeInternal, "трейс не найден", "Трейс запроса не найден", "",
 	)
@@ -262,6 +266,7 @@ var (
 	)
 
 	// Ошибки метрик.
+	// ErrMetricCollectionFailed ошибка сбора метрик.
 	ErrMetricCollectionFailed = NewCustomError(
 		ErrorTypeInternal, "ошибка сбора метрик", "Ошибка при сборе метрик производительности", "",
 	)
@@ -270,6 +275,7 @@ var (
 	)
 
 	// Ошибки конфигурации.
+	// ErrConfigNotFound ошибка при отсутствии конфигурации.
 	ErrConfigNotFound = NewCustomError(
 		ErrorTypeInternal, "конфигурация не найдена", "Конфигурация не найдена", "",
 	)
@@ -278,6 +284,7 @@ var (
 	)
 
 	// Ошибки локализации.
+	// ErrLocalizationNotFound ошибка при отсутствии перевода.
 	ErrLocalizationNotFound = NewCustomError(
 		ErrorTypeInternal, "локализация не найдена", "Перевод не найден", "",
 	)

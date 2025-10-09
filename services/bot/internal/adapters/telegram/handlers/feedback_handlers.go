@@ -7,27 +7,13 @@ import (
 	"strings"
 	"time"
 
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// Константы для работы с отзывами.
-const (
-	ButtonsPerRow        = 2    // Количество кнопок в ряду
-	MinFeedbackLength    = 10   // Минимальная длина отзыва
-	MaxFeedbackLength    = 50   // Максимальная длина отзыва для проверки
-	MaxContactInfoLength = 200  // Максимальная длина контактной информации
-	MaxKeyboardButtons   = 10   // Максимальное количество кнопок в клавиатуре
-	MaxFeedbackItems     = 1000 // Максимальное количество отзывов для отображения
-
-	// FeedbackTypeActiveLocal активные отзывы.
-	FeedbackTypeActiveLocal = "active"
-	// FeedbackTypeArchiveLocal архивные отзывы.
-	FeedbackTypeArchiveLocal = "archive"
-	// FeedbackTypeAllLocal все отзывы.
-	FeedbackTypeAllLocal = "all"
-)
+// Feedback handler constants are now defined in localization/constants.go
 
 // FeedbackHandler интерфейс для обработчиков отзывов.
 type FeedbackHandler interface {
@@ -310,7 +296,7 @@ func (fh *FeedbackHandlerImpl) createNavigationKeyboard(currentIndex, totalCount
 	}
 
 	// Кнопка "В обработанные" (только для активных отзывов)
-	if feedbackType == FeedbackTypeActiveLocal {
+	if feedbackType == localization.FeedbackTypeActiveLocal {
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
 			"📦 В обработанные",
 			fmt.Sprintf("archive_feedback_%d", currentIndex),
@@ -318,7 +304,7 @@ func (fh *FeedbackHandlerImpl) createNavigationKeyboard(currentIndex, totalCount
 	}
 
 	// Кнопки для архивных отзывов
-	if feedbackType == FeedbackTypeArchiveLocal {
+	if feedbackType == localization.FeedbackTypeArchiveLocal {
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
 			"🔄 Вернуть в активные",
 			fmt.Sprintf("unarchive_feedback_%d", currentIndex),
@@ -350,9 +336,9 @@ func (fh *FeedbackHandlerImpl) createNavigationKeyboard(currentIndex, totalCount
 
 	if len(buttons) > 0 {
 		// Первая строка: навигация
-		if len(buttons) >= ButtonsPerRow {
+		if len(buttons) >= localization.ButtonsPerRow {
 			rows = append(rows, []tgbotapi.InlineKeyboardButton{buttons[0], buttons[1]})
-			buttons = buttons[ButtonsPerRow:]
+			buttons = buttons[localization.ButtonsPerRow:]
 		} else if len(buttons) == 1 {
 			rows = append(rows, []tgbotapi.InlineKeyboardButton{buttons[0]})
 			buttons = buttons[1:]
@@ -374,11 +360,11 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackMessage(message *tgbotapi.Message, 
 	feedbackText := message.Text
 
 	// Проверяем валидность отзыва
-	if len([]rune(feedbackText)) < MinFeedbackLength {
+	if len([]rune(feedbackText)) < localization.MinFeedbackLength {
 		return fh.handleFeedbackTooShort(message, user)
 	}
 
-	if len([]rune(feedbackText)) > MaxFeedbackItems {
+	if len([]rune(feedbackText)) > localization.MaxFeedbackItems {
 		return fh.handleFeedbackTooLong(message, user)
 	}
 

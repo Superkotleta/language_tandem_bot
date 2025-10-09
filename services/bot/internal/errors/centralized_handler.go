@@ -46,7 +46,7 @@ type Alert struct {
 	Context    map[string]interface{} `json:"context"`
 	Timestamp  time.Time              `json:"timestamp"`
 	Resolved   bool                   `json:"resolved"`
-	ResolvedAt *time.Time             `json:"resolved_at,omitempty"`
+	ResolvedAt *time.Time             `json:"resolvedAt,omitempty"`
 }
 
 // CentralizedErrorHandler предоставляет централизованную обработку ошибок.

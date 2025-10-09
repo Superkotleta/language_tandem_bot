@@ -5,17 +5,13 @@ import (
 	"strconv"
 	"strings"
 
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// Константы для типов отзывов.
-const (
-	FeedbackTypeArchive = "archive"
-	FeedbackTypeAll     = "all"
-	FeedbackTypeActive  = "active"
-)
+// Admin handler constants are now defined in localization/constants.go
 
 // AdminHandler интерфейс для обработки административных функций.
 type AdminHandler interface {
@@ -208,7 +204,7 @@ func (h *AdminHandlerImpl) HandleBrowseActiveFeedbacks(callback *tgbotapi.Callba
 		activeFeedbacks[index],
 		index,
 		len(activeFeedbacks),
-		FeedbackTypeActive,
+		localization.FeedbackTypeActive,
 	)
 }
 
@@ -289,7 +285,7 @@ func (h *AdminHandlerImpl) HandleBrowseArchiveFeedbacks(callback *tgbotapi.Callb
 		archivedFeedbacks[index],
 		index,
 		len(archivedFeedbacks),
-		FeedbackTypeArchive,
+		localization.FeedbackTypeArchive,
 	)
 }
 
@@ -347,9 +343,9 @@ func (h *AdminHandlerImpl) formatFeedbackText(fb map[string]interface{}, current
 	typeText := "📝 Активные отзывы"
 
 	switch feedbackType {
-	case FeedbackTypeArchive:
+	case localization.FeedbackTypeArchive:
 		typeText = "📁 Архив отзывов"
-	case FeedbackTypeAll:
+	case localization.FeedbackTypeAll:
 		typeText = "📊 Все отзывы"
 	}
 
@@ -410,7 +406,7 @@ func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(
 	}
 
 	// Кнопки действий для необработанных отзывов
-	if feedbackType == FeedbackTypeActive && !fb["is_processed"].(bool) {
+	if feedbackType == localization.FeedbackTypeActive && !fb["is_processed"].(bool) {
 		actionRow := []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("✅ Обработать", fmt.Sprintf("fb_process_%v", fb["id"])),
 		}
@@ -418,7 +414,7 @@ func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(
 	}
 
 	// Кнопки действий для обработанных отзывов
-	if feedbackType == FeedbackTypeArchive && fb["is_processed"].(bool) {
+	if feedbackType == localization.FeedbackTypeArchive && fb["is_processed"].(bool) {
 		actionRow := []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("❌ Снять обработку", fmt.Sprintf("fb_unprocess_%v", fb["id"])),
 		}

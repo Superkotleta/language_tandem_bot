@@ -19,14 +19,7 @@ import (
 	"time"
 )
 
-// Константы для валидации.
-const (
-	// minFeedbackLength - минимальная длина отзыва.
-	minFeedbackLength = 10
-
-	// maxFeedbackLength - максимальная длина отзыва.
-	maxFeedbackLength = 1000
-)
+// Feedback length constants are now defined in localization/constants.go
 
 // BotService provides the main business logic for the language exchange bot.
 // It coordinates between different services like database, cache, localization,
@@ -142,7 +135,7 @@ func NewBotService(db *database.DB, errorHandler interface{}) *BotService {
 
 	// Запускаем cache warming в фоне
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), localization.CacheWarmingTimeoutSeconds*time.Second)
 		defer cancel()
 
 		if err := cacheService.WarmUp(ctx, service); err != nil {
@@ -948,11 +941,11 @@ func (s *BotService) SendFeedbackNotification(feedbackData map[string]interface{
 func (s *BotService) ValidateFeedback(feedbackText string) error {
 	length := len([]rune(feedbackText)) // Учитываем Unicode
 
-	if length < minFeedbackLength {
+	if length < localization.MinFeedbackLength {
 		return errorsPkg.ErrFeedbackTooShort
 	}
 
-	if length > maxFeedbackLength {
+	if length > localization.MaxFeedbackLength {
 		return errorsPkg.ErrFeedbackTooLong
 	}
 

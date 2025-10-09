@@ -16,10 +16,7 @@ import (
 
 // Константы для работы с профилем.
 
-// Константы для сообщений.
-const (
-	MessageChooseAtLeastOneInterest = "choose_at_least_one_interest"
-)
+// Interest handler message constants are now defined in localization/constants.go
 
 // TemporaryInterestStorage временное хранилище выборов пользователей.
 type TemporaryInterestStorage struct {
@@ -340,8 +337,8 @@ func (h *ImprovedInterestHandler) HandleInterestsContinue(callback *tgbotapi.Cal
 
 	// Проверяем, выбраны ли интересы
 	if len(selectedInterests) == 0 {
-		warningMsg := "❗ " + h.service.Localizer.Get(user.InterfaceLanguageCode, MessageChooseAtLeastOneInterest)
-		if warningMsg == MessageChooseAtLeastOneInterest {
+		warningMsg := "❗ " + h.service.Localizer.Get(user.InterfaceLanguageCode, localization.MessageChooseAtLeastOneInterest)
+		if warningMsg == localization.MessageChooseAtLeastOneInterest {
 			warningMsg = "❗ Пожалуйста, выберите хотя бы один интерес"
 		}
 
@@ -507,9 +504,9 @@ func (h *ImprovedInterestHandler) showPrimaryInterestsSelection(callback *tgbota
 			messageText = strings.ReplaceAll(messageText, "{remaining}", strconv.Itoa(remaining))
 			messageText = strings.ReplaceAll(messageText, "{max}", strconv.Itoa(recommendedPrimary))
 		} else {
-			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "max_primary_interests_reached")
-			if messageText == "max_primary_interests_reached" {
-				messageText = "✅ Максимальное количество основных интересов выбрано!"
+			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, localization.MessageMaxPrimaryInterestsReached)
+			if messageText == localization.MessageMaxPrimaryInterestsReached {
+				messageText = localization.MessageMaxPrimaryInterestsFallback
 			}
 		}
 	}
@@ -642,9 +639,9 @@ func (h *ImprovedInterestHandler) updatePrimaryInterestsKeyboard(callback *tgbot
 			messageText = strings.ReplaceAll(messageText, "{remaining}", strconv.Itoa(remaining))
 			messageText = strings.ReplaceAll(messageText, "{max}", strconv.Itoa(recommendedPrimary))
 		} else {
-			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, "max_primary_interests_reached")
-			if messageText == "max_primary_interests_reached" {
-				messageText = "✅ Максимальное количество основных интересов выбрано!"
+			messageText = h.service.Localizer.Get(user.InterfaceLanguageCode, localization.MessageMaxPrimaryInterestsReached)
+			if messageText == localization.MessageMaxPrimaryInterestsReached {
+				messageText = localization.MessageMaxPrimaryInterestsFallback
 			}
 		}
 	}

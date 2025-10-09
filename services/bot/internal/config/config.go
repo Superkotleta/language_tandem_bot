@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"language-exchange-bot/internal/localization"
+
 	"github.com/joho/godotenv"
 )
 
@@ -104,7 +106,7 @@ func getDatabaseURL(getFromFile func(string) string) string {
 func getRedisDB() int {
 	redisDB, err := strconv.Atoi(getEnv("REDIS_DB", "0"))
 	if err != nil {
-		return 0 // default value
+		return 0
 	}
 
 	return redisDB
@@ -218,7 +220,7 @@ func parseAdminUsernames() []string {
 func getPrimaryInterestScore() int {
 	score, err := strconv.Atoi(getEnv("PRIMARY_INTEREST_SCORE", "3"))
 	if err != nil {
-		return 3 // default value
+		return localization.DefaultPrimaryInterestScore
 	}
 
 	return score
@@ -228,7 +230,7 @@ func getPrimaryInterestScore() int {
 func getAdditionalInterestScore() int {
 	score, err := strconv.Atoi(getEnv("ADDITIONAL_INTEREST_SCORE", "1"))
 	if err != nil {
-		return 1 // default value
+		return localization.DefaultAdditionalInterestScore
 	}
 
 	return score
@@ -238,7 +240,7 @@ func getAdditionalInterestScore() int {
 func getMinCompatibilityScore() int {
 	score, err := strconv.Atoi(getEnv("MIN_COMPATIBILITY_SCORE", "5"))
 	if err != nil {
-		return 5 // default value
+		return localization.DefaultMinCompatibilityScore
 	}
 
 	return score
@@ -248,7 +250,7 @@ func getMinCompatibilityScore() int {
 func getMaxMatchesPerUser() int {
 	matches, err := strconv.Atoi(getEnv("MAX_MATCHES_PER_USER", "10"))
 	if err != nil {
-		return 10 // default value
+		return localization.DefaultMaxMatchesPerUser
 	}
 
 	return matches
@@ -258,7 +260,7 @@ func getMaxMatchesPerUser() int {
 func getMinPrimaryInterests() int {
 	interests, err := strconv.Atoi(getEnv("MIN_PRIMARY_INTERESTS", "1"))
 	if err != nil {
-		return 1 // default value
+		return localization.DefaultMinPrimaryInterests
 	}
 
 	return interests
@@ -268,7 +270,7 @@ func getMinPrimaryInterests() int {
 func getMaxPrimaryInterests() int {
 	interests, err := strconv.Atoi(getEnv("MAX_PRIMARY_INTERESTS", "5"))
 	if err != nil {
-		return 5 // default value
+		return localization.DefaultMaxPrimaryInterests
 	}
 
 	return interests
@@ -278,7 +280,7 @@ func getMaxPrimaryInterests() int {
 func getPrimaryPercentage() float64 {
 	percentage, err := strconv.ParseFloat(getEnv("PRIMARY_PERCENTAGE", "0.3"), 64)
 	if err != nil {
-		return 0.3 // default value
+		return localization.DefaultPrimaryPercentage
 	}
 
 	return percentage
@@ -349,7 +351,7 @@ func getDatabaseMaxOpenConns() int {
 		return parsed
 	}
 
-	return 25 // значение по умолчанию
+	return localization.DefaultDatabaseMaxOpenConns
 }
 
 // getDatabaseMaxIdleConns получает максимальное количество idle соединений.
@@ -359,5 +361,5 @@ func getDatabaseMaxIdleConns() int {
 		return parsed
 	}
 
-	return 10 // значение по умолчанию
+	return localization.DefaultDatabaseMaxIdleConns
 }

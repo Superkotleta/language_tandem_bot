@@ -24,17 +24,7 @@ var (
 	DefaultMaxRetryBackoff = localization.RedisMaxRetryBackoffMs * time.Millisecond
 )
 
-// Redis configuration constants.
-const (
-	DefaultRedisProtocol   = 3
-	DefaultMaxRetries      = 3
-	DefaultPoolSize        = 20               // Увеличено для лучшей производительности
-	DefaultMinIdleConns    = 5                // Минимум idle соединений
-	DefaultMaxIdleConns    = 10               // Максимум idle соединений
-	DefaultPoolTimeout     = 5 * time.Second  // Таймаут для получения соединения
-	DefaultConnMaxLifetime = 30 * time.Minute // Максимальное время жизни соединения
-	DefaultConnMaxIdleTime = 5 * time.Minute  // Максимальное время idle соединения
-)
+// Redis configuration constants are now defined in localization/constants.go
 
 // RedisCacheService реализация кэша на основе Redis.
 type RedisCacheService struct {
@@ -56,28 +46,28 @@ func NewRedisCacheService(redisURL, password string, database int, config *Confi
 		ClientName:                   "language-exchange-bot",
 		Dialer:                       nil,
 		OnConnect:                    nil,
-		Protocol:                     DefaultRedisProtocol,
+		Protocol:                     localization.DefaultRedisProtocol,
 		Username:                     "",
 		CredentialsProvider:          nil,
 		CredentialsProviderContext:   nil,
 		StreamingCredentialsProvider: nil,
-		MaxRetries:                   DefaultMaxRetries,
+		MaxRetries:                   localization.RedisMaxRetries,
 		MinRetryBackoff:              DefaultMinRetryBackoff,
 		MaxRetryBackoff:              DefaultMaxRetryBackoff,
 		DialTimeout:                  DefaultDialTimeout,
 		ReadTimeout:                  DefaultReadTimeout,
 		WriteTimeout:                 DefaultWriteTimeout,
-		ContextTimeoutEnabled:        true,  // Включаем context timeout для лучшего контроля
-		ReadBufferSize:               16384, // 16KB буфер для чтения
-		WriteBufferSize:              16384, // 16KB буфер для записи
-		PoolFIFO:                     true,  // FIFO для более предсказуемого поведения
-		PoolSize:                     DefaultPoolSize,
-		PoolTimeout:                  DefaultPoolTimeout,
-		MinIdleConns:                 DefaultMinIdleConns,
-		MaxIdleConns:                 DefaultMaxIdleConns,
+		ContextTimeoutEnabled:        true,                              // Включаем context timeout для лучшего контроля
+		ReadBufferSize:               localization.RedisReadBufferSize,  // 16KB буфер для чтения
+		WriteBufferSize:              localization.RedisWriteBufferSize, // 16KB буфер для записи
+		PoolFIFO:                     true,                              // FIFO для более предсказуемого поведения
+		PoolSize:                     localization.RedisPoolSize,
+		PoolTimeout:                  localization.DefaultPoolTimeout,
+		MinIdleConns:                 localization.DefaultMinIdleConns,
+		MaxIdleConns:                 localization.DefaultMaxIdleConns,
 		MaxActiveConns:               0,
-		ConnMaxIdleTime:              DefaultConnMaxIdleTime,
-		ConnMaxLifetime:              DefaultConnMaxLifetime,
+		ConnMaxIdleTime:              localization.DefaultConnMaxIdleTime,
+		ConnMaxLifetime:              localization.DefaultConnMaxLifetime,
 		TLSConfig:                    nil,
 		Limiter:                      nil,
 		DisableIndentity:             false,
@@ -861,7 +851,7 @@ func (r *RedisCacheService) GetConnectionStats(ctx context.Context) map[string]i
 
 // HealthCheck проверяет здоровье Redis соединения.
 func (r *RedisCacheService) HealthCheck(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, localization.RedisHealthCheckTimeoutSeconds*time.Second)
 	defer cancel()
 
 	_, err := r.client.Ping(ctx).Result()

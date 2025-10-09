@@ -55,7 +55,7 @@ func (bo *BatchOperations) BatchInsertUsers(ctx context.Context, users []*models
 	}()
 
 	// Подготавливаем данные для COPY
-	var rows []string
+	rows := make([]string, 0, len(users))
 
 	for _, user := range users {
 		row := fmt.Sprintf("%d,%s,%s,%s,%s,%s,%s,%s,%s,%d,%s,%s",
@@ -98,7 +98,7 @@ func (bo *BatchOperations) BatchUpdateUsers(ctx context.Context, users []*models
 
 	// Используем VALUES для массового обновления
 	query := `
-		UPDATE users SET 
+		UPDATE users SET
 			username = data.username,
 			first_name = data.first_name,
 			native_language_code = data.native_language_code,
@@ -109,14 +109,14 @@ func (bo *BatchOperations) BatchUpdateUsers(ctx context.Context, users []*models
 			status = data.status,
 			profile_completion_level = data.profile_completion_level,
 			updated_at = data.updated_at
-		FROM (VALUES %s) AS data(id, username, first_name, native_language_code, 
-		                        target_language_code, target_language_level, 
-		                        interface_language_code, state, status, 
+		FROM (VALUES %s) AS data(id, username, first_name, native_language_code,
+		                        target_language_code, target_language_level,
+		                        interface_language_code, state, status,
 		                        profile_completion_level, updated_at)
 		WHERE users.id = data.id`
 
 	// Подготавливаем VALUES
-	var values []string
+	values := make([]string, 0, len(users))
 
 	for _, user := range users {
 		value := fmt.Sprintf("(%d, %s, %s, %s, %s, %s, %s, %s, %s, %d, %s)",
@@ -160,7 +160,7 @@ func (bo *BatchOperations) BatchInsertInterests(ctx context.Context, interests [
 		ON CONFLICT (key_name) DO NOTHING`
 
 	// Подготавливаем VALUES
-	var values []string
+	values := make([]string, 0, len(interests))
 
 	for _, interest := range interests {
 		value := fmt.Sprintf("(%s, %d, %d, %s, %s)",
@@ -197,7 +197,7 @@ func (bo *BatchOperations) BatchInsertUserInterests(ctx context.Context, userID 
 		ON CONFLICT (user_id, interest_id) DO NOTHING`
 
 	// Подготавливаем VALUES
-	var values []string
+	values := make([]string, 0, len(interestIDs))
 
 	now := time.Now().Format(time.RFC3339)
 	for _, interestID := range interestIDs {
@@ -264,7 +264,7 @@ func (bo *BatchOperations) BatchInsertLanguages(ctx context.Context, languages [
 		ON CONFLICT (code) DO NOTHING`
 
 	// Подготавливаем VALUES
-	var values []string
+	values := make([]string, 0, len(languages))
 
 	for _, language := range languages {
 		value := fmt.Sprintf("(%s, %s, %s, %s)",
@@ -295,14 +295,14 @@ func (bo *BatchOperations) BatchUpdateUserStats(ctx context.Context, userStats [
 	}
 
 	query := `
-		UPDATE users SET 
+		UPDATE users SET
 			profile_completion_level = data.profile_completion_level,
 			updated_at = data.updated_at
 		FROM (VALUES %s) AS data(id, profile_completion_level, updated_at)
 		WHERE users.id = data.id`
 
 	// Подготавливаем VALUES
-	var values []string
+	values := make([]string, 0, len(userStats))
 
 	for _, stats := range userStats {
 		value := fmt.Sprintf("(%d, %d, %s)",

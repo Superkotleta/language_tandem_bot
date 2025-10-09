@@ -12,10 +12,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// Константы для работы с callback data.
-const (
-	MinPartsForInterestCallback = 4 // Минимальное количество частей в callback data для интересов
-)
+// Profile interest handler constants are now defined in localization/constants.go
 
 // ProfileInterestHandler обрабатывает редактирование интересов из профиля.
 type ProfileInterestHandler struct {

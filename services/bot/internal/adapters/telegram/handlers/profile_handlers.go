@@ -247,7 +247,7 @@ func (ph *ProfileHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Callbac
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandleInterestsContinue",
-		map[string]interface{}{"userID": user.ID, "completionLevel": 100},
+		map[string]interface{}{"userID": user.ID, "completionLevel": localization.ProfileCompletionLevelComplete},
 	)
 
 	err = ph.updateProfileCompletionLevel(user.ID, localization.ProfileCompletionLevelComplete)

@@ -3,6 +3,9 @@ package models
 
 import "time"
 
+// User state and status constants (keeping them here for backward compatibility).
+// TODO: Consider moving these to localization/constants.go in the future.
+
 // Состояния пользователя.
 const (
 	StateNew                          = "new"

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 
+	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -21,7 +22,7 @@ func (e *IsolatedInterestEditor) createEditMainMenuKeyboard(interfaceLang string
 			"isolated_edit_categories",
 		),
 		tgbotapi.NewInlineKeyboardButtonData(
-			"⭐ "+e.service.Localizer.Get(interfaceLang, "edit_primary_interests"),
+			localization.SymbolStar+e.service.Localizer.Get(interfaceLang, "edit_primary_interests"),
 			"isolated_edit_primary",
 		),
 	}
@@ -95,7 +96,7 @@ func (e *IsolatedInterestEditor) createEditCategoriesKeyboard(categories []model
 			"isolated_main_menu",
 		),
 		tgbotapi.NewInlineKeyboardButtonData(
-			"⭐ "+e.service.Localizer.Get(interfaceLang, "edit_primary_interests"),
+			localization.SymbolStar+e.service.Localizer.Get(interfaceLang, "edit_primary_interests"),
 			"isolated_edit_primary",
 		),
 	}
@@ -121,9 +122,9 @@ func (e *IsolatedInterestEditor) createEditCategoryInterestsKeyboard(interests [
 		interest1 := interests[i]
 		interestName1 := e.service.Localizer.Get(interfaceLang, "interest_"+interest1.KeyName)
 
-		prefix1 := "☐ "
+		prefix1 := localization.SymbolUnchecked
 		if selectedMap[interest1.ID] {
-			prefix1 = "✅ "
+			prefix1 = localization.SymbolChecked
 		}
 
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
@@ -137,9 +138,9 @@ func (e *IsolatedInterestEditor) createEditCategoryInterestsKeyboard(interests [
 			interest2 := interests[i+1]
 			interestName2 := e.service.Localizer.Get(interfaceLang, "interest_"+interest2.KeyName)
 
-			prefix2 := "☐ "
+			prefix2 := localization.SymbolUnchecked
 			if selectedMap[interest2.ID] {
-				prefix2 = "✅ "
+				prefix2 = localization.SymbolChecked
 			}
 
 			button2 := tgbotapi.NewInlineKeyboardButtonData(
@@ -156,7 +157,7 @@ func (e *IsolatedInterestEditor) createEditCategoryInterestsKeyboard(interests [
 	if len(interests) > 0 {
 		massRow := []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData(
-				"✅ "+e.service.Localizer.Get(interfaceLang, "select_all_in_category"),
+				localization.SymbolChecked+e.service.Localizer.Get(interfaceLang, "select_all_in_category"),
 				"isolated_select_all_"+categoryKey,
 			),
 			tgbotapi.NewInlineKeyboardButtonData(
@@ -239,9 +240,9 @@ func (e *IsolatedInterestEditor) createEditPrimaryInterestsKeyboard(selections [
 
 		interestName1 := e.service.Localizer.Get(interfaceLang, "interest_"+interest1.KeyName)
 
-		prefix1 := "☐ "
+		prefix1 := localization.SymbolUnchecked
 		if selection1.IsPrimary {
-			prefix1 = "⭐ "
+			prefix1 = localization.SymbolStar
 		}
 
 		button1 := tgbotapi.NewInlineKeyboardButtonData(
@@ -261,9 +262,9 @@ func (e *IsolatedInterestEditor) createEditPrimaryInterestsKeyboard(selections [
 
 			interestName2 := e.service.Localizer.Get(interfaceLang, "interest_"+interest2.KeyName)
 
-			prefix2 := "☐ "
+			prefix2 := localization.SymbolUnchecked
 			if selection2.IsPrimary {
-				prefix2 = "⭐ "
+				prefix2 = localization.SymbolStar
 			}
 
 			button2 := tgbotapi.NewInlineKeyboardButtonData(
@@ -303,8 +304,8 @@ func (e *IsolatedInterestEditor) getCategoryProgress(session *EditSession, categ
 	}
 
 	if count == 0 {
-		return "☐"
-	} else if count < 3 {
+		return localization.SymbolEmpty
+	} else if count < localization.ProgressDisplayThreshold {
 		return "◐"
 	} else {
 		return "◉"
