@@ -155,10 +155,11 @@ func (e *IsolatedAvailabilityEditor) ShowEditMenu(callback *tgbotapi.CallbackQue
 
 	keyboard := e.createEditMenuKeyboard(session, lang)
 
-	return e.baseHandler.messageFactory.SendWithKeyboard(
+	return e.baseHandler.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
+		callback.Message.MessageID,
 		message,
-		keyboard,
+		&keyboard,
 	)
 }
 
@@ -220,10 +221,11 @@ func (e *IsolatedAvailabilityEditor) ShowDayTypeSelection(callback *tgbotapi.Cal
 		),
 	)
 
-	return e.baseHandler.messageFactory.SendWithKeyboard(
+	return e.baseHandler.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
+		callback.Message.MessageID,
 		message,
-		keyboard,
+		&keyboard,
 	)
 }
 
@@ -268,10 +270,11 @@ func (e *IsolatedAvailabilityEditor) ShowSpecificDaysSelection(callback *tgbotap
 
 	keyboard := e.createSpecificDaysKeyboard(session, lang)
 
-	return e.baseHandler.messageFactory.SendWithKeyboard(
+	return e.baseHandler.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
+		callback.Message.MessageID,
 		message,
-		keyboard,
+		&keyboard,
 	)
 }
 
@@ -340,10 +343,11 @@ func (e *IsolatedAvailabilityEditor) ShowTimeSlotsSelection(callback *tgbotapi.C
 
 	keyboard := e.createTimeSlotsKeyboard(session, lang)
 
-	return e.baseHandler.messageFactory.SendWithKeyboard(
+	return e.baseHandler.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
+		callback.Message.MessageID,
 		message,
-		keyboard,
+		&keyboard,
 	)
 }
 
@@ -412,10 +416,11 @@ func (e *IsolatedAvailabilityEditor) ShowCommunicationSelection(callback *tgbota
 
 	keyboard := e.createCommunicationKeyboard(session, lang)
 
-	return e.baseHandler.messageFactory.SendWithKeyboard(
+	return e.baseHandler.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
+		callback.Message.MessageID,
 		message,
-		keyboard,
+		&keyboard,
 	)
 }
 
@@ -508,10 +513,11 @@ func (e *IsolatedAvailabilityEditor) ShowFrequencySelection(callback *tgbotapi.C
 		),
 	)
 
-	return e.baseHandler.messageFactory.SendWithKeyboard(
+	return e.baseHandler.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
+		callback.Message.MessageID,
 		message,
-		keyboard,
+		&keyboard,
 	)
 }
 
@@ -673,10 +679,11 @@ func (e *IsolatedAvailabilityEditor) CancelEdit(callback *tgbotapi.CallbackQuery
 		),
 	)
 
-	return e.baseHandler.messageFactory.SendWithKeyboard(
+	return e.baseHandler.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
+		callback.Message.MessageID,
 		message,
-		keyboard,
+		&keyboard,
 	)
 }
 
@@ -702,10 +709,11 @@ func (e *IsolatedAvailabilityEditor) ShowSaveConfirmation(callback *tgbotapi.Cal
 		),
 	)
 
-	return e.baseHandler.messageFactory.SendWithKeyboard(
+	return e.baseHandler.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
+		callback.Message.MessageID,
 		message,
-		keyboard,
+		&keyboard,
 	)
 }
 

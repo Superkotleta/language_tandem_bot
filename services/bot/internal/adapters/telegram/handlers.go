@@ -840,6 +840,10 @@ func (h *TelegramHandler) handleProfileCommands(callback *tgbotapi.CallbackQuery
 		log.Printf("DEBUG: Handling edit_languages for user %d", user.ID)
 
 		return h.profileHandler.HandleEditLanguages(callback, user)
+	case "edit_availability":
+		log.Printf("DEBUG: Handling edit_availability for user %d", user.ID)
+
+		return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
 	case "edit_native_lang":
 		log.Printf("DEBUG: Handling edit_native_lang for user %d", user.ID)
 
@@ -954,6 +958,7 @@ func (h *TelegramHandler) handleAvailabilityCallbacks(callback *tgbotapi.Callbac
 		case data == "availability_proceed_to_communication":
 			return h.availabilityHandler.HandleFriendshipPreferencesStart(callback, user)
 		case data == "availability_proceed_to_frequency":
+			log.Printf("DEBUG: Processing availability_proceed_to_frequency for user %d", user.ID)
 			return h.availabilityHandler.CompleteAvailabilitySetup(callback, user)
 
 		// Обработка кнопок "Назад"
@@ -999,6 +1004,12 @@ func (h *TelegramHandler) handleAvailabilityCallbacks(callback *tgbotapi.Callbac
 		case strings.HasPrefix(data, "availability_communication_"):
 			style := strings.TrimPrefix(data, "availability_communication_")
 			return h.availabilityHandler.HandleCommunicationStyleSelection(callback, user, style)
+		case data == "view_profile":
+			// Показать профиль пользователя
+			return h.menuHandler.HandleMainViewProfile(callback, user, h.profileHandler)
+		case data == "back_to_main_menu":
+			// Возврат в главное меню
+			return h.menuHandler.HandleBackToMainMenu(callback, user)
 		}
 
 		return nil // Callback не обработан этой функцией

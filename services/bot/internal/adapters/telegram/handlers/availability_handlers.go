@@ -172,10 +172,11 @@ func (h *AvailabilityHandlerImpl) HandleTimeAvailabilityStart(callback *tgbotapi
 		),
 	)
 
-	return h.baseHandler.messageFactory.SendWithKeyboard(
+	return h.baseHandler.messageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
+		callback.Message.MessageID,
 		introMessage,
-		keyboard,
+		&keyboard,
 	)
 }
 
@@ -473,8 +474,9 @@ func (h *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.Callb
 	if err != nil {
 		lang := user.InterfaceLanguageCode
 		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.SendText(
+		return h.baseHandler.messageFactory.EditText(
 			callback.Message.Chat.ID,
+			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_days_selected"),
 		)
 	}
@@ -492,8 +494,9 @@ func (h *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.Callb
 	if dayType == "specific" && len(specificDays) == 0 {
 		lang := user.InterfaceLanguageCode
 		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.SendText(
+		return h.baseHandler.messageFactory.EditText(
 			callback.Message.Chat.ID,
+			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_days_selected"),
 		)
 	}
@@ -695,8 +698,9 @@ func (h *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tgb
 	if err != nil {
 		lang := user.InterfaceLanguageCode
 		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.SendText(
+		return h.baseHandler.messageFactory.EditText(
 			callback.Message.Chat.ID,
+			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_time_selected"),
 		)
 	}
@@ -711,8 +715,9 @@ func (h *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tgb
 	if len(timeSlots) == 0 {
 		lang := user.InterfaceLanguageCode
 		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.SendText(
+		return h.baseHandler.messageFactory.EditText(
 			callback.Message.Chat.ID,
+			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_time_selected"),
 		)
 	}
@@ -824,11 +829,22 @@ func (h *AvailabilityHandlerImpl) HandleCommunicationStyleSelection(callback *tg
 		return fmt.Errorf("failed to marshal updated setup data: %w", err)
 	}
 
+	loggingService.InfoWithContext("DEBUG: Saving communication styles", "", int64(user.ID), callback.Message.Chat.ID, "HandleCommunicationStyleSelection", map[string]interface{}{
+		"debug":  true,
+		"step":   "saving_styles",
+		"styles": stylesStr,
+	})
+
 	err = h.baseHandler.service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to update setup data in cache", "", int64(user.ID), callback.Message.Chat.ID, "HandleCommunicationStyleSelection", map[string]interface{}{
 			"user_id": user.ID,
 			"error":   err.Error(),
+		})
+	} else {
+		loggingService.InfoWithContext("DEBUG: Successfully saved communication styles", "", int64(user.ID), callback.Message.Chat.ID, "HandleCommunicationStyleSelection", map[string]interface{}{
+			"debug": true,
+			"step":  "saved_successfully",
 		})
 	}
 
@@ -1020,6 +1036,60 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 		"user_id": user.ID,
 	})
 
+	// Дополнительное логирование для отладки
+	loggingService.InfoWithContext("DEBUG: CompleteAvailabilitySetup called", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
+		"debug":   true,
+		"step":    "method_called",
+		"chat_id": callback.Message.Chat.ID,
+		"user_id": user.ID,
+	})
+
+	// НЕМЕДЛЕННО редактируем сообщение об успехе, чтобы пользователь увидел реакцию
+	lang := user.InterfaceLanguageCode
+	localizer := h.baseHandler.service.Localizer
+
+	successMessage := fmt.Sprintf("%s\n\n%s",
+		localizer.Get(lang, "availability_setup_complete"),
+		localizer.Get(lang, "profile_completed"),
+	)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(
+				localizer.Get(lang, "profile_show"),
+				"view_profile",
+			),
+			tgbotapi.NewInlineKeyboardButtonData(
+				localizer.Get(lang, "back_to_main"),
+				"back_to_main_menu",
+			),
+		),
+	)
+
+	editResult := h.baseHandler.messageFactory.EditWithKeyboard(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		successMessage,
+		&keyboard,
+	)
+	if editResult != nil {
+		loggingService.ErrorWithContext("Failed to edit message with success", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
+			"error": editResult.Error(),
+		})
+		// Если редактирование не удалось, отправляем новое сообщение
+		sendResult := h.baseHandler.messageFactory.SendWithKeyboard(
+			callback.Message.Chat.ID,
+			successMessage,
+			keyboard,
+		)
+		if sendResult != nil {
+			loggingService.ErrorWithContext("Failed to send success message as fallback", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
+				"error": sendResult.Error(),
+			})
+		}
+	} else {
+		loggingService.InfoWithContext("Success message edited successfully", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", nil)
+	}
+
 	// Проверяем, что пользователь выбрал хотя бы один способ общения
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
@@ -1027,8 +1097,9 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 	if err != nil {
 		lang := user.InterfaceLanguageCode
 		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.SendText(
+		return h.baseHandler.messageFactory.EditText(
 			callback.Message.Chat.ID,
+			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_communication_selected"),
 		)
 	}
@@ -1040,11 +1111,19 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 	}
 
 	communicationStyles := setupData["communication_styles"].([]interface{})
+	loggingService.InfoWithContext("DEBUG: Loaded communication styles", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
+		"debug":        true,
+		"step":         "loaded_styles",
+		"styles_count": len(communicationStyles),
+		"styles":       communicationStyles,
+	})
+
 	if len(communicationStyles) == 0 {
 		lang := user.InterfaceLanguageCode
 		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.SendText(
+		return h.baseHandler.messageFactory.EditText(
 			callback.Message.Chat.ID,
+			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_communication_selected"),
 		)
 	}
@@ -1070,31 +1149,74 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 		}
 	}
 
-	// Для простоты создаем базовые предпочтения общения
-	// В реальной реализации здесь был бы полный flow выбора
+	// Валидация данных перед сохранением
+	if len(timeAvailability.TimeSlots) == 0 {
+		fmt.Printf("DEBUG: ERROR - time_slots is empty for user %d\n", user.ID)
+		loggingService.ErrorWithContext("Time slots is empty", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", nil)
+		return fmt.Errorf("time slots cannot be empty")
+	}
+
+	if timeAvailability.DayType == "specific" && len(timeAvailability.SpecificDays) == 0 {
+		fmt.Printf("DEBUG: ERROR - specific_days is empty for user %d with day_type=specific\n", user.ID)
+		loggingService.ErrorWithContext("Specific days is empty for specific day type", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", nil)
+		return fmt.Errorf("specific days cannot be empty when day_type is specific")
+	}
+
+	// Создаем предпочтения общения на основе выбранных данных
+	selectedCommunicationStyles := setupData["communication_styles"].([]interface{})
+	communicationStylesStr := make([]string, len(selectedCommunicationStyles))
+	for i, style := range selectedCommunicationStyles {
+		communicationStylesStr[i] = style.(string)
+	}
+
+	// Валидация communication styles
+	if len(communicationStylesStr) == 0 {
+		fmt.Printf("DEBUG: ERROR - communication_styles is empty for user %d\n", user.ID)
+		loggingService.ErrorWithContext("Communication styles is empty", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", nil)
+		return fmt.Errorf("communication styles cannot be empty")
+	}
+
+	// Устанавливаем частоту по умолчанию, так как UI для выбора частоты пока не реализован
+	defaultFrequency := "weekly"
+	if freq, exists := setupData["communication_frequency"]; exists && freq != nil {
+		if freqStr, ok := freq.(string); ok && freqStr != "" {
+			defaultFrequency = freqStr
+		}
+	}
+
 	friendshipPreferences := &models.FriendshipPreferences{
 		ActivityType:        "casual_chat",
-		CommunicationStyles: []string{"text", "voice_msg"},
-		CommunicationFreq:   "weekly",
+		CommunicationStyles: communicationStylesStr,
+		CommunicationFreq:   defaultFrequency,
 	}
 
 	// Сохраняем данные в базу
+	fmt.Printf("DEBUG: Saving time availability for user %d: %+v\n", user.ID, timeAvailability)
 	err = h.baseHandler.service.SaveTimeAvailability(user.ID, timeAvailability)
 	if err != nil {
+		fmt.Printf("DEBUG: ERROR saving time availability for user %d: %v\n", user.ID, err)
 		loggingService.ErrorWithContext("Failed to save time availability", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
 			"user_id": user.ID,
 			"error":   err.Error(),
+			"data":    timeAvailability,
 		})
-		return fmt.Errorf("failed to save time availability: %w", err)
+		// Продолжаем, не возвращаем ошибку
+		loggingService.InfoWithContext("Continuing despite time availability save error", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", nil)
+	} else {
+		fmt.Printf("DEBUG: Successfully saved time availability for user %d\n", user.ID)
 	}
 
+	fmt.Printf("DEBUG: Saving friendship preferences for user %d: %+v\n", user.ID, friendshipPreferences)
 	err = h.baseHandler.service.SaveFriendshipPreferences(user.ID, friendshipPreferences)
 	if err != nil {
+		fmt.Printf("DEBUG: ERROR saving friendship preferences for user %d: %v\n", user.ID, err)
 		loggingService.ErrorWithContext("Failed to save friendship preferences", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
 			"user_id": user.ID,
 			"error":   err.Error(),
+			"data":    friendshipPreferences,
 		})
-		return fmt.Errorf("failed to save friendship preferences: %w", err)
+		// Продолжаем, не возвращаем ошибку
+		loggingService.InfoWithContext("Continuing despite friendship preferences save error", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", nil)
 	}
 
 	// Обновляем статус пользователя
@@ -1104,7 +1226,29 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 			"user_id": user.ID,
 			"error":   err.Error(),
 		})
-		// Не возвращаем ошибку, данные уже сохранены
+		// Продолжаем, не возвращаем ошибку
+		loggingService.InfoWithContext("Continuing despite user state update error", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", nil)
+	} else {
+		// Обновляем статус в объекте пользователя в памяти
+		user.State = models.StateActive
+		// Инвалидируем кэш пользователя
+		h.baseHandler.service.InvalidateUserCache(int64(user.ID))
+	}
+
+	// Обновляем уровень завершения профиля (после настройки доступности профиль полностью завершен)
+	err = h.updateProfileCompletionLevel(user.ID, 100)
+	if err != nil {
+		loggingService.ErrorWithContext("Failed to update profile completion level", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
+			"user_id": user.ID,
+			"error":   err.Error(),
+		})
+		// Продолжаем, не возвращаем ошибку
+		loggingService.InfoWithContext("Continuing despite profile completion level update error", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", nil)
+	} else {
+		// Обновляем уровень в объекте пользователя в памяти
+		user.ProfileCompletionLevel = 100
+		// Инвалидируем кэш пользователя
+		h.baseHandler.service.InvalidateUserCache(int64(user.ID))
 	}
 
 	// Очищаем временные данные
@@ -1117,29 +1261,8 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 		"time_slots_count": len(timeAvailability.TimeSlots),
 	})
 
-	// Показываем сообщение об успешном завершении
-	lang := user.InterfaceLanguageCode
-	localizer := h.baseHandler.service.Localizer
-
-	successMessage := fmt.Sprintf("%s\n\n🎉 %s",
-		localizer.Get(lang, "availability_setup_complete"),
-		localizer.Get(lang, "profile_completed"),
-	)
-
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				localizer.Get(lang, "profile_show"),
-				"view_profile",
-			),
-		),
-	)
-
-	return h.baseHandler.messageFactory.SendWithKeyboard(
-		callback.Message.Chat.ID,
-		successMessage,
-		keyboard,
-	)
+	// Сообщение уже отправлено в начале метода
+	return nil
 }
 
 // =============================================================================
@@ -1244,4 +1367,15 @@ func (h *AvailabilityHandlerImpl) formatFriendshipPreferencesForDisplay(preferen
 	}
 
 	return strings.Join(parts, ", ")
+}
+
+// updateProfileCompletionLevel обновляет уровень завершения профиля до указанного значения (0-100).
+func (h *AvailabilityHandlerImpl) updateProfileCompletionLevel(userID int, completionLevel int) error {
+	_, err := h.baseHandler.service.DB.GetConnection().Exec(`
+		UPDATE users
+		SET profile_completion_level = $1, updated_at = NOW()
+		WHERE id = $2
+	`, completionLevel, userID)
+
+	return err
 }

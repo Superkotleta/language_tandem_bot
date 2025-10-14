@@ -572,6 +572,23 @@ func (s *BotService) IsProfileCompleted(user *models.User) (bool, error) {
 func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 	lang := user.InterfaceLanguageCode
 
+	// Загружаем дополнительные данные профиля
+	timeAvailability, err := s.GetTimeAvailability(user.ID)
+	if err != nil {
+		// Не критичная ошибка, продолжаем без данных доступности
+		timeAvailability = nil
+	}
+
+	friendshipPreferences, err := s.GetFriendshipPreferences(user.ID)
+	if err != nil {
+		// Не критичная ошибка, продолжаем без данных предпочтений
+		friendshipPreferences = nil
+	}
+
+	// Временно устанавливаем данные в объект пользователя для совместимости
+	user.TimeAvailability = timeAvailability
+	user.FriendshipPreferences = friendshipPreferences
+
 	// Получаем основную информацию
 	basicInfo := s.buildBasicProfileInfo(user, lang)
 	languageInfo := s.buildLanguageProfileInfo(user, lang)

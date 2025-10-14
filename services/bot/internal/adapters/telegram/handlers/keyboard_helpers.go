@@ -227,12 +227,14 @@ func (kb *KeyboardBuilder) CreateProfileMenuKeyboard(interfaceLang string) tgbot
 		"back_to_main_menu",
 	)
 
-	// Шесть рядов: интересы, доступность, языки, язык интерфейса, сброс, главное меню
+	// Группировка кнопок для лучшего UX:
+	// Ряд 1: Интересы и доступность
+	// Ряд 2: Языки и интерфейс
+	// Ряд 3: Сброс профиля
+	// Ряд 4: Главное меню
 	buttons := [][]tgbotapi.InlineKeyboardButton{
-		{editInterestsIsolated},
-		{editAvailability},
-		{editLanguages},
-		{changeInterfaceLang},
+		{editInterestsIsolated, editAvailability},
+		{editLanguages, changeInterfaceLang},
 		{reconfig},
 		{backToMain},
 	}
