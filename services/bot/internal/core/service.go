@@ -719,8 +719,8 @@ func (s *BotService) buildAdditionalProfileInfo(user *models.User, lang string) 
 	var lines []string
 
 	// Временная доступность
-	availabilityText := s.formatTimeAvailability(user.TimeAvailability, lang)
-	lines = append(lines, fmt.Sprintf("⏰ %s: %s", s.Localizer.Get(lang, "profile_field_availability"), availabilityText))
+	timeAvailabilityText := s.formatTimeAvailability(user.TimeAvailability, lang)
+	lines = append(lines, fmt.Sprintf("⏰ %s: %s", s.Localizer.Get(lang, "profile_field_availability"), timeAvailabilityText))
 
 	// Предпочтения общения
 	communicationText := s.formatCommunicationPreferences(user.FriendshipPreferences, lang)
@@ -737,63 +737,90 @@ func (s *BotService) buildAdditionalProfileInfo(user *models.User, lang string) 
 // formatTimeAvailability форматирует временную доступность.
 func (s *BotService) formatTimeAvailability(ta *models.TimeAvailability, lang string) string {
 	if ta == nil {
-		return "Не указано"
+		return s.Localizer.Get(lang, "not_specified")
 	}
 
-	dayText := s.formatDayType(ta, lang)
-	timeText := s.formatTimeSlot(ta.TimeSlot, lang)
+	var parts []string
 
-	return fmt.Sprintf("%s, %s", dayText, timeText)
-}
-
-// formatDayType форматирует тип дня.
-func (s *BotService) formatDayType(ta *models.TimeAvailability, lang string) string {
+	// Форматируем дни
 	switch ta.DayType {
 	case "weekdays":
-		return s.Localizer.Get(lang, "time_weekdays")
+		parts = append(parts, s.Localizer.Get(lang, localization.LocaleTimeWeekdays))
 	case "weekends":
-		return s.Localizer.Get(lang, "time_weekends")
+		parts = append(parts, s.Localizer.Get(lang, localization.LocaleTimeWeekends))
 	case "any":
-		return s.Localizer.Get(lang, "time_any")
+		parts = append(parts, s.Localizer.Get(lang, localization.LocaleTimeAny))
 	case "specific":
-		return s.formatSpecificDays(ta.SpecificDays, lang)
+		if len(ta.SpecificDays) > 0 {
+			dayNames := make([]string, len(ta.SpecificDays))
+			for i, day := range ta.SpecificDays {
+				switch day {
+				case "monday":
+					dayNames[i] = s.Localizer.Get(lang, "day_monday")
+				case "tuesday":
+					dayNames[i] = s.Localizer.Get(lang, "day_tuesday")
+				case "wednesday":
+					dayNames[i] = s.Localizer.Get(lang, "day_wednesday")
+				case "thursday":
+					dayNames[i] = s.Localizer.Get(lang, "day_thursday")
+				case "friday":
+					dayNames[i] = s.Localizer.Get(lang, "day_friday")
+				case "saturday":
+					dayNames[i] = s.Localizer.Get(lang, "day_saturday")
+				case "sunday":
+					dayNames[i] = s.Localizer.Get(lang, "day_sunday")
+				default:
+					dayNames[i] = day
+				}
+			}
+			parts = append(parts, strings.Join(dayNames, ", "))
+		} else {
+			parts = append(parts, s.Localizer.Get(lang, localization.LocaleTimeAny))
+		}
 	default:
-		return s.Localizer.Get(lang, "time_any")
-	}
-}
-
-// formatSpecificDays форматирует конкретные дни.
-func (s *BotService) formatSpecificDays(specificDays []string, lang string) string {
-	if len(specificDays) > 0 {
-		return strings.Join(specificDays, ", ")
+		parts = append(parts, s.Localizer.Get(lang, localization.LocaleTimeAny))
 	}
 
-	return s.Localizer.Get(lang, "time_any")
-}
-
-// formatTimeSlot форматирует временной слот.
-func (s *BotService) formatTimeSlot(timeSlot, lang string) string {
-	switch timeSlot {
-	case "morning":
-		return s.Localizer.Get(lang, "time_morning")
-	case "day":
-		return s.Localizer.Get(lang, "time_day")
-	case "evening":
-		return s.Localizer.Get(lang, "time_evening")
-	case "late":
-		return s.Localizer.Get(lang, "time_late")
-	default:
-		return s.Localizer.Get(lang, "time_any")
+	// Форматируем время
+	if len(ta.TimeSlots) > 0 {
+		timeParts := make([]string, len(ta.TimeSlots))
+		for i, slot := range ta.TimeSlots {
+			switch slot {
+			case "morning":
+				timeParts[i] = s.Localizer.Get(lang, localization.LocaleTimeMorning)
+			case "day":
+				timeParts[i] = s.Localizer.Get(lang, localization.LocaleTimeDay)
+			case "evening":
+				timeParts[i] = s.Localizer.Get(lang, localization.LocaleTimeEvening)
+			case "late":
+				timeParts[i] = s.Localizer.Get(lang, localization.LocaleTimeLate)
+			default:
+				timeParts[i] = slot
+			}
+		}
+		parts = append(parts, strings.Join(timeParts, ", "))
 	}
+
+	if len(parts) == 0 {
+		return s.Localizer.Get(lang, "not_specified")
+	}
+
+	return strings.Join(parts, " ")
 }
 
 // formatCommunicationPreferences форматирует предпочтения общения.
 func (s *BotService) formatCommunicationPreferences(fp *models.FriendshipPreferences, lang string) string {
 	if fp == nil {
-		return "Не указано"
+		return s.Localizer.Get(lang, "not_specified")
 	}
 
-	styleText := s.formatCommunicationStyle(fp.CommunicationStyle, lang)
+	// Форматируем массив стилей общения
+	var styleTexts []string
+	for _, style := range fp.CommunicationStyles {
+		styleTexts = append(styleTexts, s.formatCommunicationStyle(style, lang))
+	}
+	styleText := strings.Join(styleTexts, ", ")
+
 	freqText := s.formatCommunicationFreq(fp.CommunicationFreq, lang)
 
 	return fmt.Sprintf("%s, %s", styleText, freqText)
@@ -1710,7 +1737,124 @@ func (s *BotService) GetConfig() *config.Config {
 	return s.Config
 }
 
-// === Методы databaseAdapter для работы с доступностью ===
+// GetTimeAvailability получает временную доступность пользователя.
+func (s *BotService) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
+	return s.DB.GetTimeAvailability(userID)
+}
+
+// GetFriendshipPreferences получает предпочтения общения пользователя.
+func (s *BotService) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
+	return s.DB.GetFriendshipPreferences(userID)
+}
+
+// SaveTimeAvailability сохраняет временную доступность пользователя.
+func (s *BotService) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
+	return s.DB.SaveTimeAvailability(userID, availability)
+}
+
+// SaveFriendshipPreferences сохраняет предпочтения общения пользователя.
+func (s *BotService) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
+	return s.DB.SaveFriendshipPreferences(userID, preferences)
+}
+
+// ValidateTimeAvailability валидирует данные временной доступности
+func (s *BotService) ValidateTimeAvailability(availability *models.TimeAvailability, lang string) error {
+	if availability == nil {
+		return fmt.Errorf("%s", s.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+	}
+
+	// Validate day type
+	switch availability.DayType {
+	case "weekdays", "weekends", "any":
+		// Valid types, no additional validation needed
+	case "specific":
+		// Must have at least one specific day
+		if len(availability.SpecificDays) == 0 {
+			return fmt.Errorf("%s", s.Localizer.Get(lang, localization.LocaleErrorNoDaysSelected))
+		}
+	default:
+		return fmt.Errorf("%s", s.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+	}
+
+	// Validate time slots - must have at least one
+	if len(availability.TimeSlots) == 0 {
+		return fmt.Errorf("%s", s.Localizer.Get(lang, localization.LocaleErrorNoTimeSelected))
+	}
+
+	// Validate time slot values
+	validTimeSlots := map[string]bool{
+		"morning": true,
+		"day":     true,
+		"evening": true,
+		"late":    true,
+	}
+
+	for _, slot := range availability.TimeSlots {
+		if !validTimeSlots[slot] {
+			return fmt.Errorf("%s", s.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+		}
+	}
+
+	return nil
+}
+
+// UpdateUserState обновляет состояние пользователя.
+func (s *BotService) UpdateUserState(userID int, state string) error {
+	return s.DB.UpdateUserState(userID, state)
+}
+
+// ValidateFriendshipPreferences валидирует данные предпочтений общения
+func (s *BotService) ValidateFriendshipPreferences(preferences *models.FriendshipPreferences, lang string) error {
+	if preferences == nil {
+		return fmt.Errorf("%s", s.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+	}
+
+	// Validate activity type
+	validActivityTypes := map[string]bool{
+		"movies":      true,
+		"games":       true,
+		"educational": true,
+		"casual_chat": true,
+	}
+
+	if !validActivityTypes[preferences.ActivityType] {
+		return fmt.Errorf("%s", s.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+	}
+
+	// Validate communication styles - must have at least one
+	if len(preferences.CommunicationStyles) == 0 {
+		return fmt.Errorf("%s", s.Localizer.Get(lang, localization.LocaleErrorNoCommunicationSelected))
+	}
+
+	// Validate communication style values
+	validCommStyles := map[string]bool{
+		"text":        true,
+		"voice_msg":   true,
+		"audio_call":  true,
+		"video_call":  true,
+		"meet_person": true,
+	}
+
+	for _, style := range preferences.CommunicationStyles {
+		if !validCommStyles[style] {
+			return fmt.Errorf("%s", s.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+		}
+	}
+
+	// Validate communication frequency
+	validFrequencies := map[string]bool{
+		"multiple_weekly":  true,
+		"weekly":           true,
+		"multiple_monthly": true,
+		"flexible":         true,
+	}
+
+	if !validFrequencies[preferences.CommunicationFreq] {
+		return fmt.Errorf("%s", s.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+	}
+
+	return nil
+}
 
 // SaveTimeAvailability сохраняет временную доступность пользователя.
 func (a *databaseAdapter) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {

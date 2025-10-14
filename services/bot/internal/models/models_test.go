@@ -47,15 +47,10 @@ func TestUser_JSONSerialization(t *testing.T) {
 		CreatedAt:              now,
 		UpdatedAt:              now,
 		Interests:              []int{1, 2, 3},
-		TimeAvailability: &TimeAvailability{
-			DayType:      "weekdays",
-			SpecificDays: []string{"monday", "wednesday"},
-			TimeSlot:     "evening",
-		},
 		FriendshipPreferences: &FriendshipPreferences{
-			ActivityType:       "educational",
-			CommunicationStyle: "text",
-			CommunicationFreq:  "weekly",
+			ActivityType:        "educational",
+			CommunicationStyles: []string{"text"},
+			CommunicationFreq:   "weekly",
 		},
 	}
 
@@ -85,14 +80,9 @@ func TestUser_JSONSerialization(t *testing.T) {
 	assert.Equal(t, user.Interests, deserialized.Interests)
 
 	// Verify nested structs
-	assert.NotNil(t, deserialized.TimeAvailability)
-	assert.Equal(t, user.TimeAvailability.DayType, deserialized.TimeAvailability.DayType)
-	assert.Equal(t, user.TimeAvailability.SpecificDays, deserialized.TimeAvailability.SpecificDays)
-	assert.Equal(t, user.TimeAvailability.TimeSlot, deserialized.TimeAvailability.TimeSlot)
-
 	assert.NotNil(t, deserialized.FriendshipPreferences)
 	assert.Equal(t, user.FriendshipPreferences.ActivityType, deserialized.FriendshipPreferences.ActivityType)
-	assert.Equal(t, user.FriendshipPreferences.CommunicationStyle, deserialized.FriendshipPreferences.CommunicationStyle)
+	assert.Equal(t, user.FriendshipPreferences.CommunicationStyles, deserialized.FriendshipPreferences.CommunicationStyles)
 	assert.Equal(t, user.FriendshipPreferences.CommunicationFreq, deserialized.FriendshipPreferences.CommunicationFreq)
 }
 
@@ -113,7 +103,6 @@ func TestUser_MinimalUser(t *testing.T) {
 	assert.Empty(t, user.State)                 // no default value in struct
 	assert.Empty(t, user.Status)                // no default value in struct
 	assert.Equal(t, 0, user.ProfileCompletionLevel)
-	assert.Nil(t, user.TimeAvailability)
 	assert.Nil(t, user.FriendshipPreferences)
 }
 
@@ -131,54 +120,25 @@ func TestUser_ProfileCompletion(t *testing.T) {
 		Status:                 StatusActive,
 		ProfileCompletionLevel: 100,
 		Interests:              []int{1, 2, 3, 4, 5},
-		TimeAvailability: &TimeAvailability{
-			DayType:  "weekdays",
-			TimeSlot: "evening",
-		},
 		FriendshipPreferences: &FriendshipPreferences{
-			ActivityType:       "educational",
-			CommunicationStyle: "text",
-			CommunicationFreq:  "weekly",
+			ActivityType:        "educational",
+			CommunicationStyles: []string{"text"},
+			CommunicationFreq:   "weekly",
 		},
 	}
 
 	// Test complete profile
 	assert.Equal(t, 100, user.ProfileCompletionLevel)
 	assert.NotEmpty(t, user.Interests)
-	assert.NotNil(t, user.TimeAvailability)
 	assert.NotNil(t, user.FriendshipPreferences)
-}
-
-// TestTimeAvailability_JSONSerialization тестирует JSON сериализацию TimeAvailability.
-func TestTimeAvailability_JSONSerialization(t *testing.T) {
-	ta := TimeAvailability{
-		DayType:      "specific",
-		SpecificDays: []string{"monday", "wednesday", "friday"},
-		TimeSlot:     "morning",
-	}
-
-	// Test JSON serialization
-	data, err := json.Marshal(ta)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, data)
-
-	// Test JSON deserialization
-	var deserialized TimeAvailability
-
-	err = json.Unmarshal(data, &deserialized)
-	assert.NoError(t, err)
-
-	assert.Equal(t, ta.DayType, deserialized.DayType)
-	assert.Equal(t, ta.SpecificDays, deserialized.SpecificDays)
-	assert.Equal(t, ta.TimeSlot, deserialized.TimeSlot)
 }
 
 // TestFriendshipPreferences_JSONSerialization тестирует JSON сериализацию FriendshipPreferences.
 func TestFriendshipPreferences_JSONSerialization(t *testing.T) {
 	fp := FriendshipPreferences{
-		ActivityType:       "movies",
-		CommunicationStyle: "voice_msg",
-		CommunicationFreq:  "daily",
+		ActivityType:        "movies",
+		CommunicationStyles: []string{"voice_msg"},
+		CommunicationFreq:   "daily",
 	}
 
 	// Test JSON serialization
@@ -193,7 +153,7 @@ func TestFriendshipPreferences_JSONSerialization(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, fp.ActivityType, deserialized.ActivityType)
-	assert.Equal(t, fp.CommunicationStyle, deserialized.CommunicationStyle)
+	assert.Equal(t, fp.CommunicationStyles, deserialized.CommunicationStyles)
 	assert.Equal(t, fp.CommunicationFreq, deserialized.CommunicationFreq)
 }
 
@@ -582,7 +542,6 @@ func TestModels_DefaultValues(t *testing.T) {
 	assert.Empty(t, user.Status)                // empty string, no default value
 	assert.Empty(t, user.InterfaceLanguageCode) // empty string, no default value
 	assert.Equal(t, 0, user.ProfileCompletionLevel)
-	assert.Nil(t, user.TimeAvailability)
 	assert.Nil(t, user.FriendshipPreferences)
 
 	// Test default Language values

@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -33,9 +34,10 @@ type TelegramHandler struct {
 	interestHandler        *handlers.NewInterestHandlerImpl
 	profileInterestHandler *handlers.ProfileInterestHandler
 	isolatedInterestEditor *handlers.IsolatedInterestEditor
+	availabilityHandler    *handlers.AvailabilityHandlerImpl
+	availabilityEditor     handlers.IsolatedAvailabilityEditor
 	adminHandler           *handlers.AdminHandlerImpl
 	utilityHandler         *handlers.UtilityHandlerImpl
-	availabilityHandler    *handlers.AvailabilityHandlerImpl
 	errorHandler           *errorsPkg.ErrorHandler
 	isolatedRouter         *CallbackRouter // Роутер для изолированных callback'ов
 	rateLimiter            *RateLimiter    // Rate limiter для защиты от спама
@@ -93,9 +95,10 @@ func NewTelegramHandler(
 		errorHandler,
 		service.Cache,
 	)
+	availabilityHandler := handlers.NewAvailabilityHandler(baseHandler)
+	availabilityEditor := *handlers.NewIsolatedAvailabilityEditor(baseHandler)
 	adminHandler := handlers.NewAdminHandler(baseHandler, adminChatIDs, make([]string, 0))
 	utilityHandler := handlers.NewUtilityHandler(baseHandler)
-	availabilityHandler := handlers.NewAvailabilityHandler(baseHandler)
 
 	// Создаем rate limiter для защиты от спама
 	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
@@ -115,9 +118,10 @@ func NewTelegramHandler(
 		interestHandler:        interestHandler,
 		profileInterestHandler: profileInterestHandler,
 		isolatedInterestEditor: isolatedInterestEditor,
+		availabilityHandler:    availabilityHandler,
+		availabilityEditor:     availabilityEditor,
 		adminHandler:           adminHandler,
 		utilityHandler:         utilityHandler,
-		availabilityHandler:    availabilityHandler,
 		errorHandler:           errorHandler,
 		isolatedRouter:         isolatedRouter,
 		rateLimiter:            rateLimiter,
@@ -177,9 +181,10 @@ func NewTelegramHandlerWithAdmins(
 		errorHandler,
 		service.Cache,
 	)
+	availabilityHandler := handlers.NewAvailabilityHandler(baseHandler)
+	availabilityEditor := *handlers.NewIsolatedAvailabilityEditor(baseHandler)
 	adminHandler := handlers.NewAdminHandler(baseHandler, adminChatIDs, adminUsernames)
 	utilityHandler := handlers.NewUtilityHandler(baseHandler)
-	availabilityHandler := handlers.NewAvailabilityHandler(baseHandler)
 
 	// Создаем rate limiter для защиты от спама
 	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
@@ -199,9 +204,10 @@ func NewTelegramHandlerWithAdmins(
 		interestHandler:        interestHandler,
 		profileInterestHandler: profileInterestHandler,
 		isolatedInterestEditor: isolatedInterestEditor,
+		availabilityHandler:    availabilityHandler,
+		availabilityEditor:     availabilityEditor,
 		adminHandler:           adminHandler,
 		utilityHandler:         utilityHandler,
-		availabilityHandler:    availabilityHandler,
 		errorHandler:           errorHandler,
 		isolatedRouter:         isolatedRouter,
 		rateLimiter:            rateLimiter,
@@ -335,7 +341,6 @@ func (h *TelegramHandler) handleState(message *tgbotapi.Message, user *models.Us
 	case models.StateWaitingLanguage,
 		models.StateWaitingInterests,
 		models.StateWaitingTime,
-		models.StateWaitingTimeAvailability,
 		models.StateWaitingFriendshipPreferences:
 		return h.utilityHandler.SendMessage(
 			message.Chat.ID,
@@ -410,14 +415,14 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		return err
 	}
 
-	if err := h.handleFeedbackCallbacks(callback, user, data); err != nil {
-		log.Printf("DEBUG: handleFeedbackCallbacks returned error: %v", err)
+	if err := h.handleAvailabilityCallbacks(callback, user, data); err != nil {
+		log.Printf("DEBUG: handleAvailabilityCallbacks returned error: %v", err)
 
 		return err
 	}
 
-	if err := h.handleAvailabilityCallbacks(callback, user, data); err != nil {
-		log.Printf("DEBUG: handleAvailabilityCallbacks returned error: %v", err)
+	if err := h.handleFeedbackCallbacks(callback, user, data); err != nil {
+		log.Printf("DEBUG: handleFeedbackCallbacks returned error: %v", err)
 
 		return err
 	}
@@ -601,8 +606,7 @@ func (h *TelegramHandler) handleProfileCallbacks(callback *tgbotapi.CallbackQuer
 	// Обработка команд профиля
 	if strings.HasPrefix(data, "profile_") ||
 		strings.HasPrefix(data, "edit_") ||
-		data == "back_to_previous_step" ||
-		data == "continue_to_availability" {
+		data == "back_to_previous_step" {
 		return h.handleProfileCommands(
 			callback,
 			user,
@@ -848,14 +852,6 @@ func (h *TelegramHandler) handleProfileCommands(callback *tgbotapi.CallbackQuery
 		log.Printf("DEBUG: Handling edit_level for user %d", user.ID)
 
 		return h.profileHandler.HandleEditLevelLang(callback, user)
-	case "edit_availability":
-		log.Printf("DEBUG: Handling edit_availability for user %d", user.ID)
-
-		return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
-	case "continue_to_availability":
-		log.Printf("DEBUG: Handling continue_to_availability for user %d", user.ID)
-
-		return h.startAvailabilitySetup(callback, user)
 	}
 
 	log.Printf("DEBUG: No handler found for data: '%s' for user %d", data, user.ID)
@@ -864,6 +860,154 @@ func (h *TelegramHandler) handleProfileCommands(callback *tgbotapi.CallbackQuery
 }
 
 // handleMenuCallbacks обрабатывает callback'и связанные с меню.
+// handleAvailabilityCallbacks обрабатывает callback'и связанные с настройкой доступности
+func (h *TelegramHandler) handleAvailabilityCallbacks(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
+	// Обработка callback'а для перехода к настройке доступности
+	if data == "continue_to_availability" {
+		return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
+	}
+
+	// Обработка callback'ов редактора доступности (isolated editor)
+	if strings.HasPrefix(data, "availability_") ||
+		strings.HasPrefix(data, "avail_edit_") ||
+		strings.HasPrefix(data, "avail_") {
+
+		// Логируем все availability callback'и для отладки
+		h.service.LoggingService.Telegram().InfoWithContext("Processing availability callback", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+			"user_id":       user.ID,
+			"callback_data": data,
+		})
+
+		// Обработка callback'ов редактора
+		switch {
+		case data == "avail_edit_days":
+			return h.availabilityEditor.EditDays(callback, user)
+		case data == "avail_edit_time":
+			return h.availabilityEditor.EditTimeSlots(callback, user)
+		case data == "avail_edit_communication":
+			return h.availabilityEditor.EditCommunication(callback, user)
+		case data == "avail_edit_frequency":
+			return h.availabilityEditor.EditFrequency(callback, user)
+		case data == "avail_save_changes":
+			return h.availabilityEditor.SaveChanges(callback, user)
+		case data == "avail_cancel_edit":
+			return h.availabilityEditor.CancelEdit(callback, user)
+		case data == "avail_back_to_edit_menu":
+			session, err := h.availabilityEditor.GetEditSession(user.ID)
+			if err != nil {
+				return err
+			}
+			return h.availabilityEditor.ShowEditMenu(callback, session, user)
+
+		// Обработка выбора типа дней
+		case strings.HasPrefix(data, "avail_edit_daytype_"):
+			dayType := strings.TrimPrefix(data, "avail_edit_daytype_")
+			return h.availabilityEditor.HandleDayTypeSelection(callback, user, dayType)
+
+		// Обработка выбора конкретных дней
+		case strings.HasPrefix(data, "avail_edit_day_"):
+			day := strings.TrimPrefix(data, "avail_edit_day_")
+			return h.availabilityEditor.ToggleSpecificDay(callback, user, day)
+
+		// Обработка применения дней
+		case data == "avail_apply_days":
+			session, err := h.availabilityEditor.GetEditSession(user.ID)
+			if err != nil {
+				return err
+			}
+			return h.availabilityEditor.ShowEditMenu(callback, session, user)
+
+		// Обработка выбора временных слотов
+		case strings.HasPrefix(data, "avail_edit_timeslot_"):
+			slot := strings.TrimPrefix(data, "avail_edit_timeslot_")
+			return h.availabilityEditor.ToggleTimeSlot(callback, user, slot)
+
+		// Обработка применения времени
+		case data == "avail_apply_time":
+			session, err := h.availabilityEditor.GetEditSession(user.ID)
+			if err != nil {
+				return err
+			}
+			return h.availabilityEditor.ShowEditMenu(callback, session, user)
+
+		// Обработка выбора стилей общения
+		case strings.HasPrefix(data, "avail_edit_commstyle_"):
+			style := strings.TrimPrefix(data, "avail_edit_commstyle_")
+			return h.availabilityEditor.ToggleCommunicationStyle(callback, user, style)
+
+		// Обработка применения общения
+		case data == "avail_apply_communication":
+			session, err := h.availabilityEditor.GetEditSession(user.ID)
+			if err != nil {
+				return err
+			}
+			return h.availabilityEditor.ShowEditMenu(callback, session, user)
+
+		// Обработка выбора частоты
+		case strings.HasPrefix(data, "avail_edit_freq_"):
+			freq := strings.TrimPrefix(data, "avail_edit_freq_")
+			return h.availabilityEditor.HandleFrequencySelection(callback, user, freq)
+
+		// Обработка setup flow
+		case data == "availability_proceed_to_time":
+			return h.availabilityHandler.ShowTimeSlotSelection(callback, user)
+		case data == "availability_proceed_to_communication":
+			return h.availabilityHandler.HandleFriendshipPreferencesStart(callback, user)
+		case data == "availability_proceed_to_frequency":
+			return h.availabilityHandler.CompleteAvailabilitySetup(callback, user)
+
+		// Обработка кнопок "Назад"
+		case data == "availability_back_to_daytype":
+			// Возврат к началу setup (выбор типа дней)
+			return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
+		case data == "availability_back_to_days":
+			// Возврат к выбору типа дней (то же что и начало setup)
+			return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
+		case data == "availability_back_to_time":
+			// Возврат к выбору времени - проверяем, есть ли данные
+			cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
+			err := h.service.Cache.Get(context.Background(), cacheKey, nil)
+			if err != nil {
+				// Если данных нет, начинаем setup заново
+				return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
+			}
+			return h.availabilityHandler.ShowTimeSlotSelection(callback, user)
+
+		// Обработка выбора дней в setup
+		case strings.HasPrefix(data, "availability_specific_day_"):
+			day := strings.TrimPrefix(data, "availability_specific_day_")
+			return h.availabilityHandler.HandleSpecificDaysSelection(callback, user, day)
+
+		// Обработка выбора времени в setup
+		case strings.HasPrefix(data, "availability_timeslot_"):
+			slot := strings.TrimPrefix(data, "availability_timeslot_")
+			if slot == "select_all" {
+				return h.availabilityHandler.HandleSelectAllTimeSlots(callback, user)
+			}
+			return h.availabilityHandler.HandleTimeSlotSelection(callback, user, slot)
+
+		// Обработка выбора типа дней в setup
+		case strings.HasPrefix(data, "availability_daytype_"):
+			dayType := strings.TrimPrefix(data, "availability_daytype_")
+			return h.availabilityHandler.HandleDayTypeSelection(callback, user, dayType)
+
+		// Обработка кнопки "выбрать всё" для способов общения
+		case data == "availability_communication_select_all":
+			return h.availabilityHandler.HandleSelectAllCommunication(callback, user)
+
+		// Обработка выбора индивидуальных способов общения
+		case strings.HasPrefix(data, "availability_communication_"):
+			style := strings.TrimPrefix(data, "availability_communication_")
+			return h.availabilityHandler.HandleCommunicationStyleSelection(callback, user, style)
+		}
+
+		return nil // Callback не обработан этой функцией
+	}
+
+	// Если callback не связан с availability, возвращаем nil для продолжения обработки другими handlers
+	return nil
+}
+
 func (h *TelegramHandler) handleMenuCallbacks(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
 	switch data {
 	case "main_change_language":
@@ -985,67 +1129,6 @@ func (h *TelegramHandler) handleFeedbackCallbacks(callback *tgbotapi.CallbackQue
 		indexStr := strings.TrimPrefix(data, "delete_current_feedback_")
 
 		return h.feedbackHandler.HandleDeleteCurrentFeedback(callback, user, indexStr)
-	}
-
-	return nil
-}
-
-// startAvailabilitySetup начинает настройку доступности после завершения интересов.
-func (h *TelegramHandler) startAvailabilitySetup(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	// Переводим пользователя в состояние ожидания настройки доступности
-	err := h.service.DB.UpdateUserState(user.ID, models.StateWaitingTimeAvailability)
-	if err != nil {
-		return fmt.Errorf("failed to update user state: %w", err)
-	}
-
-	// Автоматически начинаем настройку доступности
-	return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
-}
-
-// handleAvailabilityCallbacks обрабатывает callback'и связанные с настройкой доступности.
-func (h *TelegramHandler) handleAvailabilityCallbacks(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
-	switch {
-	case data == "setup_availability":
-		return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
-	case strings.HasPrefix(data, "availability_daytype_"):
-		dayType := strings.TrimPrefix(data, "availability_daytype_")
-
-		return h.availabilityHandler.HandleDayTypeSelection(callback, user, dayType)
-	case strings.HasPrefix(data, "availability_specific_day_"):
-		day := strings.TrimPrefix(data, "availability_specific_day_")
-
-		return h.availabilityHandler.HandleSpecificDaysSelection(callback, user, day)
-	case data == "availability_proceed_to_time":
-		// Получаем текущую доступность, чтобы определить следующий шаг
-		availability, err := h.service.DB.GetTimeAvailability(user.ID)
-		if err != nil {
-			return fmt.Errorf("failed to get time availability: %w", err)
-		}
-
-		if availability.DayType == "specific" && len(availability.SpecificDays) == 0 {
-			// Если выбраны specific дни, но ничего не выбрано, показываем ошибку
-			return h.availabilityHandler.ShowSpecificDaysSelection(callback, user)
-		}
-
-		return h.availabilityHandler.ShowTimeSlotSelection(callback, user)
-	case strings.HasPrefix(data, "availability_timeslot_"):
-		timeSlot := strings.TrimPrefix(data, "availability_timeslot_")
-
-		return h.availabilityHandler.HandleTimeSlotSelection(callback, user, timeSlot)
-	case data == "setup_friendship_preferences":
-		return h.availabilityHandler.HandleFriendshipPreferencesStart(callback, user)
-	case strings.HasPrefix(data, "availability_activity_"):
-		activityType := strings.TrimPrefix(data, "availability_activity_")
-
-		return h.availabilityHandler.HandleActivityTypeSelection(callback, user, activityType)
-	case strings.HasPrefix(data, "availability_communication_"):
-		communicationStyle := strings.TrimPrefix(data, "availability_communication_")
-
-		return h.availabilityHandler.HandleCommunicationStyleSelection(callback, user, communicationStyle)
-	case strings.HasPrefix(data, "availability_frequency_"):
-		frequency := strings.TrimPrefix(data, "availability_frequency_")
-
-		return h.availabilityHandler.HandleCommunicationFrequencySelection(callback, user, frequency)
 	}
 
 	return nil

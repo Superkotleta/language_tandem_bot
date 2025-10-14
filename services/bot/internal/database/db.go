@@ -287,15 +287,10 @@ func (db *DB) GetUserByTelegramID(telegramID int64) (*models.User, error) {
 		CreatedAt:              time.Now(),
 		UpdatedAt:              time.Now(),
 		Interests:              []int{},
-		TimeAvailability: &models.TimeAvailability{
-			DayType:      "any",
-			SpecificDays: []string{},
-			TimeSlot:     "any",
-		},
 		FriendshipPreferences: &models.FriendshipPreferences{
-			ActivityType:       "casual_chat",
-			CommunicationStyle: "text",
-			CommunicationFreq:  "weekly",
+			ActivityType:        "casual_chat",
+			CommunicationStyles: []string{"text"},
+			CommunicationFreq:   "weekly",
 		},
 	}
 
@@ -377,15 +372,10 @@ func (db *DB) FindOrCreateUser(telegramID int64, username, firstName string) (*m
 		CreatedAt:              time.Now(),
 		UpdatedAt:              time.Now(),
 		Interests:              []int{},
-		TimeAvailability: &models.TimeAvailability{
-			DayType:      "any",
-			SpecificDays: []string{},
-			TimeSlot:     "any",
-		},
 		FriendshipPreferences: &models.FriendshipPreferences{
-			ActivityType:       "casual_chat",
-			CommunicationStyle: "text",
-			CommunicationFreq:  "weekly",
+			ActivityType:        "casual_chat",
+			CommunicationStyles: []string{"text"},
+			CommunicationFreq:   "weekly",
 		},
 	}
 
@@ -937,70 +927,14 @@ func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error 
 	return nil
 }
 
-// SaveTimeAvailability сохраняет временную доступность пользователя.
-func (db *DB) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
-	query := `
-		INSERT INTO user_time_availability (user_id, day_type, specific_days, time_slot)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (user_id) DO UPDATE SET
-			day_type = EXCLUDED.day_type,
-			specific_days = EXCLUDED.specific_days,
-			time_slot = EXCLUDED.time_slot,
-			created_at = CURRENT_TIMESTAMP
-	`
-
-	_, err := db.conn.ExecContext(context.Background(), query,
-		userID,
-		availability.DayType,
-		availability.SpecificDays,
-		availability.TimeSlot,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to save time availability: %w", err)
-	}
-
-	return nil
-}
-
-// GetTimeAvailability получает временную доступность пользователя.
-func (db *DB) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
-	query := `
-		SELECT day_type, specific_days, time_slot
-		FROM user_time_availability
-		WHERE user_id = $1
-	`
-
-	var availability models.TimeAvailability
-
-	err := db.conn.QueryRowContext(context.Background(), query, userID).Scan(
-		&availability.DayType,
-		&availability.SpecificDays,
-		&availability.TimeSlot,
-	)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			// Возвращаем значения по умолчанию, если данных нет
-			return &models.TimeAvailability{
-				DayType:      "any",
-				SpecificDays: []string{},
-				TimeSlot:     "any",
-			}, nil
-		}
-
-		return nil, fmt.Errorf("failed to get time availability: %w", err)
-	}
-
-	return &availability, nil
-}
-
 // SaveFriendshipPreferences сохраняет предпочтения общения пользователя.
 func (db *DB) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
 	query := `
-		INSERT INTO friendship_preferences (user_id, activity_type, communication_style, communication_frequency)
+		INSERT INTO friendship_preferences (user_id, activity_type, communication_styles, communication_frequency)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (user_id) DO UPDATE SET
 			activity_type = EXCLUDED.activity_type,
-			communication_style = EXCLUDED.communication_style,
+			communication_styles = EXCLUDED.communication_styles,
 			communication_frequency = EXCLUDED.communication_frequency,
 			created_at = CURRENT_TIMESTAMP
 	`
@@ -1008,7 +942,7 @@ func (db *DB) SaveFriendshipPreferences(userID int, preferences *models.Friendsh
 	_, err := db.conn.ExecContext(context.Background(), query,
 		userID,
 		preferences.ActivityType,
-		preferences.CommunicationStyle,
+		preferences.CommunicationStyles,
 		preferences.CommunicationFreq,
 	)
 	if err != nil {
@@ -1021,7 +955,7 @@ func (db *DB) SaveFriendshipPreferences(userID int, preferences *models.Friendsh
 // GetFriendshipPreferences получает предпочтения общения пользователя.
 func (db *DB) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
 	query := `
-		SELECT activity_type, communication_style, communication_frequency
+		SELECT activity_type, communication_styles, communication_frequency
 		FROM friendship_preferences
 		WHERE user_id = $1
 	`
@@ -1030,16 +964,16 @@ func (db *DB) GetFriendshipPreferences(userID int) (*models.FriendshipPreference
 
 	err := db.conn.QueryRowContext(context.Background(), query, userID).Scan(
 		&preferences.ActivityType,
-		&preferences.CommunicationStyle,
+		&preferences.CommunicationStyles,
 		&preferences.CommunicationFreq,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Возвращаем значения по умолчанию, если данных нет
 			return &models.FriendshipPreferences{
-				ActivityType:       "casual_chat",
-				CommunicationStyle: "text",
-				CommunicationFreq:  "weekly",
+				ActivityType:        "casual_chat",
+				CommunicationStyles: []string{"text"},
+				CommunicationFreq:   "weekly",
 			}, nil
 		}
 
@@ -1047,6 +981,62 @@ func (db *DB) GetFriendshipPreferences(userID int) (*models.FriendshipPreference
 	}
 
 	return &preferences, nil
+}
+
+// SaveTimeAvailability сохраняет временную доступность пользователя.
+func (db *DB) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
+	query := `
+		INSERT INTO user_time_availability (user_id, day_type, specific_days, time_slots)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (user_id) DO UPDATE SET
+			day_type = EXCLUDED.day_type,
+			specific_days = EXCLUDED.specific_days,
+			time_slots = EXCLUDED.time_slots,
+			created_at = CURRENT_TIMESTAMP
+	`
+
+	_, err := db.conn.ExecContext(context.Background(), query,
+		userID,
+		availability.DayType,
+		availability.SpecificDays,
+		availability.TimeSlots,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to save time availability: %w", err)
+	}
+
+	return nil
+}
+
+// GetTimeAvailability получает временную доступность пользователя.
+func (db *DB) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
+	query := `
+		SELECT day_type, specific_days, time_slots
+		FROM user_time_availability
+		WHERE user_id = $1
+	`
+
+	var availability models.TimeAvailability
+
+	err := db.conn.QueryRowContext(context.Background(), query, userID).Scan(
+		&availability.DayType,
+		&availability.SpecificDays,
+		&availability.TimeSlots,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Возвращаем значения по умолчанию, если данных нет
+			return &models.TimeAvailability{
+				DayType:      "any",
+				SpecificDays: []string{},
+				TimeSlots:    []string{"any"},
+			}, nil
+		}
+
+		return nil, fmt.Errorf("failed to get time availability: %w", err)
+	}
+
+	return &availability, nil
 }
 
 // ===== BATCH OPERATIONS METHODS =====

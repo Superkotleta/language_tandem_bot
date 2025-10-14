@@ -45,6 +45,8 @@ type Database interface {
 	// Доступность пользователя
 	SaveTimeAvailability(userID int, availability *models.TimeAvailability) error
 	GetTimeAvailability(userID int) (*models.TimeAvailability, error)
+
+	// Предпочтения общения
 	SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error
 	GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error)
 

@@ -294,6 +294,105 @@ const (
 )
 
 // =============================================================================
+// AVAILABILITY CALLBACK CONSTANTS
+// =============================================================================
+
+// Availability setup callbacks
+const (
+	CallbackAvailDayTypeWeekdays = "availability_daytype_weekdays"
+	CallbackAvailDayTypeWeekends = "availability_daytype_weekends"
+	CallbackAvailDayTypeAny      = "availability_daytype_any"
+	CallbackAvailDayTypeSpecific = "availability_daytype_specific"
+
+	CallbackAvailSpecificDayMonday    = "availability_specific_day_monday"
+	CallbackAvailSpecificDayTuesday   = "availability_specific_day_tuesday"
+	CallbackAvailSpecificDayWednesday = "availability_specific_day_wednesday"
+	CallbackAvailSpecificDayThursday  = "availability_specific_day_thursday"
+	CallbackAvailSpecificDayFriday    = "availability_specific_day_friday"
+	CallbackAvailSpecificDaySaturday  = "availability_specific_day_saturday"
+	CallbackAvailSpecificDaySunday    = "availability_specific_day_sunday"
+
+	CallbackAvailProceedToTime          = "availability_proceed_to_time"
+	CallbackAvailProceedToCommunication = "availability_proceed_to_communication"
+	CallbackAvailProceedToFrequency     = "availability_proceed_to_frequency"
+
+	CallbackAvailTimeSlotMorning = "availability_timeslot_morning"
+	CallbackAvailTimeSlotDay     = "availability_timeslot_day"
+	CallbackAvailTimeSlotEvening = "availability_timeslot_evening"
+	CallbackAvailTimeSlotLate    = "availability_timeslot_late"
+
+	CallbackAvailCommunicationText       = "availability_communication_text"
+	CallbackAvailCommunicationVoiceMsg   = "availability_communication_voice_msg"
+	CallbackAvailCommunicationAudioCall  = "availability_communication_audio_call"
+	CallbackAvailCommunicationVideoCall  = "availability_communication_video_call"
+	CallbackAvailCommunicationMeetPerson = "availability_communication_meet_person"
+
+	CallbackAvailFrequencyMultipleWeekly  = "availability_frequency_multiple_weekly"
+	CallbackAvailFrequencyWeekly          = "availability_frequency_weekly"
+	CallbackAvailFrequencyMultipleMonthly = "availability_frequency_multiple_monthly"
+	CallbackAvailFrequencyFlexible        = "availability_frequency_flexible"
+)
+
+// Availability editor callbacks
+const (
+	CallbackAvailEditDays          = "avail_edit_days"
+	CallbackAvailEditTime          = "avail_edit_time"
+	CallbackAvailEditCommunication = "avail_edit_communication"
+	CallbackAvailEditFrequency     = "avail_edit_frequency"
+	CallbackAvailSaveChanges       = "avail_save_changes"
+	CallbackAvailCancelEdit        = "avail_cancel_edit"
+	CallbackAvailBackToEditMenu    = "avail_back_to_edit_menu"
+
+	CallbackAvailEditDayTypeWeekdays = "avail_edit_daytype_weekdays"
+	CallbackAvailEditDayTypeWeekends = "avail_edit_daytype_weekends"
+	CallbackAvailEditDayTypeAny      = "avail_edit_daytype_any"
+	CallbackAvailEditDayTypeSpecific = "avail_edit_daytype_specific"
+
+	CallbackAvailEditDayMonday    = "avail_edit_day_monday"
+	CallbackAvailEditDayTuesday   = "avail_edit_day_tuesday"
+	CallbackAvailEditDayWednesday = "avail_edit_day_wednesday"
+	CallbackAvailEditDayThursday  = "avail_edit_day_thursday"
+	CallbackAvailEditDayFriday    = "avail_edit_day_friday"
+	CallbackAvailEditDaySaturday  = "avail_edit_day_saturday"
+	CallbackAvailEditDaySunday    = "avail_edit_day_sunday"
+
+	CallbackAvailApplyDays          = "avail_apply_days"
+	CallbackAvailApplyTime          = "avail_apply_time"
+	CallbackAvailApplyCommunication = "avail_apply_communication"
+	CallbackAvailBackToDayType      = "avail_back_to_daytype"
+
+	CallbackAvailEditTimeSlotMorning = "avail_edit_timeslot_morning"
+	CallbackAvailEditTimeSlotDay     = "avail_edit_timeslot_day"
+	CallbackAvailEditTimeSlotEvening = "avail_edit_timeslot_evening"
+	CallbackAvailEditTimeSlotLate    = "avail_edit_timeslot_late"
+
+	CallbackAvailEditCommStyleText       = "avail_edit_commstyle_text"
+	CallbackAvailEditCommStyleVoiceMsg   = "avail_edit_commstyle_voice_msg"
+	CallbackAvailEditCommStyleAudioCall  = "avail_edit_commstyle_audio_call"
+	CallbackAvailEditCommStyleVideoCall  = "avail_edit_commstyle_video_call"
+	CallbackAvailEditCommStyleMeetPerson = "avail_edit_commstyle_meet_person"
+
+	CallbackAvailEditFreqMultipleWeekly  = "avail_edit_freq_multiple_weekly"
+	CallbackAvailEditFreqWeekly          = "avail_edit_freq_weekly"
+	CallbackAvailEditFreqMultipleMonthly = "avail_edit_freq_multiple_monthly"
+	CallbackAvailEditFreqFlexible        = "avail_edit_freq_flexible"
+)
+
+// Availability callback prefixes for routing
+const (
+	CallbackPrefixAvailDayType       = "availability_daytype_"
+	CallbackPrefixAvailSpecificDay   = "availability_specific_day_"
+	CallbackPrefixAvailTimeSlot      = "availability_timeslot_"
+	CallbackPrefixAvailCommunication = "availability_communication_"
+	CallbackPrefixAvailFrequency     = "availability_frequency_"
+	CallbackPrefixAvailEdit          = "avail_edit_"
+	CallbackPrefixAvailEditDay       = "avail_edit_day_"
+	CallbackPrefixAvailEditTimeSlot  = "avail_edit_timeslot_"
+	CallbackPrefixAvailEditCommStyle = "avail_edit_commstyle_"
+	CallbackPrefixAvailEditFreq      = "avail_edit_freq_"
+)
+
+// =============================================================================
 // LOCALIZATION KEYS (text message identifiers)
 // =============================================================================
 
@@ -387,22 +486,25 @@ const (
 
 // Locale keys for time and communication preferences.
 const (
-	LocaleTimeWeekdays    = "time_weekdays"
-	LocaleTimeWeekends    = "time_weekends"
-	LocaleTimeAny         = "time_any"
-	LocaleTimeMorning     = "time_morning"
-	LocaleTimeDay         = "time_day"
-	LocaleTimeEvening     = "time_evening"
-	LocaleTimeLate        = "time_late"
-	LocaleCommText        = "comm_text"
-	LocaleCommVoice       = "comm_voice"
-	LocaleCommAudio       = "comm_audio"
-	LocaleCommVideo       = "comm_video"
-	LocaleCommMeet        = "comm_meet"
-	LocaleFreqSpontaneous = "freq_spontaneous"
-	LocaleFreqWeekly      = "freq_weekly"
-	LocaleFreqDaily       = "freq_daily"
-	LocaleFreqIntensive   = "freq_intensive"
+	LocaleTimeWeekdays        = "time_weekdays"
+	LocaleTimeWeekends        = "time_weekends"
+	LocaleTimeAny             = "time_any"
+	LocaleTimeMorning         = "time_morning"
+	LocaleTimeDay             = "time_day"
+	LocaleTimeEvening         = "time_evening"
+	LocaleTimeLate            = "time_late"
+	LocaleCommText            = "comm_text"
+	LocaleCommVoice           = "comm_voice"
+	LocaleCommAudio           = "comm_audio"
+	LocaleCommVideo           = "comm_video"
+	LocaleCommMeet            = "comm_meet"
+	LocaleFreqSpontaneous     = "freq_spontaneous"
+	LocaleFreqWeekly          = "freq_weekly"
+	LocaleFreqDaily           = "freq_daily"
+	LocaleFreqIntensive       = "freq_intensive"
+	LocaleFreqMultipleWeekly  = "freq_multiple_weekly"
+	LocaleFreqMultipleMonthly = "freq_multiple_monthly"
+	LocaleFreqFlexible        = "freq_flexible"
 )
 
 // Locale keys for user status.
@@ -440,4 +542,12 @@ const (
 	LocaleBackToActiveFeedbacks  = "back_to_active_feedbacks"
 	LocaleBackToArchiveFeedbacks = "back_to_archive_feedbacks"
 	LocaleBackToAllFeedbacks     = "back_to_all_feedbacks"
+)
+
+// Locale keys for availability validation.
+const (
+	LocaleErrorNoDaysSelected          = "error_no_days_selected"
+	LocaleErrorNoTimeSelected          = "error_no_time_selected"
+	LocaleErrorNoCommunicationSelected = "error_no_communication_selected"
+	LocaleErrorInvalidAvailabilityData = "error_invalid_availability_data"
 )

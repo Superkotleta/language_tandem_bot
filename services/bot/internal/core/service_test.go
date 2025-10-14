@@ -581,32 +581,6 @@ func TestGetLanguageFlag(t *testing.T) {
 	}
 }
 
-func TestFormatTimeAvailability(t *testing.T) {
-	mockLocalizer := &localization.Localizer{}
-
-	service := &BotService{
-		Localizer: mockLocalizer,
-	}
-
-	t.Run("Valid time availability", func(t *testing.T) {
-		ta := &models.TimeAvailability{
-			DayType:  "weekdays",
-			TimeSlot: "morning",
-		}
-
-		// Test method exists and doesn't panic
-		assert.NotPanics(t, func() {
-			result := service.formatTimeAvailability(ta, "en")
-			assert.NotEmpty(t, result)
-		})
-	})
-
-	t.Run("Nil time availability", func(t *testing.T) {
-		result := service.formatTimeAvailability(nil, "en")
-		assert.Equal(t, "Не указано", result)
-	})
-}
-
 func TestFormatCommunicationPreferences(t *testing.T) {
 	mockLocalizer := &localization.Localizer{}
 
@@ -616,8 +590,8 @@ func TestFormatCommunicationPreferences(t *testing.T) {
 
 	t.Run("Valid preferences", func(t *testing.T) {
 		fp := &models.FriendshipPreferences{
-			CommunicationStyle: "text",
-			CommunicationFreq:  "daily",
+			CommunicationStyles: []string{"text"},
+			CommunicationFreq:   "daily",
 		}
 
 		// Test method exists and doesn't panic
@@ -629,7 +603,47 @@ func TestFormatCommunicationPreferences(t *testing.T) {
 
 	t.Run("Nil preferences", func(t *testing.T) {
 		result := service.formatCommunicationPreferences(nil, "en")
-		assert.Equal(t, "Не указано", result)
+		assert.NotEmpty(t, result) // Should return localized "not specified"
+	})
+}
+
+func TestFormatTimeAvailability(t *testing.T) {
+	mockLocalizer := &localization.Localizer{}
+
+	service := &BotService{
+		Localizer: mockLocalizer,
+	}
+
+	t.Run("Valid time availability", func(t *testing.T) {
+		ta := &models.TimeAvailability{
+			DayType:      "weekdays",
+			SpecificDays: []string{},
+			TimeSlots:    []string{"morning", "evening"},
+		}
+
+		// Test method exists and doesn't panic
+		assert.NotPanics(t, func() {
+			result := service.formatTimeAvailability(ta, "en")
+			assert.NotEmpty(t, result)
+		})
+	})
+
+	t.Run("Nil time availability", func(t *testing.T) {
+		result := service.formatTimeAvailability(nil, "en")
+		assert.NotEmpty(t, result) // Should return localized "not specified"
+	})
+
+	t.Run("Specific days", func(t *testing.T) {
+		ta := &models.TimeAvailability{
+			DayType:      "specific",
+			SpecificDays: []string{"monday", "wednesday", "friday"},
+			TimeSlots:    []string{"morning"},
+		}
+
+		assert.NotPanics(t, func() {
+			result := service.formatTimeAvailability(ta, "en")
+			assert.NotEmpty(t, result)
+		})
 	})
 }
 
@@ -715,82 +729,6 @@ func TestExecuteWithCircuitBreakersContext(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "success", result)
 	})
-}
-
-func TestFormatDayType(t *testing.T) {
-	// Initialize service with localizer to avoid nil pointer dereference
-	localizer := &localization.Localizer{}
-	service := NewBotServiceWithInterface(nil, localizer)
-
-	t.Run("weekdays", func(t *testing.T) {
-		ta := &models.TimeAvailability{DayType: "weekdays"}
-		result := service.formatDayType(ta, "en")
-		assert.Contains(t, result, "weekdays")
-	})
-
-	t.Run("weekends", func(t *testing.T) {
-		ta := &models.TimeAvailability{DayType: "weekends"}
-		result := service.formatDayType(ta, "en")
-		assert.Contains(t, result, "weekends")
-	})
-
-	t.Run("any", func(t *testing.T) {
-		ta := &models.TimeAvailability{DayType: "any"}
-		result := service.formatDayType(ta, "en")
-		assert.NotEmpty(t, result)
-	})
-
-	t.Run("specific", func(t *testing.T) {
-		ta := &models.TimeAvailability{DayType: "specific", SpecificDays: []string{"monday", "wednesday"}}
-		result := service.formatDayType(ta, "en")
-		assert.Contains(t, result, "monday")
-		assert.Contains(t, result, "wednesday")
-	})
-}
-
-func TestFormatSpecificDays(t *testing.T) {
-	// Initialize service with localizer to avoid nil pointer dereference
-	localizer := &localization.Localizer{}
-	service := NewBotServiceWithInterface(nil, localizer)
-
-	t.Run("with days", func(t *testing.T) {
-		days := []string{"monday", "wednesday", "friday"}
-		result := service.formatSpecificDays(days, "en")
-		assert.Contains(t, result, "monday")
-		assert.Contains(t, result, "wednesday")
-		assert.Contains(t, result, "friday")
-	})
-
-	t.Run("empty days", func(t *testing.T) {
-		days := []string{}
-		result := service.formatSpecificDays(days, "en")
-		assert.NotEmpty(t, result)
-	})
-}
-
-func TestFormatTimeSlot(t *testing.T) {
-	// Initialize service with localizer to avoid nil pointer dereference
-	localizer := &localization.Localizer{}
-	service := NewBotServiceWithInterface(nil, localizer)
-
-	tests := []struct {
-		name     string
-		timeSlot string
-		expected string
-	}{
-		{"morning", "morning", "morning"},
-		{"day", "day", "day"},
-		{"evening", "evening", "evening"},
-		{"late", "late", "late"},
-		{"unknown", "unknown", "any"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := service.formatTimeSlot(tt.timeSlot, "en")
-			assert.Contains(t, result, tt.expected)
-		})
-	}
 }
 
 func TestFormatCommunicationStyle(t *testing.T) {

@@ -44,23 +44,23 @@ type User struct {
 	ProfileCompletionLevel int       `db:"profile_completion_level" json:"profileCompletionLevel"`
 	CreatedAt              time.Time `db:"created_at"               json:"createdAt"`
 	UpdatedAt              time.Time `db:"updated_at"               json:"updatedAt"`
-	Interests              []int     `db:"-"                        json:"interests"` // Не храним в БД, загружаем отдельно
+	Interests              []int     `db:"-" json:"interests"` // Не храним в БД, загружаем отдельно
 
 	// Дополнительные поля для расширенного профиля
 	TimeAvailability      *TimeAvailability      `db:"-" json:"timeAvailability"`      // Временная доступность
 	FriendshipPreferences *FriendshipPreferences `db:"-" json:"friendshipPreferences"` // Предпочтения общения
 }
 
-// TimeAvailability - временная доступность пользователя.
+// TimeAvailability - временная доступность пользователя
 type TimeAvailability struct {
-	DayType      string   `db:"day_type"      json:"dayType"`      // weekdays, weekends, any, specific
-	SpecificDays []string `db:"specific_days" json:"specificDays"` // массив дней для specific
-	TimeSlot     string   `db:"time_slot"     json:"timeSlot"`     // morning, day, evening, late
+	DayType      string   `db:"day_type"      json:"dayType"`
+	SpecificDays []string `db:"specific_days" json:"specificDays"`
+	TimeSlots    []string `db:"time_slots"    json:"timeSlots"` // массив слотов для мультивыбора
 }
 
 // FriendshipPreferences - предпочтения по общению.
 type FriendshipPreferences struct {
-	ActivityType       string `db:"activity_type"           json:"activityType"`           // movies, games, educational
-	CommunicationStyle string `db:"communication_style"     json:"communicationStyle"`     // text, voice_msg, meet_person
-	CommunicationFreq  string `db:"communication_frequency" json:"communicationFrequency"` // spontaneous, weekly, daily
+	ActivityType        string   `db:"activity_type"             json:"activityType"`           // movies, games, educational
+	CommunicationStyles []string `db:"communication_styles"      json:"communicationStyles"`    // массив способов общения для мультивыбора
+	CommunicationFreq   string   `db:"communication_frequency"   json:"communicationFrequency"` // spontaneous, weekly, daily
 }

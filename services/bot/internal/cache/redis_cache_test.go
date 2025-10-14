@@ -92,15 +92,10 @@ func TestRedisCacheServiceUsers(t *testing.T) {
 		CreatedAt:              time.Now(),
 		UpdatedAt:              time.Now(),
 		Interests:              []int{1, 2, 3},
-		TimeAvailability: &models.TimeAvailability{
-			DayType:      "any",
-			SpecificDays: []string{},
-			TimeSlot:     "any",
-		},
 		FriendshipPreferences: &models.FriendshipPreferences{
-			ActivityType:       "casual_chat",
-			CommunicationStyle: "text",
-			CommunicationFreq:  "weekly",
+			ActivityType:        "casual_chat",
+			CommunicationStyles: []string{"text"},
+			CommunicationFreq:   "weekly",
 		},
 	}
 

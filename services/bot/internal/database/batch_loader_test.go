@@ -46,7 +46,7 @@ func TestBatchLoader_scanUserWithInterestRow(t *testing.T) {
 
 	// Вставляем тестовые данные
 	query := "\n\t\tINSERT INTO test_users (\n\t\t\tid, telegram_id, username, first_name,\n\t\t\tnative_language_code, target_language_code, target_language_level,\n\t\t\tinterface_language_code, created_at, updated_at,\n\t\t\tstate, profile_completion_level, status\n\t\t) VALUES (" +
-		"1, 12345, 'testuser', 'Test', 'ru', 'en', 'intermediate', 'ru', \n\t\t\tdatetime('now'), 'active', 100, 'active')\n\t"
+		"1, 12345, 'testuser', 'Test', 'ru', 'en', 'intermediate', 'ru', \n\t\t\tdatetime('now'), datetime('now'), 'active', 100, 'active')\n\t"
 	_, err = db.ExecContext(context.Background(), query)
 	require.NoError(t, err)
 

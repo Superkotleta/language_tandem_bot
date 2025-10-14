@@ -576,7 +576,7 @@ func (db *DatabaseMock) GetTimeAvailability(userID int) (*models.TimeAvailabilit
 				return &models.TimeAvailability{
 					DayType:      "any",
 					SpecificDays: []string{},
-					TimeSlot:     "any",
+					TimeSlots:    []string{"any"},
 				}, nil
 			}
 
@@ -607,9 +607,9 @@ func (db *DatabaseMock) GetFriendshipPreferences(userID int) (*models.Friendship
 		if user.ID == userID {
 			if user.FriendshipPreferences == nil {
 				return &models.FriendshipPreferences{
-					ActivityType:       "casual_chat",
-					CommunicationStyle: "text",
-					CommunicationFreq:  "weekly",
+					ActivityType:        "casual_chat",
+					CommunicationStyles: []string{"text"},
+					CommunicationFreq:   "weekly",
 				}, nil
 			}
 
