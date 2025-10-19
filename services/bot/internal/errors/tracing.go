@@ -1,6 +1,8 @@
 package errors
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"time"
@@ -34,9 +36,19 @@ func NewRequestContext(userID, chatID int64, operation string) *RequestContext {
 
 // generateRequestID генерирует уникальный RequestID.
 func generateRequestID() string {
-	// Используем timestamp + случайные символы для уникальности
+	// Используем timestamp + криптографически случайные символы для уникальности
 	timestamp := time.Now().UnixNano()
-	randomPart := time.Now().UnixNano() % maxRandomValue
+
+	// Генерируем случайное число с помощью crypto/rand
+	var randomBytes [8]byte
+	if _, err := rand.Read(randomBytes[:]); err != nil {
+		// Fallback на timestamp-based случайность в случае ошибки
+		randomPart := timestamp % maxRandomValue
+		return fmt.Sprintf("req_%d_%d", timestamp, randomPart)
+	}
+
+	randomValue := binary.BigEndian.Uint64(randomBytes[:])
+	randomPart := randomValue % maxRandomValue
 
 	return fmt.Sprintf("req_%d_%d", timestamp, randomPart)
 }

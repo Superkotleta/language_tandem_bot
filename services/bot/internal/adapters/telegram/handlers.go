@@ -363,6 +363,14 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 		return errors.New("service not initialized")
 	}
 
+	if callback == nil {
+		return errors.New("callback is nil")
+	}
+
+	if callback.From == nil {
+		return errors.New("callback.From is nil")
+	}
+
 	log.Printf("DEBUG: handleCallbackQuery called with data: '%s' from user %d", callback.Data, callback.From.ID)
 
 	user, err := h.service.HandleUserRegistration(

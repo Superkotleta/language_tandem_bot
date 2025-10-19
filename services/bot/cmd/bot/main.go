@@ -30,6 +30,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"sync"
 	"syscall"
 	"time"
@@ -45,10 +46,19 @@ import (
 
 // Константы для таймаутов.
 const (
-	ForceShutdownTimeout = 10 * time.Second
+	ForceShutdownTimeout = 5 * time.Minute // Увеличен для предотвращения перезапуска Docker в dev режиме
 )
 
 func main() {
+	// Глобальный recover для отлова всех паник
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("FATAL PANIC in main: %v", r)
+			log.Printf("Stack trace: %s", debug.Stack())
+			os.Exit(1)
+		}
+	}()
+
 	cfg := config.Load()
 	db := setupDatabase(cfg)
 
@@ -152,8 +162,8 @@ func setupGracefulShutdown() (context.Context, context.CancelFunc) {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		<-sigChan
-		log.Println("Received shutdown signal...")
+		sig := <-sigChan
+		log.Printf("Received shutdown signal: %v", sig)
 		cancel()
 	}()
 
@@ -189,6 +199,8 @@ func startAdminServerWithService(cfg *config.Config, service *core.BotService, e
 
 // waitForShutdown ждет завершения работы ботов и admin сервера.
 func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, adminServer *server.AdminServer, ctx context.Context, cancel context.CancelFunc) {
+	log.Printf("waitForShutdown called with %d bots", len(bots))
+
 	// Если нет запущенных ботов, но есть admin API, ждем сигнала shutdown
 	if len(bots) == 0 {
 		log.Println("No bots running, waiting for shutdown signal...")
@@ -201,7 +213,9 @@ func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, adminServer
 	done := make(chan struct{})
 
 	go func() {
+		log.Println("Waiting for all goroutines to finish...")
 		wg.Wait()
+		log.Println("All goroutines finished")
 		close(done)
 	}()
 
@@ -210,7 +224,7 @@ func waitForShutdown(bots []adapters.BotAdapter, wg *sync.WaitGroup, adminServer
 	case <-done:
 		log.Println("All bots stopped gracefully")
 	case <-time.After(ForceShutdownTimeout):
-		log.Println("Force shutdown")
+		log.Printf("Force shutdown after %v timeout", ForceShutdownTimeout)
 		cancel()
 	}
 

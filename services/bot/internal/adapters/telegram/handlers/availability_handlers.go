@@ -1231,8 +1231,8 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 	} else {
 		// Обновляем статус в объекте пользователя в памяти
 		user.State = models.StateActive
-		// Инвалидируем кэш пользователя
-		h.baseHandler.service.InvalidateUserCache(int64(user.ID))
+		// Обновляем кэш пользователя напрямую
+		h.baseHandler.service.Cache.SetUser(context.Background(), user)
 	}
 
 	// Обновляем уровень завершения профиля (после настройки доступности профиль полностью завершен)
@@ -1247,8 +1247,8 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 	} else {
 		// Обновляем уровень в объекте пользователя в памяти
 		user.ProfileCompletionLevel = 100
-		// Инвалидируем кэш пользователя
-		h.baseHandler.service.InvalidateUserCache(int64(user.ID))
+		// Обновляем кэш пользователя напрямую вместо инвалидации
+		h.baseHandler.service.Cache.SetUser(context.Background(), user)
 	}
 
 	// Очищаем временные данные

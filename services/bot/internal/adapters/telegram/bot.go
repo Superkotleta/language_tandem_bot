@@ -191,7 +191,7 @@ func (tb *TelegramBot) Start(ctx context.Context) error {
 				}
 			}(update)
 		case <-ctx.Done():
-			log.Println("Stopping Telegram bot...")
+			log.Println("Stopping Telegram bot due to context cancellation...")
 			tb.api.StopReceivingUpdates()
 
 			return nil

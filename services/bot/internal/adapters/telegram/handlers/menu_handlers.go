@@ -108,14 +108,30 @@ func (mh *MenuHandler) HandleMainChangeLanguage(callback *tgbotapi.CallbackQuery
 
 // HandleMainViewProfile обрабатывает просмотр профиля.
 func (mh *MenuHandler) HandleMainViewProfile(callback *tgbotapi.CallbackQuery, user *models.User, profileHandler *ProfileHandlerImpl) error {
+	if user == nil {
+		return fmt.Errorf("user is nil")
+	}
+
+	// Получаем свежие данные пользователя для проверки актуального статуса профиля
+	freshUser, err := mh.base.service.GetCachedUser(user.TelegramID)
+	if err != nil {
+		log.Printf("Failed to get fresh user data for profile view: %v", err)
+		// В случае ошибки используем переданные данные
+		freshUser = user
+	}
+
+	if freshUser == nil {
+		return fmt.Errorf("freshUser is nil after GetCachedUser")
+	}
+
 	// Проверяем, заполнен ли профиль по уровню завершения профиля
-	if user.ProfileCompletionLevel == 0 {
+	if freshUser.ProfileCompletionLevel == 0 {
 		// Профиль не заполнен - показываем информационное сообщение и кнопку настройки
-		text := mh.base.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleEmptyProfileMessage)
+		text := mh.base.service.Localizer.Get(freshUser.InterfaceLanguageCode, localization.LocaleEmptyProfileMessage)
 
 		// Создаем клавиатуру с кнопками настройки профиля
 		setupButton := tgbotapi.NewInlineKeyboardButtonData(
-			mh.base.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleSetupProfileButton),
+			mh.base.service.Localizer.Get(freshUser.InterfaceLanguageCode, localization.LocaleSetupProfileButton),
 			"show_profile_setup_features",
 		)
 
@@ -134,7 +150,7 @@ func (mh *MenuHandler) HandleMainViewProfile(callback *tgbotapi.CallbackQuery, u
 	}
 
 	// Профиль заполнен - показываем его
-	return profileHandler.HandleProfileShow(callback, user)
+	return profileHandler.HandleProfileShow(callback, freshUser)
 }
 
 // HandleMainEditProfile обрабатывает редактирование профиля.

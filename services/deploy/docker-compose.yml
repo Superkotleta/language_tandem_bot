@@ -57,8 +57,8 @@ services:
     networks:
       - app-network
     restart: unless-stopped
-    stdin_open: true
-    tty: true
+    stdin_open: false
+    tty: false
 
 # profile:
 #   build:
