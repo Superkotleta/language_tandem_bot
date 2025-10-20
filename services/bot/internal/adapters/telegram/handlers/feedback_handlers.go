@@ -509,10 +509,7 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 	// Создаем клавиатуру с кнопкой "Главное меню"
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "main_menu_title"),
-				"back_to_main_menu",
-			),
+			fh.base.keyboardBuilder.CreateBackToMainButton(user.InterfaceLanguageCode),
 		),
 	)
 

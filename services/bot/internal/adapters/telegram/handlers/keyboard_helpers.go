@@ -944,3 +944,109 @@ func (kb *KeyboardBuilder) getInterestName(interestID int, interfaceLang string)
 	// Последний fallback - используем key_name из базы данных
 	return interest.KeyName, nil
 }
+
+// =============================================================================
+// STANDARD BUTTON HELPERS
+// =============================================================================
+// Эти методы создают стандартные кнопки, которые используются по всему приложению.
+// Преимущества:
+// 1. Единая точка изменений - если нужно поменять текст/стиль кнопки
+// 2. Автоматическая локализация - не нужно помнить ключи локализации
+// 3. Меньше дублирования кода
+// 4. Защита от опечаток в callback данных
+
+// CreateBackButton создает кнопку "Назад" с указанным callback.
+// Используется для навигации назад в многошаговых формах.
+//
+// Параметры:
+//   - lang: код языка интерфейса (ru, en, es, zh)
+//   - callbackData: callback данные для кнопки (например: "availability_back_to_days")
+//
+// Пример:
+//   backBtn := kb.CreateBackButton("ru", "availability_back_to_daytype")
+func (kb *KeyboardBuilder) CreateBackButton(lang, callbackData string) tgbotapi.InlineKeyboardButton {
+	return tgbotapi.NewInlineKeyboardButtonData(
+		kb.service.Localizer.Get(lang, "back_button"),
+		callbackData,
+	)
+}
+
+// CreateContinueButton создает кнопку "Продолжить" с указанным callback.
+// Используется для перехода к следующему шагу в многошаговых формах.
+//
+// Параметры:
+//   - lang: код языка интерфейса
+//   - callbackData: callback данные для кнопки (например: "availability_proceed_to_time")
+//
+// Пример:
+//   continueBtn := kb.CreateContinueButton("en", "availability_proceed_to_communication")
+func (kb *KeyboardBuilder) CreateContinueButton(lang, callbackData string) tgbotapi.InlineKeyboardButton {
+	return tgbotapi.NewInlineKeyboardButtonData(
+		kb.service.Localizer.Get(lang, "continue_button"),
+		callbackData,
+	)
+}
+
+// CreateBackToMainButton создает кнопку "В главное меню".
+// Всегда ведет в главное меню (callback: "back_to_main_menu").
+//
+// Параметры:
+//   - lang: код языка интерфейса
+//
+// Пример:
+//   mainMenuBtn := kb.CreateBackToMainButton("ru")
+func (kb *KeyboardBuilder) CreateBackToMainButton(lang string) tgbotapi.InlineKeyboardButton {
+	return tgbotapi.NewInlineKeyboardButtonData(
+		kb.service.Localizer.Get(lang, "back_to_main"),
+		"back_to_main_menu",
+	)
+}
+
+// CreateViewProfileButton создает кнопку "Посмотреть профиль".
+// Всегда ведет к просмотру профиля (callback: "view_profile").
+//
+// Параметры:
+//   - lang: код языка интерфейса
+//
+// Пример:
+//   profileBtn := kb.CreateViewProfileButton("en")
+func (kb *KeyboardBuilder) CreateViewProfileButton(lang string) tgbotapi.InlineKeyboardButton {
+	return tgbotapi.NewInlineKeyboardButtonData(
+		kb.service.Localizer.Get(lang, "profile_show"),
+		"view_profile",
+	)
+}
+
+// CreateNavigationRow создает строку с кнопками "Назад" и "Продолжить".
+// Это самый частый паттерн в многошаговых формах.
+//
+// Параметры:
+//   - lang: код языка интерфейса
+//   - backCallback: callback для кнопки "Назад"
+//   - continueCallback: callback для кнопки "Продолжить"
+//
+// Пример:
+//   navRow := kb.CreateNavigationRow("ru", "back_to_days", "proceed_to_time")
+//   keyboard := tgbotapi.NewInlineKeyboardMarkup(navRow)
+func (kb *KeyboardBuilder) CreateNavigationRow(lang, backCallback, continueCallback string) []tgbotapi.InlineKeyboardButton {
+	return []tgbotapi.InlineKeyboardButton{
+		kb.CreateBackButton(lang, backCallback),
+		kb.CreateContinueButton(lang, continueCallback),
+	}
+}
+
+// CreateProfileActionsRow создает строку с кнопками "Посмотреть профиль" и "В главное меню".
+// Используется после завершения настройки профиля или других операций.
+//
+// Параметры:
+//   - lang: код языка интерфейса
+//
+// Пример:
+//   actionsRow := kb.CreateProfileActionsRow("en")
+//   keyboard := tgbotapi.NewInlineKeyboardMarkup(actionsRow)
+func (kb *KeyboardBuilder) CreateProfileActionsRow(lang string) []tgbotapi.InlineKeyboardButton {
+	return []tgbotapi.InlineKeyboardButton{
+		kb.CreateViewProfileButton(lang),
+		kb.CreateBackToMainButton(lang),
+	}
+}

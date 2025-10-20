@@ -191,7 +191,7 @@ func (mh *MenuHandler) HandleFeedbackHelp(callback *tgbotapi.CallbackQuery, user
 func (mh *MenuHandler) createFeedbackKeyboard(lang string) tgbotapi.InlineKeyboardMarkup {
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{
-			tgbotapi.NewInlineKeyboardButtonData(mh.base.service.Localizer.Get(lang, localization.LocaleFeedbackBackToMain), "back_to_main_menu"),
+			mh.base.keyboardBuilder.CreateBackToMainButton(lang),
 		},
 		{
 			tgbotapi.NewInlineKeyboardButtonData(mh.base.service.Localizer.Get(lang, localization.LocaleFeedbackHelp), "feedback_help"),

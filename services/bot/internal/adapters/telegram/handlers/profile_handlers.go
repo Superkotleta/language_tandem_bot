@@ -561,8 +561,8 @@ func (ph *ProfileHandlerImpl) ShowProfileSetupFeatures(callback *tgbotapi.Callba
 	)
 
 	// Создаем клавиатуру с кнопкой "Продолжить"
-	continueButton := tgbotapi.NewInlineKeyboardButtonData(
-		ph.base.service.Localizer.Get(user.InterfaceLanguageCode, "continue_button"),
+	continueButton := ph.base.keyboardBuilder.CreateContinueButton(
+		user.InterfaceLanguageCode,
 		"profile_setup_continue",
 	)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup([]tgbotapi.InlineKeyboardButton{continueButton})

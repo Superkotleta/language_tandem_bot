@@ -429,16 +429,13 @@ func (h *AvailabilityHandlerImpl) ShowSpecificDaysSelection(callback *tgbotapi.C
 	}
 
 	// Кнопки "Назад" и "Продолжить"
-	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(
-			localizer.Get(lang, "back_button"),
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard,
+		h.baseHandler.keyboardBuilder.CreateNavigationRow(
+			lang,
 			"availability_back_to_daytype",
-		),
-		tgbotapi.NewInlineKeyboardButtonData(
-			localizer.Get(lang, "continue_button"),
 			"availability_proceed_to_time",
 		),
-	))
+	)
 
 	// Редактируем текущее сообщение вместо отправки нового
 	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
@@ -579,15 +576,10 @@ func (h *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.Callb
 				"availability_timeslot_select_all",
 			),
 		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				localizer.Get(lang, "back_button"),
-				"availability_back_to_days",
-			),
-			tgbotapi.NewInlineKeyboardButtonData(
-				localizer.Get(lang, "continue_button"),
-				"availability_proceed_to_communication",
-			),
+		h.baseHandler.keyboardBuilder.CreateNavigationRow(
+			lang,
+			"availability_back_to_days",
+			"availability_proceed_to_communication",
 		),
 	)
 
@@ -989,15 +981,10 @@ func (h *AvailabilityHandlerImpl) ShowCommunicationStyleSelection(callback *tgbo
 				"availability_communication_select_all",
 			),
 		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				localizer.Get(lang, "back_button"),
-				"availability_back_to_time",
-			),
-			tgbotapi.NewInlineKeyboardButtonData(
-				localizer.Get(lang, "continue_button"),
-				"availability_proceed_to_frequency",
-			),
+		h.baseHandler.keyboardBuilder.CreateNavigationRow(
+			lang,
+			"availability_back_to_time",
+			"availability_proceed_to_frequency",
 		),
 	)
 
@@ -1053,16 +1040,7 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 		localizer.Get(lang, "profile_completed"),
 	)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				localizer.Get(lang, "profile_show"),
-				"view_profile",
-			),
-			tgbotapi.NewInlineKeyboardButtonData(
-				localizer.Get(lang, "back_to_main"),
-				"back_to_main_menu",
-			),
-		),
+		h.baseHandler.keyboardBuilder.CreateProfileActionsRow(lang),
 	)
 
 	editResult := h.baseHandler.messageFactory.EditWithKeyboard(
@@ -1231,6 +1209,22 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 	} else {
 		// Обновляем статус в объекте пользователя в памяти
 		user.State = models.StateActive
+		// Обновляем кэш пользователя напрямую
+		h.baseHandler.service.Cache.SetUser(context.Background(), user)
+	}
+
+	// Обновляем статус профиля на активный (важно для отображения профиля)
+	err = h.baseHandler.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
+	if err != nil {
+		loggingService.ErrorWithContext("Failed to update user status", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
+			"user_id": user.ID,
+			"error":   err.Error(),
+		})
+		// Продолжаем, не возвращаем ошибку
+		loggingService.InfoWithContext("Continuing despite user status update error", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", nil)
+	} else {
+		// Обновляем статус в объекте пользователя в памяти
+		user.Status = models.StatusActive
 		// Обновляем кэш пользователя напрямую
 		h.baseHandler.service.Cache.SetUser(context.Background(), user)
 	}

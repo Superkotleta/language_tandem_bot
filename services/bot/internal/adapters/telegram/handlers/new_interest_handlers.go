@@ -618,8 +618,8 @@ func (h *NewInterestHandlerImpl) completeProfileSetup(callback *tgbotapi.Callbac
 	// Показываем сообщение о завершении интересов
 	completionKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				"✅ "+h.base.service.Localizer.Get(user.InterfaceLanguageCode, "continue_button"),
+			h.base.keyboardBuilder.CreateContinueButton(
+				user.InterfaceLanguageCode,
 				"continue_to_availability",
 			),
 		),

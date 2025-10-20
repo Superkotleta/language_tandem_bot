@@ -672,10 +672,7 @@ func (e *IsolatedAvailabilityEditor) CancelEdit(callback *tgbotapi.CallbackQuery
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				localizer.Get(lang, "back_to_profile"),
-				"view_profile",
-			),
+			e.baseHandler.keyboardBuilder.CreateViewProfileButton(lang),
 		),
 	)
 
@@ -702,10 +699,7 @@ func (e *IsolatedAvailabilityEditor) ShowSaveConfirmation(callback *tgbotapi.Cal
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				localizer.Get(lang, "profile_show"),
-				"view_profile",
-			),
+			e.baseHandler.keyboardBuilder.CreateViewProfileButton(lang),
 		),
 	)
 
