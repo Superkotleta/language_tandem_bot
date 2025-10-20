@@ -283,6 +283,11 @@ const (
 	FeedbackTypeArchive = "archive" // Архивные отзывы
 	FeedbackTypeAll     = "all"     // Все отзывы
 	FeedbackTypeActive  = "active"  // Активные отзывы
+
+	// Admin callback prefixes
+	CallbackPrefixBrowse      = "browse_"       // browse_{type}_{index}
+	CallbackPrefixFbProcess   = "fb_process_"   // fb_process_{id}
+	CallbackPrefixFbUnprocess = "fb_unprocess_" // fb_unprocess_{id}
 )
 
 // Cache Calculation Constants

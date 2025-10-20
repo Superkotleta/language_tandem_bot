@@ -389,14 +389,14 @@ func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(
 		if currentIndex > 0 {
 			navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(
 				"⬅️ Пред",
-				fmt.Sprintf("browse_%s_%d", feedbackType, currentIndex-1),
+				fmt.Sprintf("%s%s_%d", localization.CallbackPrefixBrowse, feedbackType, currentIndex-1),
 			))
 		}
 
 		if currentIndex < totalCount-1 {
 			navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(
 				"След ➡️",
-				fmt.Sprintf("browse_%s_%d", feedbackType, currentIndex+1),
+				fmt.Sprintf("%s%s_%d", localization.CallbackPrefixBrowse, feedbackType, currentIndex+1),
 			))
 		}
 
@@ -408,7 +408,7 @@ func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(
 	// Кнопки действий для необработанных отзывов
 	if feedbackType == localization.FeedbackTypeActive && !fb["is_processed"].(bool) {
 		actionRow := []tgbotapi.InlineKeyboardButton{
-			tgbotapi.NewInlineKeyboardButtonData("✅ Обработать", fmt.Sprintf("fb_process_%v", fb["id"])),
+			tgbotapi.NewInlineKeyboardButtonData("✅ Обработать", fmt.Sprintf("%s%v", localization.CallbackPrefixFbProcess, fb["id"])),
 		}
 		keyboard = append(keyboard, actionRow)
 	}
@@ -416,7 +416,7 @@ func (h *AdminHandlerImpl) createFeedbackNavigationKeyboard(
 	// Кнопки действий для обработанных отзывов
 	if feedbackType == localization.FeedbackTypeArchive && fb["is_processed"].(bool) {
 		actionRow := []tgbotapi.InlineKeyboardButton{
-			tgbotapi.NewInlineKeyboardButtonData("❌ Снять обработку", fmt.Sprintf("fb_unprocess_%v", fb["id"])),
+			tgbotapi.NewInlineKeyboardButtonData("❌ Снять обработку", fmt.Sprintf("%s%v", localization.CallbackPrefixFbUnprocess, fb["id"])),
 		}
 		keyboard = append(keyboard, actionRow)
 	}

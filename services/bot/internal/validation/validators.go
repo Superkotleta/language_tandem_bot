@@ -307,3 +307,148 @@ func (v *Validator) ValidateCallbackData(data string) []string {
 
 	return errors
 }
+
+// =============================================================================
+// COMMON VALIDATION HELPERS - хелперы для типичных паттернов валидации
+// =============================================================================
+// Эти методы предоставляют быстрый доступ к часто используемым проверкам.
+// Преимущества:
+// 1. Сокращение дублирования кода
+// 2. Стандартизация сообщений об ошибках
+// 3. Быстрое создание валидации для новых полей
+
+// ValidateNotEmpty проверяет, что значение не пустое (после trim).
+func (v *Validator) ValidateNotEmpty(value string, fieldName string) string {
+	if strings.TrimSpace(value) == "" {
+		return fmt.Sprintf("Поле '%s' обязательно для заполнения", fieldName)
+	}
+	return ""
+}
+
+// ValidateLengthRange проверяет, что длина строки находится в заданном диапазоне.
+func (v *Validator) ValidateLengthRange(value string, minLen, maxLen int, fieldName string) string {
+	length := utf8.RuneCountInString(value)
+	if length < minLen {
+		return fmt.Sprintf("Поле '%s' должно содержать минимум %d символов", fieldName, minLen)
+	}
+	if length > maxLen {
+		return fmt.Sprintf("Поле '%s' должно содержать максимум %d символов", fieldName, maxLen)
+	}
+	return ""
+}
+
+// ValidateMinLength проверяет минимальную длину с кастомным сообщением.
+func (v *Validator) ValidateMinLength(value string, minLen int, fieldName string) string {
+	if utf8.RuneCountInString(value) < minLen {
+		return fmt.Sprintf("Поле '%s' должно содержать минимум %d символов", fieldName, minLen)
+	}
+	return ""
+}
+
+// ValidateMaxLength проверяет максимальную длину с кастомным сообщением.
+func (v *Validator) ValidateMaxLength(value string, maxLen int, fieldName string) string {
+	if utf8.RuneCountInString(value) > maxLen {
+		return fmt.Sprintf("Поле '%s' должно содержать максимум %d символов", fieldName, maxLen)
+	}
+	return ""
+}
+
+// ValidatePositiveNumber проверяет, что число положительное.
+func (v *Validator) ValidatePositiveNumber(value int, fieldName string) string {
+	if value <= 0 {
+		return fmt.Sprintf("Поле '%s' должно быть положительным числом", fieldName)
+	}
+	return ""
+}
+
+// ValidateRange проверяет, что число находится в заданном диапазоне.
+func (v *Validator) ValidateRange(value, min, max int, fieldName string) string {
+	if value < min {
+		return fmt.Sprintf("Поле '%s' должно быть не меньше %d", fieldName, min)
+	}
+	if value > max {
+		return fmt.Sprintf("Поле '%s' должно быть не больше %d", fieldName, max)
+	}
+	return ""
+}
+
+// ValidateOneOf проверяет, что значение входит в список допустимых.
+func (v *Validator) ValidateOneOf(value string, allowed []string, fieldName string) string {
+	for _, allowedValue := range allowed {
+		if value == allowedValue {
+			return ""
+		}
+	}
+	return fmt.Sprintf("Поле '%s' должно быть одним из: %s", fieldName, strings.Join(allowed, ", "))
+}
+
+// ValidateEmailFormat проверяет формат email адреса.
+func (v *Validator) ValidateEmailFormat(email string, fieldName string) string {
+	if !regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`).MatchString(email) {
+		return fmt.Sprintf("Поле '%s' содержит некорректный email адрес", fieldName)
+	}
+	return ""
+}
+
+// ValidateURLFormat проверяет формат URL.
+func (v *Validator) ValidateURLFormat(url string, fieldName string) string {
+	if !regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`).MatchString(url) {
+		return fmt.Sprintf("Поле '%s' содержит некорректный URL", fieldName)
+	}
+	return ""
+}
+
+// ValidateAlphanumeric проверяет, что строка содержит только буквы и цифры.
+func (v *Validator) ValidateAlphanumeric(value string, fieldName string) string {
+	if !regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString(value) {
+		return fmt.Sprintf("Поле '%s' должно содержать только буквы и цифры", fieldName)
+	}
+	return ""
+}
+
+// ValidateUsernameFormat проверяет формат username.
+func (v *Validator) ValidateUsernameFormat(username string, fieldName string) string {
+	if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(username) {
+		return fmt.Sprintf("Поле '%s' содержит некорректные символы (только буквы, цифры и _)", fieldName)
+	}
+	return ""
+}
+
+// ValidatePhoneFormat проверяет формат телефонного номера (простая проверка).
+func (v *Validator) ValidatePhoneFormat(phone string, fieldName string) string {
+	// Удаляем все нецифровые символы для проверки
+	cleaned := regexp.MustCompile(`[^\d]`).ReplaceAllString(phone, "")
+	if len(cleaned) < 10 || len(cleaned) > 15 {
+		return fmt.Sprintf("Поле '%s' содержит некорректный номер телефона", fieldName)
+	}
+	return ""
+}
+
+// ValidateNotNil проверяет, что указатель не nil (для interface{}).
+func (v *Validator) ValidateNotNil(value interface{}, fieldName string) string {
+	if value == nil {
+		return fmt.Sprintf("Поле '%s' обязательно для заполнения", fieldName)
+	}
+	return ""
+}
+
+// ValidateSliceNotEmpty проверяет, что слайс не пустой.
+func (v *Validator) ValidateSliceNotEmpty(slice interface{}, fieldName string) string {
+	switch s := slice.(type) {
+	case []string:
+		if len(s) == 0 {
+			return fmt.Sprintf("Поле '%s' должно содержать хотя бы один элемент", fieldName)
+		}
+	case []int:
+		if len(s) == 0 {
+			return fmt.Sprintf("Поле '%s' должно содержать хотя бы один элемент", fieldName)
+		}
+	case []interface{}:
+		if len(s) == 0 {
+			return fmt.Sprintf("Поле '%s' должно содержать хотя бы один элемент", fieldName)
+		}
+	default:
+		return fmt.Sprintf("Неподдерживаемый тип для проверки '%s'", fieldName)
+	}
+	return ""
+}

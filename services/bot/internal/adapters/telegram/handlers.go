@@ -34,6 +34,7 @@ type TelegramHandler struct {
 	interestHandler        *handlers.NewInterestHandlerImpl
 	profileInterestHandler *handlers.ProfileInterestHandler
 	isolatedInterestEditor *handlers.IsolatedInterestEditor
+	isolatedLanguageEditor *handlers.IsolatedLanguageEditor
 	availabilityHandler    *handlers.AvailabilityHandlerImpl
 	availabilityEditor     handlers.IsolatedAvailabilityEditor
 	adminHandler           *handlers.AdminHandlerImpl
@@ -95,6 +96,7 @@ func NewTelegramHandler(
 		errorHandler,
 		service.Cache,
 	)
+	isolatedLanguageEditor := handlers.NewIsolatedLanguageEditor(baseHandler)
 	availabilityHandler := handlers.NewAvailabilityHandler(baseHandler)
 	availabilityEditor := *handlers.NewIsolatedAvailabilityEditor(baseHandler)
 	adminHandler := handlers.NewAdminHandler(baseHandler, adminChatIDs, make([]string, 0))
@@ -118,6 +120,7 @@ func NewTelegramHandler(
 		interestHandler:        interestHandler,
 		profileInterestHandler: profileInterestHandler,
 		isolatedInterestEditor: isolatedInterestEditor,
+		isolatedLanguageEditor: isolatedLanguageEditor,
 		availabilityHandler:    availabilityHandler,
 		availabilityEditor:     availabilityEditor,
 		adminHandler:           adminHandler,
@@ -181,6 +184,7 @@ func NewTelegramHandlerWithAdmins(
 		errorHandler,
 		service.Cache,
 	)
+	isolatedLanguageEditor := handlers.NewIsolatedLanguageEditor(baseHandler)
 	availabilityHandler := handlers.NewAvailabilityHandler(baseHandler)
 	availabilityEditor := *handlers.NewIsolatedAvailabilityEditor(baseHandler)
 	adminHandler := handlers.NewAdminHandler(baseHandler, adminChatIDs, adminUsernames)
@@ -204,6 +208,7 @@ func NewTelegramHandlerWithAdmins(
 		interestHandler:        interestHandler,
 		profileInterestHandler: profileInterestHandler,
 		isolatedInterestEditor: isolatedInterestEditor,
+		isolatedLanguageEditor: isolatedLanguageEditor,
 		availabilityHandler:    availabilityHandler,
 		availabilityEditor:     availabilityEditor,
 		adminHandler:           adminHandler,
@@ -812,6 +817,76 @@ func (h *TelegramHandler) HandleIsolatedShowStats(callback *tgbotapi.CallbackQue
 	}
 
 	return h.isolatedInterestEditor.ShowEditStatistics(callback, user, session)
+}
+
+// =============================================================================
+// ISOLATED LANGUAGE EDITOR HANDLERS
+// =============================================================================
+
+// HandleIsolatedLangEditNative начинает редактирование родного языка.
+func (h *TelegramHandler) HandleIsolatedLangEditNative(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Starting native language edit for user %d", user.ID)
+	return h.isolatedLanguageEditor.HandleEditNativeLanguage(callback, user)
+}
+
+// HandleIsolatedLangEditTarget начинает редактирование изучаемого языка.
+func (h *TelegramHandler) HandleIsolatedLangEditTarget(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Starting target language edit for user %d", user.ID)
+	return h.isolatedLanguageEditor.HandleEditTargetLanguage(callback, user)
+}
+
+// HandleIsolatedLangEditLevel начинает редактирование уровня владения языком.
+func (h *TelegramHandler) HandleIsolatedLangEditLevel(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Starting language level edit for user %d", user.ID)
+	return h.isolatedLanguageEditor.HandleEditLanguageLevel(callback, user)
+}
+
+// HandleIsolatedLangPreview показывает предпросмотр изменений языков.
+func (h *TelegramHandler) HandleIsolatedLangPreview(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Showing language changes preview for user %d", user.ID)
+	return h.isolatedLanguageEditor.HandlePreviewChanges(callback, user)
+}
+
+// HandleIsolatedLangUndoLast отменяет последнее изменение языка.
+func (h *TelegramHandler) HandleIsolatedLangUndoLast(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Undoing last language change for user %d", user.ID)
+	return h.isolatedLanguageEditor.HandleUndoLastChange(callback, user)
+}
+
+// HandleIsolatedLangBackToMenu возвращает в главное меню редактора языков.
+func (h *TelegramHandler) HandleIsolatedLangBackToMenu(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Returning to language edit menu for user %d", user.ID)
+	return h.isolatedLanguageEditor.HandleBackToMenu(callback, user)
+}
+
+// HandleIsolatedLangNativeSelection обрабатывает выбор родного языка.
+func (h *TelegramHandler) HandleIsolatedLangNativeSelection(callback *tgbotapi.CallbackQuery, user *models.User, langCode string) error {
+	log.Printf("Native language selected: %s for user %d", langCode, user.ID)
+	return h.isolatedLanguageEditor.HandleNativeLanguageSelection(callback, user, langCode)
+}
+
+// HandleIsolatedLangTargetSelection обрабатывает выбор изучаемого языка.
+func (h *TelegramHandler) HandleIsolatedLangTargetSelection(callback *tgbotapi.CallbackQuery, user *models.User, langCode string) error {
+	log.Printf("Target language selected: %s for user %d", langCode, user.ID)
+	return h.isolatedLanguageEditor.HandleTargetLanguageSelection(callback, user, langCode)
+}
+
+// HandleIsolatedLangLevelSelection обрабатывает выбор уровня владения языком.
+func (h *TelegramHandler) HandleIsolatedLangLevelSelection(callback *tgbotapi.CallbackQuery, user *models.User, levelCode string) error {
+	log.Printf("Language level selected: %s for user %d", levelCode, user.ID)
+	return h.isolatedLanguageEditor.HandleLanguageLevelSelection(callback, user, levelCode)
+}
+
+// HandleIsolatedLangSave обрабатывает сохранение изменений языков.
+func (h *TelegramHandler) HandleIsolatedLangSave(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Saving language changes for user %d", user.ID)
+	return h.isolatedLanguageEditor.HandleSaveChanges(callback, user)
+}
+
+// HandleIsolatedLangCancel обрабатывает отмену редактирования языков.
+func (h *TelegramHandler) HandleIsolatedLangCancel(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	log.Printf("Cancelling language edit for user %d", user.ID)
+	return h.isolatedLanguageEditor.HandleCancelEdit(callback, user)
 }
 
 // handleIsolatedCallbacks обрабатывает все callback'и изолированной системы через роутер.

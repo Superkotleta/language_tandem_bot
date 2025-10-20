@@ -39,6 +39,7 @@ func (e *IsolatedInterestEditor) createEditMainMenuKeyboard(interfaceLang string
 			"isolated_cancel_edit",
 		),
 	}
+	// TODO: Replace with kb.CreateSaveCancelKeyboard() when callback data is standardized
 	buttonRows = append(buttonRows, controlRow)
 
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
@@ -199,6 +200,7 @@ func (e *IsolatedInterestEditor) createChangesPreviewKeyboard(interfaceLang stri
 			"isolated_undo_last",
 		),
 	}
+	// TODO: Replace with kb.CreateSaveUndoKeyboard() when callback data is standardized
 	buttonRows = append(buttonRows, mainRow)
 
 	// Навигация

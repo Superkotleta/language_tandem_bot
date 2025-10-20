@@ -201,6 +201,8 @@
 	"edit_interests_in_category": "Editando intereses en categoría:",
   "back_to_main": "🏠 Volver al menú principal",
   "target_language_explanation": "🎯 ¿Cuál es tu nivel de ruso?",
+  "yes_button": "✅ Sí",
+  "no_button": "❌ No",
   "access_denied": "❌ No tienes permisos para ejecutar este comando",
   
   "feedback_back_to_main": "🏠 Menú Principal",

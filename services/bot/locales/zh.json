@@ -209,6 +209,8 @@
 	"edit_interests_in_category": "编辑类别中的兴趣：",
   "back_to_main": "🏠 返回主菜单",
   "target_language_explanation": "🎯 你的俄语水平如何?",
+  "yes_button": "✅ 是",
+  "no_button": "❌ 否",
   "access_denied": "❌ 您没有执行此命令的权限",
   
   "feedback_back_to_main": "🏠 主菜单",

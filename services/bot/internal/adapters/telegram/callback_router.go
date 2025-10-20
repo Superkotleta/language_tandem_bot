@@ -157,5 +157,59 @@ func (r *CallbackRouter) SetupIsolatedRoutes(handler *TelegramHandler) error {
 		return handler.HandleIsolatedMassClear(callback, user, categoryKey)
 	})
 
+	// =============================================================================
+	// LANGUAGE EDITOR ROUTES - Isolated Language Editor
+	// =============================================================================
+
+	// Main language editor actions
+	r.RegisterSimple("isolated_lang_edit_native", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		return handler.HandleIsolatedLangEditNative(callback, user)
+	})
+
+	r.RegisterSimple("isolated_lang_edit_target", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		return handler.HandleIsolatedLangEditTarget(callback, user)
+	})
+
+	r.RegisterSimple("isolated_lang_edit_level", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		return handler.HandleIsolatedLangEditLevel(callback, user)
+	})
+
+	r.RegisterSimple("isolated_lang_preview", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		return handler.HandleIsolatedLangPreview(callback, user)
+	})
+
+	r.RegisterSimple("isolated_lang_undo_last", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		return handler.HandleIsolatedLangUndoLast(callback, user)
+	})
+
+	r.RegisterSimple("isolated_lang_back_to_menu", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		return handler.HandleIsolatedLangBackToMenu(callback, user)
+	})
+
+	// Save and cancel actions - specific for language editor
+	r.RegisterSimple("isolated_lang_save", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		return handler.HandleIsolatedLangSave(callback, user)
+	})
+
+	r.RegisterSimple("isolated_lang_cancel", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		return handler.HandleIsolatedLangCancel(callback, user)
+	})
+
+	// Language selection with prefixes
+	r.RegisterPrefix("lang_isolated_native_", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		langCode := params["param"]
+		return handler.HandleIsolatedLangNativeSelection(callback, user, langCode)
+	})
+
+	r.RegisterPrefix("lang_isolated_target_", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		langCode := params["param"]
+		return handler.HandleIsolatedLangTargetSelection(callback, user, langCode)
+	})
+
+	r.RegisterPrefix("level_isolated_level_", func(callback *tgbotapi.CallbackQuery, user *models.User, params map[string]string) error {
+		levelCode := params["param"]
+		return handler.HandleIsolatedLangLevelSelection(callback, user, levelCode)
+	})
+
 	return nil
 }

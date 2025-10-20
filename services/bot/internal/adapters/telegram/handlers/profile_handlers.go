@@ -318,223 +318,47 @@ func (ph *ProfileHandlerImpl) updateProfileCompletionLevel(userID int, completio
 	return nil
 }
 
-// HandleEditLanguages позволяет редактировать языки пользователя.
+// HandleEditLanguages запускает изолированный редактор языков.
+// Старая логика заменена на IsolatedLanguageEditor.
 func (ph *ProfileHandlerImpl) HandleEditLanguages(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	// Показываем текущие настройки языков с кнопками редактирования
-	text := ph.base.service.Localizer.Get(user.InterfaceLanguageCode, "profile_edit_languages") +
-		"\n\n" + ph.base.service.Localizer.Get(user.InterfaceLanguageCode, "save_button") +
-		" или " + ph.base.service.Localizer.Get(user.InterfaceLanguageCode, "cancel_button")
-
-	keyboard := ph.base.keyboardBuilder.CreateEditLanguagesKeyboard(
-		user.InterfaceLanguageCode,
-		user.NativeLanguageCode,
-		user.TargetLanguageCode,
-		user.TargetLanguageLevel,
-	)
-
-	err := ph.base.messageFactory.EditWithKeyboard(
-		callback.Message.Chat.ID,
-		callback.Message.MessageID,
-		text,
-		&keyboard,
-	)
-
-	return err
+	editor := NewIsolatedLanguageEditor(ph.base)
+	return editor.StartEditSession(callback, user)
 }
 
-// HandleEditNativeLang редактирует родной язык пользователя.
+// =============================================================================
+// DEPRECATED: Старые методы редактирования языков
+// Функциональность перенесена в IsolatedLanguageEditor
+// Методы оставлены для обратной совместимости, но маркированы как устаревшие
+// =============================================================================
+
+// HandleEditNativeLang - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
 func (ph *ProfileHandlerImpl) HandleEditNativeLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	text := ph.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
-	// Показываем клавиатуру с сохранением/отменой вместо обычного выбора
-	keyboard := ph.base.keyboardBuilder.CreateLanguageKeyboard(user.InterfaceLanguageCode, "edit_native", "", false)
-
-	// Добавляем кнопки сохранить/отменить
-	saveRow := ph.base.keyboardBuilder.CreateSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
-	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
-
-	err := ph.base.messageFactory.EditWithKeyboard(
-		callback.Message.Chat.ID,
-		callback.Message.MessageID,
-		text,
-		&keyboard,
-	)
-
-	return err
+	return ph.HandleEditLanguages(callback, user)
 }
 
-// HandleEditTargetLang редактирует изучаемый язык пользователя (только если родной - русский).
+// HandleEditTargetLang - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
 func (ph *ProfileHandlerImpl) HandleEditTargetLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	// Проверяем, что родной язык русский - только в этом случае можно редактировать изучаемый язык
-	if user.NativeLanguageCode != "ru" {
-		// Не должно происходить по логике, но на всякий случай
-		// Используем MessageFactory для отправки сообщения об ошибке
-		return ph.base.messageFactory.SendText(callback.Message.Chat.ID, "Редактирование изучаемого языка недоступно при вашем родном языке.")
-	}
-
-	text := ph.base.service.Localizer.Get(user.InterfaceLanguageCode, "choose_target_language")
-	// Исключаем родной язык из списка изучаемых
-	keyboard := ph.base.keyboardBuilder.CreateLanguageKeyboard(user.InterfaceLanguageCode, "edit_target", user.NativeLanguageCode, false)
-
-	// Добавляем кнопки сохранить/отменить
-	saveRow := ph.base.keyboardBuilder.CreateSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
-	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
-
-	err := ph.base.messageFactory.EditWithKeyboard(
-		callback.Message.Chat.ID,
-		callback.Message.MessageID,
-		text,
-		&keyboard,
-	)
-
-	return err
+	return ph.HandleEditLanguages(callback, user)
 }
 
-// HandleEditNativeLanguage сохраняет выбор родного языка с учетом первоначальной логики.
+// HandleEditNativeLanguage - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
 func (ph *ProfileHandlerImpl) HandleEditNativeLanguage(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	langCode := callback.Data[len("lang_edit_native_"):]
-
-	// Сохраняем новый родной язык
-	err := ph.base.service.DB.UpdateUserNativeLanguage(user.ID, langCode)
-	if err != nil {
-		return err
-	}
-
-	user.NativeLanguageCode = langCode
-
-	// Применяем изначальную логику выбора языков
-	if langCode == "ru" {
-		// Если выбран русский как родной, предлагаем выбрать изучаемый из оставшихся 3
-		// Но не меняем существующий изучаемый язык, если он есть
-		text := "Выберите изучаемый язык:"
-		keyboard := ph.base.keyboardBuilder.CreateLanguageKeyboard(user.InterfaceLanguageCode, "edit_target", "ru", false)
-
-		// Добавляем кнопки сохранить/отменить
-		saveRow := ph.base.keyboardBuilder.CreateSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
-		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
-
-		err = ph.base.messageFactory.EditWithKeyboard(
-			callback.Message.Chat.ID,
-			callback.Message.MessageID,
-			text,
-			&keyboard,
-		)
-
-		return err
-	} else {
-		// Если выбран не русский, автоматически устанавливаем русский как изучаемый
-		err := ph.base.service.DB.UpdateUserTargetLanguage(user.ID, "ru")
-		if err != nil {
-			return err
-		}
-
-		user.TargetLanguageCode = "ru"
-
-		// Показываем подтверждение и предлагаем выбрать уровень
-		nativeLangName := ph.base.service.Localizer.GetLanguageName(langCode, user.InterfaceLanguageCode)
-		text := fmt.Sprintf("Родной язык: %s\nИзучаемый язык: Русский\n\nВыберите уровень владения русским языком:",
-			nativeLangName)
-
-		keyboard := ph.base.keyboardBuilder.CreateLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, "ru", "edit_level", false)
-
-		// Добавляем кнопки сохранить/отменить
-		saveRow := ph.base.keyboardBuilder.CreateSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
-		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
-
-		err = ph.base.messageFactory.EditWithKeyboard(
-			callback.Message.Chat.ID,
-			callback.Message.MessageID,
-			text,
-			&keyboard,
-		)
-
-		return err
-	}
+	return ph.HandleEditLanguages(callback, user)
 }
 
-// HandleEditTargetLanguage сохраняет выбор изучаемого языка.
+// HandleEditTargetLanguage - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
 func (ph *ProfileHandlerImpl) HandleEditTargetLanguage(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	langCode := callback.Data[len("lang_edit_target_"):]
-
-	err := ph.base.service.DB.UpdateUserTargetLanguage(user.ID, langCode)
-	if err != nil {
-		return err
-	}
-
-	user.TargetLanguageCode = langCode
-	langName := ph.base.service.Localizer.GetLanguageName(langCode, user.InterfaceLanguageCode)
-
-	// Предлагаем выбрать уровень владения языком
-	title := ph.base.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
-		"language": langName,
-	})
-
-	keyboard := ph.base.keyboardBuilder.CreateLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, langCode, "edit_level_", false)
-	// Добавляем save/cancel
-	saveRow := ph.base.keyboardBuilder.CreateSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
-	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
-
-	err = ph.base.messageFactory.EditWithKeyboard(
-		callback.Message.Chat.ID,
-		callback.Message.MessageID,
-		title,
-		&keyboard,
-	)
-
-	return err
+	return ph.HandleEditLanguages(callback, user)
 }
 
-// HandleEditLevelSelection обрабатывает выбор уровня владения языком при редактировании.
+// HandleEditLevelSelection - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
 func (ph *ProfileHandlerImpl) HandleEditLevelSelection(callback *tgbotapi.CallbackQuery, user *models.User, levelCode string) error {
-	// Сохраняем уровень владения языком
-	err := ph.base.service.DB.UpdateUserTargetLanguageLevel(user.ID, levelCode)
-	if err != nil {
-		return err
-	}
-
-	user.TargetLanguageLevel = levelCode
-
-	// Переходим к меню редактирования языков с обновленными данными
-	text := ph.base.service.Localizer.Get(user.InterfaceLanguageCode, "profile_edit_languages") +
-		"\n\n" + ph.base.service.Localizer.Get(user.InterfaceLanguageCode, "save_button") +
-		" или " + ph.base.service.Localizer.Get(user.InterfaceLanguageCode, "cancel_button")
-
-	keyboard := ph.base.keyboardBuilder.CreateEditLanguagesKeyboard(
-		user.InterfaceLanguageCode,
-		user.NativeLanguageCode,
-		user.TargetLanguageCode,
-		user.TargetLanguageLevel,
-	)
-
-	err = ph.base.messageFactory.EditWithKeyboard(
-		callback.Message.Chat.ID,
-		callback.Message.MessageID,
-		text,
-		&keyboard,
-	)
-
-	return err
+	return ph.HandleEditLanguages(callback, user)
 }
 
-// HandleEditLevelLang редактирует уровень владения языком.
+// HandleEditLevelLang - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
 func (ph *ProfileHandlerImpl) HandleEditLevelLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	langName := ph.base.service.Localizer.GetLanguageName(user.TargetLanguageCode, user.InterfaceLanguageCode)
-	title := ph.base.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
-		"language": langName,
-	})
-
-	keyboard := ph.base.keyboardBuilder.CreateLanguageLevelKeyboardWithPrefix(user.InterfaceLanguageCode, user.TargetLanguageCode, "edit_level_", false)
-	// Добавляем save/cancel
-	saveRow := ph.base.keyboardBuilder.CreateSaveEditsKeyboard(user.InterfaceLanguageCode).InlineKeyboard[0]
-	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []tgbotapi.InlineKeyboardButton{saveRow[0], saveRow[1]})
-
-	err := ph.base.messageFactory.EditWithKeyboard(
-		callback.Message.Chat.ID,
-		callback.Message.MessageID,
-		title,
-		&keyboard,
-	)
-
-	return err
+	return ph.HandleEditLanguages(callback, user)
 }
 
 // ShowProfileSetupFeatures показывает новые возможности заполнения профиля.

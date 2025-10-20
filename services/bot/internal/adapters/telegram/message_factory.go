@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"fmt"
 	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/logging"
@@ -316,4 +317,76 @@ func (f *MessageFactory) logOutgoingMessage(chatID int64, userID int64, operatio
 			"user_id":      userID,
 		},
 	)
+}
+
+// =============================================================================
+// SEMANTIC MESSAGE HELPERS - для типичных паттернов сообщений
+// =============================================================================
+// Эти методы создают часто используемые типы сообщений с правильным форматированием.
+// Преимущества:
+// 1. Стандартизация внешнего вида сообщений об ошибках, предупреждениях и успехе
+// 2. Автоматическая локализация ключевых слов
+// 3. Сокращение дублирования кода
+
+// SendError отправляет сообщение об ошибке с красным значком и жирным текстом.
+func (f *MessageFactory) SendError(chatID int64, errorText string) error {
+	message := fmt.Sprintf("❌ *Ошибка*\n\n%s", errorText)
+	return f.SendHTML(chatID, message)
+}
+
+// SendWarning отправляет предупреждение с желтым значком и курсивным текстом.
+func (f *MessageFactory) SendWarning(chatID int64, warningText string) error {
+	message := fmt.Sprintf("⚠️ _Предупреждение_\n\n%s", warningText)
+	return f.SendHTML(chatID, message)
+}
+
+// SendSuccess отправляет сообщение об успехе с зеленым значком.
+func (f *MessageFactory) SendSuccess(chatID int64, successText string) error {
+	message := fmt.Sprintf("✅ %s", successText)
+	return f.SendHTML(chatID, message)
+}
+
+// SendInfo отправляет информационное сообщение с синим значком.
+func (f *MessageFactory) SendInfo(chatID int64, infoText string) error {
+	message := fmt.Sprintf("ℹ️ %s", infoText)
+	return f.SendText(chatID, message)
+}
+
+// SendConfirmation отправляет запрос подтверждения с кнопками Да/Нет.
+func (f *MessageFactory) SendConfirmation(chatID int64, questionText string, yesCallback, noCallback string) error {
+	message := fmt.Sprintf("🤔 %s", questionText)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("✅ Да", yesCallback),
+			tgbotapi.NewInlineKeyboardButtonData("❌ Нет", noCallback),
+		),
+	)
+	return f.SendWithKeyboard(chatID, message, keyboard)
+}
+
+// SendLocalizedError отправляет локализованное сообщение об ошибке.
+func (f *MessageFactory) SendLocalizedError(chatID int64, localizer *localization.Localizer, lang, errorKey string, args ...interface{}) error {
+	errorText := localizer.Get(lang, errorKey)
+	if len(args) > 0 {
+		errorText = fmt.Sprintf(errorText, args...)
+	}
+	return f.SendError(chatID, errorText)
+}
+
+// SendLocalizedSuccess отправляет локализованное сообщение об успехе.
+func (f *MessageFactory) SendLocalizedSuccess(chatID int64, localizer *localization.Localizer, lang, successKey string, args ...interface{}) error {
+	successText := localizer.Get(lang, successKey)
+	if len(args) > 0 {
+		successText = fmt.Sprintf(successText, args...)
+	}
+	return f.SendSuccess(chatID, successText)
+}
+
+// SendLocalizedWarning отправляет локализованное предупреждение.
+func (f *MessageFactory) SendLocalizedWarning(chatID int64, localizer *localization.Localizer, lang, warningKey string, args ...interface{}) error {
+	warningText := localizer.Get(lang, warningKey)
+	if len(args) > 0 {
+		warningText = fmt.Sprintf(warningText, args...)
+	}
+	return f.SendWarning(chatID, warningText)
 }
