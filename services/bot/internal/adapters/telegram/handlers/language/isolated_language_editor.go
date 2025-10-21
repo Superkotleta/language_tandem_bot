@@ -1,4 +1,4 @@
-package handlers
+package language
 
 import (
 	"context"
@@ -8,12 +8,13 @@ import (
 
 	"language-exchange-bot/internal/models"
 
+	"language-exchange-bot/internal/adapters/telegram/handlers/base"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 // IsolatedLanguageEditor управляет изолированным редактированием языковых настроек
 type IsolatedLanguageEditor struct {
-	baseHandler *BaseHandler
+	baseHandler *base.BaseHandler
 }
 
 // LanguageEditSession представляет сессию редактирования языков
@@ -41,7 +42,7 @@ type LanguageChange struct {
 }
 
 // NewIsolatedLanguageEditor создает новый изолированный редактор языков
-func NewIsolatedLanguageEditor(baseHandler *BaseHandler) *IsolatedLanguageEditor {
+func NewIsolatedLanguageEditor(baseHandler *base.BaseHandler) *IsolatedLanguageEditor {
 	return &IsolatedLanguageEditor{
 		baseHandler: baseHandler,
 	}
@@ -53,8 +54,8 @@ func NewIsolatedLanguageEditor(baseHandler *BaseHandler) *IsolatedLanguageEditor
 
 // StartEditSession начинает сессию редактирования языков
 func (e *IsolatedLanguageEditor) StartEditSession(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := e.baseHandler.service.LoggingService
-	requestID := generateRequestID("StartLanguageEditSession")
+	loggingService := e.baseHandler.Service.LoggingService
+	requestID := base.GenerateRequestID("StartLanguageEditSession")
 
 	loggingService.LogRequestStart(requestID, int64(user.ID), callback.Message.Chat.ID, "StartLanguageEditSession")
 	loggingService.Telegram().InfoWithContext(
@@ -125,7 +126,7 @@ func (e *IsolatedLanguageEditor) showMainEditMenu(callback *tgbotapi.CallbackQue
 	text := e.buildLanguageSettingsText(user, session)
 	keyboard := e.createEditMainMenuKeyboard(user.InterfaceLanguageCode, session)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		text,
@@ -135,7 +136,7 @@ func (e *IsolatedLanguageEditor) showMainEditMenu(callback *tgbotapi.CallbackQue
 
 // buildLanguageSettingsText формирует текст с текущими настройками языков
 func (e *IsolatedLanguageEditor) buildLanguageSettingsText(user *models.User, session *LanguageEditSession) string {
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 	lang := user.InterfaceLanguageCode
 
 	// Заголовок
@@ -178,7 +179,7 @@ func (e *IsolatedLanguageEditor) buildLanguageSettingsText(user *models.User, se
 
 // createEditMainMenuKeyboard создает клавиатуру главного меню редактирования
 func (e *IsolatedLanguageEditor) createEditMainMenuKeyboard(interfaceLang string, session *LanguageEditSession) tgbotapi.InlineKeyboardMarkup {
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 
 	buttonRows := [][]tgbotapi.InlineKeyboardButton{
 		// Редактирование родного языка
@@ -248,10 +249,10 @@ func (e *IsolatedLanguageEditor) HandleEditNativeLanguage(callback *tgbotapi.Cal
 		return err
 	}
 
-	text := e.baseHandler.service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
+	text := e.baseHandler.Service.Localizer.Get(user.InterfaceLanguageCode, "choose_native_language")
 	keyboard := e.createNativeLanguageKeyboard(user.InterfaceLanguageCode, session)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		text,
@@ -261,7 +262,7 @@ func (e *IsolatedLanguageEditor) HandleEditNativeLanguage(callback *tgbotapi.Cal
 
 // createNativeLanguageKeyboard создает клавиатуру выбора родного языка
 func (e *IsolatedLanguageEditor) createNativeLanguageKeyboard(interfaceLang string, session *LanguageEditSession) tgbotapi.InlineKeyboardMarkup {
-	kb := e.baseHandler.keyboardBuilder
+	kb := e.baseHandler.KeyboardBuilder
 
 	// Получаем базовую клавиатуру с языками
 	keyboard := kb.CreateLanguageKeyboard(interfaceLang, "isolated_native", "", false)
@@ -343,13 +344,13 @@ func (e *IsolatedLanguageEditor) HandleEditTargetLanguage(callback *tgbotapi.Cal
 
 	// Проверяем, что родной язык - русский
 	if session.CurrentNativeLang != "ru" {
-		text := e.baseHandler.service.Localizer.Get(user.InterfaceLanguageCode, "target_language_locked")
+		text := e.baseHandler.Service.Localizer.Get(user.InterfaceLanguageCode, "target_language_locked")
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			[]tgbotapi.InlineKeyboardButton{
-				e.baseHandler.keyboardBuilder.CreateBackButton(user.InterfaceLanguageCode, "isolated_lang_back_to_menu"),
+				e.baseHandler.KeyboardBuilder.CreateBackButton(user.InterfaceLanguageCode, "isolated_lang_back_to_menu"),
 			},
 		)
-		return e.baseHandler.messageFactory.EditWithKeyboard(
+		return e.baseHandler.MessageFactory.EditWithKeyboard(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
 			text,
@@ -364,10 +365,10 @@ func (e *IsolatedLanguageEditor) HandleEditTargetLanguage(callback *tgbotapi.Cal
 		return err
 	}
 
-	text := e.baseHandler.service.Localizer.Get(user.InterfaceLanguageCode, "choose_target_language")
+	text := e.baseHandler.Service.Localizer.Get(user.InterfaceLanguageCode, "choose_target_language")
 	keyboard := e.createTargetLanguageKeyboard(user.InterfaceLanguageCode, session)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		text,
@@ -377,7 +378,7 @@ func (e *IsolatedLanguageEditor) HandleEditTargetLanguage(callback *tgbotapi.Cal
 
 // createTargetLanguageKeyboard создает клавиатуру выбора изучаемого языка
 func (e *IsolatedLanguageEditor) createTargetLanguageKeyboard(interfaceLang string, session *LanguageEditSession) tgbotapi.InlineKeyboardMarkup {
-	kb := e.baseHandler.keyboardBuilder
+	kb := e.baseHandler.KeyboardBuilder
 
 	// Исключаем родной язык из списка
 	keyboard := kb.CreateLanguageKeyboard(interfaceLang, "isolated_target", session.CurrentNativeLang, false)
@@ -445,7 +446,7 @@ func (e *IsolatedLanguageEditor) HandleEditLanguageLevel(callback *tgbotapi.Call
 
 // showLevelSelection показывает экран выбора уровня владения языком
 func (e *IsolatedLanguageEditor) showLevelSelection(callback *tgbotapi.CallbackQuery, user *models.User, session *LanguageEditSession) error {
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 	langName := localizer.GetLanguageName(session.CurrentTargetLang, user.InterfaceLanguageCode)
 
 	text := localizer.GetWithParams(user.InterfaceLanguageCode, "choose_level_title", map[string]string{
@@ -454,7 +455,7 @@ func (e *IsolatedLanguageEditor) showLevelSelection(callback *tgbotapi.CallbackQ
 
 	keyboard := e.createLevelKeyboard(user.InterfaceLanguageCode, session)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		text,
@@ -464,7 +465,7 @@ func (e *IsolatedLanguageEditor) showLevelSelection(callback *tgbotapi.CallbackQ
 
 // createLevelKeyboard создает клавиатуру выбора уровня владения
 func (e *IsolatedLanguageEditor) createLevelKeyboard(interfaceLang string, session *LanguageEditSession) tgbotapi.InlineKeyboardMarkup {
-	kb := e.baseHandler.keyboardBuilder
+	kb := e.baseHandler.KeyboardBuilder
 
 	keyboard := kb.CreateLanguageLevelKeyboardWithPrefix(interfaceLang, session.CurrentTargetLang, "isolated_level_", false)
 
@@ -529,7 +530,7 @@ func (e *IsolatedLanguageEditor) HandlePreviewChanges(callback *tgbotapi.Callbac
 	text := e.buildChangesPreviewText(user, session)
 	keyboard := e.createChangesPreviewKeyboard(user.InterfaceLanguageCode, session)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		text,
@@ -539,7 +540,7 @@ func (e *IsolatedLanguageEditor) HandlePreviewChanges(callback *tgbotapi.Callbac
 
 // buildChangesPreviewText формирует текст предпросмотра изменений
 func (e *IsolatedLanguageEditor) buildChangesPreviewText(user *models.User, session *LanguageEditSession) string {
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 	lang := user.InterfaceLanguageCode
 
 	text := "📋 " + localizer.Get(lang, "preview_changes") + "\n\n"
@@ -573,8 +574,8 @@ func (e *IsolatedLanguageEditor) buildChangesPreviewText(user *models.User, sess
 
 // createChangesPreviewKeyboard создает клавиатуру предпросмотра изменений
 func (e *IsolatedLanguageEditor) createChangesPreviewKeyboard(interfaceLang string, session *LanguageEditSession) tgbotapi.InlineKeyboardMarkup {
-	localizer := e.baseHandler.service.Localizer
-	kb := e.baseHandler.keyboardBuilder
+	localizer := e.baseHandler.Service.Localizer
+	kb := e.baseHandler.KeyboardBuilder
 
 	mainRow := []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData(
@@ -612,13 +613,13 @@ func (e *IsolatedLanguageEditor) HandleUndoLastChange(callback *tgbotapi.Callbac
 
 	if len(session.Changes) == 0 {
 		// Нет изменений для отмены
-		text := e.baseHandler.service.Localizer.Get(user.InterfaceLanguageCode, "no_changes_to_undo")
+		text := e.baseHandler.Service.Localizer.Get(user.InterfaceLanguageCode, "no_changes_to_undo")
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			[]tgbotapi.InlineKeyboardButton{
-				e.baseHandler.keyboardBuilder.CreateBackButton(user.InterfaceLanguageCode, "isolated_lang_back_to_menu"),
+				e.baseHandler.KeyboardBuilder.CreateBackButton(user.InterfaceLanguageCode, "isolated_lang_back_to_menu"),
 			},
 		)
-		return e.baseHandler.messageFactory.EditWithKeyboard(
+		return e.baseHandler.MessageFactory.EditWithKeyboard(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
 			text,
@@ -678,8 +679,8 @@ func (e *IsolatedLanguageEditor) HandleSaveChanges(callback *tgbotapi.CallbackQu
 		return e.StartEditSession(callback, user)
 	}
 
-	loggingService := e.baseHandler.service.LoggingService
-	requestID := generateRequestID("SaveLanguageChanges")
+	loggingService := e.baseHandler.Service.LoggingService
+	requestID := base.GenerateRequestID("SaveLanguageChanges")
 
 	loggingService.Telegram().InfoWithContext(
 		"Saving language changes",
@@ -697,7 +698,7 @@ func (e *IsolatedLanguageEditor) HandleSaveChanges(callback *tgbotapi.CallbackQu
 	for _, change := range session.Changes {
 		switch change.Field {
 		case "native_language":
-			if err := e.baseHandler.service.DB.UpdateUserNativeLanguage(user.ID, session.CurrentNativeLang); err != nil {
+			if err := e.baseHandler.Service.DB.UpdateUserNativeLanguage(user.ID, session.CurrentNativeLang); err != nil {
 				loggingService.Telegram().ErrorWithContext(
 					"Failed to update native language",
 					requestID,
@@ -714,7 +715,7 @@ func (e *IsolatedLanguageEditor) HandleSaveChanges(callback *tgbotapi.CallbackQu
 			user.NativeLanguageCode = session.CurrentNativeLang
 
 		case "target_language":
-			if err := e.baseHandler.service.DB.UpdateUserTargetLanguage(user.ID, session.CurrentTargetLang); err != nil {
+			if err := e.baseHandler.Service.DB.UpdateUserTargetLanguage(user.ID, session.CurrentTargetLang); err != nil {
 				loggingService.Telegram().ErrorWithContext(
 					"Failed to update target language",
 					requestID,
@@ -731,7 +732,7 @@ func (e *IsolatedLanguageEditor) HandleSaveChanges(callback *tgbotapi.CallbackQu
 			user.TargetLanguageCode = session.CurrentTargetLang
 
 		case "target_level":
-			if err := e.baseHandler.service.DB.UpdateUserTargetLanguageLevel(user.ID, session.CurrentTargetLevel); err != nil {
+			if err := e.baseHandler.Service.DB.UpdateUserTargetLanguageLevel(user.ID, session.CurrentTargetLevel); err != nil {
 				loggingService.Telegram().ErrorWithContext(
 					"Failed to update target language level",
 					requestID,
@@ -777,18 +778,18 @@ func (e *IsolatedLanguageEditor) HandleSaveChanges(callback *tgbotapi.CallbackQu
 	)
 
 	// Показываем сообщение об успешном сохранении и профиль
-	text := e.baseHandler.service.Localizer.Get(user.InterfaceLanguageCode, "changes_saved_successfully") + "\n\n"
+	text := e.baseHandler.Service.Localizer.Get(user.InterfaceLanguageCode, "changes_saved_successfully") + "\n\n"
 
-	summary, err := e.baseHandler.service.BuildProfileSummary(user)
+	summary, err := e.baseHandler.Service.BuildProfileSummary(user)
 	if err == nil {
 		text += summary + "\n\n"
 	}
 
-	text += e.baseHandler.service.Localizer.Get(user.InterfaceLanguageCode, "profile_actions")
+	text += e.baseHandler.Service.Localizer.Get(user.InterfaceLanguageCode, "profile_actions")
 
-	keyboard := e.baseHandler.keyboardBuilder.CreateProfileMenuKeyboard(user.InterfaceLanguageCode)
+	keyboard := e.baseHandler.KeyboardBuilder.CreateProfileMenuKeyboard(user.InterfaceLanguageCode)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		text,
@@ -804,8 +805,8 @@ func (e *IsolatedLanguageEditor) HandleCancelEdit(callback *tgbotapi.CallbackQue
 		return e.showProfileAfterCancel(callback, user)
 	}
 
-	loggingService := e.baseHandler.service.LoggingService
-	requestID := generateRequestID("CancelLanguageEdit")
+	loggingService := e.baseHandler.Service.LoggingService
+	requestID := base.GenerateRequestID("CancelLanguageEdit")
 
 	loggingService.Telegram().InfoWithContext(
 		"Cancelling language edit session",
@@ -839,15 +840,15 @@ func (e *IsolatedLanguageEditor) HandleCancelEdit(callback *tgbotapi.CallbackQue
 
 // showProfileAfterCancel показывает профиль после отмены редактирования
 func (e *IsolatedLanguageEditor) showProfileAfterCancel(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	summary, err := e.baseHandler.service.BuildProfileSummary(user)
+	summary, err := e.baseHandler.Service.BuildProfileSummary(user)
 	if err != nil {
 		return err
 	}
 
-	text := summary + "\n\n" + e.baseHandler.service.Localizer.Get(user.InterfaceLanguageCode, "profile_actions")
-	keyboard := e.baseHandler.keyboardBuilder.CreateProfileMenuKeyboard(user.InterfaceLanguageCode)
+	text := summary + "\n\n" + e.baseHandler.Service.Localizer.Get(user.InterfaceLanguageCode, "profile_actions")
+	keyboard := e.baseHandler.KeyboardBuilder.CreateProfileMenuKeyboard(user.InterfaceLanguageCode)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		text,
@@ -884,7 +885,7 @@ func (e *IsolatedLanguageEditor) getSessionKey(userID int) string {
 // saveSession сохраняет сессию в кеш
 func (e *IsolatedLanguageEditor) saveSession(userID int, session *LanguageEditSession) error {
 	key := e.getSessionKey(userID)
-	return e.baseHandler.service.Cache.Set(context.Background(), key, session, time.Hour)
+	return e.baseHandler.Service.Cache.Set(context.Background(), key, session, time.Hour)
 }
 
 // getSession получает сессию из кеша
@@ -892,7 +893,7 @@ func (e *IsolatedLanguageEditor) getSession(userID int) (*LanguageEditSession, e
 	key := e.getSessionKey(userID)
 
 	var data string
-	if err := e.baseHandler.service.Cache.Get(context.Background(), key, &data); err != nil {
+	if err := e.baseHandler.Service.Cache.Get(context.Background(), key, &data); err != nil {
 		return nil, fmt.Errorf("edit session not found")
 	}
 
@@ -907,5 +908,5 @@ func (e *IsolatedLanguageEditor) getSession(userID int) (*LanguageEditSession, e
 // deleteSession удаляет сессию из кеша
 func (e *IsolatedLanguageEditor) deleteSession(userID int) error {
 	key := e.getSessionKey(userID)
-	return e.baseHandler.service.Cache.Delete(context.Background(), key)
+	return e.baseHandler.Service.Cache.Delete(context.Background(), key)
 }

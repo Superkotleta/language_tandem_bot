@@ -1,14 +1,16 @@
-package handlers
+package feedback
 
 import (
 	"testing"
+
+	"language-exchange-bot/internal/adapters/telegram/handlers/base"
 
 	"github.com/stretchr/testify/assert"
 )
 
 // TestNewFeedbackHandler tests creating new feedback handler.
 func TestNewFeedbackHandler(t *testing.T) {
-	base := &BaseHandler{}
+	base := &base.BaseHandler{}
 	adminChatIDs := []int64{123, 456}
 	adminUsernames := []string{"admin1", "admin2"}
 
@@ -23,7 +25,7 @@ func TestNewFeedbackHandler(t *testing.T) {
 // TestFeedbackHandlerImpl_HandleFeedbackCommand tests feedback command handling.
 func TestFeedbackHandlerImpl_HandleFeedbackCommand(t *testing.T) {
 	// Just test that the method exists and can be called
-	base := &BaseHandler{}
+	base := &base.BaseHandler{}
 	handler := NewFeedbackHandler(base, []int64{}, []string{})
 
 	// Test method signature exists
@@ -33,7 +35,7 @@ func TestFeedbackHandlerImpl_HandleFeedbackCommand(t *testing.T) {
 // TestFeedbackHandlerImpl_HandleFeedbacksCommand tests feedbacks command handling.
 func TestFeedbackHandlerImpl_HandleFeedbacksCommand(t *testing.T) {
 	// Just test that the method exists and can be called
-	base := &BaseHandler{}
+	base := &base.BaseHandler{}
 	handler := NewFeedbackHandler(base, []int64{123}, []string{"admin"})
 
 	// Test method signature exists
@@ -43,7 +45,7 @@ func TestFeedbackHandlerImpl_HandleFeedbacksCommand(t *testing.T) {
 // TestFeedbackHandlerImpl_HandleFeedbackMessage tests feedback message handling.
 func TestFeedbackHandlerImpl_HandleFeedbackMessage(t *testing.T) {
 	// Just test that the method exists and can be called
-	base := &BaseHandler{}
+	base := &base.BaseHandler{}
 	handler := NewFeedbackHandler(base, []int64{}, []string{})
 
 	// Test method signature exists
@@ -53,7 +55,7 @@ func TestFeedbackHandlerImpl_HandleFeedbackMessage(t *testing.T) {
 // TestFeedbackHandlerImpl_HandleFeedbackContactMessage tests feedback contact message handling.
 func TestFeedbackHandlerImpl_HandleFeedbackContactMessage(t *testing.T) {
 	// Just test that the method exists and can be called
-	base := &BaseHandler{}
+	base := &base.BaseHandler{}
 	handler := NewFeedbackHandler(base, []int64{}, []string{})
 
 	// Test method signature exists

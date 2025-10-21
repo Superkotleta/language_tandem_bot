@@ -1,4 +1,4 @@
-package handlers
+package availability
 
 import (
 	"context"
@@ -10,12 +10,13 @@ import (
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
+	"language-exchange-bot/internal/adapters/telegram/handlers/base"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 // IsolatedAvailabilityEditor управляет изолированным редактированием доступности
 type IsolatedAvailabilityEditor struct {
-	baseHandler *BaseHandler
+	baseHandler *base.BaseHandler
 }
 
 // AvailabilityEditSession представляет сессию редактирования доступности
@@ -40,7 +41,7 @@ type AvailabilityChange struct {
 }
 
 // NewIsolatedAvailabilityEditor создает новый изолированный редактор доступности
-func NewIsolatedAvailabilityEditor(baseHandler *BaseHandler) *IsolatedAvailabilityEditor {
+func NewIsolatedAvailabilityEditor(baseHandler *base.BaseHandler) *IsolatedAvailabilityEditor {
 	return &IsolatedAvailabilityEditor{
 		baseHandler: baseHandler,
 	}
@@ -52,7 +53,7 @@ func NewIsolatedAvailabilityEditor(baseHandler *BaseHandler) *IsolatedAvailabili
 
 // StartEditSession начинает сессию редактирования доступности
 func (e *IsolatedAvailabilityEditor) StartEditSession(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := e.baseHandler.service.LoggingService
+	loggingService := e.baseHandler.Service.LoggingService
 
 	// Детальное логирование начала сессии
 	loggingService.LogRequestStart("", int64(user.ID), callback.Message.Chat.ID, "StartEditSession")
@@ -64,7 +65,7 @@ func (e *IsolatedAvailabilityEditor) StartEditSession(callback *tgbotapi.Callbac
 	})
 
 	// Получаем текущие данные пользователя
-	timeAvailability, err := e.baseHandler.service.GetTimeAvailability(user.ID)
+	timeAvailability, err := e.baseHandler.Service.GetTimeAvailability(user.ID)
 	if err != nil {
 		loggingService.Telegram().ErrorWithContext("Failed to get time availability for edit session", "", int64(user.ID), callback.Message.Chat.ID, "StartEditSession", map[string]interface{}{
 			"user_id":    user.ID,
@@ -75,7 +76,7 @@ func (e *IsolatedAvailabilityEditor) StartEditSession(callback *tgbotapi.Callbac
 		return fmt.Errorf("failed to get time availability: %w", err)
 	}
 
-	friendshipPreferences, err := e.baseHandler.service.GetFriendshipPreferences(user.ID)
+	friendshipPreferences, err := e.baseHandler.Service.GetFriendshipPreferences(user.ID)
 	if err != nil {
 		loggingService.Telegram().ErrorWithContext("Failed to get friendship preferences for edit session", "", int64(user.ID), callback.Message.Chat.ID, "StartEditSession", map[string]interface{}{
 			"user_id":    user.ID,
@@ -138,7 +139,7 @@ func (e *IsolatedAvailabilityEditor) StartEditSession(callback *tgbotapi.Callbac
 // ShowEditMenu показывает главное меню редактирования доступности
 func (e *IsolatedAvailabilityEditor) ShowEditMenu(callback *tgbotapi.CallbackQuery, session *AvailabilityEditSession, user *models.User) error {
 	lang := user.InterfaceLanguageCode
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 
 	// Форматируем текущие настройки для отображения
 	timeDisplay := e.formatCurrentTimeAvailability(session.CurrentTimeAvailability, lang)
@@ -155,7 +156,7 @@ func (e *IsolatedAvailabilityEditor) ShowEditMenu(callback *tgbotapi.CallbackQue
 
 	keyboard := e.createEditMenuKeyboard(session, lang)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		message,
@@ -184,7 +185,7 @@ func (e *IsolatedAvailabilityEditor) EditDays(callback *tgbotapi.CallbackQuery, 
 // ShowDayTypeSelection показывает выбор типа дней
 func (e *IsolatedAvailabilityEditor) ShowDayTypeSelection(callback *tgbotapi.CallbackQuery, session *AvailabilityEditSession, user *models.User) error {
 	lang := user.InterfaceLanguageCode
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 
 	message := localizer.Get(lang, "select_day_type")
 
@@ -221,7 +222,7 @@ func (e *IsolatedAvailabilityEditor) ShowDayTypeSelection(callback *tgbotapi.Cal
 		),
 	)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		message,
@@ -257,7 +258,7 @@ func (e *IsolatedAvailabilityEditor) HandleDayTypeSelection(callback *tgbotapi.C
 // ShowSpecificDaysSelection показывает выбор конкретных дней
 func (e *IsolatedAvailabilityEditor) ShowSpecificDaysSelection(callback *tgbotapi.CallbackQuery, session *AvailabilityEditSession, user *models.User) error {
 	lang := user.InterfaceLanguageCode
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 
 	// Форматируем выбранные дни
 	selectedDays := e.formatSelectedDays(session.CurrentTimeAvailability.SpecificDays, lang)
@@ -270,7 +271,7 @@ func (e *IsolatedAvailabilityEditor) ShowSpecificDaysSelection(callback *tgbotap
 
 	keyboard := e.createSpecificDaysKeyboard(session, lang)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		message,
@@ -330,7 +331,7 @@ func (e *IsolatedAvailabilityEditor) EditTimeSlots(callback *tgbotapi.CallbackQu
 // ShowTimeSlotsSelection показывает выбор временных слотов
 func (e *IsolatedAvailabilityEditor) ShowTimeSlotsSelection(callback *tgbotapi.CallbackQuery, session *AvailabilityEditSession, user *models.User) error {
 	lang := user.InterfaceLanguageCode
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 
 	// Форматируем выбранные слоты
 	selectedSlots := e.formatSelectedTimeSlots(session.CurrentTimeAvailability.TimeSlots, lang)
@@ -343,7 +344,7 @@ func (e *IsolatedAvailabilityEditor) ShowTimeSlotsSelection(callback *tgbotapi.C
 
 	keyboard := e.createTimeSlotsKeyboard(session, lang)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		message,
@@ -403,7 +404,7 @@ func (e *IsolatedAvailabilityEditor) EditCommunication(callback *tgbotapi.Callba
 // ShowCommunicationSelection показывает выбор способов общения
 func (e *IsolatedAvailabilityEditor) ShowCommunicationSelection(callback *tgbotapi.CallbackQuery, session *AvailabilityEditSession, user *models.User) error {
 	lang := user.InterfaceLanguageCode
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 
 	// Форматируем выбранные способы
 	selectedStyles := e.formatSelectedCommunicationStyles(session.CurrentPreferences.CommunicationStyles, lang)
@@ -416,7 +417,7 @@ func (e *IsolatedAvailabilityEditor) ShowCommunicationSelection(callback *tgbota
 
 	keyboard := e.createCommunicationKeyboard(session, lang)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		message,
@@ -476,7 +477,7 @@ func (e *IsolatedAvailabilityEditor) EditFrequency(callback *tgbotapi.CallbackQu
 // ShowFrequencySelection показывает выбор частоты общения
 func (e *IsolatedAvailabilityEditor) ShowFrequencySelection(callback *tgbotapi.CallbackQuery, session *AvailabilityEditSession, user *models.User) error {
 	lang := user.InterfaceLanguageCode
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 
 	message := localizer.Get(lang, "select_communication_frequency")
 
@@ -513,7 +514,7 @@ func (e *IsolatedAvailabilityEditor) ShowFrequencySelection(callback *tgbotapi.C
 		),
 	)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		message,
@@ -545,7 +546,7 @@ func (e *IsolatedAvailabilityEditor) HandleFrequencySelection(callback *tgbotapi
 
 // SaveChanges сохраняет все изменения
 func (e *IsolatedAvailabilityEditor) SaveChanges(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := e.baseHandler.service.LoggingService
+	loggingService := e.baseHandler.Service.LoggingService
 	telegramLogger := loggingService.Telegram()
 
 	session, err := e.getEditSession(user.ID)
@@ -589,18 +590,18 @@ func (e *IsolatedAvailabilityEditor) SaveChanges(callback *tgbotapi.CallbackQuer
 	})
 
 	// Сохраняем данные в базу
-	if err := e.baseHandler.service.SaveTimeAvailability(user.ID, session.CurrentTimeAvailability); err != nil {
+	if err := e.baseHandler.Service.SaveTimeAvailability(user.ID, session.CurrentTimeAvailability); err != nil {
 		loggingService.LogErrorWithContext(err, "", int64(user.ID), callback.Message.Chat.ID, "SaveChanges", "database")
 		return err
 	}
 
-	if err := e.baseHandler.service.SaveFriendshipPreferences(user.ID, session.CurrentPreferences); err != nil {
+	if err := e.baseHandler.Service.SaveFriendshipPreferences(user.ID, session.CurrentPreferences); err != nil {
 		loggingService.LogErrorWithContext(err, "", int64(user.ID), callback.Message.Chat.ID, "SaveChanges", "database")
 		return err
 	}
 
 	// Обновляем статус пользователя
-	if err := e.baseHandler.service.UpdateUserState(user.ID, models.StateActive); err != nil {
+	if err := e.baseHandler.Service.UpdateUserState(user.ID, models.StateActive); err != nil {
 		telegramLogger.ErrorWithContext("Failed to update user state after successful save", "", int64(user.ID), callback.Message.Chat.ID, "SaveChanges", map[string]interface{}{
 			"user_id":              user.ID,
 			"error":                err.Error(),
@@ -635,7 +636,7 @@ func (e *IsolatedAvailabilityEditor) SaveChanges(callback *tgbotapi.CallbackQuer
 
 // CancelEdit отменяет редактирование
 func (e *IsolatedAvailabilityEditor) CancelEdit(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := e.baseHandler.service.LoggingService
+	loggingService := e.baseHandler.Service.LoggingService
 	telegramLogger := loggingService.Telegram()
 
 	// Получаем информацию о сессии перед очисткой для логирования
@@ -663,7 +664,7 @@ func (e *IsolatedAvailabilityEditor) CancelEdit(callback *tgbotapi.CallbackQuery
 	loggingService.LogRequestEnd("", int64(user.ID), callback.Message.Chat.ID, "CancelEdit", false)
 
 	lang := user.InterfaceLanguageCode
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 
 	message := fmt.Sprintf("%s\n\n%s",
 		localizer.Get(lang, "edit_cancelled"),
@@ -672,11 +673,11 @@ func (e *IsolatedAvailabilityEditor) CancelEdit(callback *tgbotapi.CallbackQuery
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			e.baseHandler.keyboardBuilder.CreateViewProfileButton(lang),
+			e.baseHandler.KeyboardBuilder.CreateViewProfileButton(lang),
 		),
 	)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		message,
@@ -687,7 +688,7 @@ func (e *IsolatedAvailabilityEditor) CancelEdit(callback *tgbotapi.CallbackQuery
 // ShowSaveConfirmation показывает подтверждение сохранения
 func (e *IsolatedAvailabilityEditor) ShowSaveConfirmation(callback *tgbotapi.CallbackQuery, session *AvailabilityEditSession, user *models.User) error {
 	lang := user.InterfaceLanguageCode
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 
 	changesSummary := e.formatChangesSummary(session, lang)
 
@@ -699,11 +700,11 @@ func (e *IsolatedAvailabilityEditor) ShowSaveConfirmation(callback *tgbotapi.Cal
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			e.baseHandler.keyboardBuilder.CreateViewProfileButton(lang),
+			e.baseHandler.KeyboardBuilder.CreateViewProfileButton(lang),
 		),
 	)
 
-	return e.baseHandler.messageFactory.EditWithKeyboard(
+	return e.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		message,
@@ -725,7 +726,7 @@ func (e *IsolatedAvailabilityEditor) getEditSession(userID int) (*AvailabilityEd
 	cacheKey := fmt.Sprintf("availability_edit_session:%d", userID)
 
 	var data string
-	err := e.baseHandler.service.Cache.Get(context.Background(), cacheKey, &data)
+	err := e.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get edit session from cache: %w", err)
 	}
@@ -746,13 +747,13 @@ func (e *IsolatedAvailabilityEditor) getEditSession(userID int) (*AvailabilityEd
 func (e *IsolatedAvailabilityEditor) saveEditSession(session *AvailabilityEditSession) error {
 	cacheKey := fmt.Sprintf("availability_edit_session:%d", session.UserID)
 
-	return e.baseHandler.service.Cache.Set(context.Background(), cacheKey, session, 30*time.Minute)
+	return e.baseHandler.Service.Cache.Set(context.Background(), cacheKey, session, 30*time.Minute)
 }
 
 // clearEditSession очищает сессию из кеша
 func (e *IsolatedAvailabilityEditor) clearEditSession(userID int) {
 	cacheKey := fmt.Sprintf("availability_edit_session:%d", userID)
-	e.baseHandler.service.Cache.Delete(context.Background(), cacheKey)
+	e.baseHandler.Service.Cache.Delete(context.Background(), cacheKey)
 }
 
 // recordChange записывает изменение в сессию
@@ -767,7 +768,7 @@ func (e *IsolatedAvailabilityEditor) recordChange(session *AvailabilityEditSessi
 	session.Changes = append(session.Changes, change)
 
 	// Логируем каждое изменение
-	loggingService := e.baseHandler.service.LoggingService.Telegram()
+	loggingService := e.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Availability data changed", "", int64(session.UserID), 0, "RecordChange", map[string]interface{}{
 		"user_id":                  session.UserID,
 		"field":                    field,
@@ -781,12 +782,12 @@ func (e *IsolatedAvailabilityEditor) recordChange(session *AvailabilityEditSessi
 // validateSessionData валидирует данные сессии
 func (e *IsolatedAvailabilityEditor) validateSessionData(session *AvailabilityEditSession, lang string) error {
 	// Валидируем временную доступность
-	if err := e.baseHandler.service.ValidateTimeAvailability(session.CurrentTimeAvailability, lang); err != nil {
+	if err := e.baseHandler.Service.ValidateTimeAvailability(session.CurrentTimeAvailability, lang); err != nil {
 		return err
 	}
 
 	// Валидируем предпочтения общения
-	if err := e.baseHandler.service.ValidateFriendshipPreferences(session.CurrentPreferences, lang); err != nil {
+	if err := e.baseHandler.Service.ValidateFriendshipPreferences(session.CurrentPreferences, lang); err != nil {
 		return err
 	}
 
@@ -843,7 +844,7 @@ func (e *IsolatedAvailabilityEditor) deepCopyFriendshipPreferences(original *mod
 // formatCurrentTimeAvailability форматирует текущую временную доступность
 func (e *IsolatedAvailabilityEditor) formatCurrentTimeAvailability(availability *models.TimeAvailability, lang string) string {
 	if availability == nil {
-		return "⏰ " + e.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
+		return "⏰ " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
 	parts := []string{"⏰"}
@@ -851,11 +852,11 @@ func (e *IsolatedAvailabilityEditor) formatCurrentTimeAvailability(availability 
 	// Форматируем дни
 	switch availability.DayType {
 	case "weekdays":
-		parts = append(parts, e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeWeekdays))
+		parts = append(parts, e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeWeekdays))
 	case "weekends":
-		parts = append(parts, e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeWeekends))
+		parts = append(parts, e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeWeekends))
 	case "any":
-		parts = append(parts, e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeAny))
+		parts = append(parts, e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeAny))
 	case "specific":
 		if len(availability.SpecificDays) > 0 {
 			days := make([]string, len(availability.SpecificDays))
@@ -864,7 +865,7 @@ func (e *IsolatedAvailabilityEditor) formatCurrentTimeAvailability(availability 
 			}
 			parts = append(parts, strings.Join(days, ", "))
 		} else {
-			parts = append(parts, e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeAny))
+			parts = append(parts, e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeAny))
 		}
 	}
 
@@ -874,13 +875,13 @@ func (e *IsolatedAvailabilityEditor) formatCurrentTimeAvailability(availability 
 		for i, slot := range availability.TimeSlots {
 			switch slot {
 			case "morning":
-				timeParts[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeMorning)
+				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeMorning)
 			case "day":
-				timeParts[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeDay)
+				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeDay)
 			case "evening":
-				timeParts[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeEvening)
+				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeEvening)
 			case "late":
-				timeParts[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeLate)
+				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeLate)
 			}
 		}
 		parts = append(parts, strings.Join(timeParts, ", "))
@@ -892,7 +893,7 @@ func (e *IsolatedAvailabilityEditor) formatCurrentTimeAvailability(availability 
 // formatCurrentCommunicationPreferences форматирует текущие предпочтения общения
 func (e *IsolatedAvailabilityEditor) formatCurrentCommunicationPreferences(preferences *models.FriendshipPreferences, lang string) string {
 	if preferences == nil {
-		return "💬 " + e.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
+		return "💬 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
 	parts := []string{"💬"}
@@ -903,15 +904,15 @@ func (e *IsolatedAvailabilityEditor) formatCurrentCommunicationPreferences(prefe
 		for i, style := range preferences.CommunicationStyles {
 			switch style {
 			case "text":
-				styleParts[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleCommText)
+				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommText)
 			case "voice_msg":
-				styleParts[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleCommVoice)
+				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVoice)
 			case "audio_call":
-				styleParts[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleCommAudio)
+				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommAudio)
 			case "video_call":
-				styleParts[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleCommVideo)
+				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVideo)
 			case "meet_person":
-				styleParts[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleCommMeet)
+				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommMeet)
 			}
 		}
 		parts = append(parts, strings.Join(styleParts, ", "))
@@ -923,21 +924,21 @@ func (e *IsolatedAvailabilityEditor) formatCurrentCommunicationPreferences(prefe
 // formatCurrentFrequency форматирует текущую частоту
 func (e *IsolatedAvailabilityEditor) formatCurrentFrequency(preferences *models.FriendshipPreferences, lang string) string {
 	if preferences == nil {
-		return "📊 " + e.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
+		return "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
 	freqText := "📊 "
 	switch preferences.CommunicationFreq {
 	case "multiple_weekly":
-		freqText += e.baseHandler.service.Localizer.Get(lang, localization.LocaleFreqMultipleWeekly)
+		freqText += e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqMultipleWeekly)
 	case "weekly":
-		freqText += e.baseHandler.service.Localizer.Get(lang, localization.LocaleFreqWeekly)
+		freqText += e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqWeekly)
 	case "multiple_monthly":
-		freqText += e.baseHandler.service.Localizer.Get(lang, localization.LocaleFreqMultipleMonthly)
+		freqText += e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqMultipleMonthly)
 	case "flexible":
-		freqText += e.baseHandler.service.Localizer.Get(lang, localization.LocaleFreqFlexible)
+		freqText += e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqFlexible)
 	default:
-		freqText += e.baseHandler.service.Localizer.Get(lang, localization.LocaleFreqWeekly)
+		freqText += e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqWeekly)
 	}
 
 	return freqText
@@ -946,7 +947,7 @@ func (e *IsolatedAvailabilityEditor) formatCurrentFrequency(preferences *models.
 // formatSelectedDays форматирует выбранные дни
 func (e *IsolatedAvailabilityEditor) formatSelectedDays(days []string, lang string) string {
 	if len(days) == 0 {
-		return e.baseHandler.service.Localizer.Get(lang, "no_days_selected")
+		return e.baseHandler.Service.Localizer.Get(lang, "no_days_selected")
 	}
 
 	dayNames := make([]string, len(days))
@@ -961,19 +962,19 @@ func (e *IsolatedAvailabilityEditor) formatSelectedDays(days []string, lang stri
 func (e *IsolatedAvailabilityEditor) formatDayName(day, lang string) string {
 	switch day {
 	case "monday":
-		return e.baseHandler.service.Localizer.Get(lang, "day_monday")
+		return e.baseHandler.Service.Localizer.Get(lang, "day_monday")
 	case "tuesday":
-		return e.baseHandler.service.Localizer.Get(lang, "day_tuesday")
+		return e.baseHandler.Service.Localizer.Get(lang, "day_tuesday")
 	case "wednesday":
-		return e.baseHandler.service.Localizer.Get(lang, "day_wednesday")
+		return e.baseHandler.Service.Localizer.Get(lang, "day_wednesday")
 	case "thursday":
-		return e.baseHandler.service.Localizer.Get(lang, "day_thursday")
+		return e.baseHandler.Service.Localizer.Get(lang, "day_thursday")
 	case "friday":
-		return e.baseHandler.service.Localizer.Get(lang, "day_friday")
+		return e.baseHandler.Service.Localizer.Get(lang, "day_friday")
 	case "saturday":
-		return e.baseHandler.service.Localizer.Get(lang, "day_saturday")
+		return e.baseHandler.Service.Localizer.Get(lang, "day_saturday")
 	case "sunday":
-		return e.baseHandler.service.Localizer.Get(lang, "day_sunday")
+		return e.baseHandler.Service.Localizer.Get(lang, "day_sunday")
 	default:
 		return day
 	}
@@ -982,20 +983,20 @@ func (e *IsolatedAvailabilityEditor) formatDayName(day, lang string) string {
 // formatSelectedTimeSlots форматирует выбранные временные слоты
 func (e *IsolatedAvailabilityEditor) formatSelectedTimeSlots(slots []string, lang string) string {
 	if len(slots) == 0 {
-		return e.baseHandler.service.Localizer.Get(lang, "none_selected")
+		return e.baseHandler.Service.Localizer.Get(lang, "none_selected")
 	}
 
 	slotNames := make([]string, len(slots))
 	for i, slot := range slots {
 		switch slot {
 		case "morning":
-			slotNames[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeMorning)
+			slotNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeMorning)
 		case "day":
-			slotNames[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeDay)
+			slotNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeDay)
 		case "evening":
-			slotNames[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeEvening)
+			slotNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeEvening)
 		case "late":
-			slotNames[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeLate)
+			slotNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeLate)
 		default:
 			slotNames[i] = slot
 		}
@@ -1007,22 +1008,22 @@ func (e *IsolatedAvailabilityEditor) formatSelectedTimeSlots(slots []string, lan
 // formatSelectedCommunicationStyles форматирует выбранные способы общения
 func (e *IsolatedAvailabilityEditor) formatSelectedCommunicationStyles(styles []string, lang string) string {
 	if len(styles) == 0 {
-		return e.baseHandler.service.Localizer.Get(lang, "none_selected")
+		return e.baseHandler.Service.Localizer.Get(lang, "none_selected")
 	}
 
 	styleNames := make([]string, len(styles))
 	for i, style := range styles {
 		switch style {
 		case "text":
-			styleNames[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleCommText)
+			styleNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommText)
 		case "voice_msg":
-			styleNames[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleCommVoice)
+			styleNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVoice)
 		case "audio_call":
-			styleNames[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleCommAudio)
+			styleNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommAudio)
 		case "video_call":
-			styleNames[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleCommVideo)
+			styleNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVideo)
 		case "meet_person":
-			styleNames[i] = e.baseHandler.service.Localizer.Get(lang, localization.LocaleCommMeet)
+			styleNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommMeet)
 		default:
 			styleNames[i] = style
 		}
@@ -1034,7 +1035,7 @@ func (e *IsolatedAvailabilityEditor) formatSelectedCommunicationStyles(styles []
 // formatChangesSummary форматирует сводку изменений
 func (e *IsolatedAvailabilityEditor) formatChangesSummary(session *AvailabilityEditSession, lang string) string {
 	if len(session.Changes) == 0 {
-		return e.baseHandler.service.Localizer.Get(lang, "no_changes_made")
+		return e.baseHandler.Service.Localizer.Get(lang, "no_changes_made")
 	}
 
 	changes := make([]string, len(session.Changes))
@@ -1050,13 +1051,13 @@ func (e *IsolatedAvailabilityEditor) formatChangesSummary(session *AvailabilityE
 func (e *IsolatedAvailabilityEditor) formatFieldName(field, lang string) string {
 	switch field {
 	case "day_type":
-		return e.baseHandler.service.Localizer.Get(lang, "time_weekdays") // Generic day field
+		return e.baseHandler.Service.Localizer.Get(lang, "time_weekdays") // Generic day field
 	case "time_slots":
-		return e.baseHandler.service.Localizer.Get(lang, "select_time_slot")
+		return e.baseHandler.Service.Localizer.Get(lang, "select_time_slot")
 	case "communication_styles":
-		return e.baseHandler.service.Localizer.Get(lang, "select_communication_style")
+		return e.baseHandler.Service.Localizer.Get(lang, "select_communication_style")
 	case "frequency":
-		return e.baseHandler.service.Localizer.Get(lang, "select_communication_frequency")
+		return e.baseHandler.Service.Localizer.Get(lang, "select_communication_frequency")
 	default:
 		return field
 	}
@@ -1068,7 +1069,7 @@ func (e *IsolatedAvailabilityEditor) formatFieldName(field, lang string) string 
 
 // createEditMenuKeyboard создает клавиатуру главного меню редактирования
 func (e *IsolatedAvailabilityEditor) createEditMenuKeyboard(session *AvailabilityEditSession, lang string) tgbotapi.InlineKeyboardMarkup {
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 
 	var rows [][]tgbotapi.InlineKeyboardButton
 
@@ -1124,7 +1125,7 @@ func (e *IsolatedAvailabilityEditor) createEditMenuKeyboard(session *Availabilit
 
 // createSpecificDaysKeyboard создает клавиатуру выбора конкретных дней
 func (e *IsolatedAvailabilityEditor) createSpecificDaysKeyboard(session *AvailabilityEditSession, lang string) tgbotapi.InlineKeyboardMarkup {
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 	selectedDays := make(map[string]bool)
 	for _, day := range session.CurrentTimeAvailability.SpecificDays {
 		selectedDays[day] = true
@@ -1181,7 +1182,7 @@ func (e *IsolatedAvailabilityEditor) createSpecificDaysKeyboard(session *Availab
 
 // createTimeSlotsKeyboard создает клавиатуру выбора временных слотов
 func (e *IsolatedAvailabilityEditor) createTimeSlotsKeyboard(session *AvailabilityEditSession, lang string) tgbotapi.InlineKeyboardMarkup {
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 	selectedSlots := make(map[string]bool)
 	for _, slot := range session.CurrentTimeAvailability.TimeSlots {
 		selectedSlots[slot] = true
@@ -1234,7 +1235,7 @@ func (e *IsolatedAvailabilityEditor) createTimeSlotsKeyboard(session *Availabili
 
 // createCommunicationKeyboard создает клавиатуру выбора способов общения
 func (e *IsolatedAvailabilityEditor) createCommunicationKeyboard(session *AvailabilityEditSession, lang string) tgbotapi.InlineKeyboardMarkup {
-	localizer := e.baseHandler.service.Localizer
+	localizer := e.baseHandler.Service.Localizer
 	selectedStyles := make(map[string]bool)
 	for _, style := range session.CurrentPreferences.CommunicationStyles {
 		selectedStyles[style] = true

@@ -1,4 +1,4 @@
-package handlers
+package feedback
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
+	"language-exchange-bot/internal/adapters/telegram/handlers/base"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -52,14 +53,14 @@ type FeedbackHandler interface {
 
 // FeedbackHandlerImpl реализация обработчиков отзывов.
 type FeedbackHandlerImpl struct {
-	base           *BaseHandler
+	base           *base.BaseHandler
 	adminChatIDs   []int64
 	adminUsernames []string
 }
 
 // NewFeedbackHandler создает новый экземпляр FeedbackHandler.
 func NewFeedbackHandler(
-	base *BaseHandler,
+	base *base.BaseHandler,
 	adminChatIDs []int64,
 	adminUsernames []string,
 ) *FeedbackHandlerImpl {
@@ -72,8 +73,8 @@ func NewFeedbackHandler(
 
 // HandleFeedbackCommand обрабатывает команду /feedback.
 func (fh *FeedbackHandlerImpl) HandleFeedbackCommand(message *tgbotapi.Message, user *models.User) error {
-	text := fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_text")
-	if err := fh.base.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedback); err != nil {
+	text := fh.base.Service.Localizer.Get(user.InterfaceLanguageCode, "feedback_text")
+	if err := fh.base.Service.DB.UpdateUserState(user.ID, models.StateWaitingFeedback); err != nil {
 		log.Printf("Failed to update user state to waiting feedback for user %d: %v", user.ID, err)
 	}
 
@@ -108,7 +109,7 @@ func (fh *FeedbackHandlerImpl) HandleFeedbacksCommand(message *tgbotapi.Message,
 
 	// Если пользователь не является администратором, отправляем сообщение об отказе
 	if !isAdminByID && !isAdminByUsername {
-		return fh.sendMessage(message.Chat.ID, fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "access_denied"))
+		return fh.sendMessage(message.Chat.ID, fh.base.Service.Localizer.Get(user.InterfaceLanguageCode, "access_denied"))
 	}
 
 	// Показываем статистику отзывов и меню управления
@@ -127,13 +128,13 @@ func (fh *FeedbackHandlerImpl) HandleMainFeedback(callback *tgbotapi.CallbackQue
 
 // sendMessage отправляет сообщение (deprecated - используйте messageFactory.SendText).
 func (fh *FeedbackHandlerImpl) sendMessage(chatID int64, text string) error {
-	return fh.base.messageFactory.SendText(chatID, text)
+	return fh.base.MessageFactory.SendText(chatID, text)
 }
 
 // editFeedbackStatistics редактирует сообщение со статистикой отзывов.
 func (fh *FeedbackHandlerImpl) editFeedbackStatistics(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		return fh.sendMessage(chatID, "❌ Ошибка получения отзывов: "+err.Error())
 	}
@@ -169,7 +170,7 @@ func (fh *FeedbackHandlerImpl) editFeedbackStatistics(chatID int64, messageID in
 	)
 
 	// Редактируем сообщение
-	err = fh.base.messageFactory.EditWithKeyboard(chatID, messageID, text, &keyboard)
+	err = fh.base.MessageFactory.EditWithKeyboard(chatID, messageID, text, &keyboard)
 
 	return err
 }
@@ -177,10 +178,10 @@ func (fh *FeedbackHandlerImpl) editFeedbackStatistics(chatID int64, messageID in
 // showFeedbackStatistics показывает статистику отзывов.
 func (fh *FeedbackHandlerImpl) showFeedbackStatistics(chatID int64, user *models.User) error {
 	// Получаем все отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -214,10 +215,10 @@ func (fh *FeedbackHandlerImpl) showFeedbackStatistics(chatID int64, user *models
 	text += fmt.Sprintf("📈 Всего: %d", totalCount)
 
 	// Создаем клавиатуру управления отзывами
-	keyboard := fh.base.keyboardBuilder.CreateFeedbackAdminKeyboard(user.InterfaceLanguageCode)
+	keyboard := fh.base.KeyboardBuilder.CreateFeedbackAdminKeyboard(user.InterfaceLanguageCode)
 
 	// Используем MessageFactory для отправки сообщения
-	return fh.base.messageFactory.SendWithKeyboard(chatID, text, keyboard)
+	return fh.base.MessageFactory.SendWithKeyboard(chatID, text, keyboard)
 }
 
 // editFeedbackWithNavigation обновляет существующее сообщение с отзывом.
@@ -240,7 +241,7 @@ func (fh *FeedbackHandlerImpl) editFeedbackWithNavigation(
 	// Создаем клавиатуру навигации
 	keyboard := fh.createNavigationKeyboard(currentIndex, len(feedbackList), feedbackType)
 
-	err := fh.base.messageFactory.EditHTMLWithKeyboard(chatID, messageID, text, &keyboard)
+	err := fh.base.MessageFactory.EditHTMLWithKeyboard(chatID, messageID, text, &keyboard)
 
 	return err
 }
@@ -374,7 +375,7 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackMessage(message *tgbotapi.Message, 
 	}
 
 	// Логируем принятие отзыва
-	fh.base.service.LoggingService.Telegram().InfoWithContext(
+	fh.base.Service.LoggingService.Telegram().InfoWithContext(
 		"Feedback received",
 		"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 		int64(user.ID),
@@ -397,8 +398,8 @@ func (fh *FeedbackHandlerImpl) handleFeedbackTooShort(message *tgbotapi.Message,
 	count := len([]rune(feedbackText))
 
 	errorText := fmt.Sprintf("%s\n\n%s",
-		fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_too_short"),
-		fh.base.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "feedback_char_count", map[string]string{
+		fh.base.Service.Localizer.Get(user.InterfaceLanguageCode, "feedback_too_short"),
+		fh.base.Service.Localizer.GetWithParams(user.InterfaceLanguageCode, "feedback_char_count", map[string]string{
 			"count": strconv.Itoa(count),
 		}),
 	)
@@ -412,8 +413,8 @@ func (fh *FeedbackHandlerImpl) handleFeedbackTooLong(message *tgbotapi.Message, 
 	count := len([]rune(feedbackText))
 
 	errorText := fmt.Sprintf("%s\n\n%s",
-		fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_too_long"),
-		fh.base.service.Localizer.GetWithParams(user.InterfaceLanguageCode, "feedback_char_count", map[string]string{
+		fh.base.Service.Localizer.Get(user.InterfaceLanguageCode, "feedback_too_long"),
+		fh.base.Service.Localizer.GetWithParams(user.InterfaceLanguageCode, "feedback_char_count", map[string]string{
 			"count": strconv.Itoa(count),
 		}),
 	)
@@ -427,13 +428,13 @@ func (fh *FeedbackHandlerImpl) handleFeedbackContactRequest(message *tgbotapi.Me
 	// Пока просто переходим к следующему состоянию
 
 	// Обновляем состояние для ожидания контактных данных
-	err := fh.base.service.DB.UpdateUserState(user.ID, models.StateWaitingFeedbackContact)
+	err := fh.base.Service.DB.UpdateUserState(user.ID, models.StateWaitingFeedbackContact)
 	if err != nil {
 		return err
 	}
 
 	// Запрашиваем контактные данные
-	contactText := fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_request")
+	contactText := fh.base.Service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_request")
 
 	return fh.sendMessage(
 		message.Chat.ID,
@@ -447,10 +448,10 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 	adminIDs := fh.adminChatIDs
 
 	// Сохраняем отзыв через сервис
-	err := fh.base.service.SaveUserFeedback(user.ID, feedbackText, contactInfo, adminIDs)
+	err := fh.base.Service.SaveUserFeedback(user.ID, feedbackText, contactInfo, adminIDs)
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to save feedback",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -461,7 +462,7 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 			},
 		)
 		// Используем локализацию для ошибки
-		errorText := fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_error_generic")
+		errorText := fh.base.Service.Localizer.Get(user.InterfaceLanguageCode, "feedback_error_generic")
 		if errorText == "feedback_error_generic" { // fallback в случае отсутствия перевода
 			errorText = "❌ Произошла ошибка при сохранении отзыва. Попробуйте позже."
 		}
@@ -470,16 +471,16 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 	}
 
 	// Отправляем подтверждение пользователю
-	successText := fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_saved")
+	successText := fh.base.Service.Localizer.Get(user.InterfaceLanguageCode, "feedback_saved")
 	if successText == "feedback_saved" { // fallback в случае отсутствия перевода
 		successText = "✅ Спасибо за ваш отзыв! Мы обязательно его рассмотрим."
 	}
 
 	// Возвращаем пользователя в активное состояние
-	err = fh.base.service.DB.UpdateUserState(user.ID, models.StateActive)
+	err = fh.base.Service.DB.UpdateUserState(user.ID, models.StateActive)
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to update user state",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -491,10 +492,10 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 		)
 	}
 
-	err = fh.base.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
+	err = fh.base.Service.DB.UpdateUserStatus(user.ID, models.StatusActive)
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to update user status",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -509,14 +510,14 @@ func (fh *FeedbackHandlerImpl) handleFeedbackComplete(message *tgbotapi.Message,
 	// Создаем клавиатуру с кнопкой "Главное меню"
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			fh.base.keyboardBuilder.CreateBackToMainButton(user.InterfaceLanguageCode),
+			fh.base.KeyboardBuilder.CreateBackToMainButton(user.InterfaceLanguageCode),
 		),
 	)
 
 	// Используем MessageFactory для отправки сообщения
-	if err := fh.base.messageFactory.SendWithKeyboard(message.Chat.ID, successText, keyboard); err != nil {
+	if err := fh.base.MessageFactory.SendWithKeyboard(message.Chat.ID, successText, keyboard); err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to send success message",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -540,11 +541,11 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackContactMessage(message *tgbotapi.Me
 	// Валидируем контактные данные
 	if contactInfo == "" {
 		return fh.sendMessage(message.Chat.ID,
-			fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_placeholder"))
+			fh.base.Service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_placeholder"))
 	}
 
 	// Подтверждаем получение контактов
-	confirmedText := fh.base.service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_provided")
+	confirmedText := fh.base.Service.Localizer.Get(user.InterfaceLanguageCode, "feedback_contact_provided")
 	if err := fh.sendMessage(message.Chat.ID, confirmedText); err != nil {
 		return err
 	}
@@ -561,10 +562,10 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackContactMessage(message *tgbotapi.Me
 // changeFeedbackStatus изменяет статус отзыва и отправляет подтверждение.
 func (fh *FeedbackHandlerImpl) changeFeedbackStatus(callback *tgbotapi.CallbackQuery, user *models.User, feedbackID int, processed bool, confirmMsg string) error {
 	// Обновляем статус отзыва
-	err := fh.base.service.UpdateFeedbackStatus(feedbackID, processed)
+	err := fh.base.Service.UpdateFeedbackStatus(feedbackID, processed)
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to update feedback status",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -580,9 +581,9 @@ func (fh *FeedbackHandlerImpl) changeFeedbackStatus(callback *tgbotapi.CallbackQ
 	}
 
 	// Используем MessageFactory для отправки HTML сообщения
-	if err := fh.base.messageFactory.SendHTML(callback.Message.Chat.ID, confirmMsg); err != nil {
+	if err := fh.base.MessageFactory.SendHTML(callback.Message.Chat.ID, confirmMsg); err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Telegram().ErrorWithContext(
+		fh.base.Service.LoggingService.Telegram().ErrorWithContext(
 			"Failed to send status change confirmation",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -603,7 +604,7 @@ func (fh *FeedbackHandlerImpl) changeFeedbackStatus(callback *tgbotapi.CallbackQ
 //nolint:cyclop // функция содержит последовательную логику обработки, сложность оправдана
 func (fh *FeedbackHandlerImpl) processArchiveFeedbackAction(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string, actionFunc func(int) error, successMessage string) error {
 	// Получаем все обработанные отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов: "+err.Error())
 	}
@@ -645,7 +646,7 @@ func (fh *FeedbackHandlerImpl) processArchiveFeedbackAction(callback *tgbotapi.C
 			),
 		)
 
-		err = fh.base.messageFactory.EditWithKeyboard(callback.Message.Chat.ID, callback.Message.MessageID, text, &keyboard)
+		err = fh.base.MessageFactory.EditWithKeyboard(callback.Message.Chat.ID, callback.Message.MessageID, text, &keyboard)
 
 		return err
 	}
@@ -697,10 +698,10 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackDelete(callback *tgbotapi.CallbackQ
 	}
 
 	// Удаляем отзыв
-	err = fh.base.service.DeleteFeedback(feedbackID)
+	err = fh.base.Service.DeleteFeedback(feedbackID)
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to delete feedback",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -717,9 +718,9 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackDelete(callback *tgbotapi.CallbackQ
 
 	// Используем MessageFactory для отправки HTML сообщения
 	deleteMsg := fmt.Sprintf("🗑️ Отзыв #%d <b>удален</b>", feedbackID)
-	if err := fh.base.messageFactory.SendHTML(callback.Message.Chat.ID, deleteMsg); err != nil {
+	if err := fh.base.MessageFactory.SendHTML(callback.Message.Chat.ID, deleteMsg); err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Telegram().ErrorWithContext(
+		fh.base.Service.LoggingService.Telegram().ErrorWithContext(
 			"Failed to send deletion confirmation",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -738,10 +739,10 @@ func (fh *FeedbackHandlerImpl) HandleFeedbackDelete(callback *tgbotapi.CallbackQ
 // HandleShowActiveFeedbacks показывает активные отзывы.
 func (fh *FeedbackHandlerImpl) HandleShowActiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем все отзывы
-	feedbacks, err := fh.base.service.GetAllFeedback()
+	feedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -779,10 +780,10 @@ func (fh *FeedbackHandlerImpl) HandleShowActiveFeedbacks(callback *tgbotapi.Call
 // HandleShowArchiveFeedbacks показывает архивные отзывы.
 func (fh *FeedbackHandlerImpl) HandleShowArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем все отзывы
-	feedbacks, err := fh.base.service.GetAllFeedback()
+	feedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -820,10 +821,10 @@ func (fh *FeedbackHandlerImpl) HandleShowArchiveFeedbacks(callback *tgbotapi.Cal
 // HandleShowAllFeedbacks показывает все отзывы.
 func (fh *FeedbackHandlerImpl) HandleShowAllFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем все отзывы
-	feedbacks, err := fh.base.service.GetAllFeedback()
+	feedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -875,10 +876,10 @@ func (fh *FeedbackHandlerImpl) handleBrowseFeedbacks(callback *tgbotapi.Callback
 	}
 
 	// Получаем все отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -940,10 +941,10 @@ func (fh *FeedbackHandlerImpl) HandleNavigateFeedback(callback *tgbotapi.Callbac
 //nolint:cyclop,funlen // функция содержит последовательную логику архивирования, длина оправдана
 func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.CallbackQuery, user *models.User, indexStr string) error {
 	// Получаем все активные отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to get feedbacks",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -977,10 +978,10 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 	feedbackID := feedback["id"].(int)
 
 	// Архивируем отзыв
-	err = fh.base.service.ArchiveFeedback(feedbackID)
+	err = fh.base.Service.ArchiveFeedback(feedbackID)
 	if err != nil {
 		// Используем структурированное логирование
-		fh.base.service.LoggingService.Database().ErrorWithContext(
+		fh.base.Service.LoggingService.Database().ErrorWithContext(
 			"Failed to archive feedback",
 			"req_"+strconv.FormatInt(time.Now().UnixNano(), 10),
 			int64(user.ID),
@@ -1008,7 +1009,7 @@ func (fh *FeedbackHandlerImpl) HandleArchiveFeedback(callback *tgbotapi.Callback
 			),
 		)
 
-		err = fh.base.messageFactory.EditWithKeyboard(callback.Message.Chat.ID, callback.Message.MessageID, text, &keyboard)
+		err = fh.base.MessageFactory.EditWithKeyboard(callback.Message.Chat.ID, callback.Message.MessageID, text, &keyboard)
 
 		return err
 	}
@@ -1044,7 +1045,7 @@ func (fh *FeedbackHandlerImpl) HandleBackToFeedbackStats(callback *tgbotapi.Call
 // editActiveFeedbacks редактирует сообщение со списком активных отзывов.
 func (fh *FeedbackHandlerImpl) editActiveFeedbacks(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		return fh.sendMessage(chatID, "❌ Ошибка получения отзывов: "+err.Error())
 	}
@@ -1070,7 +1071,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacks(chatID int64, messageID int, 
 
 		editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 		editMsg.ReplyMarkup = &keyboard
-		_, err := fh.base.bot.Send(editMsg)
+		_, err := fh.base.Bot.Send(editMsg)
 
 		return err
 	}
@@ -1082,7 +1083,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacks(chatID int64, messageID int, 
 // editArchiveFeedbacks редактирует сообщение со списком обработанных отзывов.
 func (fh *FeedbackHandlerImpl) editArchiveFeedbacks(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		return fh.sendMessage(chatID, "❌ Ошибка получения отзывов: "+err.Error())
 	}
@@ -1108,7 +1109,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacks(chatID int64, messageID int,
 
 		editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 		editMsg.ReplyMarkup = &keyboard
-		_, err := fh.base.bot.Send(editMsg)
+		_, err := fh.base.Bot.Send(editMsg)
 
 		return err
 	}
@@ -1120,7 +1121,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacks(chatID int64, messageID int,
 // editAllFeedbacks редактирует сообщение со списком всех отзывов.
 func (fh *FeedbackHandlerImpl) editAllFeedbacks(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		return fh.sendMessage(chatID, "❌ Ошибка получения отзывов: "+err.Error())
 	}
@@ -1137,7 +1138,7 @@ func (fh *FeedbackHandlerImpl) editAllFeedbacks(chatID int64, messageID int, use
 
 		editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 		editMsg.ReplyMarkup = &keyboard
-		_, err := fh.base.bot.Send(editMsg)
+		_, err := fh.base.Bot.Send(editMsg)
 
 		return err
 	}
@@ -1149,7 +1150,7 @@ func (fh *FeedbackHandlerImpl) editAllFeedbacks(chatID int64, messageID int, use
 // editActiveFeedbacksList редактирует сообщение со списком активных отзывов (заголовок).
 func (fh *FeedbackHandlerImpl) editActiveFeedbacksList(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		return fh.sendMessage(chatID, "❌ Ошибка получения отзывов: "+err.Error())
 	}
@@ -1173,7 +1174,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacksList(chatID int64, messageID i
 			),
 		)
 
-		sendErr := fh.base.messageFactory.EditWithKeyboard(chatID, messageID, text, &keyboard)
+		sendErr := fh.base.MessageFactory.EditWithKeyboard(chatID, messageID, text, &keyboard)
 
 		return sendErr
 	}
@@ -1207,7 +1208,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacksList(chatID int64, messageID i
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
 
-	err = fh.base.messageFactory.EditHTMLWithKeyboard(chatID, messageID, text, &keyboard)
+	err = fh.base.MessageFactory.EditHTMLWithKeyboard(chatID, messageID, text, &keyboard)
 
 	return err
 }
@@ -1215,7 +1216,7 @@ func (fh *FeedbackHandlerImpl) editActiveFeedbacksList(chatID int64, messageID i
 // editArchiveFeedbacksList редактирует сообщение со списком обработанных отзывов (заголовок).
 func (fh *FeedbackHandlerImpl) editArchiveFeedbacksList(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		return fh.sendMessage(chatID, "❌ Ошибка получения отзывов: "+err.Error())
 	}
@@ -1239,7 +1240,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacksList(chatID int64, messageID 
 			),
 		)
 
-		sendErr := fh.base.messageFactory.EditWithKeyboard(chatID, messageID, text, &keyboard)
+		sendErr := fh.base.MessageFactory.EditWithKeyboard(chatID, messageID, text, &keyboard)
 
 		return sendErr
 	}
@@ -1273,7 +1274,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacksList(chatID int64, messageID 
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
 
-	err = fh.base.messageFactory.EditHTMLWithKeyboard(chatID, messageID, text, &keyboard)
+	err = fh.base.MessageFactory.EditHTMLWithKeyboard(chatID, messageID, text, &keyboard)
 
 	return err
 }
@@ -1281,7 +1282,7 @@ func (fh *FeedbackHandlerImpl) editArchiveFeedbacksList(chatID int64, messageID 
 // editAllFeedbacksList редактирует сообщение со списком всех отзывов (заголовок).
 func (fh *FeedbackHandlerImpl) editAllFeedbacksList(chatID int64, messageID int, user *models.User) error {
 	// Получаем все отзывы
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		return fh.sendMessage(chatID, "❌ Ошибка получения отзывов: "+err.Error())
 	}
@@ -1296,7 +1297,7 @@ func (fh *FeedbackHandlerImpl) editAllFeedbacksList(chatID int64, messageID int,
 			),
 		)
 
-		sendErr := fh.base.messageFactory.EditWithKeyboard(chatID, messageID, text, &keyboard)
+		sendErr := fh.base.MessageFactory.EditWithKeyboard(chatID, messageID, text, &keyboard)
 
 		return sendErr
 	}
@@ -1336,7 +1337,7 @@ func (fh *FeedbackHandlerImpl) editAllFeedbacksList(chatID int64, messageID int,
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
 
-	err = fh.base.messageFactory.EditHTMLWithKeyboard(chatID, messageID, text, &keyboard)
+	err = fh.base.MessageFactory.EditHTMLWithKeyboard(chatID, messageID, text, &keyboard)
 
 	return err
 }
@@ -1347,7 +1348,7 @@ func (fh *FeedbackHandlerImpl) HandleDeleteCurrentFeedback(callback *tgbotapi.Ca
 		callback,
 		user,
 		indexStr,
-		fh.base.service.DeleteFeedback,
+		fh.base.Service.DeleteFeedback,
 		"✅ Отзыв удален!\n\n🎉 Все обработанные отзывы удалены!",
 	)
 }
@@ -1355,7 +1356,7 @@ func (fh *FeedbackHandlerImpl) HandleDeleteCurrentFeedback(callback *tgbotapi.Ca
 // HandleDeleteAllArchiveFeedbacks показывает подтверждение удаления всех обработанных отзывов.
 func (fh *FeedbackHandlerImpl) HandleDeleteAllArchiveFeedbacks(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Получаем количество обработанных отзывов
-	allFeedbacks, err := fh.base.service.GetAllFeedback()
+	allFeedbacks, err := fh.base.Service.GetAllFeedback()
 	if err != nil {
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка получения отзывов: "+err.Error())
 	}
@@ -1383,7 +1384,7 @@ func (fh *FeedbackHandlerImpl) HandleDeleteAllArchiveFeedbacks(callback *tgbotap
 		),
 	)
 
-	err = fh.base.messageFactory.EditHTMLWithKeyboard(callback.Message.Chat.ID, callback.Message.MessageID, text, &keyboard)
+	err = fh.base.MessageFactory.EditHTMLWithKeyboard(callback.Message.Chat.ID, callback.Message.MessageID, text, &keyboard)
 
 	return err
 }
@@ -1391,7 +1392,7 @@ func (fh *FeedbackHandlerImpl) HandleDeleteAllArchiveFeedbacks(callback *tgbotap
 // HandleConfirmDeleteAllArchive подтверждает и выполняет удаление всех обработанных отзывов.
 func (fh *FeedbackHandlerImpl) HandleConfirmDeleteAllArchive(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Удаляем все обработанные отзывы
-	deletedCount, err := fh.base.service.DeleteAllProcessedFeedbacks()
+	deletedCount, err := fh.base.Service.DeleteAllProcessedFeedbacks()
 	if err != nil {
 		return fh.sendMessage(callback.Message.Chat.ID, "❌ Ошибка удаления отзывов: "+err.Error())
 	}
@@ -1405,7 +1406,7 @@ func (fh *FeedbackHandlerImpl) HandleConfirmDeleteAllArchive(callback *tgbotapi.
 		),
 	)
 
-	err = fh.base.messageFactory.EditHTMLWithKeyboard(callback.Message.Chat.ID, callback.Message.MessageID, text, &keyboard)
+	err = fh.base.MessageFactory.EditHTMLWithKeyboard(callback.Message.Chat.ID, callback.Message.MessageID, text, &keyboard)
 
 	return err
 }
@@ -1416,7 +1417,7 @@ func (fh *FeedbackHandlerImpl) HandleUnarchiveFeedback(callback *tgbotapi.Callba
 		callback,
 		user,
 		indexStr,
-		fh.base.service.UnarchiveFeedback,
+		fh.base.Service.UnarchiveFeedback,
 		"✅ Отзыв возвращен в активные!\n\n🎉 Все обработанные отзывы возвращены!",
 	)
 }

@@ -1,4 +1,4 @@
-package handlers
+package base
 
 import (
 	"testing"
@@ -16,23 +16,23 @@ func TestNewBaseHandler_NilInputs(t *testing.T) {
 	}
 
 	// Проверяем, что поля установлены в nil
-	if baseHandler.bot != nil {
+	if baseHandler.Bot != nil {
 		t.Error("Bot field should be nil")
 	}
 
-	if baseHandler.service != nil {
+	if baseHandler.Service != nil {
 		t.Error("Service field should be nil")
 	}
 
-	if baseHandler.keyboardBuilder != nil {
+	if baseHandler.KeyboardBuilder != nil {
 		t.Error("KeyboardBuilder field should be nil")
 	}
 
-	if baseHandler.errorHandler != nil {
+	if baseHandler.ErrorHandler != nil {
 		t.Error("ErrorHandler field should be nil")
 	}
 
-	if baseHandler.messageFactory != nil {
+	if baseHandler.MessageFactory != nil {
 		t.Error("MessageFactory field should be nil")
 	}
 }

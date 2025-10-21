@@ -1,4 +1,4 @@
-package handlers
+package base
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -14,13 +14,13 @@ import (
 //
 //	base := NewBaseHandler(bot, service, keyboardBuilder, errorHandler, messageFactory)
 //	handler := NewFeedbackHandler(base, adminChatIDs, adminUsernames)
-//	handler.base.messageFactory.SendText(chatID, "Hello")
+//	handler.Base.MessageFactory.SendText(chatID, "Hello")
 type BaseHandler struct {
-	bot             *tgbotapi.BotAPI
-	service         *core.BotService
-	keyboardBuilder *KeyboardBuilder
-	errorHandler    *errors.ErrorHandler
-	messageFactory  *MessageFactory
+	Bot             *tgbotapi.BotAPI
+	Service         *core.BotService
+	KeyboardBuilder *KeyboardBuilder
+	ErrorHandler    *errors.ErrorHandler
+	MessageFactory  *MessageFactory
 }
 
 // NewBaseHandler создает новый BaseHandler с общими зависимостями.
@@ -32,35 +32,35 @@ func NewBaseHandler(
 	messageFactory *MessageFactory,
 ) *BaseHandler {
 	return &BaseHandler{
-		bot:             bot,
-		service:         service,
-		keyboardBuilder: keyboardBuilder,
-		errorHandler:    errorHandler,
-		messageFactory:  messageFactory,
+		Bot:             bot,
+		Service:         service,
+		KeyboardBuilder: keyboardBuilder,
+		ErrorHandler:    errorHandler,
+		MessageFactory:  messageFactory,
 	}
 }
 
 // GetBot возвращает экземпляр Telegram Bot API.
 func (b *BaseHandler) GetBot() *tgbotapi.BotAPI {
-	return b.bot
+	return b.Bot
 }
 
 // GetService возвращает основной сервис бота.
 func (b *BaseHandler) GetService() *core.BotService {
-	return b.service
+	return b.Service
 }
 
 // GetKeyboardBuilder возвращает построитель клавиатур.
 func (b *BaseHandler) GetKeyboardBuilder() *KeyboardBuilder {
-	return b.keyboardBuilder
+	return b.KeyboardBuilder
 }
 
 // GetErrorHandler возвращает обработчик ошибок.
 func (b *BaseHandler) GetErrorHandler() *errors.ErrorHandler {
-	return b.errorHandler
+	return b.ErrorHandler
 }
 
 // GetMessageFactory возвращает фабрику сообщений.
 func (b *BaseHandler) GetMessageFactory() *MessageFactory {
-	return b.messageFactory
+	return b.MessageFactory
 }

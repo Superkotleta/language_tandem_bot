@@ -1,4 +1,4 @@
-package handlers
+package menu
 
 import (
 	"testing"

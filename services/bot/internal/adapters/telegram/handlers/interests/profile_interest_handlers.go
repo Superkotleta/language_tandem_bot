@@ -1,4 +1,4 @@
-package handlers
+package interests
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
+	"language-exchange-bot/internal/adapters/telegram/handlers/base"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -19,7 +20,7 @@ type ProfileInterestHandler struct {
 	service         *core.BotService
 	interestService *core.InterestService
 	bot             *tgbotapi.BotAPI
-	keyboardBuilder *KeyboardBuilder
+	keyboardBuilder *base.KeyboardBuilder
 	errorHandler    *errors.ErrorHandler
 }
 
@@ -28,7 +29,7 @@ func NewProfileInterestHandler(
 	service *core.BotService,
 	interestService *core.InterestService,
 	bot *tgbotapi.BotAPI,
-	keyboardBuilder *KeyboardBuilder,
+	keyboardBuilder *base.KeyboardBuilder,
 	errorHandler *errors.ErrorHandler,
 ) *ProfileInterestHandler {
 	return &ProfileInterestHandler{
@@ -44,7 +45,7 @@ func NewProfileInterestHandler(
 func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	pih.service.LoggingService.Telegram().DebugWithContext(
 		"HandleEditInterestsFromProfile called",
-		generateRequestID("HandleEditInterestsFromProfile"),
+		base.GenerateRequestID("HandleEditInterestsFromProfile"),
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandleEditInterestsFromProfile",
@@ -56,7 +57,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 	if err != nil {
 		pih.service.LoggingService.Database().ErrorWithContext(
 			"Failed to get interest categories",
-			generateRequestID("HandleEditInterestsFromProfile"),
+			base.GenerateRequestID("HandleEditInterestsFromProfile"),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"HandleEditInterestsFromProfile",
@@ -69,7 +70,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 	// Логируем получение категорий
 	pih.service.LoggingService.Database().DebugWithContext(
 		"Retrieved interest categories",
-		generateRequestID("HandleEditInterestsFromProfile"),
+		base.GenerateRequestID("HandleEditInterestsFromProfile"),
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandleEditInterestsFromProfile",
@@ -80,7 +81,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 	keyboard := pih.keyboardBuilder.CreateEditInterestCategoriesKeyboard(user.InterfaceLanguageCode)
 	pih.service.LoggingService.Telegram().DebugWithContext(
 		"Created keyboard for editing interests",
-		generateRequestID("HandleEditInterestsFromProfile"),
+		base.GenerateRequestID("HandleEditInterestsFromProfile"),
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandleEditInterestsFromProfile",
@@ -92,7 +93,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 		pih.service.Localizer.Get(user.InterfaceLanguageCode, localization.LocaleChooseInterestCategory)
 	pih.service.LoggingService.Telegram().DebugWithContext(
 		"Created text for editing interests",
-		generateRequestID("HandleEditInterestsFromProfile"),
+		base.GenerateRequestID("HandleEditInterestsFromProfile"),
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandleEditInterestsFromProfile",
@@ -111,7 +112,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 	if err != nil {
 		pih.service.LoggingService.Telegram().ErrorWithContext(
 			"Failed to send edit message",
-			generateRequestID("HandleEditInterestsFromProfile"),
+			base.GenerateRequestID("HandleEditInterestsFromProfile"),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"HandleEditInterestsFromProfile",
@@ -123,7 +124,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 
 	pih.service.LoggingService.Telegram().DebugWithContext(
 		"Successfully sent edit message",
-		generateRequestID("HandleEditInterestsFromProfile"),
+		base.GenerateRequestID("HandleEditInterestsFromProfile"),
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandleEditInterestsFromProfile",
@@ -137,7 +138,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestsFromProfile(callback *tgbo
 func (pih *ProfileInterestHandler) HandleEditInterestCategoryFromProfile(callback *tgbotapi.CallbackQuery, user *models.User, categoryKey string) error {
 	pih.service.LoggingService.Telegram().InfoWithContext(
 		"User selected category for editing",
-		generateRequestID("HandleEditInterestCategoryFromProfile"),
+		base.GenerateRequestID("HandleEditInterestCategoryFromProfile"),
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandleEditInterestCategoryFromProfile",
@@ -220,7 +221,7 @@ func (pih *ProfileInterestHandler) HandleEditInterestSelectionFromProfile(callba
 
 	pih.service.LoggingService.Telegram().InfoWithContext(
 		"User toggling interest",
-		generateRequestID("HandleEditInterestSelectionFromProfile"),
+		base.GenerateRequestID("HandleEditInterestSelectionFromProfile"),
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandleEditInterestSelectionFromProfile",
@@ -344,7 +345,7 @@ func (pih *ProfileInterestHandler) HandleEditPrimaryInterestSelectionFromProfile
 func (pih *ProfileInterestHandler) HandleSaveInterestEditsFromProfile(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	pih.service.LoggingService.Telegram().InfoWithContext(
 		"User saving interest edits",
-		generateRequestID("HandleSaveInterestEditsFromProfile"),
+		base.GenerateRequestID("HandleSaveInterestEditsFromProfile"),
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandleSaveInterestEditsFromProfile",

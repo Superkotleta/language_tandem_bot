@@ -1,4 +1,4 @@
-package handlers
+package availability
 
 import (
 	"context"
@@ -10,16 +10,17 @@ import (
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/models"
 
+	"language-exchange-bot/internal/adapters/telegram/handlers/base"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 // AvailabilityHandlerImpl handles availability setup and editing
 type AvailabilityHandlerImpl struct {
-	baseHandler *BaseHandler
+	baseHandler *base.BaseHandler
 }
 
 // NewAvailabilityHandler creates a new availability handler
-func NewAvailabilityHandler(baseHandler *BaseHandler) *AvailabilityHandlerImpl {
+func NewAvailabilityHandler(baseHandler *base.BaseHandler) *AvailabilityHandlerImpl {
 	return &AvailabilityHandlerImpl{
 		baseHandler: baseHandler,
 	}
@@ -42,15 +43,15 @@ func (h *AvailabilityHandlerImpl) validateTimeAvailability(availability *models.
 	case "specific":
 		// Must have at least one specific day
 		if len(availability.SpecificDays) == 0 {
-			return fmt.Errorf("%s", h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorNoDaysSelected))
+			return fmt.Errorf("%s", h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorNoDaysSelected))
 		}
 	default:
-		return fmt.Errorf("%s", h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+		return fmt.Errorf("%s", h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
 	}
 
 	// Validate time slots - must have at least one
 	if len(availability.TimeSlots) == 0 {
-		return fmt.Errorf("%s", h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorNoTimeSelected))
+		return fmt.Errorf("%s", h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorNoTimeSelected))
 	}
 
 	// Validate time slot values
@@ -63,7 +64,7 @@ func (h *AvailabilityHandlerImpl) validateTimeAvailability(availability *models.
 
 	for _, slot := range availability.TimeSlots {
 		if !validTimeSlots[slot] {
-			return fmt.Errorf("%s", h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+			return fmt.Errorf("%s", h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
 		}
 	}
 
@@ -85,12 +86,12 @@ func (h *AvailabilityHandlerImpl) validateFriendshipPreferences(preferences *mod
 	}
 
 	if !validActivityTypes[preferences.ActivityType] {
-		return fmt.Errorf("%s", h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+		return fmt.Errorf("%s", h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
 	}
 
 	// Validate communication styles - must have at least one
 	if len(preferences.CommunicationStyles) == 0 {
-		return fmt.Errorf("%s", h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorNoCommunicationSelected))
+		return fmt.Errorf("%s", h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorNoCommunicationSelected))
 	}
 
 	// Validate communication style values
@@ -104,7 +105,7 @@ func (h *AvailabilityHandlerImpl) validateFriendshipPreferences(preferences *mod
 
 	for _, style := range preferences.CommunicationStyles {
 		if !validCommStyles[style] {
-			return fmt.Errorf("%s", h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+			return fmt.Errorf("%s", h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
 		}
 	}
 
@@ -117,7 +118,7 @@ func (h *AvailabilityHandlerImpl) validateFriendshipPreferences(preferences *mod
 	}
 
 	if !validFrequencies[preferences.CommunicationFreq] {
-		return fmt.Errorf("%s", h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
+		return fmt.Errorf("%s", h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData))
 	}
 
 	return nil
@@ -129,14 +130,14 @@ func (h *AvailabilityHandlerImpl) validateFriendshipPreferences(preferences *mod
 
 // HandleTimeAvailabilityStart starts the time availability setup process
 func (h *AvailabilityHandlerImpl) HandleTimeAvailabilityStart(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Starting availability setup process", "", int64(user.ID), callback.Message.Chat.ID, "HandleTimeAvailabilityStart", map[string]interface{}{
 		"user_id":            user.ID,
 		"interface_language": user.InterfaceLanguageCode,
 	})
 
 	lang := user.InterfaceLanguageCode
-	localizer := h.baseHandler.service.Localizer
+	localizer := h.baseHandler.Service.Localizer
 
 	// Показываем приветственное сообщение
 	introMessage := fmt.Sprintf("%s\n\n%s",
@@ -172,7 +173,7 @@ func (h *AvailabilityHandlerImpl) HandleTimeAvailabilityStart(callback *tgbotapi
 		),
 	)
 
-	return h.baseHandler.messageFactory.EditWithKeyboard(
+	return h.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		introMessage,
@@ -182,7 +183,7 @@ func (h *AvailabilityHandlerImpl) HandleTimeAvailabilityStart(callback *tgbotapi
 
 // HandleDayTypeSelection handles day type selection
 func (h *AvailabilityHandlerImpl) HandleDayTypeSelection(callback *tgbotapi.CallbackQuery, user *models.User, dayType string) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Processing day type selection", "", int64(user.ID), callback.Message.Chat.ID, "HandleDayTypeSelection", map[string]interface{}{
 		"user_id":           user.ID,
 		"selected_day_type": dayType,
@@ -207,7 +208,7 @@ func (h *AvailabilityHandlerImpl) HandleDayTypeSelection(callback *tgbotapi.Call
 	}
 
 	// Сохраняем в cache на 30 минут
-	err = h.baseHandler.service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
+	err = h.baseHandler.Service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to save setup data to cache", "", int64(user.ID), callback.Message.Chat.ID, "HandleDayTypeSelection", map[string]interface{}{
 			"user_id": user.ID,
@@ -226,7 +227,7 @@ func (h *AvailabilityHandlerImpl) HandleDayTypeSelection(callback *tgbotapi.Call
 
 // HandleSpecificDaysSelection handles specific days selection
 func (h *AvailabilityHandlerImpl) HandleSpecificDaysSelection(callback *tgbotapi.CallbackQuery, user *models.User, day string) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Processing specific day selection", "", int64(user.ID), callback.Message.Chat.ID, "HandleSpecificDaysSelection", map[string]interface{}{
 		"user_id":      user.ID,
 		"selected_day": day,
@@ -235,7 +236,7 @@ func (h *AvailabilityHandlerImpl) HandleSpecificDaysSelection(callback *tgbotapi
 	// Получаем текущие данные настройки
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
-	err := h.baseHandler.service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
 		return fmt.Errorf("failed to get setup data: %w", err)
 	}
@@ -277,7 +278,7 @@ func (h *AvailabilityHandlerImpl) HandleSpecificDaysSelection(callback *tgbotapi
 		return fmt.Errorf("failed to marshal updated setup data: %w", err)
 	}
 
-	err = h.baseHandler.service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
+	err = h.baseHandler.Service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to update setup data in cache", "", int64(user.ID), callback.Message.Chat.ID, "HandleSpecificDaysSelection", map[string]interface{}{
 			"user_id": user.ID,
@@ -291,14 +292,14 @@ func (h *AvailabilityHandlerImpl) HandleSpecificDaysSelection(callback *tgbotapi
 
 // ShowSpecificDaysSelection shows specific days selection interface
 func (h *AvailabilityHandlerImpl) ShowSpecificDaysSelection(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	lang := user.InterfaceLanguageCode
-	localizer := h.baseHandler.service.Localizer
+	localizer := h.baseHandler.Service.Localizer
 
 	// Получаем текущие выбранные дни
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
-	err := h.baseHandler.service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
 		return fmt.Errorf("failed to get setup data: %w", err)
 	}
@@ -430,7 +431,7 @@ func (h *AvailabilityHandlerImpl) ShowSpecificDaysSelection(callback *tgbotapi.C
 
 	// Кнопки "Назад" и "Продолжить"
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard,
-		h.baseHandler.keyboardBuilder.CreateNavigationRow(
+		h.baseHandler.KeyboardBuilder.CreateNavigationRow(
 			lang,
 			"availability_back_to_daytype",
 			"availability_proceed_to_time",
@@ -445,7 +446,7 @@ func (h *AvailabilityHandlerImpl) ShowSpecificDaysSelection(callback *tgbotapi.C
 		keyboard,
 	)
 
-	_, err = h.baseHandler.bot.Send(editMsg)
+	_, err = h.baseHandler.Bot.Send(editMsg)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to edit message", "", int64(user.ID), callback.Message.Chat.ID, "ShowSpecificDaysSelection", map[string]interface{}{
 			"user_id": user.ID,
@@ -459,7 +460,7 @@ func (h *AvailabilityHandlerImpl) ShowSpecificDaysSelection(callback *tgbotapi.C
 
 // ShowTimeSlotSelection shows time slot selection interface
 func (h *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Showing time slot selection", "", int64(user.ID), callback.Message.Chat.ID, "ShowTimeSlotSelection", map[string]interface{}{
 		"user_id": user.ID,
 	})
@@ -467,11 +468,11 @@ func (h *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.Callb
 	// Проверяем, что пользователь выбрал тип дней
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
-	err := h.baseHandler.service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
 		lang := user.InterfaceLanguageCode
-		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.EditText(
+		localizer := h.baseHandler.Service.Localizer
+		return h.baseHandler.MessageFactory.EditText(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_days_selected"),
@@ -490,8 +491,8 @@ func (h *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.Callb
 	// Проверяем валидность выбора дней
 	if dayType == "specific" && len(specificDays) == 0 {
 		lang := user.InterfaceLanguageCode
-		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.EditText(
+		localizer := h.baseHandler.Service.Localizer
+		return h.baseHandler.MessageFactory.EditText(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_days_selected"),
@@ -500,7 +501,7 @@ func (h *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.Callb
 
 	// Продолжаем работать с уже загруженными данными
 	lang := user.InterfaceLanguageCode
-	localizer := h.baseHandler.service.Localizer
+	localizer := h.baseHandler.Service.Localizer
 
 	timeSlots := setupData["time_slots"].([]interface{})
 	selectedSlots := make([]string, len(timeSlots))
@@ -576,7 +577,7 @@ func (h *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.Callb
 				"availability_timeslot_select_all",
 			),
 		),
-		h.baseHandler.keyboardBuilder.CreateNavigationRow(
+		h.baseHandler.KeyboardBuilder.CreateNavigationRow(
 			lang,
 			"availability_back_to_days",
 			"availability_proceed_to_communication",
@@ -591,7 +592,7 @@ func (h *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.Callb
 		keyboard,
 	)
 
-	_, err = h.baseHandler.bot.Send(editMsg)
+	_, err = h.baseHandler.Bot.Send(editMsg)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to edit message", "", int64(user.ID), callback.Message.Chat.ID, "ShowTimeSlotSelection", map[string]interface{}{
 			"user_id": user.ID,
@@ -613,7 +614,7 @@ func getSlotSymbol(slot string, selectedSlots map[string]bool) string {
 
 // HandleTimeSlotSelection handles time slot selection
 func (h *AvailabilityHandlerImpl) HandleTimeSlotSelection(callback *tgbotapi.CallbackQuery, user *models.User, timeSlot string) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Processing time slot selection", "", int64(user.ID), callback.Message.Chat.ID, "HandleTimeSlotSelection", map[string]interface{}{
 		"user_id":            user.ID,
 		"selected_time_slot": timeSlot,
@@ -622,7 +623,7 @@ func (h *AvailabilityHandlerImpl) HandleTimeSlotSelection(callback *tgbotapi.Cal
 	// Получаем текущие данные настройки
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
-	err := h.baseHandler.service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
 		return fmt.Errorf("failed to get setup data: %w", err)
 	}
@@ -664,7 +665,7 @@ func (h *AvailabilityHandlerImpl) HandleTimeSlotSelection(callback *tgbotapi.Cal
 		return fmt.Errorf("failed to marshal updated setup data: %w", err)
 	}
 
-	err = h.baseHandler.service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
+	err = h.baseHandler.Service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to update setup data in cache", "", int64(user.ID), callback.Message.Chat.ID, "HandleTimeSlotSelection", map[string]interface{}{
 			"user_id": user.ID,
@@ -678,7 +679,7 @@ func (h *AvailabilityHandlerImpl) HandleTimeSlotSelection(callback *tgbotapi.Cal
 
 // HandleFriendshipPreferencesStart starts friendship preferences setup
 func (h *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Starting friendship preferences setup", "", int64(user.ID), callback.Message.Chat.ID, "HandleFriendshipPreferencesStart", map[string]interface{}{
 		"user_id": user.ID,
 	})
@@ -686,11 +687,11 @@ func (h *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tgb
 	// Проверяем, что пользователь выбрал хотя бы один временной слот
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
-	err := h.baseHandler.service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
 		lang := user.InterfaceLanguageCode
-		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.EditText(
+		localizer := h.baseHandler.Service.Localizer
+		return h.baseHandler.MessageFactory.EditText(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_time_selected"),
@@ -706,8 +707,8 @@ func (h *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tgb
 	timeSlots := setupData["time_slots"].([]interface{})
 	if len(timeSlots) == 0 {
 		lang := user.InterfaceLanguageCode
-		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.EditText(
+		localizer := h.baseHandler.Service.Localizer
+		return h.baseHandler.MessageFactory.EditText(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_time_selected"),
@@ -718,7 +719,7 @@ func (h *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tgb
 	if _, exists := setupData["communication_styles"]; !exists {
 		setupData["communication_styles"] = []string{"text"} // По умолчанию текст
 		setupDataJSON, _ := json.Marshal(setupData)
-		h.baseHandler.service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
+		h.baseHandler.Service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
 	}
 
 	// Показываем интерфейс выбора способов общения
@@ -727,7 +728,7 @@ func (h *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tgb
 
 // HandleSelectAllTimeSlots handles selecting all time slots
 func (h *AvailabilityHandlerImpl) HandleSelectAllTimeSlots(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Selecting all time slots", "", int64(user.ID), callback.Message.Chat.ID, "HandleSelectAllTimeSlots", map[string]interface{}{
 		"user_id": user.ID,
 	})
@@ -735,7 +736,7 @@ func (h *AvailabilityHandlerImpl) HandleSelectAllTimeSlots(callback *tgbotapi.Ca
 	// Получаем текущие данные настройки
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
-	err := h.baseHandler.service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
 		return fmt.Errorf("failed to get setup data: %w", err)
 	}
@@ -756,7 +757,7 @@ func (h *AvailabilityHandlerImpl) HandleSelectAllTimeSlots(callback *tgbotapi.Ca
 		return fmt.Errorf("failed to marshal updated setup data: %w", err)
 	}
 
-	err = h.baseHandler.service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
+	err = h.baseHandler.Service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to update setup data in cache", "", int64(user.ID), callback.Message.Chat.ID, "HandleSelectAllTimeSlots", map[string]interface{}{
 			"user_id": user.ID,
@@ -770,7 +771,7 @@ func (h *AvailabilityHandlerImpl) HandleSelectAllTimeSlots(callback *tgbotapi.Ca
 
 // HandleCommunicationStyleSelection handles individual communication style selection
 func (h *AvailabilityHandlerImpl) HandleCommunicationStyleSelection(callback *tgbotapi.CallbackQuery, user *models.User, style string) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Processing communication style selection", "", int64(user.ID), callback.Message.Chat.ID, "HandleCommunicationStyleSelection", map[string]interface{}{
 		"user_id":        user.ID,
 		"selected_style": style,
@@ -779,7 +780,7 @@ func (h *AvailabilityHandlerImpl) HandleCommunicationStyleSelection(callback *tg
 	// Получаем текущие данные настройки
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
-	err := h.baseHandler.service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
 		return fmt.Errorf("failed to get setup data: %w", err)
 	}
@@ -827,7 +828,7 @@ func (h *AvailabilityHandlerImpl) HandleCommunicationStyleSelection(callback *tg
 		"styles": stylesStr,
 	})
 
-	err = h.baseHandler.service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
+	err = h.baseHandler.Service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to update setup data in cache", "", int64(user.ID), callback.Message.Chat.ID, "HandleCommunicationStyleSelection", map[string]interface{}{
 			"user_id": user.ID,
@@ -846,7 +847,7 @@ func (h *AvailabilityHandlerImpl) HandleCommunicationStyleSelection(callback *tg
 
 // HandleSelectAllCommunication handles selecting all communication methods
 func (h *AvailabilityHandlerImpl) HandleSelectAllCommunication(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Selecting all communication methods", "", int64(user.ID), callback.Message.Chat.ID, "HandleSelectAllCommunication", map[string]interface{}{
 		"user_id": user.ID,
 	})
@@ -854,7 +855,7 @@ func (h *AvailabilityHandlerImpl) HandleSelectAllCommunication(callback *tgbotap
 	// Получаем текущие данные настройки
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
-	err := h.baseHandler.service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
 		return fmt.Errorf("failed to get setup data: %w", err)
 	}
@@ -875,7 +876,7 @@ func (h *AvailabilityHandlerImpl) HandleSelectAllCommunication(callback *tgbotap
 		return fmt.Errorf("failed to marshal updated setup data: %w", err)
 	}
 
-	err = h.baseHandler.service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
+	err = h.baseHandler.Service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to update setup data in cache", "", int64(user.ID), callback.Message.Chat.ID, "HandleSelectAllCommunication", map[string]interface{}{
 			"user_id": user.ID,
@@ -889,14 +890,14 @@ func (h *AvailabilityHandlerImpl) HandleSelectAllCommunication(callback *tgbotap
 
 // ShowCommunicationStyleSelection shows communication style selection interface
 func (h *AvailabilityHandlerImpl) ShowCommunicationStyleSelection(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	lang := user.InterfaceLanguageCode
-	localizer := h.baseHandler.service.Localizer
+	localizer := h.baseHandler.Service.Localizer
 
 	// Получаем текущие выбранные способы общения
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
-	err := h.baseHandler.service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
 		return fmt.Errorf("failed to get setup data: %w", err)
 	}
@@ -981,7 +982,7 @@ func (h *AvailabilityHandlerImpl) ShowCommunicationStyleSelection(callback *tgbo
 				"availability_communication_select_all",
 			),
 		),
-		h.baseHandler.keyboardBuilder.CreateNavigationRow(
+		h.baseHandler.KeyboardBuilder.CreateNavigationRow(
 			lang,
 			"availability_back_to_time",
 			"availability_proceed_to_frequency",
@@ -996,7 +997,7 @@ func (h *AvailabilityHandlerImpl) ShowCommunicationStyleSelection(callback *tgbo
 		keyboard,
 	)
 
-	_, err = h.baseHandler.bot.Send(editMsg)
+	_, err = h.baseHandler.Bot.Send(editMsg)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to edit message", "", int64(user.ID), callback.Message.Chat.ID, "ShowCommunicationStyleSelection", map[string]interface{}{
 			"user_id": user.ID,
@@ -1018,7 +1019,7 @@ func getStyleSymbol(style string, selectedStyles map[string]bool) string {
 
 // CompleteAvailabilitySetup завершает настройку доступности и сохраняет данные
 func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	loggingService := h.baseHandler.service.LoggingService.Telegram()
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
 	loggingService.InfoWithContext("Completing availability setup", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
 		"user_id": user.ID,
 	})
@@ -1033,17 +1034,17 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 
 	// НЕМЕДЛЕННО редактируем сообщение об успехе, чтобы пользователь увидел реакцию
 	lang := user.InterfaceLanguageCode
-	localizer := h.baseHandler.service.Localizer
+	localizer := h.baseHandler.Service.Localizer
 
 	successMessage := fmt.Sprintf("%s\n\n%s",
 		localizer.Get(lang, "availability_setup_complete"),
 		localizer.Get(lang, "profile_completed"),
 	)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
-		h.baseHandler.keyboardBuilder.CreateProfileActionsRow(lang),
+		h.baseHandler.KeyboardBuilder.CreateProfileActionsRow(lang),
 	)
 
-	editResult := h.baseHandler.messageFactory.EditWithKeyboard(
+	editResult := h.baseHandler.MessageFactory.EditWithKeyboard(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		successMessage,
@@ -1054,7 +1055,7 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 			"error": editResult.Error(),
 		})
 		// Если редактирование не удалось, отправляем новое сообщение
-		sendResult := h.baseHandler.messageFactory.SendWithKeyboard(
+		sendResult := h.baseHandler.MessageFactory.SendWithKeyboard(
 			callback.Message.Chat.ID,
 			successMessage,
 			keyboard,
@@ -1071,11 +1072,11 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 	// Проверяем, что пользователь выбрал хотя бы один способ общения
 	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
 	var setupDataStr string
-	err := h.baseHandler.service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
 		lang := user.InterfaceLanguageCode
-		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.EditText(
+		localizer := h.baseHandler.Service.Localizer
+		return h.baseHandler.MessageFactory.EditText(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_communication_selected"),
@@ -1098,8 +1099,8 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 
 	if len(communicationStyles) == 0 {
 		lang := user.InterfaceLanguageCode
-		localizer := h.baseHandler.service.Localizer
-		return h.baseHandler.messageFactory.EditText(
+		localizer := h.baseHandler.Service.Localizer
+		return h.baseHandler.MessageFactory.EditText(
 			callback.Message.Chat.ID,
 			callback.Message.MessageID,
 			localizer.Get(lang, "error_no_communication_selected"),
@@ -1170,7 +1171,7 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 
 	// Сохраняем данные в базу
 	fmt.Printf("DEBUG: Saving time availability for user %d: %+v\n", user.ID, timeAvailability)
-	err = h.baseHandler.service.SaveTimeAvailability(user.ID, timeAvailability)
+	err = h.baseHandler.Service.SaveTimeAvailability(user.ID, timeAvailability)
 	if err != nil {
 		fmt.Printf("DEBUG: ERROR saving time availability for user %d: %v\n", user.ID, err)
 		loggingService.ErrorWithContext("Failed to save time availability", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
@@ -1185,7 +1186,7 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 	}
 
 	fmt.Printf("DEBUG: Saving friendship preferences for user %d: %+v\n", user.ID, friendshipPreferences)
-	err = h.baseHandler.service.SaveFriendshipPreferences(user.ID, friendshipPreferences)
+	err = h.baseHandler.Service.SaveFriendshipPreferences(user.ID, friendshipPreferences)
 	if err != nil {
 		fmt.Printf("DEBUG: ERROR saving friendship preferences for user %d: %v\n", user.ID, err)
 		loggingService.ErrorWithContext("Failed to save friendship preferences", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
@@ -1198,7 +1199,7 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 	}
 
 	// Обновляем статус пользователя
-	err = h.baseHandler.service.UpdateUserState(user.ID, models.StateActive)
+	err = h.baseHandler.Service.UpdateUserState(user.ID, models.StateActive)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to update user state", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
 			"user_id": user.ID,
@@ -1210,11 +1211,11 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 		// Обновляем статус в объекте пользователя в памяти
 		user.State = models.StateActive
 		// Обновляем кэш пользователя напрямую
-		h.baseHandler.service.Cache.SetUser(context.Background(), user)
+		h.baseHandler.Service.Cache.SetUser(context.Background(), user)
 	}
 
 	// Обновляем статус профиля на активный (важно для отображения профиля)
-	err = h.baseHandler.service.DB.UpdateUserStatus(user.ID, models.StatusActive)
+	err = h.baseHandler.Service.DB.UpdateUserStatus(user.ID, models.StatusActive)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to update user status", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
 			"user_id": user.ID,
@@ -1226,7 +1227,7 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 		// Обновляем статус в объекте пользователя в памяти
 		user.Status = models.StatusActive
 		// Обновляем кэш пользователя напрямую
-		h.baseHandler.service.Cache.SetUser(context.Background(), user)
+		h.baseHandler.Service.Cache.SetUser(context.Background(), user)
 	}
 
 	// Обновляем уровень завершения профиля (после настройки доступности профиль полностью завершен)
@@ -1242,11 +1243,11 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 		// Обновляем уровень в объекте пользователя в памяти
 		user.ProfileCompletionLevel = 100
 		// Обновляем кэш пользователя напрямую вместо инвалидации
-		h.baseHandler.service.Cache.SetUser(context.Background(), user)
+		h.baseHandler.Service.Cache.SetUser(context.Background(), user)
 	}
 
 	// Очищаем временные данные
-	h.baseHandler.service.Cache.Delete(context.Background(), cacheKey)
+	h.baseHandler.Service.Cache.Delete(context.Background(), cacheKey)
 
 	loggingService.InfoWithContext("Availability setup completed successfully", "", int64(user.ID), callback.Message.Chat.ID, "CompleteAvailabilitySetup", map[string]interface{}{
 		"user_id":          user.ID,
@@ -1266,7 +1267,7 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 // formatTimeAvailabilityForDisplay formats time availability for display in profile
 func (h *AvailabilityHandlerImpl) formatTimeAvailabilityForDisplay(availability *models.TimeAvailability, lang string) string {
 	if availability == nil {
-		return h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
+		return h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
 	var parts []string
@@ -1274,16 +1275,16 @@ func (h *AvailabilityHandlerImpl) formatTimeAvailabilityForDisplay(availability 
 	// Format day type
 	switch availability.DayType {
 	case "weekdays":
-		parts = append(parts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeWeekdays))
+		parts = append(parts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeWeekdays))
 	case "weekends":
-		parts = append(parts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeWeekends))
+		parts = append(parts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeWeekends))
 	case "any":
-		parts = append(parts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeAny))
+		parts = append(parts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeAny))
 	case "specific":
 		if len(availability.SpecificDays) > 0 {
 			parts = append(parts, strings.Join(availability.SpecificDays, ", "))
 		} else {
-			parts = append(parts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeAny))
+			parts = append(parts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeAny))
 		}
 	}
 
@@ -1293,13 +1294,13 @@ func (h *AvailabilityHandlerImpl) formatTimeAvailabilityForDisplay(availability 
 		for _, slot := range availability.TimeSlots {
 			switch slot {
 			case "morning":
-				timeParts = append(timeParts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeMorning))
+				timeParts = append(timeParts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeMorning))
 			case "day":
-				timeParts = append(timeParts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeDay))
+				timeParts = append(timeParts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeDay))
 			case "evening":
-				timeParts = append(timeParts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeEvening))
+				timeParts = append(timeParts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeEvening))
 			case "late":
-				timeParts = append(timeParts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleTimeLate))
+				timeParts = append(timeParts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeLate))
 			}
 		}
 		if len(timeParts) > 0 {
@@ -1308,7 +1309,7 @@ func (h *AvailabilityHandlerImpl) formatTimeAvailabilityForDisplay(availability 
 	}
 
 	if len(parts) == 0 {
-		return h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
+		return h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
 	return strings.Join(parts, ", ")
@@ -1317,7 +1318,7 @@ func (h *AvailabilityHandlerImpl) formatTimeAvailabilityForDisplay(availability 
 // formatFriendshipPreferencesForDisplay formats friendship preferences for display in profile
 func (h *AvailabilityHandlerImpl) formatFriendshipPreferencesForDisplay(preferences *models.FriendshipPreferences, lang string) string {
 	if preferences == nil {
-		return h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
+		return h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
 	var parts []string
@@ -1328,15 +1329,15 @@ func (h *AvailabilityHandlerImpl) formatFriendshipPreferencesForDisplay(preferen
 		for _, style := range preferences.CommunicationStyles {
 			switch style {
 			case "text":
-				styleParts = append(styleParts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleCommText))
+				styleParts = append(styleParts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommText))
 			case "voice_msg":
-				styleParts = append(styleParts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleCommVoice))
+				styleParts = append(styleParts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVoice))
 			case "audio_call":
-				styleParts = append(styleParts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleCommAudio))
+				styleParts = append(styleParts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommAudio))
 			case "video_call":
-				styleParts = append(styleParts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleCommVideo))
+				styleParts = append(styleParts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVideo))
 			case "meet_person":
-				styleParts = append(styleParts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleCommMeet))
+				styleParts = append(styleParts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommMeet))
 			}
 		}
 		if len(styleParts) > 0 {
@@ -1347,17 +1348,17 @@ func (h *AvailabilityHandlerImpl) formatFriendshipPreferencesForDisplay(preferen
 	// Format frequency
 	switch preferences.CommunicationFreq {
 	case "multiple_weekly":
-		parts = append(parts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleFreqMultipleWeekly))
+		parts = append(parts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqMultipleWeekly))
 	case "weekly":
-		parts = append(parts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleFreqWeekly))
+		parts = append(parts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqWeekly))
 	case "multiple_monthly":
-		parts = append(parts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleFreqMultipleMonthly))
+		parts = append(parts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqMultipleMonthly))
 	case "flexible":
-		parts = append(parts, h.baseHandler.service.Localizer.Get(lang, localization.LocaleFreqFlexible))
+		parts = append(parts, h.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqFlexible))
 	}
 
 	if len(parts) == 0 {
-		return h.baseHandler.service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
+		return h.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
 	return strings.Join(parts, ", ")
@@ -1365,7 +1366,7 @@ func (h *AvailabilityHandlerImpl) formatFriendshipPreferencesForDisplay(preferen
 
 // updateProfileCompletionLevel обновляет уровень завершения профиля до указанного значения (0-100).
 func (h *AvailabilityHandlerImpl) updateProfileCompletionLevel(userID int, completionLevel int) error {
-	_, err := h.baseHandler.service.DB.GetConnection().Exec(`
+	_, err := h.baseHandler.Service.DB.GetConnection().Exec(`
 		UPDATE users
 		SET profile_completion_level = $1, updated_at = NOW()
 		WHERE id = $2

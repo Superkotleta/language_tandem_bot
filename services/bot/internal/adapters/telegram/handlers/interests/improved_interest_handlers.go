@@ -1,4 +1,4 @@
-package handlers
+package interests
 
 import (
 	"math"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"language-exchange-bot/internal/adapters/telegram/handlers/base"
 	"language-exchange-bot/internal/core"
 	"language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/localization"
@@ -21,13 +22,13 @@ import (
 // TemporaryInterestStorage временное хранилище выборов пользователей.
 type TemporaryInterestStorage struct {
 	mu      sync.RWMutex
-	storage map[int][]TemporaryInterestSelection // userID -> selections
+	storage map[int][]base.TemporaryInterestSelection // userID -> selections
 }
 
 // NewTemporaryInterestStorage создает новое временное хранилище.
 func NewTemporaryInterestStorage() *TemporaryInterestStorage {
 	return &TemporaryInterestStorage{
-		storage: make(map[int][]TemporaryInterestSelection),
+		storage: make(map[int][]base.TemporaryInterestSelection),
 	}
 }
 
@@ -48,7 +49,7 @@ func (s *TemporaryInterestStorage) AddInterest(userID, interestID int, isPrimary
 
 	// Добавляем новый выбор
 	nextOrder := len(s.storage[userID]) + 1
-	selection := TemporaryInterestSelection{
+	selection := base.TemporaryInterestSelection{
 		InterestID:     interestID,
 		IsPrimary:      isPrimary,
 		SelectionOrder: nextOrder,
@@ -89,7 +90,7 @@ func (s *TemporaryInterestStorage) ToggleInterest(userID, interestID int) bool {
 
 	// Добавляем в временное хранилище
 	nextOrder := len(selections) + 1
-	selection := TemporaryInterestSelection{
+	selection := base.TemporaryInterestSelection{
 		InterestID:     interestID,
 		IsPrimary:      false, // по умолчанию не основной
 		SelectionOrder: nextOrder,
@@ -118,7 +119,7 @@ func (s *TemporaryInterestStorage) TogglePrimary(userID, interestID int) bool {
 }
 
 // GetSelections возвращает выборы пользователя.
-func (s *TemporaryInterestStorage) GetSelections(userID int) []TemporaryInterestSelection {
+func (s *TemporaryInterestStorage) GetSelections(userID int) []base.TemporaryInterestSelection {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -194,7 +195,7 @@ type ImprovedInterestHandler struct {
 	service         *core.BotService
 	interestService *core.InterestService
 	bot             *tgbotapi.BotAPI
-	keyboardBuilder *KeyboardBuilder
+	keyboardBuilder *base.KeyboardBuilder
 	errorHandler    *errors.ErrorHandler
 	tempStorage     *TemporaryInterestStorage
 }
@@ -204,7 +205,7 @@ func NewImprovedInterestHandler(
 	service *core.BotService,
 	interestService *core.InterestService,
 	bot *tgbotapi.BotAPI,
-	keyboardBuilder *KeyboardBuilder,
+	keyboardBuilder *base.KeyboardBuilder,
 	errorHandler *errors.ErrorHandler,
 ) *ImprovedInterestHandler {
 	return &ImprovedInterestHandler{
@@ -291,7 +292,7 @@ func (h *ImprovedInterestHandler) HandleInterestSelection(callback *tgbotapi.Cal
 
 	h.service.LoggingService.Telegram().InfoWithContext(
 		"User toggled interest",
-		generateRequestID("HandleInterestSelection"),
+		base.GenerateRequestID("HandleInterestSelection"),
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandleInterestSelection",
@@ -319,7 +320,7 @@ func (h *ImprovedInterestHandler) HandlePrimaryInterestSelection(callback *tgbot
 
 	h.service.LoggingService.Telegram().InfoWithContext(
 		"User toggled primary status for interest",
-		generateRequestID("HandlePrimaryInterestSelection"),
+		base.GenerateRequestID("HandlePrimaryInterestSelection"),
 		int64(user.ID),
 		callback.Message.Chat.ID,
 		"HandlePrimaryInterestSelection",
@@ -728,7 +729,7 @@ func (h *ImprovedInterestHandler) completeProfileSetup(callback *tgbotapi.Callba
 	if err != nil {
 		h.service.LoggingService.Database().ErrorWithContext(
 			"Error updating user state",
-			generateRequestID("completeProfileSetup"),
+			base.GenerateRequestID("completeProfileSetup"),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"completeProfileSetup",
@@ -740,7 +741,7 @@ func (h *ImprovedInterestHandler) completeProfileSetup(callback *tgbotapi.Callba
 	if err != nil {
 		h.service.LoggingService.Database().ErrorWithContext(
 			"Error updating user status",
-			generateRequestID("completeProfileSetup"),
+			base.GenerateRequestID("completeProfileSetup"),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"completeProfileSetup",
@@ -753,7 +754,7 @@ func (h *ImprovedInterestHandler) completeProfileSetup(callback *tgbotapi.Callba
 	if err != nil {
 		h.service.LoggingService.Database().ErrorWithContext(
 			"Error updating profile completion level",
-			generateRequestID("completeProfileSetup"),
+			base.GenerateRequestID("completeProfileSetup"),
 			int64(user.ID),
 			callback.Message.Chat.ID,
 			"completeProfileSetup",

@@ -1,4 +1,4 @@
-package handlers
+package availability
 
 import (
 	"testing"
