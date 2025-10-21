@@ -325,42 +325,6 @@ func (ph *ProfileHandlerImpl) HandleEditLanguages(callback *tgbotapi.CallbackQue
 	return editor.StartEditSession(callback, user)
 }
 
-// =============================================================================
-// DEPRECATED: Старые методы редактирования языков
-// Функциональность перенесена в IsolatedLanguageEditor
-// Методы оставлены для обратной совместимости, но маркированы как устаревшие
-// =============================================================================
-
-// HandleEditNativeLang - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
-func (ph *ProfileHandlerImpl) HandleEditNativeLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	return ph.HandleEditLanguages(callback, user)
-}
-
-// HandleEditTargetLang - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
-func (ph *ProfileHandlerImpl) HandleEditTargetLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	return ph.HandleEditLanguages(callback, user)
-}
-
-// HandleEditNativeLanguage - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
-func (ph *ProfileHandlerImpl) HandleEditNativeLanguage(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	return ph.HandleEditLanguages(callback, user)
-}
-
-// HandleEditTargetLanguage - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
-func (ph *ProfileHandlerImpl) HandleEditTargetLanguage(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	return ph.HandleEditLanguages(callback, user)
-}
-
-// HandleEditLevelSelection - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
-func (ph *ProfileHandlerImpl) HandleEditLevelSelection(callback *tgbotapi.CallbackQuery, user *models.User, levelCode string) error {
-	return ph.HandleEditLanguages(callback, user)
-}
-
-// HandleEditLevelLang - DEPRECATED: используйте HandleEditLanguages с IsolatedLanguageEditor
-func (ph *ProfileHandlerImpl) HandleEditLevelLang(callback *tgbotapi.CallbackQuery, user *models.User) error {
-	return ph.HandleEditLanguages(callback, user)
-}
-
 // ShowProfileSetupFeatures показывает новые возможности заполнения профиля.
 func (ph *ProfileHandlerImpl) ShowProfileSetupFeatures(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	// Создаем сообщение с новыми возможностями

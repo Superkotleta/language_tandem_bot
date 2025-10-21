@@ -631,7 +631,14 @@ func (e *IsolatedInterestEditor) calculateEditStats(session *EditSession) EditSt
 		if selection.IsPrimary {
 			stats.PrimaryCount++
 		}
-		// TODO: Добавить подсчет по категориям
+
+		// Подсчет по категориям (только если interestService доступен)
+		if e.interestService != nil {
+			interest, err := e.interestService.GetInterestByID(selection.InterestID)
+			if err == nil && interest.CategoryKey != "" {
+				stats.CategoryCounts[interest.CategoryKey]++
+			}
+		}
 	}
 
 	stats.ChangesCount = len(session.Changes)
@@ -708,7 +715,28 @@ func (e *IsolatedInterestEditor) validateSelections(session *EditSession) error 
 		)
 	}
 
-	// TODO: Добавить дополнительные проверки валидации
+	// Дополнительные проверки валидации
+	primaryCount := 0
+	for _, selection := range session.CurrentSelections {
+		// Проверяем, что интерес существует
+		if e.interestService != nil {
+			_, err := e.interestService.GetInterestByID(selection.InterestID)
+			if err != nil {
+				return fmt.Errorf("interest with ID %d does not exist", selection.InterestID)
+			}
+		}
+
+		// Подсчитываем основные интересы
+		if selection.IsPrimary {
+			primaryCount++
+		}
+	}
+
+	// Проверяем, что основных интересов не более максимального количества
+	if primaryCount > localization.DefaultMaxPrimaryInterests {
+		return fmt.Errorf("too many primary interests: %d (max: %d)", primaryCount, localization.DefaultMaxPrimaryInterests)
+	}
+
 	return nil
 }
 

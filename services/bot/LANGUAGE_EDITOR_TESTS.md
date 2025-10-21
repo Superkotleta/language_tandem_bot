@@ -11,16 +11,19 @@
 ## Запуск тестов
 
 ### Все тесты языкового редактора
+
 ```bash
 go test -v ./internal/adapters/telegram/handlers -run TestLanguage
 ```
 
 ### С покрытием кода
+
 ```bash
 go test -cover ./internal/adapters/telegram/handlers -run TestLanguage
 ```
 
 ### Все тесты handlers
+
 ```bash
 go test ./internal/adapters/telegram/handlers
 ```
@@ -34,11 +37,13 @@ go test ./internal/adapters/telegram/handlers
 Проверяют корректность структуры сессии редактирования языков.
 
 **Сценарии:**
+
 - ✅ Создание новой сессии с изменениями
 - ✅ Создание пустой сессии без изменений
 - ✅ Сессия с множественными изменениями
 
 **Что проверяется:**
+
 - Корректность полей `UserID`, `OriginalNativeLang`, `CurrentNativeLang`
 - Массив изменений `Changes`
 - Временные метки `SessionStart`, `LastActivity`
@@ -51,13 +56,15 @@ go test ./internal/adapters/telegram/handlers
 Проверяют бизнес-логику изменения языков.
 
 **Сценарии:**
+
 - ✅ Изменение родного языка с не-русского на русский
 - ✅ Изменение родного языка с русского на не-русский
 - ✅ Ограничение: изучаемый язык можно менять только если родной = русский
 - ✅ Изменение уровня владения языком
 
 **Специфическая логика:**
-```
+
+```shell
 Если native != "ru" → target автоматически = "ru"
 Если native = "ru"  → target можно выбрать любой (кроме "ru")
 ```
@@ -69,11 +76,13 @@ go test ./internal/adapters/telegram/handlers
 Проверяют функциональность отмены изменений.
 
 **Сценарии:**
+
 - ✅ Отмена последнего изменения
 - ✅ Отмена при множественных изменениях
 - ✅ Невозможность отмены при отсутствии изменений
 
 **Логика:**
+
 - Удаление последнего элемента из `Changes`
 - Восстановление предыдущего значения поля
 - Хронологический порядок отмены (LIFO)
@@ -85,6 +94,7 @@ go test ./internal/adapters/telegram/handlers
 Проверяют валидацию языковых данных.
 
 **Что проверяется:**
+
 - ✅ Валидные коды языков (2 символа: `ru`, `en`, `es`, `de`)
 - ✅ Валидные уровни владения (`A1`, `A2`, `B1`, `B2`, `C1`, `C2`)
 - ✅ Родной и изучаемый языки должны различаться
@@ -97,6 +107,7 @@ go test ./internal/adapters/telegram/handlers
 Проверяют жизненный цикл сессии.
 
 **Сценарии:**
+
 - ✅ Новая сессия начинается без изменений
 - ✅ Отслеживание последней активности
 - ✅ Прогрессия между шагами (`main_menu` → `native` → `target` → `level` → `preview`)
@@ -108,11 +119,13 @@ go test ./internal/adapters/telegram/handlers
 Проверяют отслеживание изменений.
 
 **Что проверяется:**
+
 - ✅ Запись одиночного изменения
 - ✅ Запись множественных изменений в хронологическом порядке
 - ✅ Подсчет количества изменений
 
 **Структура изменения:**
+
 ```go
 type LanguageChange struct {
     Field     string      // "native_language", "target_language", "target_level"
@@ -128,7 +141,7 @@ type LanguageChange struct {
 
 ### ✅ Все тесты успешно пройдены
 
-```
+```shell
 === RUN   TestLanguageEditSessionStructure
 --- PASS: TestLanguageEditSessionStructure (0.00s)
 
@@ -148,7 +161,7 @@ type LanguageChange struct {
 --- PASS: TestChangesTracking (0.00s)
 
 PASS
-ok  	language-exchange-bot/internal/adapters/telegram/handlers	0.003s
+ok   language-exchange-bot/internal/adapters/telegram/handlers 0.003s
 ```
 
 ---
@@ -156,12 +169,14 @@ ok  	language-exchange-bot/internal/adapters/telegram/handlers	0.003s
 ## Покрытие кода
 
 Текущие тесты покрывают:
+
 - ✅ **Структуры данных**: `LanguageEditSession`, `LanguageChange`
 - ✅ **Бизнес-логику**: Правила изменения языков
 - ✅ **Валидацию**: Коды языков и уровней
 - ✅ **Функциональность**: Undo, отслеживание изменений
 
 **Не покрыто (требует интеграционных тестов):**
+
 - ⚠️ Взаимодействие с Telegram API
 - ⚠️ Работа с Redis/Cache для сессий
 - ⚠️ Callback handlers и роутинг
@@ -171,14 +186,15 @@ ok  	language-exchange-bot/internal/adapters/telegram/handlers	0.003s
 
 ## Дальнейшие улучшения
 
-### Рекомендуемые дополнительные тесты:
+### Рекомендуемые дополнительные тесты
 
 1. **Integration Tests** - тесты с реальным Redis и БД
 2. **Handler Tests** - тесты методов `HandleEditNativeLanguage`, `HandleSaveChanges` и т.д.
 3. **Keyboard Tests** - проверка корректности callback data в клавиатурах
 4. **Error Handling Tests** - тесты обработки ошибок
 
-### Пример интеграционного теста:
+### Пример интеграционного теста
+
 ```go
 func TestLanguageEditorIntegration(t *testing.T) {
     // Setup: создать mock Redis, БД, Telegram bot
@@ -193,7 +209,8 @@ func TestLanguageEditorIntegration(t *testing.T) {
 
 Для полной проверки функциональности рекомендуется провести ручное тестирование:
 
-### Чек-лист:
+### Чек-лист
+
 - [ ] Открыть редактор языков из профиля
 - [ ] Изменить родной язык
 - [ ] Проверить автоматическое изменение изучаемого языка

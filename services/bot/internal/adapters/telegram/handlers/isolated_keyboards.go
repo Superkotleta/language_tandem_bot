@@ -39,7 +39,6 @@ func (e *IsolatedInterestEditor) createEditMainMenuKeyboard(interfaceLang string
 			"isolated_cancel_edit",
 		),
 	}
-	// TODO: Replace with kb.CreateSaveCancelKeyboard() when callback data is standardized
 	buttonRows = append(buttonRows, controlRow)
 
 	return tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
@@ -200,7 +199,6 @@ func (e *IsolatedInterestEditor) createChangesPreviewKeyboard(interfaceLang stri
 			"isolated_undo_last",
 		),
 	}
-	// TODO: Replace with kb.CreateSaveUndoKeyboard() when callback data is standardized
 	buttonRows = append(buttonRows, mainRow)
 
 	// Навигация
@@ -300,9 +298,16 @@ func (e *IsolatedInterestEditor) createEditPrimaryInterestsKeyboard(selections [
 func (e *IsolatedInterestEditor) getCategoryProgress(session *EditSession, categoryKey string) string {
 	// Подсчитываем количество выбранных интересов в категории
 	count := 0
-	for range session.CurrentSelections {
-		// TODO: Добавить проверку категории интереса
-		count++
+	for _, selection := range session.CurrentSelections {
+		// Получаем интерес для проверки его категории
+		interest, err := e.interestService.GetInterestByID(selection.InterestID)
+		if err != nil {
+			continue
+		}
+		// Проверяем, принадлежит ли интерес к данной категории
+		if interest.CategoryKey == categoryKey {
+			count++
+		}
 	}
 
 	if count == 0 {

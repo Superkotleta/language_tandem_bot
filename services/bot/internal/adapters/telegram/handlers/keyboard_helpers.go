@@ -324,6 +324,8 @@ func (kb *KeyboardBuilder) CreateAvailabilitySetupKeyboard(interfaceLang string)
 }
 
 // CreateEditLanguagesKeyboard создает клавиатуру для редактирования языков.
+// DEPRECATED: Use IsolatedLanguageEditor instead (isolated_language_editor.go).
+// This method is kept for backward compatibility only and will be removed in a future version.
 func (kb *KeyboardBuilder) CreateEditLanguagesKeyboard(interfaceLang, nativeLang, targetLang, level string) tgbotapi.InlineKeyboardMarkup {
 	var buttons [][]tgbotapi.InlineKeyboardButton
 

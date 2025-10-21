@@ -527,18 +527,8 @@ func (h *TelegramHandler) handleLanguageSelection(callback *tgbotapi.CallbackQue
 
 func (h *TelegramHandler) handleLanguageEditing(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
 	switch {
-	case strings.HasPrefix(data, "edit_level_"):
-		levelCode := strings.TrimPrefix(data, "edit_level_")
-
-		return h.profileHandler.HandleEditLevelSelection(
-			callback,
-			user,
-			levelCode,
-		)
-	case strings.HasPrefix(data, "lang_edit_native_"):
-		return h.profileHandler.HandleEditNativeLanguage(callback, user)
-	case strings.HasPrefix(data, "lang_edit_target_"):
-		return h.profileHandler.HandleEditTargetLanguage(callback, user)
+	// Removed deprecated edit_level_, lang_edit_native_, lang_edit_target_ callbacks
+	// Use isolated language editor via "edit_languages" callback instead
 	}
 
 	return nil
@@ -927,18 +917,8 @@ func (h *TelegramHandler) handleProfileCommands(callback *tgbotapi.CallbackQuery
 		log.Printf("DEBUG: Handling edit_availability for user %d", user.ID)
 
 		return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
-	case "edit_native_lang":
-		log.Printf("DEBUG: Handling edit_native_lang for user %d", user.ID)
-
-		return h.profileHandler.HandleEditNativeLang(callback, user)
-	case "edit_target_lang":
-		log.Printf("DEBUG: Handling edit_target_lang for user %d", user.ID)
-
-		return h.profileHandler.HandleEditTargetLang(callback, user)
-	case "edit_level":
-		log.Printf("DEBUG: Handling edit_level for user %d", user.ID)
-
-		return h.profileHandler.HandleEditLevelLang(callback, user)
+	// Removed deprecated language edit callbacks (edit_native_lang, edit_target_lang, edit_level)
+	// Use isolated language editor via "edit_languages" callback instead
 	}
 
 	log.Printf("DEBUG: No handler found for data: '%s' for user %d", data, user.ID)
