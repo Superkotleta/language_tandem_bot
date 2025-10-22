@@ -11,6 +11,7 @@ import (
 	"language-exchange-bot/internal/models"
 
 	"language-exchange-bot/internal/adapters/telegram/handlers/base"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -76,6 +77,18 @@ func (e *IsolatedAvailabilityEditor) StartEditSession(callback *tgbotapi.Callbac
 		return fmt.Errorf("failed to get time availability: %w", err)
 	}
 
+	// Если данных нет, создаем дефолтные значения для редактирования
+	if timeAvailability == nil {
+		timeAvailability = &models.TimeAvailability{
+			DayType:      "weekdays",
+			SpecificDays: []string{},
+			TimeSlots:    []string{"morning", "evening"},
+		}
+		loggingService.Telegram().InfoWithContext("No existing time availability, using defaults", "", int64(user.ID), callback.Message.Chat.ID, "StartEditSession", map[string]interface{}{
+			"user_id": user.ID,
+		})
+	}
+
 	friendshipPreferences, err := e.baseHandler.Service.GetFriendshipPreferences(user.ID)
 	if err != nil {
 		loggingService.Telegram().ErrorWithContext("Failed to get friendship preferences for edit session", "", int64(user.ID), callback.Message.Chat.ID, "StartEditSession", map[string]interface{}{
@@ -85,6 +98,18 @@ func (e *IsolatedAvailabilityEditor) StartEditSession(callback *tgbotapi.Callbac
 		})
 		loggingService.LogErrorWithContext(err, "", int64(user.ID), callback.Message.Chat.ID, "StartEditSession", "database")
 		return fmt.Errorf("failed to get friendship preferences: %w", err)
+	}
+
+	// Если данных нет, создаем дефолтные значения для редактирования
+	if friendshipPreferences == nil {
+		friendshipPreferences = &models.FriendshipPreferences{
+			ActivityType:        "casual_chat",
+			CommunicationStyles: []string{"text"},
+			CommunicationFreq:   "weekly",
+		}
+		loggingService.Telegram().InfoWithContext("No existing friendship preferences, using defaults", "", int64(user.ID), callback.Message.Chat.ID, "StartEditSession", map[string]interface{}{
+			"user_id": user.ID,
+		})
 	}
 
 	// Логируем текущее состояние данных

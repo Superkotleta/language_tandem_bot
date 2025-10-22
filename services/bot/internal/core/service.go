@@ -576,13 +576,19 @@ func (s *BotService) BuildProfileSummary(user *models.User) (string, error) {
 	timeAvailability, err := s.GetTimeAvailability(user.ID)
 	if err != nil {
 		// Не критичная ошибка, продолжаем без данных доступности
+		log.Printf("DEBUG BuildProfileSummary: Error loading timeAvailability for user %d: %v", user.ID, err)
 		timeAvailability = nil
+	} else {
+		log.Printf("DEBUG BuildProfileSummary: Loaded timeAvailability for user %d: %+v", user.ID, timeAvailability)
 	}
 
 	friendshipPreferences, err := s.GetFriendshipPreferences(user.ID)
 	if err != nil {
 		// Не критичная ошибка, продолжаем без данных предпочтений
+		log.Printf("DEBUG BuildProfileSummary: Error loading friendshipPreferences for user %d: %v", user.ID, err)
 		friendshipPreferences = nil
+	} else {
+		log.Printf("DEBUG BuildProfileSummary: Loaded friendshipPreferences for user %d: %+v", user.ID, friendshipPreferences)
 	}
 
 	// Временно устанавливаем данные в объект пользователя для совместимости

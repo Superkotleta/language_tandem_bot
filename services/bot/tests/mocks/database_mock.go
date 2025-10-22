@@ -572,14 +572,7 @@ func (db *DatabaseMock) SaveTimeAvailability(userID int, availability *models.Ti
 func (db *DatabaseMock) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
 	for _, user := range db.users {
 		if user.ID == userID {
-			if user.TimeAvailability == nil {
-				return &models.TimeAvailability{
-					DayType:      "any",
-					SpecificDays: []string{},
-					TimeSlots:    []string{"any"},
-				}, nil
-			}
-
+			// Возвращаем nil, если данных нет - это означает, что пользователь не настроил доступность
 			return user.TimeAvailability, nil
 		}
 	}
@@ -605,14 +598,7 @@ func (db *DatabaseMock) SaveFriendshipPreferences(userID int, preferences *model
 func (db *DatabaseMock) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
 	for _, user := range db.users {
 		if user.ID == userID {
-			if user.FriendshipPreferences == nil {
-				return &models.FriendshipPreferences{
-					ActivityType:        "casual_chat",
-					CommunicationStyles: []string{"text"},
-					CommunicationFreq:   "weekly",
-				}, nil
-			}
-
+			// Возвращаем nil, если данных нет - это означает, что пользователь не настроил предпочтения
 			return user.FriendshipPreferences, nil
 		}
 	}

@@ -9,8 +9,10 @@ import (
 	"language-exchange-bot/internal/localization"
 	"language-exchange-bot/internal/logging"
 	"language-exchange-bot/internal/models"
+	"log"
 	"time"
 
+	"github.com/lib/pq"
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
@@ -929,6 +931,10 @@ func (db *DB) MarkFeedbackProcessed(feedbackID int, adminResponse string) error 
 
 // SaveFriendshipPreferences сохраняет предпочтения общения пользователя.
 func (db *DB) SaveFriendshipPreferences(userID int, preferences *models.FriendshipPreferences) error {
+	log.Printf("DEBUG SaveFriendshipPreferences: Starting save for user %d", userID)
+	log.Printf("DEBUG SaveFriendshipPreferences: Data to save: ActivityType=%s, CommunicationStyles=%v, CommunicationFreq=%s",
+		preferences.ActivityType, preferences.CommunicationStyles, preferences.CommunicationFreq)
+
 	query := `
 		INSERT INTO friendship_preferences (user_id, activity_type, communication_styles, communication_frequency)
 		VALUES ($1, $2, $3, $4)
@@ -939,21 +945,27 @@ func (db *DB) SaveFriendshipPreferences(userID int, preferences *models.Friendsh
 			created_at = CURRENT_TIMESTAMP
 	`
 
-	_, err := db.conn.ExecContext(context.Background(), query,
+	result, err := db.conn.ExecContext(context.Background(), query,
 		userID,
 		preferences.ActivityType,
-		preferences.CommunicationStyles,
+		pq.Array(preferences.CommunicationStyles),
 		preferences.CommunicationFreq,
 	)
 	if err != nil {
+		log.Printf("DEBUG SaveFriendshipPreferences: ERROR saving for user %d: %v", userID, err)
 		return fmt.Errorf("failed to save friendship preferences: %w", err)
 	}
+
+	rowsAffected, _ := result.RowsAffected()
+	log.Printf("DEBUG SaveFriendshipPreferences: Successfully saved for user %d, rows affected: %d", userID, rowsAffected)
 
 	return nil
 }
 
 // GetFriendshipPreferences получает предпочтения общения пользователя.
 func (db *DB) GetFriendshipPreferences(userID int) (*models.FriendshipPreferences, error) {
+	log.Printf("DEBUG GetFriendshipPreferences: Loading data for user %d", userID)
+
 	query := `
 		SELECT activity_type, communication_styles, communication_frequency
 		FROM friendship_preferences
@@ -964,27 +976,31 @@ func (db *DB) GetFriendshipPreferences(userID int) (*models.FriendshipPreference
 
 	err := db.conn.QueryRowContext(context.Background(), query, userID).Scan(
 		&preferences.ActivityType,
-		&preferences.CommunicationStyles,
+		pq.Array(&preferences.CommunicationStyles),
 		&preferences.CommunicationFreq,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Возвращаем значения по умолчанию, если данных нет
-			return &models.FriendshipPreferences{
-				ActivityType:        "casual_chat",
-				CommunicationStyles: []string{"text"},
-				CommunicationFreq:   "weekly",
-			}, nil
+			// Возвращаем nil, если данных нет - это означает, что пользователь не настроил предпочтения
+			log.Printf("DEBUG GetFriendshipPreferences: No data found for user %d (returning nil)", userID)
+			return nil, nil
 		}
 
+		log.Printf("DEBUG GetFriendshipPreferences: ERROR loading for user %d: %v", userID, err)
 		return nil, fmt.Errorf("failed to get friendship preferences: %w", err)
 	}
 
+	log.Printf("DEBUG GetFriendshipPreferences: Successfully loaded for user %d: ActivityType=%s, CommunicationStyles=%v, CommunicationFreq=%s",
+		userID, preferences.ActivityType, preferences.CommunicationStyles, preferences.CommunicationFreq)
 	return &preferences, nil
 }
 
 // SaveTimeAvailability сохраняет временную доступность пользователя.
 func (db *DB) SaveTimeAvailability(userID int, availability *models.TimeAvailability) error {
+	log.Printf("DEBUG SaveTimeAvailability: Starting save for user %d", userID)
+	log.Printf("DEBUG SaveTimeAvailability: Data to save: DayType=%s, SpecificDays=%v, TimeSlots=%v",
+		availability.DayType, availability.SpecificDays, availability.TimeSlots)
+
 	query := `
 		INSERT INTO user_time_availability (user_id, day_type, specific_days, time_slots)
 		VALUES ($1, $2, $3, $4)
@@ -995,21 +1011,27 @@ func (db *DB) SaveTimeAvailability(userID int, availability *models.TimeAvailabi
 			created_at = CURRENT_TIMESTAMP
 	`
 
-	_, err := db.conn.ExecContext(context.Background(), query,
+	result, err := db.conn.ExecContext(context.Background(), query,
 		userID,
 		availability.DayType,
-		availability.SpecificDays,
-		availability.TimeSlots,
+		pq.Array(availability.SpecificDays),
+		pq.Array(availability.TimeSlots),
 	)
 	if err != nil {
+		log.Printf("DEBUG SaveTimeAvailability: ERROR saving for user %d: %v", userID, err)
 		return fmt.Errorf("failed to save time availability: %w", err)
 	}
+
+	rowsAffected, _ := result.RowsAffected()
+	log.Printf("DEBUG SaveTimeAvailability: Successfully saved for user %d, rows affected: %d", userID, rowsAffected)
 
 	return nil
 }
 
 // GetTimeAvailability получает временную доступность пользователя.
 func (db *DB) GetTimeAvailability(userID int) (*models.TimeAvailability, error) {
+	log.Printf("DEBUG GetTimeAvailability: Loading data for user %d", userID)
+
 	query := `
 		SELECT day_type, specific_days, time_slots
 		FROM user_time_availability
@@ -1020,22 +1042,22 @@ func (db *DB) GetTimeAvailability(userID int) (*models.TimeAvailability, error) 
 
 	err := db.conn.QueryRowContext(context.Background(), query, userID).Scan(
 		&availability.DayType,
-		&availability.SpecificDays,
-		&availability.TimeSlots,
+		pq.Array(&availability.SpecificDays),
+		pq.Array(&availability.TimeSlots),
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Возвращаем значения по умолчанию, если данных нет
-			return &models.TimeAvailability{
-				DayType:      "any",
-				SpecificDays: []string{},
-				TimeSlots:    []string{"any"},
-			}, nil
+			// Возвращаем nil, если данных нет - это означает, что пользователь не настроил доступность
+			log.Printf("DEBUG GetTimeAvailability: No data found for user %d (returning nil)", userID)
+			return nil, nil
 		}
 
+		log.Printf("DEBUG GetTimeAvailability: ERROR loading for user %d: %v", userID, err)
 		return nil, fmt.Errorf("failed to get time availability: %w", err)
 	}
 
+	log.Printf("DEBUG GetTimeAvailability: Successfully loaded for user %d: DayType=%s, SpecificDays=%v, TimeSlots=%v",
+		userID, availability.DayType, availability.SpecificDays, availability.TimeSlots)
 	return &availability, nil
 }
 
