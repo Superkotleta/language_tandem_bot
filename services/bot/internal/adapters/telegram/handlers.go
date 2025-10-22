@@ -8,7 +8,15 @@ import (
 	"strconv"
 	"strings"
 
-	"language-exchange-bot/internal/adapters/telegram/handlers"
+	"language-exchange-bot/internal/adapters/telegram/handlers/admin"
+	"language-exchange-bot/internal/adapters/telegram/handlers/availability"
+	"language-exchange-bot/internal/adapters/telegram/handlers/base"
+	"language-exchange-bot/internal/adapters/telegram/handlers/feedback"
+	"language-exchange-bot/internal/adapters/telegram/handlers/interests"
+	"language-exchange-bot/internal/adapters/telegram/handlers/language"
+	"language-exchange-bot/internal/adapters/telegram/handlers/menu"
+	"language-exchange-bot/internal/adapters/telegram/handlers/profile"
+	"language-exchange-bot/internal/adapters/telegram/handlers/utility"
 	"language-exchange-bot/internal/core"
 	errorsPkg "language-exchange-bot/internal/errors"
 	"language-exchange-bot/internal/localization"
@@ -26,23 +34,23 @@ type TelegramHandler struct {
 	service                *core.BotService
 	adminChatIDs           []int64  // Chat ID администраторов
 	adminUsernames         []string // Usernames администраторов для проверки доступа
-	keyboardBuilder        *handlers.KeyboardBuilder
-	menuHandler            *handlers.MenuHandler
-	profileHandler         *handlers.ProfileHandlerImpl
-	feedbackHandler        *handlers.FeedbackHandlerImpl
-	languageHandler        *handlers.LanguageHandlerImpl
-	interestHandler        *handlers.NewInterestHandlerImpl
-	profileInterestHandler *handlers.ProfileInterestHandler
-	isolatedInterestEditor *handlers.IsolatedInterestEditor
-	isolatedLanguageEditor *handlers.IsolatedLanguageEditor
-	availabilityHandler    *handlers.AvailabilityHandlerImpl
-	availabilityEditor     handlers.IsolatedAvailabilityEditor
-	adminHandler           *handlers.AdminHandlerImpl
-	utilityHandler         *handlers.UtilityHandlerImpl
+	keyboardBuilder        *base.KeyboardBuilder
+	menuHandler            *menu.MenuHandler
+	profileHandler         *profile.ProfileHandlerImpl
+	feedbackHandler        *feedback.FeedbackHandlerImpl
+	languageHandler        *language.LanguageHandlerImpl
+	interestHandler        *interests.NewInterestHandlerImpl
+	profileInterestHandler *interests.ProfileInterestHandler
+	isolatedInterestEditor *interests.IsolatedInterestEditor
+	isolatedLanguageEditor *language.IsolatedLanguageEditor
+	availabilityHandler    *availability.AvailabilityHandlerImpl
+	availabilityEditor     availability.IsolatedAvailabilityEditor
+	adminHandler           *admin.AdminHandlerImpl
+	utilityHandler         *utility.UtilityHandlerImpl
 	errorHandler           *errorsPkg.ErrorHandler
 	isolatedRouter         *CallbackRouter // Роутер для изолированных callback'ов
 	rateLimiter            *RateLimiter    // Rate limiter для защиты от спама
-	messageFactory         *handlers.MessageFactory
+	messageFactory         *base.MessageFactory
 }
 
 // NewTelegramHandler создает новый экземпляр TelegramHandler с базовой конфигурацией.
@@ -52,11 +60,11 @@ func NewTelegramHandler(
 	adminChatIDs []int64,
 	errorHandler *errorsPkg.ErrorHandler,
 ) *TelegramHandler {
-	keyboardBuilder := handlers.NewKeyboardBuilder(service)
-	messageFactory := handlers.NewMessageFactory(bot, errorHandler, service.LoggingService)
+	keyboardBuilder := base.NewKeyboardBuilder(service)
+	messageFactory := base.NewMessageFactory(bot, errorHandler, service.LoggingService)
 
 	// Создаем общий BaseHandler
-	baseHandler := handlers.NewBaseHandler(
+	baseHandler := base.NewBaseHandler(
 		bot,
 		service,
 		keyboardBuilder,
@@ -64,14 +72,14 @@ func NewTelegramHandler(
 		messageFactory,
 	)
 
-	menuHandler := handlers.NewMenuHandler(baseHandler)
-	profileHandler := handlers.NewProfileHandler(baseHandler)
-	feedbackHandler := handlers.NewFeedbackHandler(
+	menuHandler := menu.NewMenuHandler(baseHandler)
+	profileHandler := profile.NewProfileHandler(baseHandler)
+	feedbackHandler := feedback.NewFeedbackHandler(
 		baseHandler,
 		adminChatIDs,
 		make([]string, 0),
 	)
-	languageHandler := handlers.NewLanguageHandler(baseHandler)
+	languageHandler := language.NewLanguageHandler(baseHandler)
 
 	var interestService *core.InterestService
 	if service.DB != nil {
@@ -80,15 +88,15 @@ func NewTelegramHandler(
 		interestService = nil // Для тестов без DB
 	}
 
-	interestHandler := handlers.NewNewInterestHandler(baseHandler, interestService)
-	profileInterestHandler := handlers.NewProfileInterestHandler(
+	interestHandler := interests.NewNewInterestHandler(baseHandler, interestService)
+	profileInterestHandler := interests.NewProfileInterestHandler(
 		service,
 		interestService,
 		bot,
 		keyboardBuilder,
 		errorHandler,
 	)
-	isolatedInterestEditor := handlers.NewIsolatedInterestEditor(
+	isolatedInterestEditor := interests.NewIsolatedInterestEditor(
 		service,
 		interestService,
 		bot,
@@ -96,11 +104,11 @@ func NewTelegramHandler(
 		errorHandler,
 		service.Cache,
 	)
-	isolatedLanguageEditor := handlers.NewIsolatedLanguageEditor(baseHandler)
-	availabilityHandler := handlers.NewAvailabilityHandler(baseHandler)
-	availabilityEditor := *handlers.NewIsolatedAvailabilityEditor(baseHandler)
-	adminHandler := handlers.NewAdminHandler(baseHandler, adminChatIDs, make([]string, 0))
-	utilityHandler := handlers.NewUtilityHandler(baseHandler)
+	isolatedLanguageEditor := language.NewIsolatedLanguageEditor(baseHandler)
+	availabilityHandler := availability.NewAvailabilityHandler(baseHandler)
+	availabilityEditor := *availability.NewIsolatedAvailabilityEditor(baseHandler)
+	adminHandler := admin.NewAdminHandler(baseHandler, adminChatIDs, make([]string, 0))
+	utilityHandler := utility.NewUtilityHandler(baseHandler)
 
 	// Создаем rate limiter для защиты от спама
 	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
@@ -147,11 +155,11 @@ func NewTelegramHandlerWithAdmins(
 	adminUsernames []string,
 	errorHandler *errorsPkg.ErrorHandler,
 ) *TelegramHandler {
-	keyboardBuilder := handlers.NewKeyboardBuilder(service)
-	messageFactory := handlers.NewMessageFactory(bot, errorHandler, service.LoggingService)
+	keyboardBuilder := base.NewKeyboardBuilder(service)
+	messageFactory := base.NewMessageFactory(bot, errorHandler, service.LoggingService)
 
 	// Создаем общий BaseHandler
-	baseHandler := handlers.NewBaseHandler(
+	baseHandler := base.NewBaseHandler(
 		bot,
 		service,
 		keyboardBuilder,
@@ -159,24 +167,24 @@ func NewTelegramHandlerWithAdmins(
 		messageFactory,
 	)
 
-	menuHandler := handlers.NewMenuHandler(baseHandler)
-	profileHandler := handlers.NewProfileHandler(baseHandler)
-	feedbackHandler := handlers.NewFeedbackHandler(
+	menuHandler := menu.NewMenuHandler(baseHandler)
+	profileHandler := profile.NewProfileHandler(baseHandler)
+	feedbackHandler := feedback.NewFeedbackHandler(
 		baseHandler,
 		adminChatIDs,
 		adminUsernames,
 	)
-	languageHandler := handlers.NewLanguageHandler(baseHandler)
+	languageHandler := language.NewLanguageHandler(baseHandler)
 	interestService := core.NewInterestService(service.DB.GetConnection())
-	interestHandler := handlers.NewNewInterestHandler(baseHandler, interestService)
-	profileInterestHandler := handlers.NewProfileInterestHandler(
+	interestHandler := interests.NewNewInterestHandler(baseHandler, interestService)
+	profileInterestHandler := interests.NewProfileInterestHandler(
 		service,
 		interestService,
 		bot,
 		keyboardBuilder,
 		errorHandler,
 	)
-	isolatedInterestEditor := handlers.NewIsolatedInterestEditor(
+	isolatedInterestEditor := interests.NewIsolatedInterestEditor(
 		service,
 		interestService,
 		bot,
@@ -184,11 +192,11 @@ func NewTelegramHandlerWithAdmins(
 		errorHandler,
 		service.Cache,
 	)
-	isolatedLanguageEditor := handlers.NewIsolatedLanguageEditor(baseHandler)
-	availabilityHandler := handlers.NewAvailabilityHandler(baseHandler)
-	availabilityEditor := *handlers.NewIsolatedAvailabilityEditor(baseHandler)
-	adminHandler := handlers.NewAdminHandler(baseHandler, adminChatIDs, adminUsernames)
-	utilityHandler := handlers.NewUtilityHandler(baseHandler)
+	isolatedLanguageEditor := language.NewIsolatedLanguageEditor(baseHandler)
+	availabilityHandler := availability.NewAvailabilityHandler(baseHandler)
+	availabilityEditor := *availability.NewIsolatedAvailabilityEditor(baseHandler)
+	adminHandler := admin.NewAdminHandler(baseHandler, adminChatIDs, adminUsernames)
+	utilityHandler := utility.NewUtilityHandler(baseHandler)
 
 	// Создаем rate limiter для защиты от спама
 	rateLimiter := NewRateLimiter(DefaultRateLimitConfig())
@@ -527,18 +535,8 @@ func (h *TelegramHandler) handleLanguageSelection(callback *tgbotapi.CallbackQue
 
 func (h *TelegramHandler) handleLanguageEditing(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
 	switch {
-	case strings.HasPrefix(data, "edit_level_"):
-		levelCode := strings.TrimPrefix(data, "edit_level_")
-
-		return h.profileHandler.HandleEditLevelSelection(
-			callback,
-			user,
-			levelCode,
-		)
-	case strings.HasPrefix(data, "lang_edit_native_"):
-		return h.profileHandler.HandleEditNativeLanguage(callback, user)
-	case strings.HasPrefix(data, "lang_edit_target_"):
-		return h.profileHandler.HandleEditTargetLanguage(callback, user)
+	// Removed deprecated edit_level_, lang_edit_native_, lang_edit_target_ callbacks
+	// Use isolated language editor via "edit_languages" callback instead
 	}
 
 	return nil
@@ -927,18 +925,8 @@ func (h *TelegramHandler) handleProfileCommands(callback *tgbotapi.CallbackQuery
 		log.Printf("DEBUG: Handling edit_availability for user %d", user.ID)
 
 		return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
-	case "edit_native_lang":
-		log.Printf("DEBUG: Handling edit_native_lang for user %d", user.ID)
-
-		return h.profileHandler.HandleEditNativeLang(callback, user)
-	case "edit_target_lang":
-		log.Printf("DEBUG: Handling edit_target_lang for user %d", user.ID)
-
-		return h.profileHandler.HandleEditTargetLang(callback, user)
-	case "edit_level":
-		log.Printf("DEBUG: Handling edit_level for user %d", user.ID)
-
-		return h.profileHandler.HandleEditLevelLang(callback, user)
+		// Removed deprecated language edit callbacks (edit_native_lang, edit_target_lang, edit_level)
+		// Use isolated language editor via "edit_languages" callback instead
 	}
 
 	log.Printf("DEBUG: No handler found for data: '%s' for user %d", data, user.ID)
