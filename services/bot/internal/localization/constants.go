@@ -66,7 +66,7 @@ const (
 	RateLimitWindowMinutes           = 1  // Time window for rate limiting (1 minute)
 	RateLimitBlockMinutes            = 2  // How long to block after exceeding limits (2 minutes)
 	RateLimitCleanupMinutes          = 10 // Interval for cleaning up expired rate limit entries (10 minutes)
-	DefaultRateLimitMaxRequests      = 20 // Default maximum requests per window
+	DefaultRateLimitMaxRequests      = 30 // Default maximum requests per window
 	RateLimitCleanupWindowMultiplier = 2  // Multiplier for cleanup window (remove entries older than 2 windows)
 )
 
