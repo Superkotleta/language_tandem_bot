@@ -44,7 +44,7 @@ type TelegramHandler struct {
 	isolatedInterestEditor *interests.IsolatedInterestEditor
 	isolatedLanguageEditor *language.IsolatedLanguageEditor
 	availabilityHandler    *availability.AvailabilityHandlerImpl
-	availabilityEditor     availability.IsolatedAvailabilityEditor
+	availabilityEditor     *availability.IsolatedAvailabilityEditor
 	adminHandler           *admin.AdminHandlerImpl
 	utilityHandler         *utility.UtilityHandlerImpl
 	errorHandler           *errorsPkg.ErrorHandler
@@ -106,7 +106,7 @@ func NewTelegramHandler(
 	)
 	isolatedLanguageEditor := language.NewIsolatedLanguageEditor(baseHandler)
 	availabilityHandler := availability.NewAvailabilityHandler(baseHandler)
-	availabilityEditor := *availability.NewIsolatedAvailabilityEditor(baseHandler)
+	availabilityEditor := availability.NewIsolatedAvailabilityEditor(baseHandler)
 	adminHandler := admin.NewAdminHandler(baseHandler, adminChatIDs, make([]string, 0))
 	utilityHandler := utility.NewUtilityHandler(baseHandler)
 
@@ -194,7 +194,7 @@ func NewTelegramHandlerWithAdmins(
 	)
 	isolatedLanguageEditor := language.NewIsolatedLanguageEditor(baseHandler)
 	availabilityHandler := availability.NewAvailabilityHandler(baseHandler)
-	availabilityEditor := *availability.NewIsolatedAvailabilityEditor(baseHandler)
+	availabilityEditor := availability.NewIsolatedAvailabilityEditor(baseHandler)
 	adminHandler := admin.NewAdminHandler(baseHandler, adminChatIDs, adminUsernames)
 	utilityHandler := utility.NewUtilityHandler(baseHandler)
 
@@ -385,6 +385,14 @@ func (h *TelegramHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) 
 	}
 
 	log.Printf("DEBUG: handleCallbackQuery called with data: '%s' from user %d", callback.Data, callback.From.ID)
+
+	// Детальное логирование для отладки
+	h.service.LoggingService.Telegram().InfoWithContext("handleCallbackQuery called", "", callback.From.ID, callback.Message.Chat.ID, "CallbackQuery", map[string]interface{}{
+		"user_id":       callback.From.ID,
+		"callback_data": callback.Data,
+		"message_id":    callback.Message.MessageID,
+		"chat_id":       callback.Message.Chat.ID,
+	})
 
 	user, err := h.service.HandleUserRegistration(
 		callback.From.ID,
@@ -924,7 +932,7 @@ func (h *TelegramHandler) handleProfileCommands(callback *tgbotapi.CallbackQuery
 	case "edit_availability":
 		log.Printf("DEBUG: Handling edit_availability for user %d", user.ID)
 
-		return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
+		return h.availabilityEditor.StartEditSession(callback, user)
 		// Removed deprecated language edit callbacks (edit_native_lang, edit_target_lang, edit_level)
 		// Use isolated language editor via "edit_languages" callback instead
 	}
@@ -937,6 +945,15 @@ func (h *TelegramHandler) handleProfileCommands(callback *tgbotapi.CallbackQuery
 // handleMenuCallbacks обрабатывает callback'и связанные с меню.
 // handleAvailabilityCallbacks обрабатывает callback'и связанные с настройкой доступности
 func (h *TelegramHandler) handleAvailabilityCallbacks(callback *tgbotapi.CallbackQuery, user *models.User, data string) error {
+	// Логируем все callback'и для отладки
+	h.service.LoggingService.Telegram().InfoWithContext("handleAvailabilityCallbacks called", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+		"user_id":                 user.ID,
+		"callback_data":           data,
+		"has_availability_prefix": strings.HasPrefix(data, "availability_"),
+		"has_avail_edit_prefix":   strings.HasPrefix(data, "avail_edit_"),
+		"has_avail_prefix":        strings.HasPrefix(data, "avail_"),
+	})
+
 	// Обработка callback'а для перехода к настройке доступности
 	if data == "continue_to_availability" {
 		return h.availabilityHandler.HandleTimeAvailabilityStart(callback, user)
@@ -949,19 +966,38 @@ func (h *TelegramHandler) handleAvailabilityCallbacks(callback *tgbotapi.Callbac
 
 		// Логируем все availability callback'и для отладки
 		h.service.LoggingService.Telegram().InfoWithContext("Processing availability callback", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
-			"user_id":       user.ID,
-			"callback_data": data,
+			"user_id":                 user.ID,
+			"callback_data":           data,
+			"has_availability_prefix": strings.HasPrefix(data, "availability_"),
+			"has_avail_edit_prefix":   strings.HasPrefix(data, "avail_edit_"),
+			"has_avail_prefix":        strings.HasPrefix(data, "avail_"),
 		})
 
 		// Обработка callback'ов редактора
 		switch {
 		case data == "avail_edit_days":
+			h.service.LoggingService.Telegram().InfoWithContext("Handling avail_edit_days", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+				"user_id":       user.ID,
+				"callback_data": data,
+			})
 			return h.availabilityEditor.EditDays(callback, user)
 		case data == "avail_edit_time":
+			h.service.LoggingService.Telegram().InfoWithContext("Handling avail_edit_time", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+				"user_id":       user.ID,
+				"callback_data": data,
+			})
 			return h.availabilityEditor.EditTimeSlots(callback, user)
 		case data == "avail_edit_communication":
+			h.service.LoggingService.Telegram().InfoWithContext("Handling avail_edit_communication", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+				"user_id":       user.ID,
+				"callback_data": data,
+			})
 			return h.availabilityEditor.EditCommunication(callback, user)
 		case data == "avail_edit_frequency":
+			h.service.LoggingService.Telegram().InfoWithContext("Handling avail_edit_frequency", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+				"user_id":       user.ID,
+				"callback_data": data,
+			})
 			return h.availabilityEditor.EditFrequency(callback, user)
 		case data == "avail_save_changes":
 			return h.availabilityEditor.SaveChanges(callback, user)
@@ -1083,6 +1119,12 @@ func (h *TelegramHandler) handleAvailabilityCallbacks(callback *tgbotapi.Callbac
 			return h.menuHandler.HandleBackToMainMenu(callback, user)
 		}
 
+		// Логируем необработанный callback для отладки
+		h.service.LoggingService.Telegram().WarnWithContext("Unhandled availability callback", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+			"user_id":       user.ID,
+			"callback_data": data,
+		})
+
 		return nil // Callback не обработан этой функцией
 	}
 
@@ -1095,6 +1137,9 @@ func (h *TelegramHandler) handleMenuCallbacks(callback *tgbotapi.CallbackQuery, 
 	case "main_change_language":
 		return h.menuHandler.HandleMainChangeLanguage(callback, user)
 	case "main_view_profile":
+		return h.menuHandler.HandleMainViewProfile(callback, user, h.profileHandler)
+	case "view_profile":
+		// Обработка кнопки "Показать профиль" из различных мест
 		return h.menuHandler.HandleMainViewProfile(callback, user, h.profileHandler)
 	case "main_edit_profile":
 		return h.menuHandler.HandleMainEditProfile(callback, user, h.profileHandler)

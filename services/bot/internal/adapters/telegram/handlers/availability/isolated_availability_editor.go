@@ -171,7 +171,8 @@ func (e *IsolatedAvailabilityEditor) ShowEditMenu(callback *tgbotapi.CallbackQue
 	commDisplay := e.formatCurrentCommunicationPreferences(session.CurrentPreferences, lang)
 	freqDisplay := e.formatCurrentFrequency(session.CurrentPreferences, lang)
 
-	message := fmt.Sprintf("%s\n\n%s\n%s\n%s\n%s",
+	// Создаем красивое сообщение с разделителями
+	message := fmt.Sprintf("🎯 %s\n\n📋 %s:\n\n%s\n\n%s\n\n%s",
 		localizer.Get(lang, "edit_availability"),
 		localizer.Get(lang, "current_settings"),
 		timeDisplay,
@@ -195,14 +196,31 @@ func (e *IsolatedAvailabilityEditor) ShowEditMenu(callback *tgbotapi.CallbackQue
 
 // EditDays переходит к редактированию дней
 func (e *IsolatedAvailabilityEditor) EditDays(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	loggingService := e.baseHandler.Service.LoggingService
+
+	loggingService.Telegram().InfoWithContext("EditDays called", "", int64(user.ID), callback.Message.Chat.ID, "EditDays", map[string]interface{}{
+		"user_id": user.ID,
+	})
+
 	session, err := e.getEditSession(user.ID)
 	if err != nil {
-		return err
+		loggingService.Telegram().WarnWithContext("Failed to get edit session in EditDays, creating new session", "", int64(user.ID), callback.Message.Chat.ID, "EditDays", map[string]interface{}{
+			"user_id": user.ID,
+			"error":   err.Error(),
+		})
+
+		// Создаем новую сессию, если старая не найдена
+		return e.StartEditSession(callback, user)
 	}
 
 	session.CurrentStep = "days"
 	session.LastActivity = time.Now()
 	e.saveEditSession(session)
+
+	loggingService.Telegram().InfoWithContext("EditDays proceeding to ShowDayTypeSelection", "", int64(user.ID), callback.Message.Chat.ID, "EditDays", map[string]interface{}{
+		"user_id":      user.ID,
+		"current_step": session.CurrentStep,
+	})
 
 	return e.ShowDayTypeSelection(callback, session, user)
 }
@@ -213,6 +231,9 @@ func (e *IsolatedAvailabilityEditor) ShowDayTypeSelection(callback *tgbotapi.Cal
 	localizer := e.baseHandler.Service.Localizer
 
 	message := localizer.Get(lang, "select_day_type")
+	if message == "select_day_type" {
+		message = "📅 Выберите тип дней:" // Fallback
+	}
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
@@ -343,7 +364,8 @@ func (e *IsolatedAvailabilityEditor) ToggleSpecificDay(callback *tgbotapi.Callba
 func (e *IsolatedAvailabilityEditor) EditTimeSlots(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	session, err := e.getEditSession(user.ID)
 	if err != nil {
-		return err
+		// Создаем новую сессию, если старая не найдена
+		return e.StartEditSession(callback, user)
 	}
 
 	session.CurrentStep = "time"
@@ -416,7 +438,8 @@ func (e *IsolatedAvailabilityEditor) ToggleTimeSlot(callback *tgbotapi.CallbackQ
 func (e *IsolatedAvailabilityEditor) EditCommunication(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	session, err := e.getEditSession(user.ID)
 	if err != nil {
-		return err
+		// Создаем новую сессию, если старая не найдена
+		return e.StartEditSession(callback, user)
 	}
 
 	session.CurrentStep = "communication"
@@ -489,7 +512,8 @@ func (e *IsolatedAvailabilityEditor) ToggleCommunicationStyle(callback *tgbotapi
 func (e *IsolatedAvailabilityEditor) EditFrequency(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	session, err := e.getEditSession(user.ID)
 	if err != nil {
-		return err
+		// Создаем новую сессию, если старая не найдена
+		return e.StartEditSession(callback, user)
 	}
 
 	session.CurrentStep = "frequency"
@@ -872,47 +896,47 @@ func (e *IsolatedAvailabilityEditor) formatCurrentTimeAvailability(availability 
 		return "⏰ " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
-	parts := []string{"⏰"}
-
-	// Форматируем дни
+	// Форматируем дни с эмодзи
+	var dayText string
 	switch availability.DayType {
 	case "weekdays":
-		parts = append(parts, e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeWeekdays))
+		dayText = "💼 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeWeekdays)
 	case "weekends":
-		parts = append(parts, e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeWeekends))
+		dayText = "🎉 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeWeekends)
 	case "any":
-		parts = append(parts, e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeAny))
+		dayText = "📅 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeAny)
 	case "specific":
 		if len(availability.SpecificDays) > 0 {
 			days := make([]string, len(availability.SpecificDays))
 			for i, day := range availability.SpecificDays {
 				days[i] = e.formatDayName(day, lang)
 			}
-			parts = append(parts, strings.Join(days, ", "))
+			dayText = "📅 " + strings.Join(days, ", ")
 		} else {
-			parts = append(parts, e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeAny))
+			dayText = "📅 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeAny)
 		}
 	}
 
-	// Форматируем время
+	// Форматируем время с эмодзи
+	var timeText string
 	if len(availability.TimeSlots) > 0 {
 		timeParts := make([]string, len(availability.TimeSlots))
 		for i, slot := range availability.TimeSlots {
 			switch slot {
 			case "morning":
-				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeMorning)
+				timeParts[i] = "🌅 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeMorning)
 			case "day":
-				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeDay)
+				timeParts[i] = "☀️ " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeDay)
 			case "evening":
-				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeEvening)
+				timeParts[i] = "🌆 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeEvening)
 			case "late":
-				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeLate)
+				timeParts[i] = "🌙 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeLate)
 			}
 		}
-		parts = append(parts, strings.Join(timeParts, ", "))
+		timeText = strings.Join(timeParts, ", ")
 	}
 
-	return strings.Join(parts, " ")
+	return fmt.Sprintf("⏰ %s\n🕐 %s", dayText, timeText)
 }
 
 // formatCurrentCommunicationPreferences форматирует текущие предпочтения общения
@@ -921,29 +945,27 @@ func (e *IsolatedAvailabilityEditor) formatCurrentCommunicationPreferences(prefe
 		return "💬 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
-	parts := []string{"💬"}
-
-	// Форматируем способы общения
+	// Форматируем способы общения с эмодзи
 	if len(preferences.CommunicationStyles) > 0 {
 		styleParts := make([]string, len(preferences.CommunicationStyles))
 		for i, style := range preferences.CommunicationStyles {
 			switch style {
 			case "text":
-				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommText)
+				styleParts[i] = "💬 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommText)
 			case "voice_msg":
-				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVoice)
+				styleParts[i] = "🎤 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVoice)
 			case "audio_call":
-				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommAudio)
+				styleParts[i] = "📞 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommAudio)
 			case "video_call":
-				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVideo)
+				styleParts[i] = "📹 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVideo)
 			case "meet_person":
-				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommMeet)
+				styleParts[i] = "🤝 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommMeet)
 			}
 		}
-		parts = append(parts, strings.Join(styleParts, ", "))
+		return strings.Join(styleParts, ", ")
 	}
 
-	return strings.Join(parts, " ")
+	return "💬 " + e.baseHandler.Service.Localizer.Get(lang, "none_selected")
 }
 
 // formatCurrentFrequency форматирует текущую частоту
@@ -952,18 +974,18 @@ func (e *IsolatedAvailabilityEditor) formatCurrentFrequency(preferences *models.
 		return "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
-	freqText := "📊 "
+	var freqText string
 	switch preferences.CommunicationFreq {
 	case "multiple_weekly":
-		freqText += e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqMultipleWeekly)
+		freqText = "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqMultipleWeekly)
 	case "weekly":
-		freqText += e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqWeekly)
+		freqText = "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqWeekly)
 	case "multiple_monthly":
-		freqText += e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqMultipleMonthly)
+		freqText = "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqMultipleMonthly)
 	case "flexible":
-		freqText += e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqFlexible)
+		freqText = "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqFlexible)
 	default:
-		freqText += e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqWeekly)
+		freqText = "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqWeekly)
 	}
 
 	return freqText
@@ -1099,51 +1121,71 @@ func (e *IsolatedAvailabilityEditor) createEditMenuKeyboard(session *Availabilit
 	var rows [][]tgbotapi.InlineKeyboardButton
 
 	// Кнопки редактирования
+	editDaysText := localizer.Get(lang, "edit_days")
+	if editDaysText == "edit_days" {
+		editDaysText = "📅 Edit days" // Fallback
+	}
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData(
-			"📅 "+localizer.Get(lang, "edit_days"),
+			editDaysText,
 			localization.CallbackAvailEditDays,
 		),
 	})
 
+	editTimeText := localizer.Get(lang, "edit_time")
+	if editTimeText == "edit_time" {
+		editTimeText = "🕐 Edit time" // Fallback
+	}
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData(
-			"🕐 "+localizer.Get(lang, "edit_time"),
+			editTimeText,
 			localization.CallbackAvailEditTime,
 		),
 	})
 
+	editCommText := localizer.Get(lang, "edit_communication")
+	if editCommText == "edit_communication" {
+		editCommText = "💬 Edit communication" // Fallback
+	}
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData(
-			"💬 "+localizer.Get(lang, "edit_communication"),
+			editCommText,
 			localization.CallbackAvailEditCommunication,
 		),
 	})
 
+	editFreqText := localizer.Get(lang, "edit_frequency")
+	if editFreqText == "edit_frequency" {
+		editFreqText = "📊 Edit frequency" // Fallback
+	}
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData(
-			"📊 "+localizer.Get(lang, "edit_frequency"),
+			editFreqText,
 			localization.CallbackAvailEditFrequency,
 		),
 	})
 
+	// Кнопки действий
+	var actionButtons []tgbotapi.InlineKeyboardButton
+
 	// Кнопка сохранения (только если есть изменения)
 	if len(session.Changes) > 0 {
-		rows = append(rows, []tgbotapi.InlineKeyboardButton{
-			tgbotapi.NewInlineKeyboardButtonData(
-				"✅ "+localizer.Get(lang, localization.LocaleSaveChanges),
-				localization.CallbackAvailSaveChanges,
-			),
-		})
+		actionButtons = append(actionButtons, tgbotapi.NewInlineKeyboardButtonData(
+			"✅ "+localizer.Get(lang, localization.LocaleSaveChanges),
+			localization.CallbackAvailSaveChanges,
+		))
 	}
 
 	// Кнопка отмены
-	rows = append(rows, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData(
-			"❌ "+localizer.Get(lang, localization.LocaleCancelEdit),
-			localization.CallbackAvailCancelEdit,
-		),
-	})
+	actionButtons = append(actionButtons, tgbotapi.NewInlineKeyboardButtonData(
+		"❌ "+localizer.Get(lang, localization.LocaleCancelEdit),
+		localization.CallbackAvailCancelEdit,
+	))
+
+	// Добавляем кнопки действий в отдельный ряд
+	if len(actionButtons) > 0 {
+		rows = append(rows, actionButtons)
+	}
 
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
 }
