@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"language-exchange-bot/internal/adapters/telegram/handlers/admin"
 	"language-exchange-bot/internal/adapters/telegram/handlers/availability"
@@ -980,84 +981,246 @@ func (h *TelegramHandler) handleAvailabilityCallbacks(callback *tgbotapi.Callbac
 				"user_id":       user.ID,
 				"callback_data": data,
 			})
-			return h.availabilityEditor.EditDays(callback, user)
+			if err := h.availabilityEditor.EditDays(callback, user); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in EditDays", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 		case data == "avail_edit_time":
 			h.service.LoggingService.Telegram().InfoWithContext("Handling avail_edit_time", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
 				"user_id":       user.ID,
 				"callback_data": data,
 			})
-			return h.availabilityEditor.EditTimeSlots(callback, user)
+			if err := h.availabilityEditor.EditTimeSlots(callback, user); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in EditTimeSlots", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 		case data == "avail_edit_communication":
 			h.service.LoggingService.Telegram().InfoWithContext("Handling avail_edit_communication", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
 				"user_id":       user.ID,
 				"callback_data": data,
 			})
-			return h.availabilityEditor.EditCommunication(callback, user)
+			if err := h.availabilityEditor.EditCommunication(callback, user); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in EditCommunication", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 		case data == "avail_edit_frequency":
 			h.service.LoggingService.Telegram().InfoWithContext("Handling avail_edit_frequency", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
 				"user_id":       user.ID,
 				"callback_data": data,
 			})
-			return h.availabilityEditor.EditFrequency(callback, user)
+			if err := h.availabilityEditor.EditFrequency(callback, user); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in EditFrequency", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 		case data == "avail_save_changes":
-			return h.availabilityEditor.SaveChanges(callback, user)
+			if err := h.availabilityEditor.SaveChanges(callback, user); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in SaveChanges", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 		case data == "avail_cancel_edit":
-			return h.availabilityEditor.CancelEdit(callback, user)
+			if err := h.availabilityEditor.CancelEdit(callback, user); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in CancelEdit", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 		case data == "avail_back_to_edit_menu":
 			session, err := h.availabilityEditor.GetEditSession(user.ID)
 			if err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error getting edit session", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
 				return err
 			}
-			return h.availabilityEditor.ShowEditMenu(callback, session, user)
+
+			// Сбрасываем изменения в сессии
+			// Глубокая копия TimeAvailability
+			if session.OriginalTimeAvailability != nil {
+				origTA := session.OriginalTimeAvailability
+				copiedDays := make([]string, len(origTA.SpecificDays))
+				copy(copiedDays, origTA.SpecificDays)
+				copiedSlots := make([]string, len(origTA.TimeSlots))
+				copy(copiedSlots, origTA.TimeSlots)
+				session.CurrentTimeAvailability = &models.TimeAvailability{
+					DayType:      origTA.DayType,
+					SpecificDays: copiedDays,
+					TimeSlots:    copiedSlots,
+				}
+			} else {
+				session.CurrentTimeAvailability = nil
+			}
+
+			// Глубокая копия FriendshipPreferences
+			if session.OriginalPreferences != nil {
+				origPref := session.OriginalPreferences
+				copiedStyles := make([]string, len(origPref.CommunicationStyles))
+				copy(copiedStyles, origPref.CommunicationStyles)
+				session.CurrentPreferences = &models.FriendshipPreferences{
+					ActivityType:        origPref.ActivityType,
+					CommunicationStyles: copiedStyles,
+					CommunicationFreq:   origPref.CommunicationFreq,
+				}
+			} else {
+				session.CurrentPreferences = nil
+			}
+			session.Changes = []availability.AvailabilityChange{}
+			session.CurrentStep = "menu"
+			session.LastActivity = time.Now()
+			// Сохраняем сессию напрямую через кеш
+			_ = h.service.Cache.Set(context.Background(),
+				fmt.Sprintf("availability_edit_session:%d", session.UserID),
+				session,
+				30*time.Minute,
+			)
+
+			if err := h.availabilityEditor.ShowEditMenu(callback, session, user); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in ShowEditMenu", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 
 		// Обработка выбора типа дней
 		case strings.HasPrefix(data, "avail_edit_daytype_"):
 			dayType := strings.TrimPrefix(data, "avail_edit_daytype_")
-			return h.availabilityEditor.HandleDayTypeSelection(callback, user, dayType)
+			if err := h.availabilityEditor.HandleDayTypeSelection(callback, user, dayType); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in HandleDayTypeSelection", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 
 		// Обработка выбора конкретных дней
 		case strings.HasPrefix(data, "avail_edit_day_"):
 			day := strings.TrimPrefix(data, "avail_edit_day_")
-			return h.availabilityEditor.ToggleSpecificDay(callback, user, day)
+			if err := h.availabilityEditor.ToggleSpecificDay(callback, user, day); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in ToggleSpecificDay", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 
 		// Обработка применения дней
 		case data == "avail_apply_days":
 			session, err := h.availabilityEditor.GetEditSession(user.ID)
 			if err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error getting edit session for apply_days", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
 				return err
 			}
-			return h.availabilityEditor.ShowEditMenu(callback, session, user)
+			if err := h.availabilityEditor.ShowEditMenu(callback, session, user); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in ShowEditMenu for apply_days", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 
 		// Обработка выбора временных слотов
 		case strings.HasPrefix(data, "avail_edit_timeslot_"):
 			slot := strings.TrimPrefix(data, "avail_edit_timeslot_")
-			return h.availabilityEditor.ToggleTimeSlot(callback, user, slot)
+			if err := h.availabilityEditor.ToggleTimeSlot(callback, user, slot); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in ToggleTimeSlot", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 
 		// Обработка применения времени
 		case data == "avail_apply_time":
 			session, err := h.availabilityEditor.GetEditSession(user.ID)
 			if err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error getting edit session for apply_time", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
 				return err
 			}
-			return h.availabilityEditor.ShowEditMenu(callback, session, user)
+			if err := h.availabilityEditor.ShowEditMenu(callback, session, user); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in ShowEditMenu for apply_time", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 
 		// Обработка выбора стилей общения
 		case strings.HasPrefix(data, "avail_edit_commstyle_"):
 			style := strings.TrimPrefix(data, "avail_edit_commstyle_")
-			return h.availabilityEditor.ToggleCommunicationStyle(callback, user, style)
+			if err := h.availabilityEditor.ToggleCommunicationStyle(callback, user, style); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in ToggleCommunicationStyle", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 
 		// Обработка применения общения
 		case data == "avail_apply_communication":
 			session, err := h.availabilityEditor.GetEditSession(user.ID)
 			if err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error getting edit session for apply_communication", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
 				return err
 			}
-			return h.availabilityEditor.ShowEditMenu(callback, session, user)
+			if err := h.availabilityEditor.ShowEditMenu(callback, session, user); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in ShowEditMenu for apply_communication", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 
 		// Обработка выбора частоты
 		case strings.HasPrefix(data, "avail_edit_freq_"):
 			freq := strings.TrimPrefix(data, "avail_edit_freq_")
-			return h.availabilityEditor.HandleFrequencySelection(callback, user, freq)
+			if err := h.availabilityEditor.HandleFrequencySelection(callback, user, freq); err != nil {
+				h.service.LoggingService.Telegram().ErrorWithContext("Error in HandleFrequencySelection", "", int64(user.ID), callback.Message.Chat.ID, "AvailabilityCallback", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+				return err
+			}
+			return nil
 
 		// Обработка setup flow
 		case data == "availability_proceed_to_time":

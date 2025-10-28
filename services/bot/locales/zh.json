@@ -129,12 +129,12 @@
   "comm_meet": "面对面会议",
   
   "freq_spontaneous": "自发地",
-  "freq_weekly": "每周",
+  "freq_weekly": "📊 每周",
   "freq_daily": "每天",
   "freq_intensive": "密集地",
-  "freq_multiple_weekly": "每周多次",
-  "freq_multiple_monthly": "每月多次",
-  "freq_flexible": "灵活",
+  "freq_multiple_weekly": "📈 每周多次",
+  "freq_multiple_monthly": "📅 每月多次",
+  "freq_flexible": "🔄 灵活",
   
   "status_new": "新用户",
   "status_filling": "填写资料",

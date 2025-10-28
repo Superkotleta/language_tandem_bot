@@ -2,7 +2,6 @@ package availability
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -332,23 +331,32 @@ func (e *IsolatedAvailabilityEditor) ToggleSpecificDay(callback *tgbotapi.Callba
 		return err
 	}
 
+	// Убираем префикс _ если он есть
+	cleanDay := strings.TrimPrefix(day, "_")
+
 	// Переключаем день в массиве
 	days := session.CurrentTimeAvailability.SpecificDays
 	dayIndex := -1
 	for i, d := range days {
-		if d == day {
+		if d == cleanDay {
 			dayIndex = i
 			break
 		}
 	}
+
+	oldDays := make([]string, len(days))
+	copy(oldDays, days)
 
 	if dayIndex >= 0 {
 		// Удаляем день
 		session.CurrentTimeAvailability.SpecificDays = append(days[:dayIndex], days[dayIndex+1:]...)
 	} else {
 		// Добавляем день
-		session.CurrentTimeAvailability.SpecificDays = append(days, day)
+		session.CurrentTimeAvailability.SpecificDays = append(days, cleanDay)
 	}
+
+	// Записываем изменение
+	e.recordChange(session, "specific_days", oldDays, session.CurrentTimeAvailability.SpecificDays)
 
 	session.LastActivity = time.Now()
 	e.saveEditSession(session)
@@ -362,8 +370,18 @@ func (e *IsolatedAvailabilityEditor) ToggleSpecificDay(callback *tgbotapi.Callba
 
 // EditTimeSlots переходит к редактированию временных слотов
 func (e *IsolatedAvailabilityEditor) EditTimeSlots(callback *tgbotapi.CallbackQuery, user *models.User) error {
+	loggingService := e.baseHandler.Service.LoggingService
+
+	loggingService.Telegram().InfoWithContext("EditTimeSlots called", "", int64(user.ID), callback.Message.Chat.ID, "EditTimeSlots", map[string]interface{}{
+		"user_id": user.ID,
+	})
+
 	session, err := e.getEditSession(user.ID)
 	if err != nil {
+		loggingService.Telegram().WarnWithContext("Failed to get edit session in EditTimeSlots, creating new session", "", int64(user.ID), callback.Message.Chat.ID, "EditTimeSlots", map[string]interface{}{
+			"user_id": user.ID,
+			"error":   err.Error(),
+		})
 		// Создаем новую сессию, если старая не найдена
 		return e.StartEditSession(callback, user)
 	}
@@ -371,6 +389,11 @@ func (e *IsolatedAvailabilityEditor) EditTimeSlots(callback *tgbotapi.CallbackQu
 	session.CurrentStep = "time"
 	session.LastActivity = time.Now()
 	e.saveEditSession(session)
+
+	loggingService.Telegram().InfoWithContext("EditTimeSlots proceeding to ShowTimeSlotsSelection", "", int64(user.ID), callback.Message.Chat.ID, "EditTimeSlots", map[string]interface{}{
+		"user_id":      user.ID,
+		"current_step": session.CurrentStep,
+	})
 
 	return e.ShowTimeSlotsSelection(callback, session, user)
 }
@@ -406,23 +429,32 @@ func (e *IsolatedAvailabilityEditor) ToggleTimeSlot(callback *tgbotapi.CallbackQ
 		return err
 	}
 
+	// Убираем префикс _ если он есть
+	cleanSlot := strings.TrimPrefix(slot, "_")
+
 	// Переключаем слот в массиве
 	slots := session.CurrentTimeAvailability.TimeSlots
 	slotIndex := -1
 	for i, s := range slots {
-		if s == slot {
+		if s == cleanSlot {
 			slotIndex = i
 			break
 		}
 	}
+
+	oldSlots := make([]string, len(slots))
+	copy(oldSlots, slots)
 
 	if slotIndex >= 0 {
 		// Удаляем слот
 		session.CurrentTimeAvailability.TimeSlots = append(slots[:slotIndex], slots[slotIndex+1:]...)
 	} else {
 		// Добавляем слот
-		session.CurrentTimeAvailability.TimeSlots = append(slots, slot)
+		session.CurrentTimeAvailability.TimeSlots = append(slots, cleanSlot)
 	}
+
+	// Записываем изменение
+	e.recordChange(session, "time_slots", oldSlots, session.CurrentTimeAvailability.TimeSlots)
 
 	session.LastActivity = time.Now()
 	e.saveEditSession(session)
@@ -475,31 +507,64 @@ func (e *IsolatedAvailabilityEditor) ShowCommunicationSelection(callback *tgbota
 
 // ToggleCommunicationStyle переключает выбор способа общения
 func (e *IsolatedAvailabilityEditor) ToggleCommunicationStyle(callback *tgbotapi.CallbackQuery, user *models.User, style string) error {
+	loggingService := e.baseHandler.Service.LoggingService
+
+	loggingService.Telegram().InfoWithContext("ToggleCommunicationStyle called", "", int64(user.ID), callback.Message.Chat.ID, "ToggleCommunicationStyle", map[string]interface{}{
+		"user_id": user.ID,
+		"style":   style,
+	})
+
 	session, err := e.getEditSession(user.ID)
 	if err != nil {
+		loggingService.Telegram().ErrorWithContext("Failed to get edit session in ToggleCommunicationStyle", "", int64(user.ID), callback.Message.Chat.ID, "ToggleCommunicationStyle", map[string]interface{}{
+			"user_id": user.ID,
+			"error":   err.Error(),
+		})
 		return err
 	}
+
+	// Убираем префикс _ если он есть
+	cleanStyle := strings.TrimPrefix(style, "_")
 
 	// Переключаем стиль в массиве
 	styles := session.CurrentPreferences.CommunicationStyles
 	styleIndex := -1
 	for i, s := range styles {
-		if s == style {
+		if s == cleanStyle {
 			styleIndex = i
 			break
 		}
 	}
 
+	oldStyles := make([]string, len(styles))
+	copy(oldStyles, styles)
+
 	if styleIndex >= 0 {
 		// Удаляем стиль
 		session.CurrentPreferences.CommunicationStyles = append(styles[:styleIndex], styles[styleIndex+1:]...)
+		loggingService.Telegram().InfoWithContext("Removed communication style", "", int64(user.ID), callback.Message.Chat.ID, "ToggleCommunicationStyle", map[string]interface{}{
+			"user_id": user.ID,
+			"style":   cleanStyle,
+		})
 	} else {
 		// Добавляем стиль
-		session.CurrentPreferences.CommunicationStyles = append(styles, style)
+		session.CurrentPreferences.CommunicationStyles = append(styles, cleanStyle)
+		loggingService.Telegram().InfoWithContext("Added communication style", "", int64(user.ID), callback.Message.Chat.ID, "ToggleCommunicationStyle", map[string]interface{}{
+			"user_id": user.ID,
+			"style":   cleanStyle,
+		})
 	}
+
+	// Записываем изменение
+	e.recordChange(session, "communication_styles", oldStyles, session.CurrentPreferences.CommunicationStyles)
 
 	session.LastActivity = time.Now()
 	e.saveEditSession(session)
+
+	loggingService.Telegram().InfoWithContext("ToggleCommunicationStyle completed successfully", "", int64(user.ID), callback.Message.Chat.ID, "ToggleCommunicationStyle", map[string]interface{}{
+		"user_id": user.ID,
+		"style":   cleanStyle,
+	})
 
 	return e.ShowCommunicationSelection(callback, session, user)
 }
@@ -573,8 +638,19 @@ func (e *IsolatedAvailabilityEditor) ShowFrequencySelection(callback *tgbotapi.C
 
 // HandleFrequencySelection обрабатывает выбор частоты
 func (e *IsolatedAvailabilityEditor) HandleFrequencySelection(callback *tgbotapi.CallbackQuery, user *models.User, frequency string) error {
+	loggingService := e.baseHandler.Service.LoggingService
+
+	loggingService.Telegram().InfoWithContext("HandleFrequencySelection called", "", int64(user.ID), callback.Message.Chat.ID, "HandleFrequencySelection", map[string]interface{}{
+		"user_id":   user.ID,
+		"frequency": frequency,
+	})
+
 	session, err := e.getEditSession(user.ID)
 	if err != nil {
+		loggingService.Telegram().ErrorWithContext("Failed to get edit session in HandleFrequencySelection", "", int64(user.ID), callback.Message.Chat.ID, "HandleFrequencySelection", map[string]interface{}{
+			"user_id": user.ID,
+			"error":   err.Error(),
+		})
 		return err
 	}
 
@@ -585,6 +661,11 @@ func (e *IsolatedAvailabilityEditor) HandleFrequencySelection(callback *tgbotapi
 	session.CurrentPreferences.CommunicationFreq = frequency
 	session.LastActivity = time.Now()
 	e.saveEditSession(session)
+
+	loggingService.Telegram().InfoWithContext("HandleFrequencySelection completed successfully", "", int64(user.ID), callback.Message.Chat.ID, "HandleFrequencySelection", map[string]interface{}{
+		"user_id":   user.ID,
+		"frequency": frequency,
+	})
 
 	return e.ShowEditMenu(callback, session, user)
 }
@@ -774,19 +855,15 @@ func (e *IsolatedAvailabilityEditor) GetEditSession(userID int) (*AvailabilityEd
 func (e *IsolatedAvailabilityEditor) getEditSession(userID int) (*AvailabilityEditSession, error) {
 	cacheKey := fmt.Sprintf("availability_edit_session:%d", userID)
 
-	var data string
-	err := e.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &data)
+	var session AvailabilityEditSession
+	err := e.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &session)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get edit session from cache: %w", err)
 	}
 
-	if data == "" {
-		return nil, fmt.Errorf("edit session not found")
-	}
-
-	var session AvailabilityEditSession
-	if err := json.Unmarshal([]byte(data), &session); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal edit session: %w", err)
+	// Проверяем, что сессия не пустая (пользователь ID должен быть больше 0)
+	if session.UserID == 0 {
+		return nil, fmt.Errorf("edit session not found or empty")
 	}
 
 	return &session, nil
@@ -924,13 +1001,13 @@ func (e *IsolatedAvailabilityEditor) formatCurrentTimeAvailability(availability 
 		for i, slot := range availability.TimeSlots {
 			switch slot {
 			case "morning":
-				timeParts[i] = "🌅 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeMorning)
+				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeMorning)
 			case "day":
-				timeParts[i] = "☀️ " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeDay)
+				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeDay)
 			case "evening":
-				timeParts[i] = "🌆 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeEvening)
+				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeEvening)
 			case "late":
-				timeParts[i] = "🌙 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeLate)
+				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeLate)
 			}
 		}
 		timeText = strings.Join(timeParts, ", ")
@@ -951,15 +1028,15 @@ func (e *IsolatedAvailabilityEditor) formatCurrentCommunicationPreferences(prefe
 		for i, style := range preferences.CommunicationStyles {
 			switch style {
 			case "text":
-				styleParts[i] = "💬 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommText)
+				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommText)
 			case "voice_msg":
-				styleParts[i] = "🎤 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVoice)
+				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVoice)
 			case "audio_call":
-				styleParts[i] = "📞 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommAudio)
+				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommAudio)
 			case "video_call":
-				styleParts[i] = "📹 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVideo)
+				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVideo)
 			case "meet_person":
-				styleParts[i] = "🤝 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommMeet)
+				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommMeet)
 			}
 		}
 		return strings.Join(styleParts, ", ")
@@ -1007,7 +1084,10 @@ func (e *IsolatedAvailabilityEditor) formatSelectedDays(days []string, lang stri
 
 // formatDayName форматирует название дня
 func (e *IsolatedAvailabilityEditor) formatDayName(day, lang string) string {
-	switch day {
+	// Убираем префикс _ если он есть
+	cleanDay := strings.TrimPrefix(day, "_")
+
+	switch cleanDay {
 	case "monday":
 		return e.baseHandler.Service.Localizer.Get(lang, "day_monday")
 	case "tuesday":
@@ -1029,12 +1109,20 @@ func (e *IsolatedAvailabilityEditor) formatDayName(day, lang string) string {
 
 // formatSelectedTimeSlots форматирует выбранные временные слоты
 func (e *IsolatedAvailabilityEditor) formatSelectedTimeSlots(slots []string, lang string) string {
-	if len(slots) == 0 {
+	// Фильтруем пустые значения
+	var validSlots []string
+	for _, slot := range slots {
+		if strings.TrimSpace(slot) != "" {
+			validSlots = append(validSlots, slot)
+		}
+	}
+
+	if len(validSlots) == 0 {
 		return e.baseHandler.Service.Localizer.Get(lang, "none_selected")
 	}
 
-	slotNames := make([]string, len(slots))
-	for i, slot := range slots {
+	slotNames := make([]string, len(validSlots))
+	for i, slot := range validSlots {
 		switch slot {
 		case "morning":
 			slotNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeMorning)
@@ -1054,12 +1142,20 @@ func (e *IsolatedAvailabilityEditor) formatSelectedTimeSlots(slots []string, lan
 
 // formatSelectedCommunicationStyles форматирует выбранные способы общения
 func (e *IsolatedAvailabilityEditor) formatSelectedCommunicationStyles(styles []string, lang string) string {
-	if len(styles) == 0 {
+	// Фильтруем пустые значения
+	var validStyles []string
+	for _, style := range styles {
+		if strings.TrimSpace(style) != "" {
+			validStyles = append(validStyles, style)
+		}
+	}
+
+	if len(validStyles) == 0 {
 		return e.baseHandler.Service.Localizer.Get(lang, "none_selected")
 	}
 
-	styleNames := make([]string, len(styles))
-	for i, style := range styles {
+	styleNames := make([]string, len(validStyles))
+	for i, style := range validStyles {
 		switch style {
 		case "text":
 			styleNames[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommText)
@@ -1277,7 +1373,7 @@ func (e *IsolatedAvailabilityEditor) createTimeSlotsKeyboard(session *Availabili
 			slotText = localizer.Get(lang, localization.LocaleTimeLate)
 		}
 
-		buttonText := fmt.Sprintf("%s 🌅 %s", symbol, slotText)
+		buttonText := fmt.Sprintf("%s %s", symbol, slotText)
 		callbackData := fmt.Sprintf("%s_%s", localization.CallbackPrefixAvailEditTimeSlot, slot)
 
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
@@ -1332,21 +1428,7 @@ func (e *IsolatedAvailabilityEditor) createCommunicationKeyboard(session *Availa
 			styleText = localizer.Get(lang, localization.LocaleCommMeet)
 		}
 
-		var emoji string
-		switch style {
-		case "text":
-			emoji = "💬"
-		case "voice_msg":
-			emoji = "🎤"
-		case "audio_call":
-			emoji = "📞"
-		case "video_call":
-			emoji = "📹"
-		case "meet_person":
-			emoji = "🤝"
-		}
-
-		buttonText := fmt.Sprintf("%s %s %s", symbol, emoji, styleText)
+		buttonText := fmt.Sprintf("%s %s", symbol, styleText)
 		callbackData := fmt.Sprintf("%s_%s", localization.CallbackPrefixAvailEditCommStyle, style)
 
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(

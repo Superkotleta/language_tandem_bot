@@ -166,12 +166,12 @@
   "comm_meet": "in-person meetings",
   
   "freq_spontaneous": "spontaneously",
-  "freq_weekly": "weekly",
-  "freq_daily": "daily",
-  "freq_intensive": "intensively",
-  "freq_multiple_weekly": "multiple times per week",
-  "freq_multiple_monthly": "multiple times per month",
-  "freq_flexible": "flexible",
+  "freq_weekly": "📊 weekly",
+  "freq_daily": "📅 daily",
+  "freq_intensive": "⚡ intensively",
+  "freq_multiple_weekly": "📈 multiple times per week",
+  "freq_multiple_monthly": "📅 multiple times per month",
+  "freq_flexible": "🔄 flexible",
   
   "status_new": "New",
   "status_filling": "Filling profile",

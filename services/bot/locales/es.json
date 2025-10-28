@@ -128,12 +128,12 @@
   "comm_meet": "reuniones presenciales",
   
   "freq_spontaneous": "espontáneamente",
-  "freq_weekly": "semanalmente",
+  "freq_weekly": "📊 semanalmente",
   "freq_daily": "diariamente",
   "freq_intensive": "intensivamente",
-  "freq_multiple_weekly": "múltiples veces por semana",
-  "freq_multiple_monthly": "múltiples veces por mes",
-  "freq_flexible": "flexible",
+  "freq_multiple_weekly": "📈 múltiples veces por semana",
+  "freq_multiple_monthly": "📅 múltiples veces por mes",
+  "freq_flexible": "🔄 flexible",
   
   "status_new": "Nuevo",
   "status_filling": "Completando perfil",
