@@ -10,6 +10,7 @@ import (
 	"language-exchange-bot/internal/models"
 
 	"language-exchange-bot/internal/adapters/telegram/handlers/base"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -24,6 +25,7 @@ type NewInterestHandler interface {
 	HandleInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error
 	HandlePrimaryInterestsContinue(callback *tgbotapi.CallbackQuery, user *models.User) error
 	HandleBackToInterests(callback *tgbotapi.CallbackQuery, user *models.User) error
+	ShowPrimaryInterestsSelection(callback *tgbotapi.CallbackQuery, user *models.User) error
 }
 
 // NewInterestHandlerImpl реализация нового обработчика интересов.
@@ -276,6 +278,11 @@ func (h *NewInterestHandlerImpl) HandleInterestsContinue(callback *tgbotapi.Call
 	}
 
 	// Переходим к выбору основных интересов
+	return h.showPrimaryInterestsSelection(callback, user)
+}
+
+// ShowPrimaryInterestsSelection показывает интерфейс выбора основных интересов (публичный метод).
+func (h *NewInterestHandlerImpl) ShowPrimaryInterestsSelection(callback *tgbotapi.CallbackQuery, user *models.User) error {
 	return h.showPrimaryInterestsSelection(callback, user)
 }
 

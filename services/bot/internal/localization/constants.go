@@ -143,10 +143,10 @@ const (
 // Keyboard Symbols
 // Used in: services/bot/internal/adapters/telegram/keyboard_helpers.go.
 const (
-	SymbolUnchecked = "☐ " // Unchecked symbol
-	SymbolChecked   = "✅ " // Checked symbol
+	SymbolUnchecked = "☑ " // Unchecked symbol (gray checkmark)
+	SymbolChecked   = "✅ " // Checked symbol (green checkmark)
 	SymbolStar      = "⭐ " // Star symbol
-	SymbolEmpty     = "☐"  // Empty symbol (without space)
+	SymbolEmpty     = "☑"  // Empty symbol (without space) (gray checkmark)
 )
 
 // Profile Completion

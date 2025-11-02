@@ -973,15 +973,21 @@ func (e *IsolatedAvailabilityEditor) formatCurrentTimeAvailability(availability 
 		return "⏰ " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
-	// Форматируем дни с эмодзи
+	localizer := e.baseHandler.Service.Localizer
+
+	// Форматируем дни с эмодзи и описанием
 	var dayText string
+	var dayDesc string
 	switch availability.DayType {
 	case "weekdays":
-		dayText = "💼 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeWeekdays)
+		dayText = "💼 " + localizer.Get(lang, localization.LocaleTimeWeekdays)
+		dayDesc = localizer.Get(lang, "day_type_weekdays_desc")
 	case "weekends":
-		dayText = "🎉 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeWeekends)
+		dayText = "🎉 " + localizer.Get(lang, localization.LocaleTimeWeekends)
+		dayDesc = localizer.Get(lang, "day_type_weekends_desc")
 	case "any":
-		dayText = "📅 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeAny)
+		dayText = "📅 " + localizer.Get(lang, localization.LocaleTimeAny)
+		dayDesc = localizer.Get(lang, "day_type_any_desc")
 	case "specific":
 		if len(availability.SpecificDays) > 0 {
 			days := make([]string, len(availability.SpecificDays))
@@ -989,31 +995,55 @@ func (e *IsolatedAvailabilityEditor) formatCurrentTimeAvailability(availability 
 				days[i] = e.formatDayName(day, lang)
 			}
 			dayText = "📅 " + strings.Join(days, ", ")
+			dayDesc = "" // Для конкретных дней описание не нужно
 		} else {
-			dayText = "📅 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeAny)
+			dayText = "📅 " + localizer.Get(lang, localization.LocaleTimeAny)
+			dayDesc = localizer.Get(lang, "day_type_any_desc")
 		}
 	}
 
-	// Форматируем время с эмодзи
-	var timeText string
+	// Форматируем время с эмодзи и описанием
+	var timeTextParts []string
+	var timeDescParts []string
 	if len(availability.TimeSlots) > 0 {
-		timeParts := make([]string, len(availability.TimeSlots))
-		for i, slot := range availability.TimeSlots {
+		for _, slot := range availability.TimeSlots {
+			var slotText string
+			var slotDesc string
 			switch slot {
 			case "morning":
-				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeMorning)
+				slotText = localizer.Get(lang, localization.LocaleTimeMorning)
+				slotDesc = localizer.Get(lang, "time_morning_desc")
 			case "day":
-				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeDay)
+				slotText = localizer.Get(lang, localization.LocaleTimeDay)
+				slotDesc = localizer.Get(lang, "time_day_desc")
 			case "evening":
-				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeEvening)
+				slotText = localizer.Get(lang, localization.LocaleTimeEvening)
+				slotDesc = localizer.Get(lang, "time_evening_desc")
 			case "late":
-				timeParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleTimeLate)
+				slotText = localizer.Get(lang, localization.LocaleTimeLate)
+				slotDesc = localizer.Get(lang, "time_late_desc")
+			}
+			if slotText != "" {
+				timeTextParts = append(timeTextParts, slotText)
+				if slotDesc != "" {
+					timeDescParts = append(timeDescParts, slotDesc)
+				}
 			}
 		}
-		timeText = strings.Join(timeParts, ", ")
 	}
 
-	return fmt.Sprintf("⏰ %s\n🕐 %s", dayText, timeText)
+	result := fmt.Sprintf("⏰ %s", dayText)
+	if dayDesc != "" {
+		result += fmt.Sprintf("\n   %s", dayDesc)
+	}
+	if len(timeTextParts) > 0 {
+		result += fmt.Sprintf("\n\n🕐 %s", strings.Join(timeTextParts, ", "))
+		if len(timeDescParts) > 0 {
+			result += "\n   " + strings.Join(timeDescParts, ", ")
+		}
+	}
+
+	return result
 }
 
 // formatCurrentCommunicationPreferences форматирует текущие предпочтения общения
@@ -1022,27 +1052,47 @@ func (e *IsolatedAvailabilityEditor) formatCurrentCommunicationPreferences(prefe
 		return "💬 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
-	// Форматируем способы общения с эмодзи
+	localizer := e.baseHandler.Service.Localizer
+
+	// Форматируем способы общения с эмодзи и описанием
 	if len(preferences.CommunicationStyles) > 0 {
-		styleParts := make([]string, len(preferences.CommunicationStyles))
-		for i, style := range preferences.CommunicationStyles {
+		styleTextParts := make([]string, 0, len(preferences.CommunicationStyles))
+		styleDescParts := make([]string, 0, len(preferences.CommunicationStyles))
+		for _, style := range preferences.CommunicationStyles {
+			var styleText string
+			var styleDesc string
 			switch style {
 			case "text":
-				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommText)
+				styleText = localizer.Get(lang, localization.LocaleCommText)
+				styleDesc = localizer.Get(lang, "comm_text_desc")
 			case "voice_msg":
-				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVoice)
+				styleText = localizer.Get(lang, localization.LocaleCommVoice)
+				styleDesc = localizer.Get(lang, "comm_voice_desc")
 			case "audio_call":
-				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommAudio)
+				styleText = localizer.Get(lang, localization.LocaleCommAudio)
+				styleDesc = localizer.Get(lang, "comm_audio_desc")
 			case "video_call":
-				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommVideo)
+				styleText = localizer.Get(lang, localization.LocaleCommVideo)
+				styleDesc = localizer.Get(lang, "comm_video_desc")
 			case "meet_person":
-				styleParts[i] = e.baseHandler.Service.Localizer.Get(lang, localization.LocaleCommMeet)
+				styleText = localizer.Get(lang, localization.LocaleCommMeet)
+				styleDesc = localizer.Get(lang, "comm_meet_desc")
+			}
+			if styleText != "" {
+				styleTextParts = append(styleTextParts, styleText)
+				if styleDesc != "" {
+					styleDescParts = append(styleDescParts, styleDesc)
+				}
 			}
 		}
-		return strings.Join(styleParts, ", ")
+		result := "💬 " + strings.Join(styleTextParts, ", ")
+		if len(styleDescParts) > 0 {
+			result += "\n   " + strings.Join(styleDescParts, ", ")
+		}
+		return result
 	}
 
-	return "💬 " + e.baseHandler.Service.Localizer.Get(lang, "none_selected")
+	return "💬 " + localizer.Get(lang, "none_selected")
 }
 
 // formatCurrentFrequency форматирует текущую частоту
@@ -1051,21 +1101,34 @@ func (e *IsolatedAvailabilityEditor) formatCurrentFrequency(preferences *models.
 		return "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleErrorInvalidAvailabilityData)
 	}
 
+	localizer := e.baseHandler.Service.Localizer
+
 	var freqText string
+	var freqDesc string
 	switch preferences.CommunicationFreq {
 	case "multiple_weekly":
-		freqText = "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqMultipleWeekly)
+		freqText = localizer.Get(lang, localization.LocaleFreqMultipleWeekly)
+		freqDesc = localizer.Get(lang, "freq_multiple_weekly_desc")
 	case "weekly":
-		freqText = "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqWeekly)
+		freqText = localizer.Get(lang, localization.LocaleFreqWeekly)
+		freqDesc = localizer.Get(lang, "freq_weekly_desc")
 	case "multiple_monthly":
-		freqText = "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqMultipleMonthly)
+		freqText = localizer.Get(lang, localization.LocaleFreqMultipleMonthly)
+		freqDesc = localizer.Get(lang, "freq_multiple_monthly_desc")
 	case "flexible":
-		freqText = "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqFlexible)
+		freqText = localizer.Get(lang, localization.LocaleFreqFlexible)
+		freqDesc = localizer.Get(lang, "freq_flexible_desc")
 	default:
-		freqText = "📊 " + e.baseHandler.Service.Localizer.Get(lang, localization.LocaleFreqWeekly)
+		freqText = localizer.Get(lang, localization.LocaleFreqWeekly)
+		freqDesc = localizer.Get(lang, "freq_weekly_desc")
 	}
 
-	return freqText
+	result := fmt.Sprintf("📊 %s", freqText)
+	if freqDesc != "" {
+		result += fmt.Sprintf("\n   %s", freqDesc)
+	}
+
+	return result
 }
 
 // formatSelectedDays форматирует выбранные дни
@@ -1304,9 +1367,9 @@ func (e *IsolatedAvailabilityEditor) createSpecificDaysKeyboard(session *Availab
 		// Первая колонка
 		if i < len(days) {
 			day := days[i]
-			symbol := "☐"
+			symbol := "☑"
 			if selectedDays[day] {
-				symbol = "☑"
+				symbol = "✅"
 			}
 			buttonText := fmt.Sprintf("%s %s", symbol, e.formatDayName(day, lang))
 			callbackData := fmt.Sprintf("%s_%s", localization.CallbackPrefixAvailEditDay, day)
@@ -1316,9 +1379,9 @@ func (e *IsolatedAvailabilityEditor) createSpecificDaysKeyboard(session *Availab
 		// Вторая колонка
 		if i+1 < len(days) {
 			day := days[i+1]
-			symbol := "☐"
+			symbol := "☑"
 			if selectedDays[day] {
-				symbol = "☑"
+				symbol = "✅"
 			}
 			buttonText := fmt.Sprintf("%s %s", symbol, e.formatDayName(day, lang))
 			callbackData := fmt.Sprintf("%s_%s", localization.CallbackPrefixAvailEditDay, day)
@@ -1356,9 +1419,9 @@ func (e *IsolatedAvailabilityEditor) createTimeSlotsKeyboard(session *Availabili
 	// Временные слоты
 	slots := []string{"morning", "day", "evening", "late"}
 	for _, slot := range slots {
-		symbol := "☐"
+		symbol := "☑"
 		if selectedSlots[slot] {
-			symbol = "☑"
+			symbol = "✅"
 		}
 
 		var slotText string
@@ -1409,9 +1472,9 @@ func (e *IsolatedAvailabilityEditor) createCommunicationKeyboard(session *Availa
 	// Способы общения
 	styles := []string{"text", "voice_msg", "audio_call", "video_call", "meet_person"}
 	for _, style := range styles {
-		symbol := "☐"
+		symbol := "☑"
 		if selectedStyles[style] {
-			symbol = "☑"
+			symbol = "✅"
 		}
 
 		var styleText string

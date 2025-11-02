@@ -307,5 +307,22 @@
   "friendship_preferences_intro": "🤝 Communication Preferences\n\nTell us about your communication preferences.",
   "availability_setup_complete": "Availability setup completed!",
   "profile_completed": "Profile fully completed",
-  "profile_show": "Show Profile"
+  "profile_show": "Show Profile",
+  
+  "day_type_weekends_desc": "Weekends — Saturday and Sunday",
+  "day_type_weekdays_desc": "Weekdays — Monday through Friday",
+  "day_type_any_desc": "Any time — available any day of the week",
+  "time_morning_desc": "🌅 Morning — approximately 6:00 AM to 12:00 PM",
+  "time_day_desc": "☀️ Day — approximately 12:00 PM to 6:00 PM",
+  "time_evening_desc": "🌆 Evening — approximately 6:00 PM to 11:00 PM",
+  "time_late_desc": "🌙 Late — after 11:00 PM",
+  "comm_text_desc": "💬 Text — communication through text messages in Telegram",
+  "comm_video_desc": "📹 Video calls — communication through video calls",
+  "comm_audio_desc": "📞 Audio calls — communication through voice calls",
+  "comm_voice_desc": "🎤 Voice — communication through voice messages",
+  "comm_meet_desc": "👥 In-person meetings — communication during personal meetings",
+  "freq_weekly_desc": "📊 Weekly — communication approximately once a week",
+  "freq_multiple_weekly_desc": "📈 Multiple times per week — communication 2-3 times per week",
+  "freq_multiple_monthly_desc": "📅 Multiple times per month — communication several times per month",
+  "freq_flexible_desc": "🔄 Flexible — communication frequency by agreement"
 }

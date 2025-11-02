@@ -11,6 +11,7 @@ import (
 	"language-exchange-bot/internal/models"
 
 	"language-exchange-bot/internal/adapters/telegram/handlers/base"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -170,6 +171,9 @@ func (h *AvailabilityHandlerImpl) HandleTimeAvailabilityStart(callback *tgbotapi
 				localizer.Get(lang, "select_specific_days_button"),
 				"availability_daytype_specific",
 			),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			h.baseHandler.KeyboardBuilder.CreateBackButton(lang, "back_to_primary_interests"),
 		),
 	)
 
@@ -373,9 +377,9 @@ func (h *AvailabilityHandlerImpl) ShowSpecificDaysSelection(callback *tgbotapi.C
 		// Первая колонка
 		if i < len(days) {
 			day := days[i]
-			symbol := "☐"
+			symbol := "☑"
 			if selectedDaysMap[day] {
-				symbol = "☑"
+				symbol = "✅"
 			}
 			var dayName string
 			switch day {
@@ -401,9 +405,9 @@ func (h *AvailabilityHandlerImpl) ShowSpecificDaysSelection(callback *tgbotapi.C
 		// Вторая колонка
 		if i+1 < len(days) {
 			day := days[i+1]
-			symbol := "☐"
+			symbol := "☑"
 			if selectedDaysMap[day] {
-				symbol = "☑"
+				symbol = "✅"
 			}
 			var dayName string
 			switch day {
@@ -449,6 +453,134 @@ func (h *AvailabilityHandlerImpl) ShowSpecificDaysSelection(callback *tgbotapi.C
 	_, err = h.baseHandler.Bot.Send(editMsg)
 	if err != nil {
 		loggingService.ErrorWithContext("Failed to edit message", "", int64(user.ID), callback.Message.Chat.ID, "ShowSpecificDaysSelection", map[string]interface{}{
+			"user_id": user.ID,
+			"error":   err.Error(),
+		})
+		return err
+	}
+
+	return nil
+}
+
+// ShowTimeSlotSelectionWithError shows time slot selection interface with an error message
+func (h *AvailabilityHandlerImpl) ShowTimeSlotSelectionWithError(callback *tgbotapi.CallbackQuery, user *models.User, errorKey string) error {
+	loggingService := h.baseHandler.Service.LoggingService.Telegram()
+	lang := user.InterfaceLanguageCode
+	localizer := h.baseHandler.Service.Localizer
+
+	// Получаем данные из кеша
+	cacheKey := fmt.Sprintf("availability_setup:%d", user.ID)
+	var setupDataStr string
+	var setupData map[string]interface{}
+
+	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
+	if err == nil {
+		// Если данные есть, используем их
+		err = json.Unmarshal([]byte(setupDataStr), &setupData)
+		if err != nil {
+			setupData = make(map[string]interface{})
+		}
+	} else {
+		setupData = make(map[string]interface{})
+	}
+
+	var timeSlots []interface{}
+	if slots, ok := setupData["time_slots"].([]interface{}); ok {
+		timeSlots = slots
+	}
+	selectedSlots := make([]string, 0)
+	for _, t := range timeSlots {
+		if t != nil {
+			if slot, ok := t.(string); ok && slot != "" {
+				selectedSlots = append(selectedSlots, slot)
+			}
+		}
+	}
+
+	// Сортируем слоты по порядку времени суток для отображения
+	timeOrder := []string{"morning", "day", "evening", "late"}
+	selectedSlotsMap := make(map[string]bool)
+	for _, slot := range selectedSlots {
+		selectedSlotsMap[slot] = true
+	}
+
+	var sortedSlotNames []string
+	for _, slot := range timeOrder {
+		if selectedSlotsMap[slot] {
+			switch slot {
+			case "morning":
+				sortedSlotNames = append(sortedSlotNames, localizer.Get(lang, localization.LocaleTimeMorning))
+			case "day":
+				sortedSlotNames = append(sortedSlotNames, localizer.Get(lang, localization.LocaleTimeDay))
+			case "evening":
+				sortedSlotNames = append(sortedSlotNames, localizer.Get(lang, localization.LocaleTimeEvening))
+			case "late":
+				sortedSlotNames = append(sortedSlotNames, localizer.Get(lang, localization.LocaleTimeLate))
+			}
+		}
+	}
+
+	// Форматируем выбранные слоты
+	selectedSlotsText := localizer.Get(lang, "none_selected")
+	if len(sortedSlotNames) > 0 {
+		selectedSlotsText = strings.Join(sortedSlotNames, ", ")
+	}
+
+	// Формируем сообщение с ошибкой
+	errorMessage := localizer.Get(lang, errorKey)
+	message := fmt.Sprintf("%s\n\n%s: %s\n\n%s",
+		localizer.Get(lang, "select_time_slot"),
+		localizer.Get(lang, "selected_slots"),
+		selectedSlotsText,
+		errorMessage,
+	)
+
+	// Создаем клавиатуру с временными слотами
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(
+				fmt.Sprintf("%s %s", getSlotSymbol("morning", selectedSlotsMap), localizer.Get(lang, localization.LocaleTimeMorning)),
+				"availability_timeslot_morning",
+			),
+			tgbotapi.NewInlineKeyboardButtonData(
+				fmt.Sprintf("%s %s", getSlotSymbol("day", selectedSlotsMap), localizer.Get(lang, localization.LocaleTimeDay)),
+				"availability_timeslot_day",
+			),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(
+				fmt.Sprintf("%s %s", getSlotSymbol("evening", selectedSlotsMap), localizer.Get(lang, localization.LocaleTimeEvening)),
+				"availability_timeslot_evening",
+			),
+			tgbotapi.NewInlineKeyboardButtonData(
+				fmt.Sprintf("%s %s", getSlotSymbol("late", selectedSlotsMap), localizer.Get(lang, localization.LocaleTimeLate)),
+				"availability_timeslot_late",
+			),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(
+				fmt.Sprintf("✅ %s", localizer.Get(lang, "select_all")),
+				"availability_timeslot_select_all",
+			),
+		),
+		h.baseHandler.KeyboardBuilder.CreateNavigationRow(
+			lang,
+			"availability_back_to_days",
+			"availability_proceed_to_communication",
+		),
+	)
+
+	// Редактируем текущее сообщение
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		message,
+		keyboard,
+	)
+
+	_, err = h.baseHandler.Bot.Send(editMsg)
+	if err != nil {
+		loggingService.ErrorWithContext("Failed to edit message with error", "", int64(user.ID), callback.Message.Chat.ID, "ShowTimeSlotSelectionWithError", map[string]interface{}{
 			"user_id": user.ID,
 			"error":   err.Error(),
 		})
@@ -607,9 +739,9 @@ func (h *AvailabilityHandlerImpl) ShowTimeSlotSelection(callback *tgbotapi.Callb
 // Helper function to get checkbox symbol for time slots
 func getSlotSymbol(slot string, selectedSlots map[string]bool) string {
 	if selectedSlots[slot] {
-		return "☑"
+		return "✅"
 	}
-	return "☐"
+	return "☑"
 }
 
 // HandleTimeSlotSelection handles time slot selection
@@ -689,13 +821,8 @@ func (h *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tgb
 	var setupDataStr string
 	err := h.baseHandler.Service.Cache.Get(context.Background(), cacheKey, &setupDataStr)
 	if err != nil {
-		lang := user.InterfaceLanguageCode
-		localizer := h.baseHandler.Service.Localizer
-		return h.baseHandler.MessageFactory.EditText(
-			callback.Message.Chat.ID,
-			callback.Message.MessageID,
-			localizer.Get(lang, "error_no_time_selected"),
-		)
+		// Если нет данных в кеше, показываем ошибку в том же окне
+		return h.ShowTimeSlotSelectionWithError(callback, user, "error_no_time_selected")
 	}
 
 	var setupData map[string]interface{}
@@ -706,18 +833,13 @@ func (h *AvailabilityHandlerImpl) HandleFriendshipPreferencesStart(callback *tgb
 
 	timeSlots := setupData["time_slots"].([]interface{})
 	if len(timeSlots) == 0 {
-		lang := user.InterfaceLanguageCode
-		localizer := h.baseHandler.Service.Localizer
-		return h.baseHandler.MessageFactory.EditText(
-			callback.Message.Chat.ID,
-			callback.Message.MessageID,
-			localizer.Get(lang, "error_no_time_selected"),
-		)
+		// Показываем ошибку в том же окне, сохраняя клавиатуру
+		return h.ShowTimeSlotSelectionWithError(callback, user, "error_no_time_selected")
 	}
 
-	// Инициализируем communication_styles в cache если их там нет
+	// Инициализируем communication_styles в cache если их там нет (пустой массив)
 	if _, exists := setupData["communication_styles"]; !exists {
-		setupData["communication_styles"] = []string{"text"} // По умолчанию текст
+		setupData["communication_styles"] = []string{} // Пустой массив, без выбранных по умолчанию
 		setupDataJSON, _ := json.Marshal(setupData)
 		h.baseHandler.Service.Cache.Set(context.Background(), cacheKey, string(setupDataJSON), 30*time.Minute)
 	}
@@ -1012,9 +1134,9 @@ func (h *AvailabilityHandlerImpl) ShowCommunicationStyleSelection(callback *tgbo
 // Helper function to get checkbox symbol for communication styles
 func getStyleSymbol(style string, selectedStyles map[string]bool) string {
 	if selectedStyles[style] {
-		return "☑"
+		return "✅"
 	}
-	return "☐"
+	return "☑"
 }
 
 // CompleteAvailabilitySetup завершает настройку доступности и сохраняет данные
@@ -1259,4 +1381,3 @@ func (h *AvailabilityHandlerImpl) CompleteAvailabilitySetup(callback *tgbotapi.C
 	// Сообщение уже отправлено в начале метода
 	return nil
 }
-

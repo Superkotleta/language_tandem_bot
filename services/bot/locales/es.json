@@ -265,5 +265,22 @@
   "select_day_type": "Seleccionar tipo de día",
   "select_time_slots": "Seleccionar horarios",
   "select_communication_methods": "Seleccionar métodos de comunicación",
-  "none_selected": "ninguno seleccionado"
+  "none_selected": "ninguno seleccionado",
+  
+  "day_type_weekends_desc": "Fines de semana — sábado y domingo",
+  "day_type_weekdays_desc": "Días laborables — de lunes a viernes",
+  "day_type_any_desc": "Cualquier momento — disponible cualquier día de la semana",
+  "time_morning_desc": "🌅 Mañana — aproximadamente de 6:00 a 12:00",
+  "time_day_desc": "☀️ Día — aproximadamente de 12:00 a 18:00",
+  "time_evening_desc": "🌆 Noche — aproximadamente de 18:00 a 23:00",
+  "time_late_desc": "🌙 Tarde — después de las 23:00",
+  "comm_text_desc": "💬 Texto — comunicación a través de mensajes de texto en Telegram",
+  "comm_video_desc": "📹 Videollamadas — comunicación a través de videollamadas",
+  "comm_audio_desc": "📞 Llamadas de audio — comunicación a través de llamadas de voz",
+  "comm_voice_desc": "🎤 Voz — comunicación a través de mensajes de voz",
+  "comm_meet_desc": "👥 Reuniones presenciales — comunicación durante reuniones personales",
+  "freq_weekly_desc": "📊 Semanalmente — comunicación aproximadamente una vez por semana",
+  "freq_multiple_weekly_desc": "📈 Varias veces por semana — comunicación 2-3 veces por semana",
+  "freq_multiple_monthly_desc": "📅 Varias veces por mes — comunicación varias veces al mes",
+  "freq_flexible_desc": "🔄 Flexible — frecuencia de comunicación por acuerdo"
 }

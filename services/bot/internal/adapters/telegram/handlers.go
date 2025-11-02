@@ -602,6 +602,8 @@ func (h *TelegramHandler) handleInterestCallbacks(callback *tgbotapi.CallbackQue
 		return h.interestHandler.HandlePrimaryInterestsContinue(callback, user)
 	case data == "back_to_interests":
 		return h.interestHandler.HandleBackToInterests(callback, user)
+	case data == "back_to_primary_interests":
+		return h.interestHandler.ShowPrimaryInterestsSelection(callback, user)
 	}
 
 	return nil
