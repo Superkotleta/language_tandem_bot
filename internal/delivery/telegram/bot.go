@@ -108,6 +108,11 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, user *
 	lang := user.InterfaceLang
 	text := b.localizer.Get(lang, "welcome_message")
 
+	// Replace template variables
+	text = b.localizer.Replace(text, map[string]string{
+		"{name}": user.FirstName,
+	})
+
 	hasProfile := user.Status == domain.StatusActive
 	keyboard := b.keyboardBuilder.MainMenu(lang, hasProfile)
 

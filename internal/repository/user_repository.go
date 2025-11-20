@@ -140,5 +140,8 @@ func (r *UserRepository) GetUserInterests(ctx context.Context, userID string) ([
 		}
 		interests = append(interests, i)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return interests, nil
 }

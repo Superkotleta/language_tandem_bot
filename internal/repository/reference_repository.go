@@ -31,6 +31,9 @@ func (r *ReferenceRepository) GetLanguages(ctx context.Context) ([]domain.Langua
 		}
 		languages = append(languages, l)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return languages, nil
 }
 
@@ -49,6 +52,9 @@ func (r *ReferenceRepository) GetCategories(ctx context.Context) ([]domain.Inter
 			return nil, err
 		}
 		categories = append(categories, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return categories, nil
 }
@@ -69,6 +75,8 @@ func (r *ReferenceRepository) GetInterestsByCategory(ctx context.Context, catego
 		}
 		interests = append(interests, i)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return interests, nil
 }
-

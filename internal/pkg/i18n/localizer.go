@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Localizer handles multi-language support
@@ -74,4 +75,12 @@ func (l *Localizer) Get(lang, key string) string {
 	}
 
 	return key // Return key if translation not found
+}
+
+// Replace replaces placeholders in the text with values
+func (l *Localizer) Replace(text string, replacements map[string]string) string {
+	for k, v := range replacements {
+		text = strings.ReplaceAll(text, k, v)
+	}
+	return text
 }
