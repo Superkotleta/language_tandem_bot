@@ -1,13 +1,14 @@
 package config
 
 import (
-	"os"
 	"fmt"
+	"os"
 )
 
 type Config struct {
 	DatabaseURL   string
 	TelegramToken string
+	LocalesPath   string
 }
 
 func Load() (*Config, error) {
@@ -21,10 +22,14 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("TELEGRAM_TOKEN is required")
 	}
 
+	localesPath := os.Getenv("LOCALES_PATH")
+	if localesPath == "" {
+		localesPath = "./locales" // Default value
+	}
+
 	return &Config{
 		DatabaseURL:   dbURL,
 		TelegramToken: tgToken,
+		LocalesPath:   localesPath,
 	}, nil
 }
-
-
