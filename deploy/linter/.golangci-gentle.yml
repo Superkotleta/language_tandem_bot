@@ -1,6 +1,5 @@
 # Мягкая конфигурация линтера
 # Для постепенного внедрения улучшений
-version: 2
 
 run:
   timeout: 5m
@@ -50,22 +49,15 @@ linters:
     # === СОВРЕМЕННЫЕ МЯГКИЕ ЛИНТЕРЫ ===
     - sloglint
     - usestdlibvars
-    - exptostd
     - durationcheck
-    - gochecksumtype
-    - godoclint
     - godot
     - goheader
     - goprintffuncname
     - grouper
-    - iface
-    - inamedparam
-    - iotamixing
     - ireturn
     - loggercheck
     - mirror
     - nilerr
-    - nilnesserr
     - nilnil
     - nolintlint
     - nonamedreturns
@@ -73,31 +65,25 @@ linters:
     - predeclared
     - protogetter
     - reassign
-    - recvcheck
     - spancheck
     - testableexamples
-    - unqueryvet
-    - usetesting
     - wastedassign
     - zerologlint
     
     # === ДОПОЛНИТЕЛЬНЫЕ (мягкие настройки) ===
     - misspell
     - whitespace
-    - wsl_v5
+    - wsl
     - tagalign
     - tagliatelle
     - asciicheck
     - bidichk
-    - canonicalheader
     - decorder
     - dogsled
     - dupl
     - dupword
-    - embeddedstructfieldcheck
     - exhaustive
     - ginkgolinter
-    - gocheckcompilerdirectives
     - importas
 
 linters-settings:

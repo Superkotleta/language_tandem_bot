@@ -1,6 +1,5 @@
 # Быстрая конфигурация линтера
 # Для быстрой разработки с основными проверками
-version: 2
 
 run:
   timeout: 3m
@@ -51,22 +50,15 @@ linters:
     # === СОВРЕМЕННЫЕ БЫСТРЫЕ ЛИНТЕРЫ ===
     - sloglint
     - usestdlibvars
-    - exptostd
     - durationcheck
-    - gochecksumtype
-    - godoclint
     - godot
     - goheader
     - goprintffuncname
     - grouper
-    - iface
-    - inamedparam
-    - iotamixing
     - ireturn
     - loggercheck
     - mirror
     - nilerr
-    - nilnesserr
     - nilnil
     - nolintlint
     - nonamedreturns
@@ -74,31 +66,25 @@ linters:
     - predeclared
     - protogetter
     - reassign
-    - recvcheck
     - spancheck
     - testableexamples
-    - unqueryvet
-    - usetesting
     - wastedassign
     - zerologlint
     
     # === ДОПОЛНИТЕЛЬНЫЕ (быстрые) ===
     - misspell
     - whitespace
-    - wsl_v5
+    - wsl
     - tagalign
     - tagliatelle
     - asciicheck
     - bidichk
-    - canonicalheader
     - decorder
     - dogsled
     - dupl
     - dupword
-    - embeddedstructfieldcheck
     - exhaustive
     - ginkgolinter
-    - gocheckcompilerdirectives
     - godox
     - importas
 
