@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"language-exchange-bot/internal/domain"
+	"strings"
 )
 
 // UserRepository defines the interface for user persistence
@@ -43,6 +44,11 @@ func (s *UserService) GetUserBySocialID(ctx context.Context, socialID, platform 
 func (s *UserService) RegisterUser(ctx context.Context, socialID, platform, firstName, username, languageCode string) (*domain.User, error) {
 	if languageCode == "" {
 		languageCode = "en"
+	}
+
+	// Normalize language code (e.g. "es-ES" -> "es")
+	if len(languageCode) > 2 {
+		languageCode = strings.Split(languageCode, "-")[0]
 	}
 
 	user := &domain.User{

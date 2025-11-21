@@ -54,6 +54,7 @@ func (b *Bot) Start(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			log.Println("Stopping Telegram bot...")
+			b.api.StopReceivingUpdates()
 			return
 		case update := <-updates:
 			if update.Message != nil {
@@ -64,6 +65,11 @@ func (b *Bot) Start(ctx context.Context) {
 }
 
 func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
+	if message.From == nil {
+		log.Printf("Received message from nil user (likely channel post or service message), ignoring. Message ID: %d", message.MessageID)
+		return
+	}
+
 	socialID := strconv.FormatInt(message.From.ID, 10)
 
 	// 1. Get or Create User
@@ -117,22 +123,29 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, user *
 	keyboard := b.keyboardBuilder.MainMenu(lang, hasProfile)
 
 	msg := b.messageFactory.NewKeyboardMessage(message.Chat.ID, text, keyboard)
-	b.api.Send(msg)
+	if _, err := b.api.Send(msg); err != nil {
+		log.Printf("Failed to send start message: %v", err)
+	}
 }
 
 func (b *Bot) handleMenu(ctx context.Context, message *tgbotapi.Message, user *domain.User) {
 	lang := user.InterfaceLang
 	text := message.Text
 
+	var err error
 	switch text {
 	case b.localizer.Get(lang, "btn_fill_profile"):
-		b.api.Send(b.messageFactory.NewText(message.Chat.ID, "Starting profile setup... (Wizard not implemented yet)"))
+		_, err = b.api.Send(b.messageFactory.NewText(message.Chat.ID, "Starting profile setup... (Wizard not implemented yet)"))
 	case b.localizer.Get(lang, "btn_profile"):
 		// Show profile with inline actions
 		profileText := fmt.Sprintf("Name: %s\nNative: %s\nTarget: %s", user.FirstName, user.NativeLang, user.TargetLang)
 		keyboard := b.keyboardBuilder.ProfileActions(lang)
-		b.api.Send(b.messageFactory.NewInlineKeyboardMessage(message.Chat.ID, profileText, keyboard))
+		_, err = b.api.Send(b.messageFactory.NewInlineKeyboardMessage(message.Chat.ID, profileText, keyboard))
 	default:
-		b.api.Send(b.messageFactory.NewText(message.Chat.ID, b.localizer.Get(lang, "unknown_command")))
+		_, err = b.api.Send(b.messageFactory.NewText(message.Chat.ID, b.localizer.Get(lang, "unknown_command")))
+	}
+
+	if err != nil {
+		log.Printf("Failed to send menu message: %v", err)
 	}
 }
