@@ -1,0 +1,72 @@
+# Строгая конфигурация линтера
+# Для production кода с максимальными проверками
+version: 2
+
+run:
+  timeout: 15m
+  tests: false
+  modules-download-mode: readonly
+  go: "1.25"
+
+linters:
+  enable-all: true
+  disable:
+    # Отключаем только legacy/deprecated линтеры
+    - deadcode
+    - exhaustivestruct
+    - golint
+    - ifshort
+    - interfacer
+    - maligned
+    - nosnakecase
+    - scopelint
+    - structcheck
+    - varcheck
+
+linters-settings:
+  govet:
+    enable-all: true
+  
+  gosec:
+    severity: low
+    confidence: low
+  
+  gocyclo:
+    min-complexity: 10
+  
+  funlen:
+    lines: 50
+    statements: 40
+  
+  gocognit:
+    min-complexity: 15
+  
+  nestif:
+    min-complexity: 4
+  
+  mnd:
+    ignored-numbers: "0,1,2"
+    ignored-functions: ""
+  
+  varnamelen:
+    min-name-length: 2
+    ignore-names: ["i", "j", "k", "id", "db"]
+  
+  cyclop:
+    max-complexity: 10
+    
+  maintidx:
+    under: 20
+
+issues:
+  max-issues-per-linter: 0  # Показывать все проблемы
+  max-same-issues: 0
+  max-from-linter: 0
+  
+  exclude-rules:
+    - linters: [gocyclo, funlen, gocognit]
+      path: ".*_test.go$"
+  
+  new: false
+  fix: false
+

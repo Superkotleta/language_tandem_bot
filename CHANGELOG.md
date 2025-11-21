@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.0.3] - 2025-11-21
+
+### Added
+- **Linting System** in `deploy/linter/` folder
+  - 4 golangci-lint configurations (gentle, fast, enhanced, strict)
+  - Comprehensive Makefile with linter commands
+  - Detailed linter documentation (README.md)
+  - Integration with main deploy Makefile
+  - Pre-commit hook support
+- 100+ enabled linters for code quality
+- Security, performance, and style checks
+- Configurable complexity thresholds
+
+### Changed
+- Updated README.md with linter information
+- Updated deploy/README.md with linter commands
+- Enhanced Makefile with help command
+
 ## [2.0.2] - 2025-11-21
 
 ### Added

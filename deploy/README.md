@@ -31,6 +31,7 @@ make logs-bot
 - `docker-compose.yml` - Конфигурация сервисов (PostgreSQL 17 + pgAdmin + Bot)
 - `Makefile` - Команды для управления
 - `env.example` - Шаблон переменных окружения
+- `linter/` - Система линтинга с 4 конфигурациями
 
 ## Сервисы
 
@@ -48,6 +49,8 @@ make logs-bot
 
 ## Команды Makefile
 
+### Docker команды
+
 ```bash
 make up            # Запуск всех сервисов
 make down          # Остановка
@@ -59,6 +62,21 @@ make db-shell      # Подключение к PostgreSQL
 make ps            # Статус контейнеров
 make clean         # Удаление контейнеров и данных (ОСТОРОЖНО!)
 ```
+
+### Линтер команды
+
+```bash
+make lint          # Мягкая проверка (рекомендуется)
+make lint-fast     # Быстрая проверка
+make lint-enhanced # Улучшенная проверка
+make lint-strict   # Строгая проверка
+make fmt           # Форматирование кода
+make vet           # Go vet
+make fix           # Автоисправление
+make pre-commit    # Проверка перед коммитом
+```
+
+Подробнее о линтере: [linter/README.md](linter/README.md)
 
 ## Логи
 

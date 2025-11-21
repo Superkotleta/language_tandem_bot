@@ -1,0 +1,136 @@
+# Быстрая конфигурация линтера
+# Для быстрой разработки с основными проверками
+version: 2
+
+run:
+  timeout: 3m
+  tests: false
+  modules-download-mode: readonly
+  go: "1.25"
+
+linters:
+  enable:
+    # === БАЗОВЫЕ БЫСТРЫЕ ЛИНТЕРЫ ===
+    - unused
+    - govet
+    - ineffassign
+    - staticcheck
+    
+    # === БЕЗОПАСНОСТЬ (быстрые) ===
+    - gosec
+    - errcheck
+    - bodyclose
+    - noctx
+    - sqlclosecheck
+    
+    # === ПРОИЗВОДИТЕЛЬНОСТЬ (быстрые) ===
+    - prealloc
+    - perfsprint
+    - makezero
+    - copyloopvar
+    - intrange
+    
+    # === СТИЛЬ КОДА (быстрые) ===
+    - goconst
+    - gocyclo
+    - funlen
+    - gocognit
+    - nestif
+    - cyclop
+    
+    # === КАЧЕСТВО КОДА (быстрые) ===
+    - gochecknoinits
+    - gochecknoglobals
+    - mnd
+    - gomoddirectives
+    - unparam
+    - unconvert
+    - nakedret
+    - nlreturn
+    
+    # === СОВРЕМЕННЫЕ БЫСТРЫЕ ЛИНТЕРЫ ===
+    - sloglint
+    - usestdlibvars
+    - exptostd
+    - durationcheck
+    - gochecksumtype
+    - godoclint
+    - godot
+    - goheader
+    - goprintffuncname
+    - grouper
+    - iface
+    - inamedparam
+    - iotamixing
+    - ireturn
+    - loggercheck
+    - mirror
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - predeclared
+    - protogetter
+    - reassign
+    - recvcheck
+    - spancheck
+    - testableexamples
+    - unqueryvet
+    - usetesting
+    - wastedassign
+    - zerologlint
+    
+    # === ДОПОЛНИТЕЛЬНЫЕ (быстрые) ===
+    - misspell
+    - whitespace
+    - wsl_v5
+    - tagalign
+    - tagliatelle
+    - asciicheck
+    - bidichk
+    - canonicalheader
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - embeddedstructfieldcheck
+    - exhaustive
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - godox
+    - importas
+
+linters-settings:
+  gocyclo:
+    min-complexity: 20  # Менее строго
+  funlen:
+    lines: 150          # Менее строго
+    statements: 75
+  gocognit:
+    min-complexity: 30  # Менее строго для сложных функций валидации
+  nestif:
+    min-complexity: 7   # Менее строго
+  mnd:
+    ignored-numbers: "0,1,2,3,4,5,10,100,1000"
+    ignored-functions: "strings.Split,strings.Join,time.Sleep"
+
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 10
+  max-from-linter: 20
+  new: false
+  fix: false
+  
+  # Исключения для конфигурационных файлов
+  exclude-rules:
+    - linters: [tagliatelle]
+      path: ".*config.*"
+      text: "json\\(camel\\)"
+    
+    # Отключаем depguard для внутренних модулей
+    - linters: [depguard]
+      path: ".*internal.*"
+      text: "is not allowed from list"
+
