@@ -1,4 +1,4 @@
-.PHONY: up down logs migrate ps restart clean lint lint-gentle lint-fast lint-enhanced lint-strict fmt vet fix help
+.PHONY: up down logs migrate ps restart clean lint lint-gentle lint-fast lint-enhanced lint-strict fmt vet fix install help
 
 # Справка
 help:
@@ -10,6 +10,7 @@ help:
 	@echo "  make ps           - Статус контейнеров"
 	@echo ""
 	@echo "=== Линтер команды ==="
+	@echo "  make install      - Установить golangci-lint"
 	@echo "  make lint         - Запуск линтера (мягкая конфигурация)"
 	@echo "  make lint-fast    - Быстрая проверка"
 	@echo "  make lint-enhanced - Улучшенная проверка"
@@ -73,6 +74,10 @@ env:
 	docker-compose config
 
 # === ЛИНТЕР КОМАНДЫ ===
+
+# Установка golangci-lint
+install:
+	@cd linter && $(MAKE) install
 
 # Мягкая конфигурация (рекомендуется)
 lint:

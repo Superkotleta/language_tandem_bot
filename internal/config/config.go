@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"os"
 )
 
@@ -14,12 +14,12 @@ type Config struct {
 func Load() (*Config, error) {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		return nil, fmt.Errorf("DATABASE_URL is required")
+		return nil, errors.New("DATABASE_URL is required")
 	}
 
 	tgToken := os.Getenv("TELEGRAM_TOKEN")
 	if tgToken == "" {
-		return nil, fmt.Errorf("TELEGRAM_TOKEN is required")
+		return nil, errors.New("TELEGRAM_TOKEN is required")
 	}
 
 	localesPath := os.Getenv("LOCALES_PATH")

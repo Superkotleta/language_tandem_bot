@@ -20,6 +20,7 @@ func NewPostgresDB(dbURL string) (*pgxpool.Pool, error) {
 
 	if err := pool.Ping(context.Background()); err != nil {
 		pool.Close()
+
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 

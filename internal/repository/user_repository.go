@@ -50,6 +50,7 @@ func (r *UserRepository) GetBySocialID(ctx context.Context, socialID, platform s
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil // Not found
 		}
+
 		return nil, err
 	}
 
@@ -66,6 +67,7 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 	if user.CreatedAt.IsZero() {
 		user.CreatedAt = time.Now()
 	}
+
 	user.UpdatedAt = time.Now()
 
 	err := r.db.QueryRow(ctx, query,
@@ -110,12 +112,14 @@ func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
 func (r *UserRepository) AddInterest(ctx context.Context, userID, interestID string) error {
 	query := `INSERT INTO user_interests (user_id, interest_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`
 	_, err := r.db.Exec(ctx, query, userID, interestID)
+
 	return err
 }
 
 func (r *UserRepository) RemoveInterest(ctx context.Context, userID, interestID string) error {
 	query := `DELETE FROM user_interests WHERE user_id = $1 AND interest_id = $2`
 	_, err := r.db.Exec(ctx, query, userID, interestID)
+
 	return err
 }
 
@@ -126,22 +130,28 @@ func (r *UserRepository) GetUserInterests(ctx context.Context, userID string) ([
 		JOIN user_interests ui ON i.id = ui.interest_id
 		WHERE ui.user_id = $1
 	`
+
 	rows, err := r.db.Query(ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var interests []domain.Interest
+
 	for rows.Next() {
 		var i domain.Interest
 		if err := rows.Scan(&i.ID, &i.CategoryID, &i.Slug, &i.Names); err != nil {
 			return nil, err
 		}
+
 		interests = append(interests, i)
 	}
+
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
 	return interests, nil
 }

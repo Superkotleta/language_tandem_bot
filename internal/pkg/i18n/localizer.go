@@ -8,13 +8,13 @@ import (
 	"strings"
 )
 
-// Localizer handles multi-language support
+// Localizer handles multi-language support.
 type Localizer struct {
 	translations map[string]map[string]string
 	fallbackLang string
 }
 
-// NewLocalizer creates a new localizer instance
+// NewLocalizer creates a new localizer instance.
 func NewLocalizer(localesPath, fallbackLang string) (*Localizer, error) {
 	l := &Localizer{
 		translations: make(map[string]map[string]string),
@@ -28,7 +28,7 @@ func NewLocalizer(localesPath, fallbackLang string) (*Localizer, error) {
 	return l, nil
 }
 
-// loadTranslations reads all JSON files from localesPath
+// loadTranslations reads all JSON files from localesPath.
 func (l *Localizer) loadTranslations(localesPath string) error {
 	files, err := os.ReadDir(localesPath)
 	if err != nil {
@@ -59,7 +59,7 @@ func (l *Localizer) loadTranslations(localesPath string) error {
 	return nil
 }
 
-// Get returns a translation for the given key and language
+// Get returns a translation for the given key and language.
 func (l *Localizer) Get(lang, key string) string {
 	if translations, ok := l.translations[lang]; ok {
 		if value, ok := translations[key]; ok {
@@ -77,10 +77,11 @@ func (l *Localizer) Get(lang, key string) string {
 	return key // Return key if translation not found
 }
 
-// Replace replaces placeholders in the text with values
+// Replace replaces placeholders in the text with values.
 func (l *Localizer) Replace(text string, replacements map[string]string) string {
 	for k, v := range replacements {
 		text = strings.ReplaceAll(text, k, v)
 	}
+
 	return text
 }

@@ -38,7 +38,7 @@ func main() {
 	userRepo := repository.NewUserRepository(dbPool)
 	refRepo := repository.NewReferenceRepository(dbPool)
 	userService := service.NewUserService(userRepo, refRepo)
-	
+
 	bot, err := telegram.NewBot(cfg.TelegramToken, userService, localizer)
 	if err != nil {
 		log.Fatalf("Failed to create bot: %v", err)

@@ -2,7 +2,7 @@ package domain
 
 import "time"
 
-// User status constants
+// User status constants.
 const (
 	StatusFillingProfile = "filling_profile"
 	StatusActive         = "active"
@@ -10,7 +10,7 @@ const (
 	StatusBanned         = "banned"
 )
 
-// User represents a user in the system
+// User represents a user in the system.
 type User struct {
 	ID            string    `json:"id"`        // UUID
 	SocialID      string    `json:"social_id"` // ID from platform
@@ -26,7 +26,7 @@ type User struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
-// Constants for supported platforms
+// Constants for supported platforms.
 const (
 	PlatformTelegram = "telegram"
 	PlatformVK       = "vk"

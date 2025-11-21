@@ -55,6 +55,7 @@ func (b *Bot) Start(ctx context.Context) {
 		case <-ctx.Done():
 			log.Println("Stopping Telegram bot...")
 			b.api.StopReceivingUpdates()
+
 			return
 		case update := <-updates:
 			if update.Message != nil {
@@ -67,6 +68,7 @@ func (b *Bot) Start(ctx context.Context) {
 func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 	if message.From == nil {
 		log.Printf("Received message from nil user (likely channel post or service message), ignoring. Message ID: %d", message.MessageID)
+
 		return
 	}
 
@@ -76,6 +78,7 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 	user, err := b.userService.GetUserBySocialID(ctx, socialID, domain.PlatformTelegram)
 	if err != nil {
 		log.Printf("Error fetching user: %v", err)
+
 		return
 	}
 
@@ -91,6 +94,7 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 		)
 		if err != nil {
 			log.Printf("Error registering user: %v", err)
+
 			return
 		}
 	}
@@ -103,6 +107,7 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 		default:
 			// Unknown command
 		}
+
 		return
 	}
 
@@ -133,6 +138,7 @@ func (b *Bot) handleMenu(ctx context.Context, message *tgbotapi.Message, user *d
 	text := message.Text
 
 	var err error
+
 	switch text {
 	case b.localizer.Get(lang, "btn_fill_profile"):
 		_, err = b.api.Send(b.messageFactory.NewText(message.Chat.ID, "Starting profile setup... (Wizard not implemented yet)"))

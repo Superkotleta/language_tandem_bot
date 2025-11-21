@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// UserRepository defines the interface for user persistence
+// UserRepository defines the interface for user persistence.
 type UserRepository interface {
 	GetBySocialID(ctx context.Context, socialID, platform string) (*domain.User, error)
 	Create(ctx context.Context, user *domain.User) error
@@ -16,7 +16,7 @@ type UserRepository interface {
 	GetUserInterests(ctx context.Context, userID string) ([]domain.Interest, error)
 }
 
-// ReferenceRepository defines the interface for static data persistence
+// ReferenceRepository defines the interface for static data persistence.
 type ReferenceRepository interface {
 	GetLanguages(ctx context.Context) ([]domain.Language, error)
 	GetCategories(ctx context.Context) ([]domain.InterestCategory, error)
@@ -35,12 +35,12 @@ func NewUserService(repo UserRepository, refRepo ReferenceRepository) *UserServi
 	}
 }
 
-// GetUserBySocialID retrieves a user by their social ID
+// GetUserBySocialID retrieves a user by their social ID.
 func (s *UserService) GetUserBySocialID(ctx context.Context, socialID, platform string) (*domain.User, error) {
 	return s.repo.GetBySocialID(ctx, socialID, platform)
 }
 
-// RegisterUser initializes a new user profile
+// RegisterUser initializes a new user profile.
 func (s *UserService) RegisterUser(ctx context.Context, socialID, platform, firstName, username, languageCode string) (*domain.User, error) {
 	if languageCode == "" {
 		languageCode = "en"
@@ -67,12 +67,12 @@ func (s *UserService) RegisterUser(ctx context.Context, socialID, platform, firs
 	return user, nil
 }
 
-// UpdateUser updates an existing user
+// UpdateUser updates an existing user.
 func (s *UserService) UpdateUser(ctx context.Context, user *domain.User) error {
 	return s.repo.Update(ctx, user)
 }
 
-// Interest Management
+// Interest Management.
 func (s *UserService) AddInterest(ctx context.Context, userID, interestID string) error {
 	return s.repo.AddInterest(ctx, userID, interestID)
 }
@@ -85,7 +85,7 @@ func (s *UserService) GetUserInterests(ctx context.Context, userID string) ([]do
 	return s.repo.GetUserInterests(ctx, userID)
 }
 
-// Reference Data
+// Reference Data.
 func (s *UserService) GetLanguages(ctx context.Context) ([]domain.Language, error) {
 	return s.refRepo.GetLanguages(ctx)
 }
