@@ -21,7 +21,7 @@ func NewUserRepository(db *pgxpool.Pool) *UserRepository {
 
 func (r *UserRepository) GetBySocialID(ctx context.Context, socialID, platform string) (*domain.User, error) {
 	query := `
-		SELECT id::text, social_id, platform, first_name, username, 
+		SELECT id::text, social_id, platform, COALESCE(first_name, ''), COALESCE(username, ''), 
 		       COALESCE(native_lang, ''), COALESCE(target_lang, ''), COALESCE(target_level, ''), 
 		       interface_lang, status, created_at, updated_at
 		FROM users
