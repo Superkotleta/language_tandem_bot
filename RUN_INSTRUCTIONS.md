@@ -1,6 +1,66 @@
 # Инструкция по запуску бота
 
-## Подготовка базы данных
+## Вариант 1: Запуск через Docker (Рекомендуется)
+
+### Быстрый старт
+
+1. Перейди в папку `deploy`:
+```bash
+cd deploy
+```
+
+2. Скопируй и настрой переменные окружения:
+```bash
+cp env.example .env
+```
+
+3. Отредактируй `.env`, добавь свой токен бота:
+```bash
+TELEGRAM_TOKEN=ваш_токен_от_BotFather
+```
+
+4. Запусти все сервисы (БД + pgAdmin + бот):
+```bash
+make up
+```
+
+5. Примени миграции:
+```bash
+make migrate
+```
+
+6. Проверь логи бота:
+```bash
+make logs-bot
+```
+
+### Управление сервисами
+
+```bash
+make down          # Остановить все контейнеры
+make restart-bot   # Перезапустить только бота
+make logs          # Просмотр логов всех сервисов
+make ps            # Статус контейнеров
+make db-shell      # Подключиться к PostgreSQL
+make clean         # Удалить контейнеры и volumes (ОСТОРОЖНО!)
+```
+
+### Доступ к pgAdmin
+
+- URL: http://localhost:5050
+- Email/Password: указаны в `.env` (по умолчанию: `admin@localhost.local` / `admin`)
+
+Для подключения к БД в pgAdmin:
+- Host: `db` (имя контейнера)
+- Port: `5432`
+- Database: `language_exchange`
+- Username/Password: из `.env`
+
+---
+
+## Вариант 2: Локальный запуск (для разработки)
+
+### Подготовка базы данных
 
 1. Создай базу данных PostgreSQL
 2. Примени миграции (последовательно):
@@ -16,7 +76,7 @@ psql $DATABASE_URL < migrations/000002_create_reference_tables.up.sql
 psql $DATABASE_URL < migrations/000003_seed_data.up.sql
 ```
 
-## Настройка переменных окружения
+### Настройка переменных окружения
 
 Создай файл `.env` или экспортируй переменные:
 
@@ -26,7 +86,7 @@ export TELEGRAM_TOKEN="your_bot_token_from_botfather"
 export LOCALES_PATH="./locales"  # Опционально, по умолчанию ./locales
 ```
 
-## Запуск
+### Запуск
 
 ```bash
 # Если переменные в .env

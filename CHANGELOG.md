@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.2] - 2025-11-21
+
+### Added
+- Docker deployment configuration in `deploy/` folder
+- Dockerfile with multi-stage build (Go 1.25 + Alpine)
+- docker-compose.yml with PostgreSQL 17, pgAdmin, and bot services
+- Makefile for convenient Docker management
+- Automated log rotation for all containers (10MB max, 3 files)
+- Healthcheck for PostgreSQL service
+- Network isolation with bridge network
+- Volume persistence for PostgreSQL data
+
+### Changed
+- Updated README_V2.md with Docker setup instructions
+- Updated RUN_INSTRUCTIONS.md with detailed Docker usage guide
+
 ## [2.0.1] - 2025-11-21
 
 ### Fixed

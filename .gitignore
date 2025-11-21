@@ -1,2 +1,4 @@
 .env
+deploy/.env
 Фазы проекта.md
+bin/

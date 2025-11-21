@@ -32,6 +32,44 @@ internal/
 
 ## Setup
 
+### Option 1: Docker (Recommended)
+
+1. Navigate to deploy directory:
+```bash
+cd deploy
+```
+
+2. Copy and configure environment variables:
+```bash
+cp env.example .env
+# Edit .env and add your TELEGRAM_TOKEN
+```
+
+3. Start all services:
+```bash
+make up
+```
+
+4. Apply database migrations:
+```bash
+make migrate
+```
+
+5. View logs:
+```bash
+make logs-bot
+```
+
+**Access pgAdmin**: Open http://localhost:5050 (credentials in `.env`)
+
+**Useful commands**:
+- `make down` - Stop all services
+- `make restart-bot` - Restart only the bot
+- `make db-shell` - Connect to PostgreSQL
+- `make ps` - Show container status
+
+### Option 2: Local Development
+
 1. Set environment variables:
 ```bash
 export DATABASE_URL="postgres://user:pass@localhost:5432/dbname"
