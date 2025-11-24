@@ -41,12 +41,14 @@ logs-bot:
 logs-db:
 	docker-compose logs -f db
 
-# Применение миграций
+# Применение миграций (строго последовательно)
 migrate:
 	@echo "Применение миграций..."
-	@cat ../migrations/000001_create_users_table.up.sql | docker-compose exec -T db psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-language_exchange}
-	@cat ../migrations/000002_create_reference_tables.up.sql | docker-compose exec -T db psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-language_exchange}
-	@cat ../migrations/000003_seed_data.up.sql | docker-compose exec -T db psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-language_exchange}
+	@bash -euo pipefail -c " \
+	for file in ../migrations/000001_create_users_table.up.sql ../migrations/000002_create_reference_tables.up.sql ../migrations/000003_seed_data.up.sql; do \
+		echo '⇒' \"\$file\"; \
+		docker-compose exec -T db sh -c 'psql -v ON_ERROR_STOP=1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\"' < \"\$file\"; \
+	done"
 	@echo "Миграции применены успешно!"
 
 # Статус контейнеров
