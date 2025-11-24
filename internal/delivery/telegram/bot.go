@@ -2,12 +2,14 @@ package telegram
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
 
 	"language-exchange-bot/internal/domain"
 	"language-exchange-bot/internal/pkg/i18n"
+	"language-exchange-bot/internal/repository"
 	"language-exchange-bot/internal/service"
 	"language-exchange-bot/internal/ui/keyboards"
 	"language-exchange-bot/internal/ui/messages"
@@ -77,23 +79,23 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 	// 1. Get or Create User
 	user, err := b.userService.GetUserBySocialID(ctx, socialID, domain.PlatformTelegram)
 	if err != nil {
-		log.Printf("Error fetching user: %v", err)
+		if errors.Is(err, repository.ErrUserNotFound) {
+			// User doesn't exist, register them
+			user, err = b.userService.RegisterUser(
+				ctx,
+				socialID,
+				domain.PlatformTelegram,
+				message.From.FirstName,
+				message.From.UserName,
+				message.From.LanguageCode,
+			)
+			if err != nil {
+				log.Printf("Error registering user: %v", err)
 
-		return
-	}
-
-	if user == nil {
-		// User doesn't exist, register them
-		user, err = b.userService.RegisterUser(
-			ctx,
-			socialID,
-			domain.PlatformTelegram,
-			message.From.FirstName,
-			message.From.UserName,
-			message.From.LanguageCode,
-		)
-		if err != nil {
-			log.Printf("Error registering user: %v", err)
+				return
+			}
+		} else {
+			log.Printf("Error fetching user: %v", err)
 
 			return
 		}
@@ -104,8 +106,6 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 		switch message.Command() {
 		case "start":
 			b.handleStart(ctx, message, user)
-		default:
-			// Unknown command
 		}
 
 		return

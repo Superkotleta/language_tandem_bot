@@ -12,18 +12,18 @@ const (
 
 // User represents a user in the system.
 type User struct {
-	ID            string    `json:"id"`        // UUID
-	SocialID      string    `json:"social_id"` // ID from platform
-	Platform      string    `json:"platform"`  // telegram, vk
-	FirstName     string    `json:"first_name"`
+	ID            string    `json:"id"`       // UUID
+	SocialID      string    `json:"socialId"` // ID from platform
+	Platform      string    `json:"platform"` // telegram, vk
+	FirstName     string    `json:"firstName"`
 	Username      string    `json:"username,omitempty"`
-	NativeLang    string    `json:"native_lang,omitempty"`
-	TargetLang    string    `json:"target_lang,omitempty"`
-	TargetLevel   string    `json:"target_level,omitempty"`
-	InterfaceLang string    `json:"interface_lang"`
+	NativeLang    string    `json:"nativeLang,omitempty"`
+	TargetLang    string    `json:"targetLang,omitempty"`
+	TargetLevel   string    `json:"targetLevel,omitempty"`
+	InterfaceLang string    `json:"interfaceLang"`
 	Status        string    `json:"status"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
 // Constants for supported platforms.

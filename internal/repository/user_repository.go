@@ -11,6 +11,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// ErrUserNotFound is returned when a user is not found.
+var ErrUserNotFound = errors.New("user not found")
+
 type UserRepository struct {
 	db *pgxpool.Pool
 }
@@ -48,7 +51,7 @@ func (r *UserRepository) GetBySocialID(ctx context.Context, socialID, platform s
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil // Not found
+			return nil, ErrUserNotFound
 		}
 
 		return nil, err
