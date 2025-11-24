@@ -74,6 +74,10 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 		return
 	}
 
+	if b.isContextCancelled(ctx, "handleMessage (pre-check)") {
+		return
+	}
+
 	socialID := strconv.FormatInt(message.From.ID, 10)
 
 	// 1. Get or Create User
@@ -81,6 +85,10 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 	if err != nil {
 		if errors.Is(err, repository.ErrUserNotFound) {
 			// User doesn't exist, register them
+			if b.isContextCancelled(ctx, "handleMessage (before register)") {
+				return
+			}
+
 			user, err = b.userService.RegisterUser(
 				ctx,
 				socialID,
@@ -116,6 +124,10 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 }
 
 func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, user *domain.User) {
+	if b.isContextCancelled(ctx, "handleStart") {
+		return
+	}
+
 	lang := user.InterfaceLang
 	text := b.localizer.Get(lang, "welcome_message")
 
@@ -134,6 +146,10 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, user *
 }
 
 func (b *Bot) handleMenu(ctx context.Context, message *tgbotapi.Message, user *domain.User) {
+	if b.isContextCancelled(ctx, "handleMenu") {
+		return
+	}
+
 	lang := user.InterfaceLang
 	text := message.Text
 
@@ -154,4 +170,13 @@ func (b *Bot) handleMenu(ctx context.Context, message *tgbotapi.Message, user *d
 	if err != nil {
 		log.Printf("Failed to send menu message: %v", err)
 	}
+}
+
+func (b *Bot) isContextCancelled(ctx context.Context, where string) bool {
+	if err := ctx.Err(); err != nil {
+		log.Printf("Context cancelled (%s): %v", where, err)
+		return true
+	}
+
+	return false
 }

@@ -14,8 +14,12 @@ BEGIN
     -- Category: Entertainment
     INSERT INTO interest_categories (slug, names, display_order)
     VALUES ('entertainment', '{"en": "Entertainment", "ru": "Развлечения"}', 10)
-    ON CONFLICT (slug) DO UPDATE SET names = EXCLUDED.names
+    ON CONFLICT (slug) DO UPDATE SET names = EXCLUDED.names, display_order = EXCLUDED.display_order
     RETURNING id INTO cat_id;
+
+    IF NOT FOUND THEN
+        SELECT id INTO cat_id FROM interest_categories WHERE slug = 'entertainment';
+    END IF;
 
     INSERT INTO interests (category_id, slug, names) VALUES
     (cat_id, 'movies', '{"en": "Movies & TV", "ru": "Кино и сериалы"}'),
@@ -27,8 +31,12 @@ BEGIN
     -- Category: Education
     INSERT INTO interest_categories (slug, names, display_order)
     VALUES ('education', '{"en": "Education", "ru": "Образование"}', 20)
-    ON CONFLICT (slug) DO UPDATE SET names = EXCLUDED.names
+    ON CONFLICT (slug) DO UPDATE SET names = EXCLUDED.names, display_order = EXCLUDED.display_order
     RETURNING id INTO cat_id;
+
+    IF NOT FOUND THEN
+        SELECT id INTO cat_id FROM interest_categories WHERE slug = 'education';
+    END IF;
 
     INSERT INTO interests (category_id, slug, names) VALUES
     (cat_id, 'books', '{"en": "Books", "ru": "Книги"}'),
@@ -40,8 +48,12 @@ BEGIN
     -- Category: Active Lifestyle
     INSERT INTO interest_categories (slug, names, display_order)
     VALUES ('active', '{"en": "Active Lifestyle", "ru": "Активный отдых"}', 30)
-    ON CONFLICT (slug) DO UPDATE SET names = EXCLUDED.names
+    ON CONFLICT (slug) DO UPDATE SET names = EXCLUDED.names, display_order = EXCLUDED.display_order
     RETURNING id INTO cat_id;
+
+    IF NOT FOUND THEN
+        SELECT id INTO cat_id FROM interest_categories WHERE slug = 'active';
+    END IF;
 
     INSERT INTO interests (category_id, slug, names) VALUES
     (cat_id, 'sports', '{"en": "Sports", "ru": "Спорт"}'),
@@ -53,8 +65,12 @@ BEGIN
     -- Category: Creative
     INSERT INTO interest_categories (slug, names, display_order)
     VALUES ('creative', '{"en": "Creative", "ru": "Творчество"}', 40)
-    ON CONFLICT (slug) DO UPDATE SET names = EXCLUDED.names
+    ON CONFLICT (slug) DO UPDATE SET names = EXCLUDED.names, display_order = EXCLUDED.display_order
     RETURNING id INTO cat_id;
+
+    IF NOT FOUND THEN
+        SELECT id INTO cat_id FROM interest_categories WHERE slug = 'creative';
+    END IF;
 
     INSERT INTO interests (category_id, slug, names) VALUES
     (cat_id, 'art', '{"en": "Art", "ru": "Искусство"}'),
@@ -66,8 +82,12 @@ BEGIN
     -- Category: Social
     INSERT INTO interest_categories (slug, names, display_order)
     VALUES ('social', '{"en": "Social", "ru": "Общество"}', 50)
-    ON CONFLICT (slug) DO UPDATE SET names = EXCLUDED.names
+    ON CONFLICT (slug) DO UPDATE SET names = EXCLUDED.names, display_order = EXCLUDED.display_order
     RETURNING id INTO cat_id;
+
+    IF NOT FOUND THEN
+        SELECT id INTO cat_id FROM interest_categories WHERE slug = 'social';
+    END IF;
 
     INSERT INTO interests (category_id, slug, names) VALUES
     (cat_id, 'psychology', '{"en": "Psychology", "ru": "Психология"}'),
