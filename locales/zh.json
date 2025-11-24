@@ -20,6 +20,9 @@
   "choose_at_least_primary_interests": "请至少选择 {count} 个主要兴趣",
   "continue_button": "➡️ 继续",
   "back_button": "⬅️ 返回",
+  "btn_fill_profile": "🚀 填写资料",
+  "btn_profile": "👤 我的资料",
+  "btn_edit_profile": "✏️ 编辑资料",
   
   "category_entertainment": "🎬 娱乐",
   "category_education": "📚 教育", 

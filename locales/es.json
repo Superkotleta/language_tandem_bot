@@ -20,6 +20,9 @@
   "choose_at_least_primary_interests": "Por favor selecciona al menos {count} intereses principales",
   "continue_button": "➡️ Continuar",
   "back_button": "⬅️ Atrás",
+  "btn_fill_profile": "🚀 Llenar Perfil",
+  "btn_profile": "👤 Mi Perfil",
+  "btn_edit_profile": "✏️ Editar Perfil",
   
   "category_entertainment": "🎬 Entretenimiento",
   "category_education": "📚 Educación", 

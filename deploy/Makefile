@@ -44,9 +44,9 @@ logs-db:
 # Применение миграций
 migrate:
 	@echo "Применение миграций..."
-	docker-compose exec -T bot /bin/sh -c "psql \$$DATABASE_URL < /app/migrations/000001_create_users_table.up.sql"
-	docker-compose exec -T bot /bin/sh -c "psql \$$DATABASE_URL < /app/migrations/000002_create_reference_tables.up.sql"
-	docker-compose exec -T bot /bin/sh -c "psql \$$DATABASE_URL < /app/migrations/000003_seed_data.up.sql"
+	@cat ../migrations/000001_create_users_table.up.sql | docker-compose exec -T db psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-language_exchange}
+	@cat ../migrations/000002_create_reference_tables.up.sql | docker-compose exec -T db psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-language_exchange}
+	@cat ../migrations/000003_seed_data.up.sql | docker-compose exec -T db psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-language_exchange}
 	@echo "Миграции применены успешно!"
 
 # Статус контейнеров

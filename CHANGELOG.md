@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.4] - 2025-11-21
+
+### Fixed
+- **Migration execution**: Changed `make migrate` to run migrations directly on the `db` container instead of through the `bot` container, ensuring proper execution order and error handling
+- **Missing localization keys**: Added `btn_fill_profile`, `btn_profile`, and `btn_edit_profile` keys to Spanish (`es.json`) and Chinese (`zh.json`) locale files to prevent untranslated button labels
+
 ## [2.0.3] - 2025-11-21
 
 ### Added
